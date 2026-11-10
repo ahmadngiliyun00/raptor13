@@ -339,6 +339,29 @@ test('B4: kebal 1 detik setelah menerima damage', async ({ page }) => {
   expect((await snap(page)).health).toBe(80);
 });
 
+test('B5: laju tembak sesuai CONFIG, OVERDRIVE dan PENGHANCUR menaikkan laju dan damage', async ({ page }) => {
+  await start(page);
+  const cfg = await page.evaluate(() => window.__game.config());
+  expect(await dbg(page, 'fireRate')).toBeCloseTo(1 / cfg.weapons.fireInterval, 1);
+  expect(cfg.weapons.fireInterval).toBeGreaterThanOrEqual(0.1);
+  expect(cfg.weapons.fireInterval).toBeLessThanOrEqual(0.12);
+  const s0 = await snap(page);
+  await hold(page, ['Enter'], 1000);
+  const base = (await snap(page)).shotsFired - s0.shotsFired;
+  expect(base).toBeGreaterThanOrEqual(9);
+  expect(base).toBeLessThanOrEqual(12);
+  await dbg(page, 'activateBuff', 'overdrive');
+  const s1 = await snap(page);
+  await hold(page, ['Enter'], 1000);
+  const over = (await snap(page)).shotsFired - s1.shotsFired;
+  expect(over).toBeGreaterThanOrEqual(Math.floor(base * 1.4));      // sekitar 1,6 kali
+  expect((await snap(page)).buffs.overdrive).toBeGreaterThan(0);
+  const d0 = await dbg(page, 'bulletDamage');
+  await dbg(page, 'activateBuff', 'destroyer');
+  expect(await dbg(page, 'bulletDamage')).toBeCloseTo(d0 * 1.5, 1);
+  await expect(page.locator('.buff[data-buff="destroyer"]')).toBeVisible();
+});
+
 test('W dan S mengubah pitch dan ketinggian', async ({ page }) => {
   await start(page);
   const s0 = await snap(page);

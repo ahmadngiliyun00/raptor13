@@ -166,6 +166,14 @@
   .note { margin: 6px 0 0; font-size: 12px; color: #ffd28a; }
   .link { font: inherit; color: var(--ui-accent); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 0; }
   .btn.danger { color: #ffb0a0; border-color: rgba(255, 120, 100, 0.5); }
+  #buffs { position: absolute; left: 16px; top: calc(146px + env(safe-area-inset-top)); display: flex; flex-direction: column; gap: 6px; }
+  .buff { display: flex; align-items: center; gap: 8px; padding: 4px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em;
+    background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 4px; }
+  .buff svg { width: 16px; height: 16px; fill: currentColor; }
+  .buff b { min-width: 18px; text-align: right; font-variant-numeric: tabular-nums; }
+  .buff[data-buff="overdrive"] { color: #ffc84a; border-color: rgba(255, 190, 60, 0.6); }
+  .buff[data-buff="destroyer"] { color: #d58bff; border-color: rgba(200, 100, 255, 0.6); }
+  body.mode-hp #buffs { top: calc(200px + env(safe-area-inset-top)); }
   #lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #ffd24a; transform-origin: center; }
   #rear-warn { position: absolute; left: 50%; bottom: calc(56px + env(safe-area-inset-bottom)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #ffd0d0; border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.6s steps(2) infinite; }
@@ -405,6 +413,10 @@
   <div id="critical" class="hidden">INTEGRITAS KRITIS</div>
   <div id="reticle"><i id="hitmark"></i></div>
   <div id="lead" class="hidden"></div>
+  <div id="buffs">
+    <div class="buff hidden" data-buff="overdrive"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span>OVERDRIVE</span><b>10</b></div>
+    <div class="buff hidden" data-buff="destroyer"><svg viewBox="0 0 24 24"><path d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1z"/></svg><span>PENGHANCUR</span><b>10</b></div>
+  </div>
   <div id="rear-warn" class="hidden">MUSUH DI BELAKANG</div>
   <div class="hud-block tl">
     <div class="row"><span class="label">NYAWA</span><span id="hearts"></span></div>
@@ -722,9 +734,9 @@ const CONFIG = {
     lockoutTime: 2.0,          // jeda wajib setelah meter benar-benar habis
   },
   weapons: {
-    fireInterval: 0.09,        // cooldown antar tembakan (detik)
-    bulletSpeed: 250,          // ditambah kecepatan pesawat; cukup lambat agar jejaknya terlihat
-    bulletLife: 1.7,
+    fireInterval: 0.10,        // cooldown antar tembakan (detik), bergantian dari dua moncong
+    bulletSpeed: 750,          // ditambah kecepatan pesawat (sekitar tiga kali versi awal)
+    bulletLife: 0.8,
     damage: 10,                // damage per peluru pemain
     maxPlayerBullets: 80,
     convergeDistance: 160,     // jarak titik temu peluru kedua sayap, juga posisi reticle
@@ -807,6 +819,14 @@ const CONFIG = {
     repairAmount: 30,
     nitroAmount: 0.5,
     heartChance: 0.14,         // peluang pickup berupa hati (+1 nyawa) bila nyawa belum penuh
+  },
+  // Buff sementara dari pickup kristal
+  buffs: {
+    duration: 10,
+    overdrive: { label: 'OVERDRIVE', rate: 1.6 },     // laju tembak
+    destroyer: { label: 'PENGHANCUR', damage: 1.5 },  // damage dan ukuran peluru
+    dropChanceEnemy: 0.12,     // peluang jatuh saat musuh hancur
+    dropChanceAsteroid: 0.06,
   },
   // Ambang keseimbangan tempur yang diperiksa uji bot (dicatat di README)
   balance: {
@@ -1656,6 +1676,7 @@ const Player = {
   _up: new THREE.Vector3(0, 1, 0),
   _right: new THREE.Vector3(1, 0, 0),
   autoLevel: true,
+  upgrades: { fireRate: 1, damage: 1 },   // pengali permanen dari kartu upgrade (S11)
   maneuver: null,                     // { type, t, dur, dir, applied }
   cooldowns: { roll: 0, immelmann: 0, loop: 0 },
   get rolling() { return this.maneuver ? this.maneuver.type === 'roll' : false; },
@@ -2411,6 +2432,7 @@ const _va = new THREE.Vector3();
 const _vb = new THREE.Vector3();
 const _vc = new THREE.Vector3();
 const _one = new THREE.Vector3(1, 1, 1);
+const _vd = new THREE.Vector3();
 const AXIS_Z = new THREE.Vector3(0, 0, 1);
 
 // Kapsul memanjang sepanjang sumbu z (Lathe), dipakai untuk peluru bercahaya
@@ -2432,7 +2454,7 @@ function capsuleGeometry(radius, length, seg = 8) {
 
 class BulletPool {
   // glowMaterial opsional: halo additive lebih besar yang berbagi matriks dengan inti peluru
-  constructor(max, geometry, material, glowMaterial = null, glowScale = 2.4) {
+  constructor(max, geometry, material, glowMaterial = null, glowScale = 2.4, glowGeometry = null) {
     this.max = max;
     this.mesh = new THREE.InstancedMesh(geometry, material, max);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -2440,14 +2462,18 @@ class BulletPool {
     this.mesh.frustumCulled = false;
     this.glow = null;
     if (glowMaterial) {
-      this.glow = new THREE.InstancedMesh(geometry, glowMaterial, max);
+      this.glow = new THREE.InstancedMesh(glowGeometry || geometry, glowMaterial, max);
       this.glow.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       this.glow.count = 0;
       this.glow.frustumCulled = false;
       this.glow.renderOrder = 4;
-      this.glowScale = new THREE.Vector3(glowScale, glowScale, 1.25);
+      this.glowScale = new THREE.Vector3(glowScale, glowScale, 1.35);
+      this.glow.setColorAt(0, new THREE.Color(1, 1, 1));   // membuat atribut warna per instance sekali
       scene.add(this.glow);
     }
+    this.colorIdx = new Uint8Array(max);     // indeks palet warna halo per peluru
+    this.sizes = new Float32Array(max).fill(1);
+    this.palette = [new THREE.Color(1, 1, 1)];
     this.p = new Float32Array(max * 3);
     this.prev = new Float32Array(max * 3);
     this.v = new Float32Array(max * 3);
@@ -2476,6 +2502,8 @@ class BulletPool {
     this.life[i] = life;
     this.dmg[i] = damage;
     this.target[i] = -1;
+    this.colorIdx[i] = 0;
+    this.sizes[i] = 1;
     this.active[i] = 1;
     return i;
   }
@@ -2499,14 +2527,25 @@ class BulletPool {
       const i3 = i * 3, i4 = i * 4;
       _va.set(this.p[i3], this.p[i3 + 1], this.p[i3 + 2]);
       _qa.set(this.q[i4], this.q[i4 + 1], this.q[i4 + 2], this.q[i4 + 3]);
-      _m4.compose(_va, _qa, _one);
+      const sz = this.sizes[i];
+      _vd.set(sz, sz, sz);
+      _m4.compose(_va, _qa, _vd);
       this.mesh.setMatrixAt(n, _m4);
-      if (this.glow) { _m4.compose(_va, _qa, this.glowScale); this.glow.setMatrixAt(n, _m4); }
+      if (this.glow) {
+        _vd.copy(this.glowScale).multiplyScalar(sz);
+        _m4.compose(_va, _qa, _vd);
+        this.glow.setMatrixAt(n, _m4);
+        this.glow.setColorAt(n, this.palette[this.colorIdx[i]]);
+      }
       n++;
     }
     this.mesh.count = n;
     this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.glow) { this.glow.count = n; this.glow.instanceMatrix.needsUpdate = true; }
+    if (this.glow) {
+      this.glow.count = n;
+      this.glow.instanceMatrix.needsUpdate = true;
+      if (this.glow.instanceColor) this.glow.instanceColor.needsUpdate = true;
+    }
   }
   reset() {
     this.active.fill(0); this.alive = 0; this.cursor = 0; this.mesh.count = 0;
@@ -2520,14 +2559,20 @@ class BulletPool {
 const Weapons = {
   pool: new BulletPool(
     CONFIG.weapons.maxPlayerBullets,
-    capsuleGeometry(0.22, 4.2),
-    new THREE.MeshBasicMaterial({ color: 0xeaffff, fog: false }),
-    new THREE.MeshBasicMaterial({ color: 0x38d8ff, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
-    2.6
+    // Bolt plasma: inti putih panas memanjang, halo additive merah oranye (warna halo per peluru)
+    // Halo memakai blending normal agar warnanya tetap jenuh di langit terang maupun angkasa gelap
+    capsuleGeometry(0.28, 7),
+    new THREE.MeshBasicMaterial({ color: 0xfff8ee, fog: false }),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false, fog: false }),
+    2.4
   ),
   cooldown: 0,
   side: 0,
   shotsFired: 0,
+  init() {
+    // Palet halo: 0 normal (merah oranye), 1 OVERDRIVE (kuning panas), 2 PENGHANCUR (ungu merah)
+    this.pool.palette = [new THREE.Color(1.0, 0.22, 0.04), new THREE.Color(1.0, 0.7, 0.05), new THREE.Color(0.72, 0.1, 0.95)];
+  },
   reset() { this.cooldown = 0; this.side = 0; this.shotsFired = 0; this.pool.reset(); },
   update(dt, firing) {
     this.cooldown -= dt;
@@ -2536,6 +2581,9 @@ const Weapons = {
     this.pool.update(dt);
     this.steerBullets(dt);
   },
+  // Laju tembak dan damage efektif: dasar dikali buff sementara dan upgrade permanen
+  interval() { return CONFIG.weapons.fireInterval / ((Buffs.overdrive > 0 ? CONFIG.buffs.overdrive.rate : 1) * Player.upgrades.fireRate); },
+  damage() { return Player.ship.stats.damage * (Buffs.destroyer > 0 ? CONFIG.buffs.destroyer.damage : 1) * Player.upgrades.damage; },
   // Peluru berpemandu lembut: kecepatan diputar sedikit ke arah posisi lead target
   steerBullets(dt) {
     const rate = CONFIG.weapons.aimAssist[Save.settings.aimAssist][1];
@@ -2561,7 +2609,8 @@ const Weapons = {
   tryFire() {
     const W = CONFIG.weapons;
     if (!Player.alive || this.cooldown > 0) return;   // cooldown antar tembakan
-    this.cooldown = Math.max(this.cooldown, -W.fireInterval) + W.fireInterval;
+    const interval = this.interval();
+    this.cooldown = Math.max(this.cooldown, -interval) + interval;
     const muzzles = Player.ship.muzzleVecs;
     const gun = muzzles[this.side % muzzles.length];
     this.side = (this.side + 1) % muzzles.length;                                        // laras bergantian
@@ -2569,7 +2618,10 @@ const Weapons = {
     // Arah ke titik temu di depan; bantuan bidik lembut membuat peluru sedikit melengkung ke target
     _vb.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance).sub(_va).normalize();
     const target = this.findAssistTarget();
-    const bi = this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, Player.ship.stats.damage);
+    const bi = this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, this.damage());
+    // Warna dan ukuran mengikuti buff aktif
+    this.pool.colorIdx[bi] = Buffs.destroyer > 0 ? 2 : Buffs.overdrive > 0 ? 1 : 0;
+    this.pool.sizes[bi] = Buffs.destroyer > 0 ? 1.45 : 1;
     this.pool.target[bi] = target ? Enemies.list.indexOf(target) : -1;
     this.shotsFired++;
     Events.emit('shot', _va, _vb);
@@ -2593,6 +2645,8 @@ const Weapons = {
     return best;
   },
 };
+
+Weapons.init();
 
 /* =====================================================================
    MUSUH - model, pool, AI sederhana, gelombang dan tembakan musuh
@@ -2705,11 +2759,16 @@ const Enemies = {
     const droneT = buildDroneModel(), gunT = buildGunshipModel();
     for (let i = 0; i < CONFIG.enemies.maxDrones; i++) this.list.push(new Enemy('drone', droneT));
     for (let i = 0; i < CONFIG.enemies.maxGunships; i++) this.list.push(new Enemy('gunship', gunT));
+    // Peluru musuh: bola bulat merah magenta gelap dengan halo, beda bentuk dan warna dari bolt pemain
     this.bullets = new BulletPool(
       CONFIG.enemies.maxBullets,
-      new THREE.BoxGeometry(0.5, 0.5, 3.0),
-      new THREE.MeshBasicMaterial({ color: 0xff6a3a })
+      new THREE.IcosahedronGeometry(0.55, 1),
+      new THREE.MeshBasicMaterial({ color: 0xff3c9a, fog: false }),
+      new THREE.MeshBasicMaterial({ color: 0xff1f6a, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
+      2.4
     );
+    this.bullets.palette = [new THREE.Color(0.9, 0.08, 0.4)];
+    this.bullets.glowScale.set(2.4, 2.4, 2.4);
   },
 
   reset() {
@@ -3348,6 +3407,7 @@ function updateCombat() {
 Events.on('enemyDestroyed', (e, byPlayer) => {
   if (!byPlayer) return;
   Game.kills++;
+  if (rand() < CONFIG.buffs.dropChanceEnemy) Pickups.place(rand() < 0.5 ? 'overdrive' : 'destroyer', e.pos.x, e.pos.y, e.pos.z);
   Combo.registerKill();
   addScore(Math.round(e.cfg.score * Combo.multiplier), e.type === 'drone' ? 'DRONE' : 'PENEMBAK');
 });
@@ -3357,6 +3417,7 @@ Events.on('asteroidDestroyed', (a, source) => {
   // Asteroid sedang dan besar kadang menjatuhkan pickup
   if (a.size !== 'small') {
     if (rand() < CONFIG.asteroids.dropChance) Pickups.place(rand() < 0.5 ? 'repair' : 'nitro', a.pos.x, a.pos.y, a.pos.z);
+    else if (rand() < CONFIG.buffs.dropChanceAsteroid) Pickups.place(rand() < 0.5 ? 'overdrive' : 'destroyer', a.pos.x, a.pos.y, a.pos.z);
   }
 });
 function addScore(amount, label) {
@@ -3699,6 +3760,14 @@ const Pickups = {
         const geo = new THREE.ExtrudeGeometry(h, { depth: 0.6, bevelEnabled: false, curveSegments: 6 });
         geo.translate(0, 0, -0.3);
         spin.add(new THREE.Mesh(geo, mat));
+      } else if (type === 'overdrive' || type === 'destroyer') {
+        // Kristal berputar: dua octahedron memanjang yang saling silang
+        const cg = new THREE.OctahedronGeometry(1.3, 0);
+        cg.scale(0.75, 1.5, 0.75);
+        const c1 = new THREE.Mesh(cg, mat), c2 = new THREE.Mesh(cg, mat);
+        c2.rotation.y = Math.PI / 4;
+        c2.scale.setScalar(0.7);
+        spin.add(c1, c2);
       } else {
         const can = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 1.9, 8), mat);
         const tip = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.9, 8), mat);
@@ -3718,6 +3787,8 @@ const Pickups = {
       this.items.push(make('repair', 0x46e07a, 0x0d4a1e));
       this.items.push(make('nitro', 0xff9a2a, 0x4a2400));
       this.items.push(make('heart', 0xff4f7a, 0x5a0a1e));
+      this.items.push(make('overdrive', 0xffb020, 0x6a3a00));
+      this.items.push(make('destroyer', 0xc040ff, 0x3a0a55));
     }
   },
 
@@ -3749,6 +3820,7 @@ const Pickups = {
       const wantRepair = Player.hp < 70 ? rand() < 0.65 : false;
       let type = wantRepair ? 'repair' : (rand() < 0.5 ? 'nitro' : 'repair');
       if (Player.lives < CONFIG.difficulty.maxLives) { if (rand() < PU.heartChance) type = 'heart'; }
+      if (rand() < 0.25) type = rand() < 0.5 ? 'overdrive' : 'destroyer';   // kristal buff tersebar
       this.spawnAhead(type);
       this.timer = randRange(PU.interval[0], PU.interval[1]);
     }
@@ -3765,8 +3837,9 @@ const Pickups = {
         this.collected++;
         if (it.type === 'repair') Player.heal(PU.repairAmount);
         else if (it.type === 'heart') Player.addLife();
+        else if (it.type === 'overdrive' || it.type === 'destroyer') Buffs.activate(it.type);
         else Player.addNitro(PU.nitroAmount);
-        addScore(50, it.type === 'repair' ? 'PERBAIKAN' : it.type === 'heart' ? 'NYAWA' : 'NITRO');
+        addScore(50, it.type === 'repair' ? 'PERBAIKAN' : it.type === 'heart' ? 'NYAWA' : it.type === 'nitro' ? 'NITRO' : CONFIG.buffs[it.type].label);
         Events.emit('pickup', it.type, it.group.position);
         continue;
       }
@@ -3776,6 +3849,19 @@ const Pickups = {
   },
 };
 Pickups.init();
+
+/* =====================================================================
+   BUFF SEMENTARA - OVERDRIVE (laju tembak) dan PENGHANCUR (damage), dari pickup kristal
+   ===================================================================== */
+const Buffs = {
+  overdrive: 0, destroyer: 0,   // sisa detik
+  reset() { this.overdrive = 0; this.destroyer = 0; },
+  activate(type) { this[type] = CONFIG.buffs.duration; Events.emit('buff', type); },
+  update(dt) {
+    if (this.overdrive > 0) this.overdrive = Math.max(0, this.overdrive - dt);
+    if (this.destroyer > 0) this.destroyer = Math.max(0, this.destroyer - dt);
+  },
+};
 
 /* =====================================================================
    COMBO - kill beruntun dalam jendela waktu singkat menaikkan multiplier
@@ -4039,6 +4125,14 @@ const FX = {
     }
     for (let k = 0; k < ne; k++) this.prevNozzle[k].copy(this.curNozzle[k]);
 
+    // Jejak pendek di belakang bolt plasma pemain
+    const pb = Weapons.pool;
+    for (let i = 0; i < pb.max; i++) {
+      if (!pb.active[i]) continue;
+      const i3 = i * 3, c = pb.palette[pb.colorIdx[i]];
+      this.fire.emit(pb.prev[i3], pb.prev[i3 + 1], pb.prev[i3 + 2], 0, 0, 0, 0.07, 1.1 * pb.sizes[i], -3, c.r, c.g, c.b, 0.6, 0, 0);
+    }
+
     // Jejak api kecil di belakang pesawat penembak
     const trail = this.take('enemy', 22, dt);
     if (trail > 0) {
@@ -4064,7 +4158,7 @@ FX.setViewport(renderer.domElement.height);
 // Efek berbasis event
 Events.on('shot', (pos, dir) => {
   const v = Player.vel;
-  FX.fire.emit(pos.x, pos.y, pos.z, v.x + dir.x * 20, v.y + dir.y * 20, v.z + dir.z * 20, 0.08, 2.6, 4, 0.55, 0.95, 1, 1, 0, 0);
+  FX.fire.emit(pos.x, pos.y, pos.z, v.x + dir.x * 20, v.y + dir.y * 20, v.z + dir.z * 20, 0.07, 2.8, 4, 1, 0.55, 0.2, 1, 0, 0);
 });
 Events.on('enemyTelegraph', (pos) => FX.fire.emit(pos.x, pos.y, pos.z, 0, 0, 0, 0.06, 1.6 + frand() * 1.2, 0, 1, 0.15, 0.25, 0.9, 0, 0));
 Events.on('enemyShot', (pos) => FX.fire.emit(pos.x, pos.y, pos.z, 0, 0, 0, 0.08, 2.2, 0, 1, 0.4, 0.2, 1, 0, 0));
@@ -4632,8 +4726,9 @@ Events.on('damage', (entity, dealt, source) => {
   hud.hitTimer = 0.14;
   hud.hitKill = entity.health.dead;
 });
-Events.on('pickup', (type) => showBanner(type === 'repair' ? 'PERBAIKAN' : type === 'heart' ? '+1 NYAWA' : 'NITRO PENUH', 1100));
+Events.on('pickup', (type) => { if (type === 'repair' || type === 'heart' || type === 'nitro') showBanner(type === 'repair' ? 'PERBAIKAN' : type === 'heart' ? '+1 NYAWA' : 'NITRO PENUH', 1100); });
 Events.on('playerRespawn', (lives) => showBanner(`NYAWA TERSISA ${lives}`, 1500));
+Events.on('buff', (type) => showBanner(CONFIG.buffs[type].label + '!', 1100));
 // Tulis ke DOM hanya bila nilainya berubah (tanpa closure per frame, tanpa layout berulang)
 function changed(key, value) {
   if (hud.last[key] === value) return false;
@@ -4695,6 +4790,14 @@ function updateHud(dt) {
   if (changed('rear', v)) $('rear-warn').classList.toggle('hidden', !v);
   updateManeuverHud();
   Touch.updateCooldowns();
+  for (const k of ['overdrive', 'destroyer']) {
+    const left = Math.ceil(Buffs[k]);
+    if (changed('buff' + k, left)) {
+      const el = hud.buffEls[k];
+      el.classList.toggle('hidden', left <= 0);
+      el.querySelector('b').textContent = left;
+    }
+  }
   updateDamageNumbers(dt);
   v = Game.state === 'playing' ? (Player.alive ? hp < CONFIG.player.criticalHp : false) : false;
   if (changed('critical', v)) $('critical').classList.toggle('hidden', !v);
@@ -4767,6 +4870,9 @@ function updateLeadMarker() {
   }
   if (changed('lead', show)) leadEl.classList.toggle('hidden', !show);
 }
+
+hud.buffEls = {};
+for (const el of document.querySelectorAll('#buffs .buff')) hud.buffEls[el.dataset.buff] = el;
 
 // Indikator cooldown manuver
 hud.mans = {};
@@ -4998,6 +5104,8 @@ function resetSession(keepWorld = false) {
   Rings.reset();
   Pickups.reset();
   Combo.reset();
+  Buffs.reset();
+  Player.upgrades.fireRate = 1; Player.upgrades.damage = 1;
   Metrics.reset();
   hud.vignetteLevel = 0;
   Game.hasSession = true;
@@ -5540,6 +5648,7 @@ function update(dt) {
     Enemies.update(dt);
     updateCombat();
     Combo.update(dt);
+    Buffs.update(dt);
     if (Player.alive) Game.score += CONFIG.score.perSecond * dt;
     else if (Player.lives > 0) {
       Player.respawnTimer -= dt;
@@ -5633,6 +5742,7 @@ window.__game = {
       maneuver: Player.maneuver ? Player.maneuver.type : null,
       deathCause: Game.deathCause,
       cooldowns: { ...Player.cooldowns },
+      buffs: { overdrive: round2(Buffs.overdrive), destroyer: round2(Buffs.destroyer) },
       highScore: HighScore.value,
       difficulty: Game.difficultyKey,
       world: Worlds.active.id,
@@ -5757,6 +5867,9 @@ window.__game = {
     enemySpeeds() {
       return { max: Math.max(0, ...Enemies.list.filter((e) => e.active).map((e) => e.vel.length())), limit: round2(Enemies.maxSpeed()), states: Enemies.list.filter((e) => e.active).map((e) => e.state) };
     },
+    activateBuff(type) { Buffs.activate(type); return true; },
+    fireRate() { return round2(1 / Weapons.interval()); },
+    bulletDamage() { return round2(Weapons.damage()); },
     forceManeuver(type, dir = 1) { return Player.startManeuver(type, dir, true); },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
     shootPlayer(dist = 60) {
