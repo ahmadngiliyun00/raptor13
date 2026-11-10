@@ -56,7 +56,7 @@ async function start(page, { seed = 1234, enemies = false, god = true } = {}) {
     window.__game.debug.setGod(g);
   }, [seed, enemies, god]);
   await page.click('#btn-start');
-  await expect.poll(async () => (await snap(page)).state).toBe('play');
+  await expect.poll(async () => (await snap(page)).state).toBe('playing');
 }
 
 async function hold(page, keys, ms) {
@@ -204,11 +204,12 @@ test('blur mereset tombol yang tertahan dan menjeda game', async ({ page }) => {
   await page.keyboard.down('KeyW');   // sengaja tidak dilepas sebelum blur
   await page.waitForTimeout(500);
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
-  expect((await snap(page)).state).toBe('pause');
+  expect((await snap(page)).state).toBe('paused');
   await page.evaluate(() => window.__game.resume());
-  await page.waitForTimeout(1500);
+  expect((await snap(page)).state).toBe('countdown');
+  await page.waitForTimeout(3600);
   const s = await snap(page);
-  expect(s.state).toBe('play');
+  expect(s.state).toBe('playing');
   expect(Math.abs(s.pitch)).toBeLessThan(0.1);   // W tidak "nyangkut"
   await page.keyboard.up('KeyW');
 });
@@ -218,26 +219,27 @@ test('P dan Esc menjeda serta melanjutkan, R mengulang', async ({ page }) => {
   await page.waitForTimeout(800);
   await page.keyboard.press('KeyP');
   const p0 = await snap(page);
-  expect(p0.state).toBe('pause');
+  expect(p0.state).toBe('paused');
   await expect(page.locator('#screen-pause')).toBeVisible();
   await page.waitForTimeout(600);
   const p1 = await snap(page);
   expect(p1.position).toEqual(p0.position);     // dunia berhenti saat jeda
   expect(p1.time).toBe(p0.time);
   await page.keyboard.press('Escape');
-  expect((await snap(page)).state).toBe('play');
+  expect((await snap(page)).state).toBe('countdown');   // lanjut lewat hitung mundur 3-2-1
   await expect(page.locator('#screen-pause')).toBeHidden();
+  await expect.poll(async () => (await snap(page)).state, { timeout: 5000 }).toBe('playing');
 
   await page.keyboard.press('Escape');
-  expect((await snap(page)).state).toBe('pause');
+  expect((await snap(page)).state).toBe('paused');
   await page.click('#btn-resume');
-  expect((await snap(page)).state).toBe('play');
+  await expect.poll(async () => (await snap(page)).state, { timeout: 5000 }).toBe('playing');
 
   await hold(page, ['Space', 'Enter'], 600);
   const before = await snap(page);
   await page.keyboard.press('KeyR');
   const after = await snap(page);
-  expect(after.state).toBe('play');
+  expect(after.state).toBe('playing');
   expect(after.time).toBeLessThan(before.time);
   expect(after.time).toBeLessThan(0.3);
   expect(after.shotsFired).toBe(0);
@@ -257,14 +259,15 @@ test('M mematikan dan menyalakan suara', async ({ page }) => {
 
 test('health 0 memicu ledakan dan layar game over, lalu bisa main lagi', async ({ page }) => {
   await start(page, { god: false });
-  await page.waitForTimeout(1000);
-  await dbg(page, 'damagePlayer', 40);
+  await page.waitForTimeout(800);   // skor bertambah dulu agar ada skor tertinggi untuk disimpan
+  await dbg(page, 'setLives', 1);
+  await dbg(page, 'forceDamagePlayer', 40);
   expect((await snap(page)).health).toBe(60);
-  await dbg(page, 'damagePlayer', 1000);
+  await dbg(page, 'forceDamagePlayer', 1000);
   const dying = await snap(page);
   expect(dying.health).toBe(0);
   expect(dying.alive).toBe(false);
-  expect(dying.state).toBe('dying');
+  expect(dying.lives).toBe(0);
   await expect.poll(async () => (await snap(page)).state, { timeout: 5000 }).toBe('gameover');
   await expect(page.locator('#screen-over')).toBeVisible();
   await expect(page.locator('#hud')).toBeHidden();
@@ -274,7 +277,7 @@ test('health 0 memicu ledakan dan layar game over, lalu bisa main lagi', async (
   expect(Number(stored)).toBeGreaterThan(0);
   await page.click('#btn-restart');
   const s = await snap(page);
-  expect(s.state).toBe('play');
+  expect(s.state).toBe('playing');
   expect(s.health).toBe(100);
 });
 
@@ -284,7 +287,8 @@ test('high score tetap aman bila localStorage melempar error', async ({ page }) 
     Storage.prototype.setItem = () => { throw new Error('diblokir'); };
   });
   await start(page, { god: false });
-  await dbg(page, 'damagePlayer', 1000);
+  await dbg(page, 'setLives', 1);
+  await dbg(page, 'forceDamagePlayer', 1000);
   await expect.poll(async () => (await snap(page)).state, { timeout: 5000 }).toBe('gameover');
   await expect(page.locator('#screen-over')).toBeVisible();
 });
@@ -300,7 +304,7 @@ test('cincin memberi skor dan nitro, pickup memulihkan health dan nitro', async 
   expect(s1.nitro).toBeGreaterThan(s0.nitro + 0.15);
 
   await dbg(page, 'setGod', false);
-  await dbg(page, 'damagePlayer', 50);
+  await dbg(page, 'forceDamagePlayer', 50);
   await dbg(page, 'setGod', true);
   expect((await snap(page)).health).toBe(50);
   expect(await dbg(page, 'placePickupAhead', 'repair', 90)).toBe(true);
@@ -365,14 +369,16 @@ test('tidak ada kebocoran objek setelah 10 kali restart', async ({ page }) => {
 
 test('simulasi 5 menit bermain: sumber daya dan biaya per langkah stabil', async ({ page }) => {
   await start(page, { enemies: true });
+  // Pemanasan: program shader dikompilasi saat jenis material pertama kali dirender
+  await dbg(page, 'simulate', 60);
   const r0 = await dbg(page, 'resources');
   const early = await dbg(page, 'simulate', 30);
   await dbg(page, 'simulate', 240);
   const late = await dbg(page, 'simulate', 30);
   const r1 = await dbg(page, 'resources');
   const s = await snap(page);
-  expect(s.state).toBe('play');
-  expect(s.time).toBeGreaterThanOrEqual(299);
+  expect(s.state).toBe('playing');
+  expect(s.time).toBeGreaterThanOrEqual(359);
   expect(s.wave).toBeGreaterThanOrEqual(4);
   expect(r1.sceneObjects).toBe(r0.sceneObjects);
   expect(r1.listeners).toBe(r0.listeners);
@@ -397,7 +403,7 @@ for (const q of ['rendah', 'tinggi']) {
     expect((await page.evaluate(() => window.__game.quality())).preset).toBe(q);
     await page.click('#btn-start');
     await page.waitForTimeout(1500);
-    expect((await snap(page)).state).toBe('play');
+    expect((await snap(page)).state).toBe('playing');
   });
 }
 
@@ -426,7 +432,8 @@ test('screenshot menu, gameplay dan game over', async ({ page }) => {
 
   // Game over
   await dbg(page, 'setGod', false);
-  await dbg(page, 'damagePlayer', 1000);
+  await dbg(page, 'setLives', 1);
+  await dbg(page, 'forceDamagePlayer', 1000);
   await expect.poll(async () => (await snap(page)).state, { timeout: 5000 }).toBe('gameover');
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${SHOT_DIR}gameover.png` });

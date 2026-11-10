@@ -4016,6 +4016,7 @@ window.__game = {
         textures: m.textures,
         programs: renderer.info.programs ? renderer.info.programs.length : 0,
         listeners: Object.keys(Events.map).reduce((n, k) => n + Events.map[k].length, 0),
+        listenerMap: Object.fromEntries(Object.keys(Events.map).map((k) => [k, Events.map[k].length])),
         heapMB: performance.memory ? round2(performance.memory.usedJSHeapSize / 1048576) : null,
       };
     },
