@@ -86,6 +86,46 @@
   }
   @media (max-width: 560px) { .controls { grid-template-columns: 1fr; } }
 
+  /* Menu utama: panel kiri, adegan 3D tetap terlihat di kanan */
+  .screen.menu {
+    align-items: flex-start; justify-content: center; padding: 24px 6vw;
+    background: linear-gradient(90deg, rgba(8, 14, 24, 0.82) 0%, rgba(8, 14, 24, 0.45) 42%, rgba(8, 14, 24, 0) 70%);
+    transition: opacity 0.8s ease;
+  }
+  .screen.menu.fade-out { opacity: 0; pointer-events: none; }
+  .menu-panel { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; text-align: left; max-width: 560px; }
+  .menu-panel .logo-wrap { align-items: flex-start; }
+  .menu-list { display: flex; flex-direction: column; gap: 10px; min-width: 260px; }
+  .menu-list .btn { width: 100%; text-align: left; }
+  .btn:focus-visible, .btn.focus { outline: 3px solid #fff; outline-offset: 3px; box-shadow: 0 0 0 6px rgba(255, 154, 60, 0.35); }
+  .keys-hint kbd { min-width: 22px; padding: 3px 5px; }
+  /* Kartu (Tentang, Pengaturan, dialog) */
+  .card {
+    display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 520px; width: 100%;
+    padding: 26px 30px; background: rgba(10, 18, 28, 0.86); border: 1px solid var(--ui-line); border-radius: 8px;
+  }
+  .card h2 .accent { color: var(--ui-accent); }
+  .version { margin: 0; color: var(--ui-dim); letter-spacing: 0.1em; }
+  .credits { display: grid; grid-template-columns: auto auto; gap: 6px 18px; margin: 0; text-align: left; }
+  .credits dt { color: var(--ui-dim); }
+  .credits dd { margin: 0; font-weight: 700; }
+  /* Toolbar pojok kanan atas */
+  #toolbar {
+    position: fixed; z-index: 40; display: flex; gap: 8px;
+    top: calc(14px + env(safe-area-inset-top)); right: calc(16px + env(safe-area-inset-right));
+  }
+  .tool {
+    display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 40px; height: 40px; padding: 0 8px;
+    color: var(--ui-fg); background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 6px; cursor: pointer;
+  }
+  .tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .tool svg path:first-child { fill: currentColor; }
+  .tool .cross { display: none; }
+  .tool[aria-pressed="true"] .wave { display: none; }
+  .tool[aria-pressed="true"] .cross { display: inline; stroke: var(--ui-bad); }
+  .tool.active { border-color: var(--ui-accent); color: var(--ui-accent); }
+  .tool:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
   /* Game over */
   .over-title { color: #ffb0a0; }
   .record { color: #ffd24a; font-weight: 800; letter-spacing: 0.3em; animation: pulse 0.9s ease-in-out infinite alternate; }
@@ -124,7 +164,7 @@
   #hearts svg path { fill: rgba(255, 255, 255, 0.12); stroke: rgba(255, 255, 255, 0.35); stroke-width: 1.5; }
   #hearts svg.on path { fill: #ff4f7a; stroke: #ffc0d0; }
   #hearts svg.lost { animation: pulse 0.25s ease-in-out 4 alternate; }
-  .hud-block.tr { top: 64px !important; }
+  .hud-block.tr { top: calc(64px + env(safe-area-inset-top)) !important; }
   #hp-fill { background: linear-gradient(90deg, #2fbf6a, #6ff09a); }
   #hp-bar.mid #hp-fill { background: linear-gradient(90deg, #d9a21b, #ffd24a); }
   #hp-bar.low #hp-fill { background: linear-gradient(90deg, #c22a2a, #ff5a4a); }
@@ -172,10 +212,7 @@
     background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 2px; overflow: hidden;
   }
   .hpfloat > i { display: block; height: 100%; background: #ffcf4a; transform-origin: left center; }
-  #mute-badge {
-    position: fixed; right: 16px; bottom: 96px; z-index: 30; padding: 4px 10px; font-size: 11px; letter-spacing: 0.16em;
-    background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 3px; color: var(--ui-dim);
-  }
+
   @media (max-width: 720px) {
     .hud-block.tl { width: 190px; }
     .hud-block.tc { top: 92px; }
@@ -252,35 +289,46 @@
   <div id="banner"></div>
   <div id="toasts"></div>
 </div>
-<div id="mute-badge" class="hidden">SUARA MATI (M)</div>
+<!-- Toolbar pojok kanan atas: tersedia di menu dan saat bermain -->
+<div id="toolbar" class="hidden">
+  <button id="btn-mute" class="tool" type="button" aria-label="Suara" aria-pressed="false" title="Suara (M)">
+    <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5c1.4 1 1.4 6 0 7M18.5 6c2.8 2.2 2.8 9.8 0 12"/><path class="cross" d="M16 9l5 6M21 9l-5 6"/></svg>
+  </button>
+</div>
 
-<!-- Layar judul -->
-<div id="screen-title" class="screen">
-  <div class="logo-wrap">
-    <div class="logo-mark"></div>
-    <h1 class="logo">RAPTOR<span>13</span></h1>
-    <p class="tagline">Superioritas udara dimulai dari sini.</p>
+<!-- Menu utama: latar adalah adegan 3D hidup (attract mode) -->
+<div id="screen-title" class="screen menu">
+  <div class="menu-panel">
+    <div class="logo-wrap">
+      <div class="logo-mark"></div>
+      <h1 class="logo">RAPTOR<span>13</span></h1>
+      <p class="tagline">Superioritas udara dimulai dari sini.</p>
+    </div>
+    <nav class="menu-list" aria-label="Menu utama">
+      <button id="btn-start" class="btn btn-big" type="button">MULAI</button>
+      <button id="btn-continue" class="btn hidden" type="button">LANJUTKAN</button>
+      <button id="btn-settings" class="btn secondary" type="button">PENGATURAN</button>
+      <button id="btn-about" class="btn secondary" type="button">TENTANG</button>
+    </nav>
+    <div class="title-foot"><span>Skor tertinggi: <b id="title-best">0</b></span></div>
+    <p class="hint keys-hint"><kbd>W</kbd><kbd>S</kbd> naik turun, <kbd>A</kbd><kbd>D</kbd> belok, <kbd>Spasi</kbd> nitro, <kbd>Enter</kbd> tembak, <kbd>P</kbd> jeda</p>
+    <p class="hint">Panah atas dan bawah untuk memilih, Enter untuk menekan</p>
   </div>
-  <button id="btn-start" class="btn btn-big" type="button">MULAI</button>
-  <div class="controls">
-    <div><kbd>W</kbd><kbd>S</kbd><span>Hidung naik dan turun</span></div>
-    <div><kbd>A</kbd><kbd>D</kbd><span>Belok sambil miring</span></div>
-    <div><kbd>Spasi</kbd><span>Tahan untuk nitro</span></div>
-    <div><kbd>Enter</kbd><span>Tahan untuk menembak</span></div>
-    <div><kbd>P</kbd><kbd>Esc</kbd><span>Jeda</span></div>
-    <div><kbd>R</kbd><span>Ulang dari awal</span></div>
-    <div><kbd>M</kbd><span>Suara hidup atau mati</span></div>
-    <div><span style="margin-left:0">Lewati gerbang emas untuk bonus</span></div>
-  </div>
-  <div class="title-foot">
-    <span>Skor tertinggi: <b id="title-best">0</b></span>
-    <label>Kualitas:
-      <select id="quality-select">
-        <option value="rendah">Rendah</option>
-        <option value="sedang">Sedang</option>
-        <option value="tinggi">Tinggi</option>
-      </select>
-    </label>
+</div>
+
+<!-- Tentang -->
+<div id="screen-about" class="screen hidden">
+  <div class="card">
+    <h2>RAPTOR<span class="accent">13</span></h2>
+    <p class="version">Versi <span id="about-version"></span></p>
+    <dl class="credits">
+      <dt>Dibuat oleh</dt><dd>Ahmad Ngiliyun</dd>
+      <dt>Dibuat dengan bantuan</dt><dd>Claude Code</dd>
+      <dt>Mesin grafis</dt><dd>Three.js r187 (versi 0.187.0)</dd>
+    </dl>
+    <p class="hint">Seluruh visual dan suara dibuat secara prosedural: geometri, tekstur, langit dan suara
+      disusun oleh kode saat game berjalan, tanpa file model, gambar, atau audio.</p>
+    <button id="btn-about-back" class="btn" type="button">KEMBALI</button>
   </div>
 </div>
 
@@ -306,6 +354,7 @@
     <span>Gerbang dilewati</span><b id="go-rings">0</b>
   </div>
   <button id="btn-restart" class="btn" type="button">MAIN LAGI</button>
+  <button id="btn-over-menu" class="btn secondary" type="button">MENU UTAMA</button>
   <p class="hint">atau tekan <kbd>R</kbd> atau <kbd>Enter</kbd></p>
 </div>
 
@@ -326,6 +375,7 @@ const CONFIG = {
   maxDelta: 0.05,              // batas atas delta time per frame (detik)
   version: '1.1.0',
   countdownTime: 3,            // detik hitung mundur setelah jeda
+  startTransition: 1.5,        // detik transisi kamera dari menu ke permainan
   // Tabel kesulitan: memengaruhi damage yang diterima pemain, HP musuh dan asteroid,
   // laju spawn, laju tembak musuh, dan jumlah nyawa awal
   difficulty: {
@@ -1232,6 +1282,16 @@ const Player = {
     this.model.root.visible = true;
     Enemies.bullets.reset();     // adil: peluru musuh yang sedang terbang dihapus
     Events.emit('playerRespawn', this.lives);
+  },
+
+  // Awal sesi dari attract mode: posisi dan arah dipertahankan agar tidak ada lompatan
+  resetForSession() {
+    const C = CONFIG.player;
+    this.health.reset(C.maxHealth);
+    this.alive = true;
+    this.nitro = 1; this.nitroLock = 0; this.nitroRegenWait = 0; this.nitroActive = false;
+    this.invuln = 0; this.spawnInvuln = 0; this.respawnTimer = 0; this.warning = false;
+    this.model.root.visible = true;
   },
 
   addLife() { this.lives = Math.min(CONFIG.difficulty.maxLives, this.lives + 1); },
@@ -3164,6 +3224,9 @@ const CamRig = {
       const b = this.blend;
       camera.position.lerpVectors(this.cinePos, this.chasePos, b);
       camera.quaternion.slerpQuaternions(this.cineQuat, this.chaseQuat, b);
+      // Jalur blending tidak boleh menembus medan
+      const minY = groundHeightAt(camera.position.x, camera.position.z) + 3;
+      if (camera.position.y < minY) camera.position.y = minY;
     }
 
     // Getar: kombinasi sinus berfrekuensi berbeda, lebih halus dari jitter acak
@@ -3688,19 +3751,31 @@ const ui = {
   title: document.getElementById('screen-title'),
   pause: document.getElementById('screen-pause'),
   over: document.getElementById('screen-over'),
+  about: document.getElementById('screen-about'),
+  toolbar: document.getElementById('toolbar'),
   btnStart: document.getElementById('btn-start'),
+  btnContinue: document.getElementById('btn-continue'),
+  btnSettings: document.getElementById('btn-settings'),
+  btnAbout: document.getElementById('btn-about'),
+  btnAboutBack: document.getElementById('btn-about-back'),
   btnResume: document.getElementById('btn-resume'),
   btnPauseRestart: document.getElementById('btn-pause-restart'),
   btnRestart: document.getElementById('btn-restart'),
-  quality: document.getElementById('quality-select'),
-  muteBadge: document.getElementById('mute-badge'),
+  btnOverMenu: document.getElementById('btn-over-menu'),
+  btnMute: document.getElementById('btn-mute'),
 };
 
 const Game = {
   state: 'boot',
   difficultyKey: CONFIG.difficulty.default,
   get diff() { return CONFIG.difficulty.levels[this.difficultyKey]; },
-  get simulating() { return this.state === 'menu' || this.state === 'starting' || this.state === 'playing'; },
+  hasSession: false,  // ada sesi permainan yang masih bisa dilanjutkan (dijeda lalu ke menu)
+  attractTime: 0,     // jam autopilot attract mode (tidak di-reset saat ganti state agar mulus)
+  // Menu tanpa sesi menjalankan attract mode; menu dengan sesi dijeda membekukan dunia
+  get simulating() {
+    if (this.state === 'menu') return !this.hasSession;
+    return this.state === 'starting' || this.state === 'playing';
+  },
   deathTimer: 0,    // hitungan setelah pesawat terakhir meledak sebelum layar game over
   time: 0,          // waktu bermain sesi ini (detik)
   stateTime: 0,     // lama berada di state sekarang
@@ -3715,42 +3790,131 @@ function setState(next) {
   const prev = Game.state;
   Game.state = next;
   Game.stateTime = 0;
+  UI.closeOverlay(true);
   document.getElementById('screen-boot').classList.toggle('hidden', next !== 'boot');
-  ui.title.classList.toggle('hidden', next !== 'menu');
+  // Saat starting, menu tetap tampil sambil memudar lalu disembunyikan oleh update
+  if (next !== 'starting') { ui.title.classList.toggle('hidden', next !== 'menu'); ui.title.classList.remove('fade-out'); }
+  if (next === 'menu') ui.btnContinue.classList.toggle('hidden', !Game.hasSession);
   ui.pause.classList.toggle('hidden', next !== 'paused');
   ui.over.classList.toggle('hidden', next !== 'gameover');
-  document.getElementById('hud').classList.toggle('hidden', next === 'menu' || next === 'gameover' || next === 'boot' || next === 'preview');
+  const hudOn = next === 'playing' || next === 'paused' || next === 'countdown' || next === 'starting';
+  document.getElementById('hud').classList.toggle('hidden', !hudOn);
+  ui.toolbar.classList.toggle('hidden', next === 'boot' || next === 'preview');
+  if (next === 'menu') document.getElementById('title-best').textContent = fmtInt(HighScore.value);
   Events.emit('state', next, prev);
+  UI.focusFirst();
 }
 
-// Reset seluruh state sesi tanpa membuat ulang objek (semua pool dipakai ulang)
-function resetSession() {
+/* Overlay (Tentang, Pengaturan, dialog) di atas layar dasar (menu atau jeda) */
+const UI = {
+  overlay: null,
+  base() { return Game.state === 'menu' ? ui.title : Game.state === 'paused' ? ui.pause : null; },
+  openOverlay(el) {
+    if (this.overlay) this.overlay.classList.add('hidden');
+    this.overlay = el;
+    el.classList.remove('hidden');
+    const b = this.base();
+    if (b) b.classList.add('hidden');
+    this.focusFirst();
+  },
+  closeOverlay(silent) {
+    if (!this.overlay) return;
+    this.overlay.classList.add('hidden');
+    this.overlay = null;
+    if (silent) return;
+    const b = this.base();
+    if (b) b.classList.remove('hidden');
+    this.focusFirst();
+  },
+  // Layar aktif yang tombolnya bisa dinavigasi dengan keyboard
+  activeScreen() {
+    if (this.overlay) return this.overlay;
+    if (Game.state === 'menu') return ui.title;
+    if (Game.state === 'paused') return ui.pause;
+    if (Game.state === 'gameover') return ui.over;
+    return null;
+  },
+  buttons(root) {
+    return Array.from(root.querySelectorAll('button')).filter((b) => b.offsetParent !== null);
+  },
+  // Fokus tombol pertama hanya bila pengguna sedang memakai keyboard (agar sorotan tidak mengganggu klik)
+  usingKeyboard: false,
+  focusFirst() {
+    if (!this.usingKeyboard) return;
+    const root = this.activeScreen();
+    if (!root) return;
+    const b = this.buttons(root)[0];
+    if (b) b.focus();
+  },
+  moveFocus(dir) {
+    const root = this.activeScreen();
+    if (!root) return false;
+    const list = this.buttons(root);
+    if (!list.length) return false;
+    const i = list.indexOf(document.activeElement);
+    const next = i < 0 ? (dir > 0 ? 0 : list.length - 1) : (i + dir + list.length) % list.length;
+    list[next].focus();
+    return true;
+  },
+};
+
+const chooseSeed = () => (Debug.fixedSeed !== null ? Debug.fixedSeed
+  : CONFIG.randomSeedPerRun ? (Math.random() * 4294967296) >>> 0 : CONFIG.seed);
+
+// Dunia baru untuk attract mode atau sesi baru (semua pool dipakai ulang, tidak ada objek baru)
+function resetWorld(seed) {
+  Game.seed = seed;
+  rand.reseed(seed);
+  World.reset(seed);
+  Player.reset();
+  Asteroids.reset();
+  Enemies.reset();
+  FX.reset();
+  Game.attractTime = 0;
+}
+
+// Statistik dan sistem sesi. keepWorld = true dipakai saat mulai dari attract mode
+// agar posisi pesawat dan dunia tidak melompat.
+function resetSession(keepWorld = false) {
   Game.time = 0;
   Game.score = 0;
   Game.kills = 0;
   Game.deathTimer = 0;
-  Game.seed = Debug.fixedSeed !== null ? Debug.fixedSeed
-    : CONFIG.randomSeedPerRun ? (Math.random() * 4294967296) >>> 0 : CONFIG.seed;
-  rand.reseed(Game.seed);
-  World.reset(Game.seed);
-  Player.reset();
+  if (keepWorld) Player.resetForSession(); else resetWorld(chooseSeed());
   Player.lives = Game.diff.lives;
   Player.spawnInvuln = CONFIG.player.startInvuln;
   Weapons.reset();
   Enemies.reset();
-  Asteroids.reset();
   Waves.reset();
   Rings.reset();
   Pickups.reset();
   Combo.reset();
-  FX.reset();
-  CamRig.reset();
   hud.vignetteLevel = 0;
+  Game.hasSession = true;
 }
 
+// MULAI dari menu: UI memudar, kamera sinematik berpindah mulus ke chase, pesawat lepas dari autopilot
 function startGame() {
-  resetSession();
-  setState('playing');
+  if (Game.hasSession) { Game.hasSession = false; resetWorld(chooseSeed()); }
+  resetSession(true);
+  setState('starting');
+  ui.title.classList.add('fade-out');
+  CamRig.setMode('chase', CONFIG.startTransition);
+  showBanner('SIAP...', 1500);
+}
+
+// LANJUTKAN dari menu: kamera kembali ke chase sambil hitung mundur
+function continueGame() {
+  if (!Game.hasSession) return;
+  CamRig.setMode('chase', 1.2);
+  setState('countdown');
+}
+
+// Kembali ke menu utama; dari jeda sesi tetap bisa dilanjutkan, dari game over dunia baru dibuat
+function goToMenu() {
+  if (Game.state === 'gameover') { Game.hasSession = false; resetWorld(chooseSeed()); CamRig.setMode('cinematic'); }
+  else CamRig.setMode('cinematic', 1.2);
+  setState('menu');
 }
 
 function togglePause() {
@@ -3759,23 +3923,34 @@ function togglePause() {
   else if (Game.state === 'countdown') setState('paused');
 }
 
+// MULAI ULANG: dunia dan sesi baru, kamera langsung chase
 function restartGame() {
-  if (Game.state === 'menu' || Game.state === 'boot') return;
-  startGame();
+  if (Game.state === 'menu' || Game.state === 'boot' || Game.state === 'starting') return;
+  resetSession(false);
+  CamRig.reset();
+  CamRig.setMode('chase');
+  setState('playing');
+  showBanner('TERBANG!', 1000);
 }
 
-ui.btnStart.addEventListener('click', () => { ui.btnStart.blur(); onAudioGesture(); startGame(); });
-ui.btnResume.addEventListener('click', () => { ui.btnResume.blur(); togglePause(); });
-ui.btnRestart.addEventListener('click', () => { ui.btnRestart.blur(); onAudioGesture(); restartGame(); });
-ui.btnPauseRestart.addEventListener('click', () => { ui.btnPauseRestart.blur(); restartGame(); });
-
-// Pilihan kualitas memuat ulang halaman dengan parameter ?kualitas=
-ui.quality.value = CONFIG.qualityPreset;
-ui.quality.addEventListener('change', () => {
-  const url = new URL(window.location.href);
-  url.searchParams.set('kualitas', ui.quality.value);
-  window.location.href = url.toString();
-});
+// Setiap klik tombol: lepaskan fokus agar Enter dan Spasi tidak memicu klik ulang
+function onButton(btn, fn) {
+  btn.addEventListener('click', () => {
+    if (document.activeElement) document.activeElement.blur();
+    onAudioGesture();
+    fn();
+  });
+}
+onButton(ui.btnStart, startGame);
+onButton(ui.btnContinue, continueGame);
+onButton(ui.btnAbout, () => UI.openOverlay(ui.about));
+onButton(ui.btnAboutBack, () => UI.closeOverlay());
+onButton(ui.btnResume, togglePause);
+onButton(ui.btnRestart, restartGame);
+onButton(ui.btnPauseRestart, restartGame);
+onButton(ui.btnOverMenu, goToMenu);
+onButton(ui.btnMute, toggleMute);
+document.getElementById('about-version').textContent = CONFIG.version;
 document.getElementById('title-best').textContent = fmtInt(HighScore.value);
 
 // Isi layar game over dan simpan skor tertinggi
@@ -3833,8 +4008,28 @@ Controls.addSource(Keyboard);
 const PREVENT_CODES = new Set(['Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
-// Navigasi menu dengan keyboard (diisi bagian MENU); mengembalikan true bila tombol sudah ditangani
-let menuKeyHandler = () => false;
+// Navigasi menu dengan keyboard: panah atas dan bawah memilih, Enter menekan, Esc menutup overlay.
+// Mengembalikan true bila tombol sudah ditangani.
+function menuKeyHandler(code) {
+  const root = UI.activeScreen();
+  if (!root) return false;
+  UI.usingKeyboard = true;
+  if (code === 'ArrowUp') return UI.moveFocus(-1);
+  if (code === 'ArrowDown') return UI.moveFocus(1);
+  if (code === 'Escape') {
+    if (UI.overlay) { UI.closeOverlay(); return true; }
+    return false;
+  }
+  if (code === 'Enter' || code === 'NumpadEnter') {
+    if (Game.state === 'gameover') { if (Game.stateTime < 1.0) return true; }   // cegah tembakan ikut menekan
+    const list = UI.buttons(root);
+    const target = list.includes(document.activeElement) ? document.activeElement : list[0];
+    if (target) target.click();
+    return true;
+  }
+  return false;
+}
+window.addEventListener('pointerdown', () => { UI.usingKeyboard = false; }, { passive: true });
 
 function onKeyDown(e) {
   if (!GAME_CODES.has(e.code)) return;
@@ -3853,12 +4048,6 @@ function onKeyDown(e) {
       break;
     case 'KeyM':
       toggleMute();
-      break;
-    case 'Enter':
-    case 'NumpadEnter':
-      // Enter di layar judul atau game over langsung memulai (jeda singkat agar tembakan tidak ikut restart)
-      if (Game.state === 'menu') startGame();
-      else if (Game.state === 'gameover') { if (Game.stateTime > 1.0) restartGame(); }
       break;
   }
 }
@@ -3887,7 +4076,7 @@ document.addEventListener('visibilitychange', onVisibility);
 // Mute global lewat master gain
 function toggleMute() {
   Game.muted = !Game.muted;
-  ui.muteBadge.classList.toggle('hidden', !Game.muted);
+  ui.btnMute.setAttribute('aria-pressed', String(Game.muted));
   Sfx.setMuted(Game.muted);
 }
 
@@ -3964,8 +4153,17 @@ function update(dt) {
         Events.emit('gameover');
       }
     }
+  } else if (Game.state === 'starting') {
+    Game.attractTime += dt;
+    Player.autopilot(dt, Game.attractTime);
+    if (Game.stateTime >= 0.8) ui.title.classList.add('hidden');
+    if (Game.stateTime >= CONFIG.startTransition) {
+      setState('playing');
+      Player.spawnInvuln = CONFIG.player.startInvuln;
+      showBanner('TERBANG!', 1000);
+    }
   } else if (Game.state === 'menu') {
-    Player.autopilot(dt, Game.stateTime);
+    if (!Game.hasSession) { Game.attractTime += dt; Player.autopilot(dt, Game.attractTime); }
   }
   if (Game.simulating) {
     Player.updateVisuals(dt, Game.stateTime);
@@ -3973,6 +4171,8 @@ function update(dt) {
     World.update(Player.pos.x, Player.pos.z);
     Clouds.update(dt, Player.pos.x, Player.pos.z);
     Asteroids.update(dt);
+  }
+  if (Game.state !== 'paused') {
     CamRig.update(dt);
     Env.update();
   }
@@ -4034,8 +4234,20 @@ window.__game = {
     };
   },
   // Kunci seed dunia dan gameplay; berlaku pada sesi berikutnya (start atau restart)
-  setSeed(n) { Debug.fixedSeed = n === null ? null : (n >>> 0); },
-  start() { if (Game.state === 'menu' || Game.state === 'gameover') startGame(); },
+  // Kunci seed dunia dan gameplay. Di menu tanpa sesi, dunia attract langsung dibangun ulang.
+  setSeed(n) {
+    Debug.fixedSeed = n === null ? null : (n >>> 0);
+    if (Game.state === 'menu') { if (!Game.hasSession) resetWorld(chooseSeed()); }
+  },
+  start() { if (Game.state === 'menu') startGame(); },
+  // Lewati transisi mulai (untuk uji): langsung ke state playing
+  skipTransition() {
+    if (Game.state !== 'starting') return;
+    ui.title.classList.add('hidden');
+    CamRig.setMode('chase');
+    setState('playing');
+    Player.spawnInvuln = CONFIG.player.startInvuln;
+  },
   restart() { restartGame(); },
   pause() { if (Game.state === 'playing') togglePause(); },
   resume() { if (Game.state === 'paused') togglePause(); },
