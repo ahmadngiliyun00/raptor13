@@ -44,6 +44,7 @@
   .btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
   .btn.secondary { background: transparent; color: var(--ui-fg); border: 1px solid var(--ui-line); box-shadow: none; font-size: 14px; padding: 12px 26px; }
   .btn-big { font-size: 22px; padding: 18px 56px; }
+  .boot-text { letter-spacing: 0.4em; color: var(--ui-dim); font-weight: 700; animation: blink 0.8s steps(2) infinite; }
   .hint { margin: 0; color: var(--ui-dim); font-size: 13px; letter-spacing: 0.04em; }
   kbd {
     display: inline-block; min-width: 26px; padding: 4px 7px; margin-right: 4px;
@@ -183,6 +184,9 @@
 <body>
 <div id="game"></div>
 
+<!-- Layar boot: tampil sampai modul dan dunia siap -->
+<div id="screen-boot" class="screen"><div class="boot-text">MEMUAT RAPTOR13...</div></div>
+
 <!-- HUD (elemen DOM di atas canvas) -->
 <div id="hud" class="hidden">
   <div id="vignette"></div>
@@ -289,6 +293,19 @@ const QUALITY_PRESETS = {
 const CONFIG = {
   qualityPreset: 'sedang',     // rendah | sedang | tinggi (bisa ditimpa lewat ?kualitas=)
   maxDelta: 0.05,              // batas atas delta time per frame (detik)
+  version: '1.1.0',
+  countdownTime: 3,            // detik hitung mundur setelah jeda
+  // Tabel kesulitan: memengaruhi damage yang diterima pemain, HP musuh dan asteroid,
+  // laju spawn, laju tembak musuh, dan jumlah nyawa awal
+  difficulty: {
+    default: 'normal',
+    maxLives: 5,
+    levels: {
+      mudah:  { label: 'Mudah',  lives: 5, damageTaken: 0.7,  enemyHp: 0.8, spawnRate: 0.8,  enemyFire: 0.8 },
+      normal: { label: 'Normal', lives: 3, damageTaken: 1.0,  enemyHp: 1.0, spawnRate: 1.0,  enemyFire: 1.0 },
+      sulit:  { label: 'Sulit',  lives: 2, damageTaken: 1.35, enemyHp: 1.3, spawnRate: 1.25, enemyFire: 1.2 },
+    },
+  },
   seed: 1337,                  // seed dunia di layar judul
   randomSeedPerRun: true,      // tiap sesi main memakai seed baru (kecuali dikunci lewat __game.setSeed)
   camera: {
@@ -798,7 +815,7 @@ const Player = {
   heal(amount) { this.health = Math.min(CONFIG.player.maxHealth, this.health + amount); },
 
   damage(amount, source) {
-    if (!this.alive || Debug.god || Game.state !== 'play') return;
+    if (!this.alive || Debug.god || Game.state !== 'playing') return;
     this.health = Math.max(0, this.health - amount);
     CamRig.addTrauma(clamp(amount / 30, 0.3, 0.9));
     Events.emit('playerHit', amount, source);
@@ -811,7 +828,7 @@ const Player = {
     this.model.root.visible = false;
     CamRig.addTrauma(1);
     Events.emit('playerDeath', this.pos);
-    setState('dying');
+    Game.deathTimer = 0;
   },
 
   // Api mesin, glow dan cahaya mengikuti intensitas nitro
@@ -2271,7 +2288,7 @@ const FX = {
   },
 
   update(dt) {
-    if (Game.state === 'play' || Game.state === 'menu') this.updateEmitters(dt);
+    if (Game.simulating) this.updateEmitters(dt);
     this.fire.update(dt);
     this.smoke.update(dt);
   },
@@ -2438,7 +2455,7 @@ const Sfx = {
 
   update(dt) {
     if (!this.ready) return;
-    const A = CONFIG.audio, on = Game.state === 'play' ? Player.alive : false;
+    const A = CONFIG.audio, on = Game.state === 'playing' ? Player.alive : false;
     const nf = Player.nitroFx;
     const sn = clamp((Player.speed - 40) / 100, 0, 1);
     const f = 52 + sn * 60 + nf * 18;
@@ -2676,7 +2693,7 @@ function updateHud(dt) {
   if (changed('kills', v)) hud.kills.textContent = v;
   v = Enemies.alive;
   if (changed('enemies', v)) hud.enemies.textContent = v;
-  v = Game.state === 'play' ? Player.warning : false;
+  v = Game.state === 'playing' ? Player.warning : false;
   if (changed('warning', v)) hud.warning.classList.toggle('hidden', !v);
 
   // Vignette merah: kilat saat kena, berdenyut saat kesehatan rendah
@@ -2730,7 +2747,8 @@ function updateIndicators() {
 }
 
 /* =====================================================================
-   GAME STATE - menu, play, pause, dying, gameover
+   GAME STATE - boot, menu, starting, playing, paused, countdown, gameover
+   Simulasi dunia hanya berjalan di menu, starting dan playing.
    ===================================================================== */
 const ui = {
   title: document.getElementById('screen-title'),
@@ -2745,7 +2763,11 @@ const ui = {
 };
 
 const Game = {
-  state: 'menu',
+  state: 'boot',
+  difficultyKey: CONFIG.difficulty.default,
+  get diff() { return CONFIG.difficulty.levels[this.difficultyKey]; },
+  get simulating() { return this.state === 'menu' || this.state === 'starting' || this.state === 'playing'; },
+  deathTimer: 0,    // hitungan setelah pesawat terakhir meledak sebelum layar game over
   time: 0,          // waktu bermain sesi ini (detik)
   stateTime: 0,     // lama berada di state sekarang
   frame: 0,
@@ -2756,12 +2778,15 @@ const Game = {
 };
 
 function setState(next) {
+  const prev = Game.state;
   Game.state = next;
   Game.stateTime = 0;
+  document.getElementById('screen-boot').classList.toggle('hidden', next !== 'boot');
   ui.title.classList.toggle('hidden', next !== 'menu');
-  ui.pause.classList.toggle('hidden', next !== 'pause');
+  ui.pause.classList.toggle('hidden', next !== 'paused');
   ui.over.classList.toggle('hidden', next !== 'gameover');
-  document.getElementById('hud').classList.toggle('hidden', next === 'menu' || next === 'gameover');
+  document.getElementById('hud').classList.toggle('hidden', next === 'menu' || next === 'gameover' || next === 'boot');
+  Events.emit('state', next, prev);
 }
 
 // Reset seluruh state sesi tanpa membuat ulang objek (semua pool dipakai ulang)
@@ -2769,6 +2794,7 @@ function resetSession() {
   Game.time = 0;
   Game.score = 0;
   Game.kills = 0;
+  Game.deathTimer = 0;
   Game.seed = Debug.fixedSeed !== null ? Debug.fixedSeed
     : CONFIG.randomSeedPerRun ? (Math.random() * 4294967296) >>> 0 : CONFIG.seed;
   rand.reseed(Game.seed);
@@ -2787,16 +2813,17 @@ function resetSession() {
 
 function startGame() {
   resetSession();
-  setState('play');
+  setState('playing');
 }
 
 function togglePause() {
-  if (Game.state === 'play') setState('pause');
-  else if (Game.state === 'pause') setState('play');
+  if (Game.state === 'playing') setState('paused');
+  else if (Game.state === 'paused') setState('countdown');
+  else if (Game.state === 'countdown') setState('paused');
 }
 
 function restartGame() {
-  if (Game.state === 'menu') return;
+  if (Game.state === 'menu' || Game.state === 'boot') return;
   startGame();
 }
 
@@ -2880,11 +2907,11 @@ function onKeyUp(e) {
 // Reset semua tombol saat jendela kehilangan fokus agar tidak ada tombol "nyangkut"
 function onBlur() {
   Input.reset();
-  if (Game.state === 'play') setState('pause');
+  if (Game.state === 'playing') setState('paused');
 }
 function onVisibility() {
   Input.reset();
-  if (document.hidden) { if (Game.state === 'play') setState('pause'); }
+  if (document.hidden) { if (Game.state === 'playing') setState('paused'); }
 }
 
 window.addEventListener('keydown', onKeyDown);
@@ -2938,7 +2965,10 @@ let lastDt = 0;
 function update(dt) {
   lastDt = dt;
   Game.stateTime += dt;
-  if (Game.state === 'play') {
+  if (Game.state === 'countdown') {
+    // Hitung mundur sebelum simulasi berjalan lagi
+    if (Game.stateTime >= CONFIG.countdownTime) setState('playing');
+  } else if (Game.state === 'playing') {
     Game.time += dt;
     let ctl = Input;
     if (Debug.autoInput) { AutoInput.update(Game.time); ctl = AutoInput; }
@@ -2952,19 +2982,19 @@ function update(dt) {
     Enemies.update(dt);
     updateCombat();
     Combo.update(dt);
-    Game.score += CONFIG.score.perSecond * dt;
-  } else if (Game.state === 'dying') {
-    // Pesawat sudah meledak: dunia tetap berjalan sebentar sebelum layar game over
-    Weapons.update(dt, false);
-    Enemies.update(dt);
-    if (Game.stateTime > 1.8) {
-      setState('gameover');
-      Events.emit('gameover');
+    if (Player.alive) Game.score += CONFIG.score.perSecond * dt;
+    else {
+      // Pesawat terakhir sudah meledak: dunia tetap berjalan sebentar sebelum layar game over
+      Game.deathTimer += dt;
+      if (Game.deathTimer > 1.8) {
+        setState('gameover');
+        Events.emit('gameover');
+      }
     }
   } else if (Game.state === 'menu') {
     Player.autopilot(dt, Game.stateTime);
   }
-  if (Game.state !== 'pause') {
+  if (Game.simulating) {
     Player.updateVisuals(dt, Game.stateTime);
     FX.update(dt);
     World.update(Player.pos.x, Player.pos.z);
@@ -2977,7 +3007,7 @@ function update(dt) {
 function render() {
   Weapons.pool.sync();
   Enemies.bullets.sync();
-  if (Game.state !== 'menu') updateHud(lastDt);
+  if (Game.state !== 'menu') { if (Game.state !== 'boot') updateHud(lastDt); }
   renderer.render(scene, camera);
 }
 
@@ -3020,15 +3050,15 @@ window.__game = {
       warning: Player.warning,
       invulnerable: Player.invuln > 0,
       highScore: HighScore.value,
-      overlay: Game.state === 'menu' ? 'title' : Game.state === 'pause' ? 'pause' : Game.state === 'gameover' ? 'gameover' : 'none',
+      difficulty: Game.difficultyKey,
     };
   },
   // Kunci seed dunia dan gameplay; berlaku pada sesi berikutnya (start atau restart)
   setSeed(n) { Debug.fixedSeed = n === null ? null : (n >>> 0); },
   start() { if (Game.state === 'menu' || Game.state === 'gameover') startGame(); },
   restart() { restartGame(); },
-  pause() { if (Game.state === 'play') togglePause(); },
-  resume() { if (Game.state === 'pause') togglePause(); },
+  pause() { if (Game.state === 'playing') togglePause(); },
+  resume() { if (Game.state === 'paused') togglePause(); },
   dispose() { disposeGame(); },
   quality() { return { preset: CONFIG.qualityPreset, ...Q }; },
   debug: {
@@ -3053,12 +3083,12 @@ window.__game = {
     // Simulasi cepat dengan langkah tetap 1/60 detik (pengendali otomatis, mode kebal).
     // Merender setiap renderEvery langkah agar jalur render ikut teruji. Mengembalikan ms per langkah.
     simulate(seconds = 10, renderEvery = 30) {
-      if (Game.state !== 'play') return null;
+      if (Game.state !== 'playing') return null;
       const steps = Math.round(seconds * 60), godBefore = Debug.god;
       Debug.god = true; Debug.autoInput = true;
       const t0 = performance.now();
       for (let i = 0; i < steps; i++) {
-        if (Game.state !== 'play') break;
+        if (Game.state !== 'playing') break;
         update(1 / 60);
         if (renderEvery > 0) { if (i % renderEvery === 0) render(); }
       }
@@ -3108,6 +3138,8 @@ function frame(now) {
   rafId = requestAnimationFrame(frame);
 }
 rafId = requestAnimationFrame(frame);
+// Boot selesai setelah frame pertama dirender: dunia sudah dibangun dan shader dikompilasi
+requestAnimationFrame(() => requestAnimationFrame(() => { if (Game.state === 'boot') setState('menu'); }));
 
 // Teardown penuh (misalnya saat game disematkan lalu dilepas). Restart biasa TIDAK memakai ini:
 // restart hanya me-reset pool yang sama sehingga tidak ada objek, listener atau timer yang menumpuk.
