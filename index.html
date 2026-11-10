@@ -324,6 +324,7 @@ function onResize() {
   renderer.setSize(w, h);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
+  if (typeof FX !== 'undefined') FX.setViewport(renderer.domElement.height);
 }
 window.addEventListener('resize', onResize);
 
@@ -1771,6 +1772,276 @@ const Combo = {
 };
 
 /* =====================================================================
+   PARTIKEL - dua sistem Points (additive untuk api, normal untuk asap)
+   dengan buffer ring berukuran tetap. Random kosmetik memakai Math.random
+   agar tidak mengganggu urutan RNG gameplay.
+   ===================================================================== */
+const frand = Math.random;
+const PARTICLE_VERT = /* glsl */`
+  attribute float aSize;
+  attribute float aAlpha;
+  attribute vec3 aColor;
+  uniform float uViewportH;
+  uniform float uFogNear;
+  uniform float uFogFar;
+  varying vec3 vColor;
+  varying float vAlpha;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    float dist = max(-mv.z, 0.1);
+    gl_PointSize = aSize > 0.0 ? min(aSize * projectionMatrix[1][1] * uViewportH * 0.5 / dist, 256.0) : 0.0;
+    vColor = aColor;
+    vAlpha = aAlpha * (1.0 - smoothstep(uFogNear, uFogFar, dist)) * smoothstep(3.0, 12.0, dist);
+  }`;
+const PARTICLE_FRAG = /* glsl */`
+  uniform float uSoft;
+  varying vec3 vColor;
+  varying float vAlpha;
+  void main() {
+    vec2 c = gl_PointCoord - 0.5;
+    float d = dot(c, c) * 4.0;
+    if (d > 1.0 || vAlpha <= 0.0) discard;
+    float a = pow(1.0 - d, uSoft);
+    gl_FragColor = vec4(vColor, a * vAlpha);
+  }`;
+
+class ParticleSystem {
+  constructor(max, additive) {
+    this.max = max;
+    this.pos = new Float32Array(max * 3);
+    this.vel = new Float32Array(max * 3);
+    this.col = new Float32Array(max * 3);
+    this.size = new Float32Array(max);
+    this.alpha = new Float32Array(max);
+    this.life = new Float32Array(max);
+    this.maxLife = new Float32Array(max);
+    this.grow = new Float32Array(max);
+    this.alpha0 = new Float32Array(max);
+    this.drag = new Float32Array(max);
+    this.grav = new Float32Array(max);
+    this.cursor = 0;
+    this.alive = 0;
+    this.colorDirty = false;
+    const geo = new THREE.BufferGeometry();
+    const dyn = (arr, n) => new THREE.BufferAttribute(arr, n).setUsage(THREE.DynamicDrawUsage);
+    this.aPos = dyn(this.pos, 3); this.aCol = dyn(this.col, 3); this.aSize = dyn(this.size, 1); this.aAlpha = dyn(this.alpha, 1);
+    geo.setAttribute('position', this.aPos);
+    geo.setAttribute('aColor', this.aCol);
+    geo.setAttribute('aSize', this.aSize);
+    geo.setAttribute('aAlpha', this.aAlpha);
+    this.material = new THREE.ShaderMaterial({
+      uniforms: {
+        uViewportH: { value: 720 },
+        uFogNear: { value: scene.fog.near },
+        uFogFar: { value: scene.fog.far },
+        uSoft: { value: additive ? 2.0 : 1.2 },
+      },
+      vertexShader: PARTICLE_VERT,
+      fragmentShader: PARTICLE_FRAG,
+      transparent: true,
+      depthWrite: false,
+      blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    });
+    this.points = new THREE.Points(geo, this.material);
+    this.points.frustumCulled = false;
+    this.points.renderOrder = additive ? 3 : 2;
+    scene.add(this.points);
+  }
+
+  emit(x, y, z, vx, vy, vz, life, size, grow, r, g, b, alpha, drag, grav) {
+    const i = this.cursor;
+    this.cursor = (i + 1) % this.max;   // buffer ring: menimpa partikel tertua bila penuh
+    const i3 = i * 3;
+    this.pos[i3] = x; this.pos[i3 + 1] = y; this.pos[i3 + 2] = z;
+    this.vel[i3] = vx; this.vel[i3 + 1] = vy; this.vel[i3 + 2] = vz;
+    this.col[i3] = r; this.col[i3 + 1] = g; this.col[i3 + 2] = b;
+    this.life[i] = life; this.maxLife[i] = life;
+    this.size[i] = size; this.grow[i] = grow;
+    this.alpha0[i] = alpha; this.alpha[i] = 0;
+    this.drag[i] = drag; this.grav[i] = grav;
+    this.colorDirty = true;
+  }
+
+  update(dt) {
+    const P = this.pos, V = this.vel;
+    let alive = 0;
+    for (let i = 0; i < this.max; i++) {
+      if (this.life[i] <= 0) continue;
+      this.life[i] -= dt;
+      if (this.life[i] <= 0) { this.size[i] = 0; this.alpha[i] = 0; continue; }
+      alive++;
+      const i3 = i * 3, k = 1 / (1 + this.drag[i] * dt);
+      V[i3] *= k; V[i3 + 1] = V[i3 + 1] * k - this.grav[i] * dt; V[i3 + 2] *= k;
+      P[i3] += V[i3] * dt; P[i3 + 1] += V[i3 + 1] * dt; P[i3 + 2] += V[i3 + 2] * dt;
+      this.size[i] += this.grow[i] * dt;
+      const t = this.life[i] / this.maxLife[i];   // 1 saat lahir, 0 saat mati
+      this.alpha[i] = this.alpha0[i] * Math.min(1, t * 2.5) * Math.min(1, (1 - t) * 12);
+    }
+    this.alive = alive;
+    this.aPos.needsUpdate = true; this.aSize.needsUpdate = true; this.aAlpha.needsUpdate = true;
+    if (this.colorDirty) { this.aCol.needsUpdate = true; this.colorDirty = false; }
+  }
+
+  setViewport(h) { this.material.uniforms.uViewportH.value = h; }
+
+  reset() {
+    this.life.fill(0); this.size.fill(0); this.alpha.fill(0);
+    this.alive = 0; this.cursor = 0;
+    this.aSize.needsUpdate = true; this.aAlpha.needsUpdate = true;
+  }
+}
+
+const FX = {
+  fire: new ParticleSystem(Math.round(Q.maxParticles * 0.6), true),
+  smoke: new ParticleSystem(Math.round(Q.maxParticles * 0.4), false),
+  density: Q.particleDensity,
+  acc: { flame: 0, smoke: 0, vapor: 0, damage: 0, enemy: 0 },
+  prevNozzle: [new THREE.Vector3(), new THREE.Vector3()],
+  curNozzle: [new THREE.Vector3(), new THREE.Vector3()],
+  hasPrev: false,
+
+  count(n) { return Math.max(1, Math.round(n * this.density)); },
+  reset() { this.fire.reset(); this.smoke.reset(); this.hasPrev = false; for (const k in this.acc) this.acc[k] = 0; },
+  setViewport(h) { this.fire.setViewport(h); this.smoke.setViewport(h); },
+  // Ambil jumlah partikel dari akumulator laju (partikel per detik), tidak bergantung frame rate
+  take(key, rate, dt) {
+    this.acc[key] += rate * this.density * dt;
+    const n = Math.floor(this.acc[key]);
+    this.acc[key] -= n;
+    return n;
+  },
+
+  explosion(x, y, z, s) {
+    const F = this.fire, S = this.smoke;
+    F.emit(x, y, z, 0, 0, 0, 0.16, 9 * s, 8 * s, 1, 0.85, 0.6, 0.7, 0, 0);
+    for (let i = 0, n = this.count(22 * s); i < n; i++) {
+      const sp = (7 + frand() * 20) * s;
+      const vx = frand() * 2 - 1, vy = frand() * 2 - 1, vz = frand() * 2 - 1, l = Math.hypot(vx, vy, vz) || 1;
+      const hot = frand();
+      F.emit(x, y, z, vx / l * sp, vy / l * sp, vz / l * sp, 0.4 + frand() * 0.5, (1.8 + frand() * 1.4) * s, 4 * s,
+        1, 0.35 + hot * 0.35, 0.06 + hot * 0.12, 0.55, 2.5, -2);
+    }
+    for (let i = 0, n = this.count(16 * s); i < n; i++) {
+      const sp = (4 + frand() * 10) * s;
+      const vx = frand() * 2 - 1, vy = frand() * 2 - 1, vz = frand() * 2 - 1, l = Math.hypot(vx, vy, vz) || 1;
+      const g = 0.22 + frand() * 0.14;
+      S.emit(x, y, z, vx / l * sp, vy / l * sp, vz / l * sp, 1.3 + frand() * 1.0, 3 * s, 6 * s, g, g, g * 1.05, 0.6, 1.8, -4);
+    }
+    for (let i = 0, n = this.count(14 * s); i < n; i++) {
+      const sp = 25 + frand() * 35;
+      const vx = frand() * 2 - 1, vy = frand() * 1.5 - 0.3, vz = frand() * 2 - 1, l = Math.hypot(vx, vy, vz) || 1;
+      F.emit(x, y, z, vx / l * sp, vy / l * sp, vz / l * sp, 0.6 + frand() * 0.5, 0.7, 0, 1, 0.7, 0.3, 1, 0.8, 30);
+    }
+  },
+
+  sparks(x, y, z, n, r = 1, g = 0.85, b = 0.45) {
+    for (let i = 0, c = this.count(n); i < c; i++) {
+      const sp = 12 + frand() * 22;
+      const vx = frand() * 2 - 1, vy = frand() * 2 - 1, vz = frand() * 2 - 1, l = Math.hypot(vx, vy, vz) || 1;
+      this.fire.emit(x, y, z, vx / l * sp, vy / l * sp, vz / l * sp, 0.18 + frand() * 0.15, 0.55, 0, r, g, b, 1, 1.5, 15);
+    }
+  },
+
+  // Emisi kontinu: api dan asap mesin, uap ujung sayap saat nitro, asap saat rusak, jejak musuh
+  updateEmitters(dt) {
+    const m = PlayerModel, q = m.root.quaternion, P = Player.pos, f = Player.forward, nf = Player.nitroFx;
+    for (let k = 0; k < 2; k++) this.curNozzle[k].copy(m.nozzles[k]).applyQuaternion(q).add(P);
+    if (!this.hasPrev) { this.prevNozzle[0].copy(this.curNozzle[0]); this.prevNozzle[1].copy(this.curNozzle[1]); this.hasPrev = true; }
+
+    if (Player.alive) {
+      // Api mesin: lebih banyak, lebih besar dan lebih panjang umur saat nitro (jejak lebih panjang).
+      // Partikel membawa sebagian kecepatan pesawat agar jejak berakhir sebelum mencapai kamera.
+      const flames = this.take('flame', 50 + 230 * nf, dt);
+      const pv = Player.vel;
+      for (let i = 0; i < flames; i++) {
+        const k = i & 1, t = frand();
+        const a = this.prevNozzle[k], b = this.curNozzle[k];
+        const hot = frand();
+        this.fire.emit(
+          a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t,
+          pv.x * 0.7 - f.x * 12 + (frand() - 0.5) * 2, pv.y * 0.7 - f.y * 12 + (frand() - 0.5) * 2, pv.z * 0.7 - f.z * 12 + (frand() - 0.5) * 2,
+          0.06 + 0.17 * nf * (0.7 + frand() * 0.6), 0.7 + 0.8 * nf, -0.5,
+          1, 0.45 + 0.3 * hot + 0.1 * nf, 0.1 + 0.2 * nf * hot, 0.6, 0, 0);
+      }
+      const puffs = this.take('smoke', 26 + 40 * nf, dt);
+      for (let i = 0; i < puffs; i++) {
+        const k = i & 1, t = frand();
+        const a = this.prevNozzle[k], b = this.curNozzle[k];
+        const g = 0.62 + frand() * 0.12;
+        this.smoke.emit(
+          a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t,
+          -f.x * 6 + (frand() - 0.5) * 2, -f.y * 6 + (frand() - 0.5) * 2 + 0.5, -f.z * 6 + (frand() - 0.5) * 2,
+          0.9 + frand() * 0.7, 0.9, 3.2, g, g, g * 1.04, 0.16, 1.2, -0.5);
+      }
+      if (nf > 0.3) {
+        const vapor = this.take('vapor', 70 * nf, dt);
+        for (let i = 0; i < vapor; i++) {
+          _va.copy(m.wingtips[i & 1]).applyQuaternion(q).add(P);
+          this.fire.emit(_va.x, _va.y, _va.z, 0, 0, 0, 0.35 + frand() * 0.2, 0.32, 0.5, 0.75, 0.82, 0.9, 0.35 * nf, 0, 0);
+        }
+      }
+      if (Player.health < 35) {
+        const dmg = this.take('damage', 30 * (1 - Player.health / 35) + 6, dt);
+        for (let i = 0; i < dmg; i++) {
+          this.smoke.emit(P.x + (frand() - 0.5) * 1.5, P.y + 0.4, P.z + (frand() - 0.5) * 1.5,
+            -f.x * 4, 1.5, -f.z * 4, 1.2 + frand(), 1.2, 4, 0.12, 0.12, 0.13, 0.5, 1.0, -1);
+        }
+      }
+    }
+    this.prevNozzle[0].copy(this.curNozzle[0]);
+    this.prevNozzle[1].copy(this.curNozzle[1]);
+
+    // Jejak api kecil di belakang pesawat penembak
+    const trail = this.take('enemy', 22, dt);
+    if (trail > 0) {
+      for (const e of Enemies.list) {
+        if (!e.active || e.type !== 'gunship') continue;
+        for (let i = 0; i < trail; i++) {
+          this.fire.emit(e.pos.x - e.dir.x * 3.4, e.pos.y - e.dir.y * 3.4, e.pos.z - e.dir.z * 3.4,
+            -e.dir.x * 10, -e.dir.y * 10, -e.dir.z * 10, 0.18, 1.0, -1, 1, 0.45, 0.15, 0.8, 1, 0);
+        }
+      }
+    }
+  },
+
+  update(dt) {
+    if (Game.state === 'play' || Game.state === 'menu') this.updateEmitters(dt);
+    this.fire.update(dt);
+    this.smoke.update(dt);
+  },
+};
+FX.setViewport(renderer.domElement.height);
+
+// Efek berbasis event
+Events.on('shot', (pos, dir) => {
+  const v = Player.vel;
+  FX.fire.emit(pos.x, pos.y, pos.z, v.x + dir.x * 20, v.y + dir.y * 20, v.z + dir.z * 20, 0.06, 1.6, 0, 1, 0.92, 0.65, 1, 0, 0);
+});
+Events.on('enemyShot', (pos) => FX.fire.emit(pos.x, pos.y, pos.z, 0, 0, 0, 0.08, 2.2, 0, 1, 0.4, 0.2, 1, 0, 0));
+Events.on('enemyHit', (x, y, z) => FX.sparks(x, y, z, 9));
+Events.on('bulletImpact', (x, y, z) => {
+  FX.sparks(x, y, z, 6, 1, 0.75, 0.4);
+  FX.smoke.emit(x, y, z, 0, 2, 0, 0.8, 1.5, 3, 0.55, 0.52, 0.48, 0.35, 1, -1);
+});
+Events.on('enemyDestroyed', (e) => FX.explosion(e.pos.x, e.pos.y, e.pos.z, e.type === 'drone' ? 1 : 1.5));
+Events.on('playerDeath', (p) => {
+  FX.explosion(p.x, p.y, p.z, 1.8);
+  FX.explosion(p.x + 2, p.y + 1, p.z - 2, 1.0);
+});
+Events.on('crash', (p) => FX.sparks(p.x, p.y - 1, p.z, 18, 1, 0.8, 0.5));
+const ringBurst = (pos, n, r, g, b) => {
+  for (let i = 0, c = FX.count(n); i < c; i++) {
+    const a = frand() * Math.PI * 2, sp = 6 + frand() * 10;
+    const ox = Math.cos(a), oy = Math.sin(a);
+    FX.fire.emit(pos.x + ox * 6, pos.y + oy * 6, pos.z + (frand() - 0.5) * 2,
+      ox * sp, oy * sp, (frand() - 0.5) * 6, 0.5 + frand() * 0.4, 1.0, 0.5, r, g, b, 1, 1.5, 0);
+  }
+};
+Events.on('ringPassed', (pos) => ringBurst(pos, 40, 1, 0.8, 0.3));
+Events.on('pickup', (type, pos) => (type === 'repair' ? ringBurst(pos, 30, 0.35, 1, 0.5) : ringBurst(pos, 30, 1, 0.6, 0.15)));
+
+/* =====================================================================
    KAMERA CHASE - lag pada rotasi (bukan posisi) agar jarak ke pesawat stabil
    di kecepatan berapa pun, FOV melebar saat nitro, dan getaran berbasis trauma
    ===================================================================== */
@@ -1874,6 +2145,7 @@ function resetSession() {
   Rings.reset();
   Pickups.reset();
   Combo.reset();
+  FX.reset();
   CamRig.reset();
 }
 
@@ -2027,6 +2299,7 @@ function update(dt) {
   }
   if (Game.state !== 'pause') {
     Player.updateVisuals(dt, Game.stateTime);
+    FX.update(dt);
     World.update(Player.pos.x, Player.pos.z);
     CamRig.update(dt);
     Env.update();
@@ -2066,6 +2339,7 @@ window.__game = {
       enemies: Enemies.alive,
       playerBullets: Weapons.pool.alive,
       enemyBullets: Enemies.bullets.alive,
+      particles: FX.fire.alive + FX.smoke.alive,
       shotsFired: Weapons.shotsFired,
       muted: Game.muted,
       multiplier: Combo.multiplier,
