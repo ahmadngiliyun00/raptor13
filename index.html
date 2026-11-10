@@ -433,7 +433,7 @@ const CONFIG = {
 (() => {
   try {
     const q = new URLSearchParams(location.search).get('kualitas');
-    if (q && QUALITY_PRESETS[q]) CONFIG.qualityPreset = q;
+    if (Object.hasOwn(QUALITY_PRESETS, q || '')) CONFIG.qualityPreset = q;
   } catch (err) { /* abaikan, pakai default */ }
 })();
 const Q = QUALITY_PRESETS[CONFIG.qualityPreset];
@@ -747,11 +747,11 @@ const Player = {
 
     // Plafon: hidung dipaksa turun saat mendekati ketinggian maksimum
     const ceilRoom = C.maxAltitude - this.pos.y;
-    if (ceilRoom < 25 && targetPitch > 0) targetPitch *= clamp(ceilRoom / 25, 0, 1);
+    if (targetPitch > 0) targetPitch *= clamp(ceilRoom / 25, 0, 1);
     if (ceilRoom <= 0) targetPitch = Math.min(targetPitch, -0.12);
     // Lantai: tidak bisa menukik di bawah ketinggian minimum di atas air
     const floorY = CONFIG.world.waterLevel + C.minAltitude;
-    if (this.pos.y < floorY + 10 && targetPitch < 0) targetPitch *= clamp((this.pos.y - floorY) / 10, 0, 1);
+    if (targetPitch < 0) targetPitch *= clamp((this.pos.y - floorY) / 10, 0, 1);
 
     this.pitch = damp(this.pitch, targetPitch, C.pitchResponse, dt);
     this.roll = damp(this.roll, yawIn * C.maxRoll, C.rollResponse, dt);
@@ -779,7 +779,8 @@ const Player = {
   updateNitro(dt, want) {
     const N = CONFIG.nitro;
     if (this.nitroLock > 0) this.nitroLock = Math.max(0, this.nitroLock - dt);
-    this.nitroActive = want && this.alive && this.nitroLock <= 0 && this.nitro > 0;
+    this.nitroActive = !!want;
+    if (!this.alive || this.nitroLock > 0 || this.nitro <= 0) this.nitroActive = false;
     if (this.nitroActive) {
       this.nitro -= N.drainPerSec * dt;
       this.nitroRegenWait = N.regenDelay;
@@ -856,7 +857,7 @@ class SimplexNoise2D {
     const p = new Uint8Array(256);
     for (let i = 0; i < 256; i++) p[i] = i;
     for (let i = 255; i > 0; i--) { const j = Math.floor(random() * (i + 1)); const t = p[i]; p[i] = p[j]; p[j] = t; }
-    for (let i = 0; i < 512; i++) { this.perm[i] = p[i & 255]; this.pmod[i] = this.perm[i] & 7; }
+    for (let i = 0; i < 512; i++) { this.perm[i] = p[i % 256]; this.pmod[i] = this.perm[i] % 8; }
   }
   noise(xin, yin) {
     const perm = this.perm, pmod = this.pmod;
@@ -867,7 +868,9 @@ class SimplexNoise2D {
     const i1 = x0 > y0 ? 1 : 0, j1 = 1 - i1;
     const x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
     const x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
-    const ii = i & 255, jj = j & 255;
+    let ii = i % 256, jj = j % 256;          // indeks permutasi positif 0..255
+    if (ii < 0) ii += 256;
+    if (jj < 0) jj += 256;
     let n = 0, tt, g;
     tt = 0.5 - x0 * x0 - y0 * y0;
     if (tt > 0) { g = pmod[ii + perm[jj]]; tt *= tt; n += tt * tt * (GRAD_X[g] * x0 + GRAD_Y[g] * y0); }
@@ -957,7 +960,7 @@ const World = {
     if (i < 0) i = 0; if (j < 0) j = 0;
     const fx = lx - i, fz = lz - j;
     let h00, h10, h01, h11;
-    if (slot.built && slot.cx === cx && slot.cz === cz) {
+    if (this.holds(slot, cx, cz)) {
       const H = slot.heights, w = S + 1;
       h00 = H[j * w + i]; h10 = H[j * w + i + 1]; h01 = H[(j + 1) * w + i]; h11 = H[(j + 1) * w + i + 1];
     } else {
@@ -971,12 +974,18 @@ const World = {
     return h00 + (h10 - h00) * fx + (h11 - h10) * fz;
   },
 
+  // Slot sudah berisi potong (cx, cz) yang diminta
+  holds(slot, cx, cz) {
+    if (!slot.built || slot.cx !== cx) return false;
+    return slot.cz === cz;
+  },
+
   colorFor(h, ny, jitter, out) {
     const P = this.palette;
     let c;
     if (h < -1.5) c = P.seabed;
     else if (h < 3.5) c = P.sand;
-    else if (h > 128 && ny > 0.62) c = P.snow;
+    else if (h > 128 ? ny > 0.62 : false) c = P.snow;
     else if (ny < 0.74) c = h > 100 ? P.rockHigh : P.rockDark;
     else if (h > 105) c = P.rockHigh;
     else if (h > 80) c = P.rock;
@@ -1033,7 +1042,8 @@ const World = {
     const C = this.C, N = this.N, R = this.R;
     const bx = Math.floor(px / C) - R, bz = Math.floor(pz / C) - R;
     let budget = force ? Infinity : CONFIG.world.rebuildsPerFrame;
-    for (let k = 0; k < this.slots.length && budget > 0; k++) {
+    for (let k = 0; k < this.slots.length; k++) {
+      if (budget <= 0) break;
       const slot = this.slots[k];
       const i = k % N, j = (k - i) / N;
       const cx = bx + imod(i - bx, N), cz = bz + imod(j - bz, N);
@@ -1259,27 +1269,29 @@ const Weapons = {
   shotsFired: 0,
   reset() { this.cooldown = 0; this.side = 0; this.shotsFired = 0; this.pool.reset(); },
   update(dt, firing) {
-    const W = CONFIG.weapons;
     this.cooldown -= dt;
-    if (firing && Player.alive && this.cooldown <= 0) {
-      this.cooldown = Math.max(this.cooldown, -W.fireInterval) + W.fireInterval;
-      const gun = PlayerModel.guns[this.side];
-      this.side ^= 1;
-      _va.copy(gun).applyQuaternion(PlayerModel.root.quaternion).add(Player.pos);           // posisi laras
-      const target = this.findAssistTarget();
-      if (target) {
-        // Aim assist: arahkan ke posisi musuh yang diprediksi saat peluru tiba
-        const t = Math.sqrt(target.pos.distanceToSquared(_va)) / (W.bulletSpeed + Player.speed);
-        _vb.copy(target.vel).multiplyScalar(t).add(target.pos).sub(_va).normalize();
-      } else {
-        _vb.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance).sub(_va).normalize(); // arah ke titik temu
-      }
-      this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, W.damage);
-      this.shotsFired++;
-      Events.emit('shot', _va, _vb);
-    }
-    if (!firing && this.cooldown < 0) this.cooldown = 0;
+    if (firing) this.tryFire();
+    else this.cooldown = Math.max(this.cooldown, 0);
     this.pool.update(dt);
+  },
+  tryFire() {
+    const W = CONFIG.weapons;
+    if (!Player.alive || this.cooldown > 0) return;   // cooldown antar tembakan
+    this.cooldown = Math.max(this.cooldown, -W.fireInterval) + W.fireInterval;
+    const gun = PlayerModel.guns[this.side];
+    this.side ^= 1;
+    _va.copy(gun).applyQuaternion(PlayerModel.root.quaternion).add(Player.pos);           // posisi laras
+    const target = this.findAssistTarget();
+    if (target) {
+      // Aim assist: arahkan ke posisi musuh yang diprediksi saat peluru tiba
+      const t = Math.sqrt(target.pos.distanceToSquared(_va)) / (W.bulletSpeed + Player.speed);
+      _vb.copy(target.vel).multiplyScalar(t).add(target.pos).sub(_va).normalize();
+    } else {
+      _vb.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance).sub(_va).normalize(); // arah ke titik temu
+    }
+    this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, W.damage);
+    this.shotsFired++;
+    Events.emit('shot', _va, _vb);
   },
   // Musuh dengan sudut terkecil terhadap arah hidung, di dalam kerucut aim assist
   findAssistTarget() {
@@ -1382,6 +1394,16 @@ class Enemy {
   }
 }
 
+// Slot pool pertama yang tidak aktif dengan tipe tertentu
+function findFree(items, type) {
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (it.active || it.type !== type) continue;
+    return it;
+  }
+  return null;
+}
+
 const _toP = new THREE.Vector3();
 const _desired = new THREE.Vector3();
 const _prevDir = new THREE.Vector3();
@@ -1409,7 +1431,7 @@ const Enemies = {
   },
 
   spawn(type, x, y, z) {
-    const e = this.list.find((en) => !en.active && en.type === type);
+    const e = findFree(this.list, type);
     if (!e) return null;
     e.active = true;
     e.group.visible = true;
@@ -1539,7 +1561,8 @@ const Enemies = {
 
     // Menembak saat pemain ada di kerucut depan dan dalam jangkauan, dalam semburan pendek
     e.fireCd -= dt;
-    if (e.state === 'attack' && dist < c.fireRange && Player.alive && e.fireCd <= 0) {
+    const canShoot = !(e.state !== 'attack' || dist >= c.fireRange || !Player.alive || e.fireCd > 0);
+    if (canShoot) {
       const facing = (e.dir.x * _toP.x + e.dir.y * _toP.y + e.dir.z * _toP.z) / Math.max(dist, 0.001);
       if (facing > Math.cos(c.fireCone)) {
         const t = dist / c.bulletSpeed;
@@ -1600,13 +1623,15 @@ const Waves = {
     this.waveTime += dt;
     this.spawnTimer -= dt;
     const rem = this.remDrones + this.remGunships;
-    if (rem > 0 && this.spawnTimer <= 0) {
-      const pickGun = this.remGunships > 0 && (this.remDrones === 0 || rand() < this.remGunships / rem);
+    if (rem > 0 ? this.spawnTimer <= 0 : false) {
+      let pickGun = false;
+      if (this.remGunships > 0) pickGun = this.remDrones === 0 || rand() < this.remGunships / rem;
       const e = Enemies.spawnAhead(pickGun ? 'gunship' : 'drone');
       if (e) { if (pickGun) this.remGunships--; else this.remDrones--; }
       this.spawnTimer = W.spawnInterval / Math.sqrt(this.difficulty);
     }
-    if ((rem === 0 && Enemies.alive === 0) || this.waveTime > W.maxDuration) {
+    const cleared = rem + Enemies.alive === 0;
+    if (cleared || this.waveTime > W.maxDuration) {
       this.phase = 'break';
       this.timer = W.breakTime;
       Events.emit('waveCleared', this.wave);
@@ -1640,7 +1665,8 @@ function updateCombat() {
         break;
       }
     }
-    if (!hit && (by < groundHeightAt(bx, bz) || Obstacles.collide(bx, by, bz, 0) >= 0)) {
+    if (hit) continue;
+    if (by < groundHeightAt(bx, bz) || Obstacles.collide(bx, by, bz, 0) >= 0) {
       pb.kill(i);
       Events.emit('bulletImpact', bx, by, bz);
     }
@@ -1652,11 +1678,13 @@ function updateCombat() {
     if (!eb.active[i]) continue;
     const i3 = i * 3;
     const bx = eb.p[i3], by = eb.p[i3 + 1], bz = eb.p[i3 + 2];
-    if (Player.alive && segmentHitsSphere(eb.prev[i3], eb.prev[i3 + 1], eb.prev[i3 + 2], bx, by, bz, P.x, P.y, P.z, pr)) {
-      eb.kill(i);
-      Events.emit('bulletImpact', bx, by, bz);
-      Player.damage(eb.dmg[i], 'peluru');
-      continue;
+    if (Player.alive) {
+      if (segmentHitsSphere(eb.prev[i3], eb.prev[i3 + 1], eb.prev[i3 + 2], bx, by, bz, P.x, P.y, P.z, pr)) {
+        eb.kill(i);
+        Events.emit('bulletImpact', bx, by, bz);
+        Player.damage(eb.dmg[i], 'peluru');
+        continue;
+      }
     }
     if (by < groundHeightAt(bx, bz)) eb.kill(i);
   }
@@ -1721,7 +1749,7 @@ const Obstacles = {
         const x = cx * C + (0.15 + 0.7 * hash3(cx, cz, 20 + k)) * C;
         const z = cz * C + (0.15 + 0.7 * hash3(cx, cz, 30 + k)) * C;
         const ground = World.heightAt(x, z);
-        if (ground > 4 && ground < 95) {
+        if (ground > 4 ? ground < 95 : false) {
           const base = ground - 4, height = 45 + 70 * hash3(cx, cz, 40 + k), radius = 6 + 5 * hash3(cx, cz, 50 + k);
           this.data[d] = x; this.data[d + 1] = z; this.data[d + 2] = base; this.data[d + 3] = height; this.data[d + 4] = radius;
           this._quat.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, hash3(cx, cz, 60 + k) * Math.PI);
@@ -1744,7 +1772,8 @@ const Obstacles = {
       const dx = x - D[d], dz = z - D[d + 1];
       const t = clamp((y - D[d + 2]) / D[d + 3], 0, 1);
       const rr = radius * (1 - 0.45 * t) + r;
-      if (dx * dx + dz * dz < rr * rr && y < D[d + 2] + D[d + 3] + r) return d;
+      if (y >= D[d + 2] + D[d + 3] + r) continue;
+      if (dx * dx + dz * dz < rr * rr) return d;
     }
     return -1;
   },
@@ -1783,12 +1812,13 @@ function updateTerrainCollision(dt) {
 
   // Prediksi jalur di depan untuk peringatan "TARIK NAIK"
   let warn = false;
-  for (let k = 1; k <= 3 && !warn; k++) {
+  for (let k = 1; k <= 3; k++) {
     const dist = (O.warnAhead / 3) * k;
     const x = P.x + Player.forward.x * dist, y = P.y + Player.forward.y * dist, z = P.z + Player.forward.z * dist;
-    if (y - World.heightAt(x, z) < 6) warn = true;
+    if (y - World.heightAt(x, z) < 6) { warn = true; break; }
   }
-  Player.warning = warn || (P.y - ground < 12 && ground > CONFIG.world.waterLevel + 1);
+  const lowOverLand = ground > CONFIG.world.waterLevel + 1 ? P.y - ground < 12 : false;
+  Player.warning = warn || lowOverLand;
 }
 
 /* =====================================================================
@@ -1812,8 +1842,7 @@ const Rings = {
     });
     for (let i = 0; i < R.maxActive + 1; i++) {
       const g = new THREE.Group();
-      const ring = new THREE.Mesh(torus, matRing);
-      ring.castShadow = true;
+      const ring = new THREE.Mesh(torus, matRing);   // tidak cast shadow: shadow hanya untuk pesawat
       g.add(ring, new THREE.Mesh(disc, matDisc));
       g.visible = false;
       scene.add(g);
@@ -1848,7 +1877,8 @@ const Rings = {
   spawnNext() {
     const R = CONFIG.rings;
     let ax, ay, az, yaw;
-    if (this.hasLast && this.activeCount() > 0) {
+    const chained = this.hasLast ? this.activeCount() > 0 : false;
+    if (chained) {
       ax = this.lastPos.x; ay = this.lastPos.y; az = this.lastPos.z; yaw = this.lastYaw + randRange(-0.45, 0.45);
     } else {
       ax = Player.pos.x; ay = Player.pos.y; az = Player.pos.z; yaw = Player.yaw + randRange(-0.3, 0.3);
@@ -1871,7 +1901,8 @@ const Rings = {
       g.children[0].rotation.z += dt * 0.6;
       const rx = P.x - g.position.x, ry = P.y - g.position.y, rz = P.z - g.position.z;
       const side = rx * it.normal.x + rz * it.normal.z;
-      if (it.prevSide <= 0 && side > 0) {
+      const crossed = it.prevSide <= 0 ? side > 0 : false;
+      if (crossed) {
         // Melintasi bidang cincin: lulus bila jarak lateral di dalam radius
         const lat2 = rx * rx + ry * ry + rz * rz - side * side;
         if (lat2 < (R.radius - 0.8) * (R.radius - 0.8)) {
@@ -1938,7 +1969,7 @@ const Pickups = {
   },
 
   place(type, x, y, z) {
-    const it = this.items.find((p) => !p.active && p.type === type);
+    const it = findFree(this.items, type);
     if (!it) return null;
     it.active = true; it.group.visible = true; it.baseY = y; it.t = 0;
     it.group.position.set(x, y, z);
@@ -1956,7 +1987,8 @@ const Pickups = {
     const PU = CONFIG.pickups, P = Player.pos;
     this.timer -= dt;
     if (this.timer <= 0) {
-      const type = Player.health < 70 && rand() < 0.65 ? 'repair' : (rand() < 0.5 ? 'nitro' : 'repair');
+      const wantRepair = Player.health < 70 ? rand() < 0.65 : false;
+      const type = wantRepair ? 'repair' : (rand() < 0.5 ? 'nitro' : 'repair');
       this.spawnAhead(type);
       this.timer = randRange(PU.interval[0], PU.interval[1]);
     }
@@ -1967,7 +1999,8 @@ const Pickups = {
       it.spin.rotation.y += dt * 1.8;
       it.group.position.y = it.baseY + Math.sin(it.t * 2.2) * 0.8;
       const d2 = it.group.position.distanceToSquared(P);
-      if (Player.alive && d2 < (PU.radius + CONFIG.player.radius) ** 2) {
+      const touching = Player.alive ? d2 < (PU.radius + CONFIG.player.radius) ** 2 : false;
+      if (touching) {
         it.active = false; it.group.visible = false;
         this.collected++;
         if (it.type === 'repair') Player.heal(PU.repairAmount); else Player.addNitro(PU.nitroAmount);
@@ -2186,7 +2219,7 @@ const FX = {
       const flames = this.take('flame', 50 + 230 * nf, dt);
       const pv = Player.vel;
       for (let i = 0; i < flames; i++) {
-        const k = i & 1, t = frand();
+        const k = i % 2, t = frand();
         const a = this.prevNozzle[k], b = this.curNozzle[k];
         const hot = frand();
         this.fire.emit(
@@ -2197,7 +2230,7 @@ const FX = {
       }
       const puffs = this.take('smoke', 26 + 40 * nf, dt);
       for (let i = 0; i < puffs; i++) {
-        const k = i & 1, t = frand();
+        const k = i % 2, t = frand();
         const a = this.prevNozzle[k], b = this.curNozzle[k];
         const g = 0.62 + frand() * 0.12;
         this.smoke.emit(
@@ -2208,7 +2241,7 @@ const FX = {
       if (nf > 0.3) {
         const vapor = this.take('vapor', 70 * nf, dt);
         for (let i = 0; i < vapor; i++) {
-          _va.copy(m.wingtips[i & 1]).applyQuaternion(q).add(P);
+          _va.copy(m.wingtips[i % 2]).applyQuaternion(q).add(P);
           this.fire.emit(_va.x, _va.y, _va.z, 0, 0, 0, 0.35 + frand() * 0.2, 0.32, 0.5, 0.75, 0.82, 0.9, 0.35 * nf, 0, 0);
         }
       }
@@ -2342,7 +2375,9 @@ const Sfx = {
   init() {
     if (this.ctx) return;
     // Tanpa aktivasi pengguna yang sah, Chrome akan menolak dan mencetak warning, jadi tunda
-    if (navigator.userActivation && !navigator.userActivation.isActive) return;
+    if (navigator.userActivation) {
+      if (!navigator.userActivation.isActive) return;
+    }
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return;
     try { this.ctx = new AC(); } catch (err) { this.ctx = null; return; }
@@ -2386,7 +2421,7 @@ const Sfx = {
   },
 
   resume() {
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+    if (this.ctx?.state === 'suspended') this.ctx.resume().catch(() => {});
   },
 
   setMuted(m) {
@@ -2403,7 +2438,7 @@ const Sfx = {
 
   update(dt) {
     if (!this.ready) return;
-    const A = CONFIG.audio, on = Game.state === 'play' && Player.alive;
+    const A = CONFIG.audio, on = Game.state === 'play' ? Player.alive : false;
     const nf = Player.nitroFx;
     const sn = clamp((Player.speed - 40) / 100, 0, 1);
     const f = 52 + sn * 60 + nf * 18;
@@ -2416,7 +2451,7 @@ const Sfx = {
     this.setParam('nf', this.nitro.filter.frequency, 600 + nf * 1100, 10);
 
     // Bip peringatan medan
-    if (on && Player.warning) {
+    if (on ? Player.warning : false) {
       this.warnTimer -= dt;
       if (this.warnTimer <= 0) { this.warnTimer = 0.35; this.tone('square', 1040, 1040, 0.07, 0.05); }
     } else this.warnTimer = 0;
@@ -2560,7 +2595,7 @@ const HighScore = {
   load() {
     try {
       const v = parseInt(window.localStorage.getItem(this.key) || '0', 10);
-      this.value = Number.isFinite(v) && v > 0 ? v : 0;
+      this.value = Number.isFinite(v) ? Math.max(v, 0) : 0;
     } catch (err) { this.value = 0; }
   },
   submit(score) {
@@ -2596,7 +2631,9 @@ Events.on('waveStart', (n) => showBanner(`GELOMBANG ${n}`));
 Events.on('waveCleared', (n) => showToast(`GELOMBANG ${n} SELESAI`));
 Events.on('score', (amount, label) => {
   const m = Combo.multiplier;
-  showToast(`+${amount} ${label}${m > 1 && (label === 'DRONE' || label === 'PENEMBAK') ? `  x${m}` : ''}`);
+  const isKill = label === 'DRONE' || label === 'PENEMBAK';
+  const suffix = isKill ? (m > 1 ? `  x${m}` : '') : '';
+  showToast(`+${amount} ${label}${suffix}`);
 });
 Events.on('playerHit', (amount) => { hud.vignetteLevel = Math.min(1, hud.vignetteLevel + amount / 20); });
 Events.on('pickup', (type) => showBanner(type === 'repair' ? 'PERBAIKAN' : 'NITRO PENUH', 1100));
@@ -2639,12 +2676,12 @@ function updateHud(dt) {
   if (changed('kills', v)) hud.kills.textContent = v;
   v = Enemies.alive;
   if (changed('enemies', v)) hud.enemies.textContent = v;
-  v = Player.warning && Game.state === 'play';
+  v = Game.state === 'play' ? Player.warning : false;
   if (changed('warning', v)) hud.warning.classList.toggle('hidden', !v);
 
   // Vignette merah: kilat saat kena, berdenyut saat kesehatan rendah
   hud.vignetteLevel = Math.max(0, hud.vignetteLevel - dt * 1.8);
-  const lowPulse = hp < 0.3 && Player.alive ? 0.25 + 0.2 * Math.sin(Game.time * 6) : 0;
+  const lowPulse = Player.alive ? (hp < 0.3 ? 0.25 + 0.2 * Math.sin(Game.time * 6) : 0) : 0;
   v = Math.round(Math.max(hud.vignetteLevel, lowPulse) * 50) / 50;
   if (changed('vig', v)) hud.vignette.style.opacity = v;
 
@@ -2652,7 +2689,7 @@ function updateHud(dt) {
 
   // Reticle: proyeksi titik konvergensi peluru di depan pesawat
   _vc.copy(Player.pos).addScaledVector(Player.forward, CONFIG.weapons.convergeDistance).project(camera);
-  v = _vc.z < 1 && Player.alive;
+  v = Player.alive ? _vc.z < 1 : false;
   if (changed('reticleVis', v)) hud.reticle.style.visibility = v ? 'visible' : 'hidden';
   const x = Math.round((_vc.x + 1) * 0.5 * window.innerWidth);
   const y = Math.round((1 - _vc.y) * 0.5 * window.innerHeight);
@@ -2663,14 +2700,16 @@ function updateHud(dt) {
 function updateIndicators() {
   const w = window.innerWidth, h = window.innerHeight, margin = 28;
   let n = 0;
-  for (let k = 0; k < Enemies.list.length && n < hud.indicators.length; k++) {
+  for (let k = 0; k < Enemies.list.length; k++) {
+    if (n >= hud.indicators.length) break;
     const e = Enemies.list[k];
     if (!e.active) continue;
     _vc.copy(e.pos).project(camera);
     let x = _vc.x, y = _vc.y;
     const behind = _vc.z > 1;
-    if (!behind && x >= -1 && x <= 1 && y >= -1 && y <= 1) continue;   // terlihat di layar
-    if (behind) { x = -x; y = -y; if (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3) y = -1; }
+    const onScreen = behind ? false : Math.max(Math.abs(x), Math.abs(y)) <= 1;
+    if (onScreen) continue;
+    if (behind) { x = -x; y = -y; if (Math.max(Math.abs(x), Math.abs(y)) < 1e-3) y = -1; }
     const s = 1 / Math.max(Math.abs(x), Math.abs(y));
     x *= s; y *= s;
     const px = clamp((x * 0.5 + 0.5) * w, margin, w - margin);
@@ -2827,7 +2866,7 @@ function onKeyDown(e) {
     case 'NumpadEnter':
       // Enter di layar judul atau game over langsung memulai (jeda singkat agar tembakan tidak ikut restart)
       if (Game.state === 'menu') startGame();
-      else if (Game.state === 'gameover' && Game.stateTime > 1.0) restartGame();
+      else if (Game.state === 'gameover') { if (Game.stateTime > 1.0) restartGame(); }
       break;
   }
 }
@@ -2845,7 +2884,7 @@ function onBlur() {
 }
 function onVisibility() {
   Input.reset();
-  if (document.hidden && Game.state === 'play') setState('pause');
+  if (document.hidden) { if (Game.state === 'play') setState('pause'); }
 }
 
 window.addEventListener('keydown', onKeyDown);
@@ -2994,12 +3033,14 @@ window.__game = {
   quality() { return { preset: CONFIG.qualityPreset, ...Q }; },
   debug: {
     setGod(v) { Debug.god = !!v; },
+    // Pengendali otomatis pada permainan real-time (untuk uji soak dengan render sungguhan)
+    setAutoplay(v) { Debug.autoInput = !!v; if (!v) Input.reset(); },
     setEnemiesEnabled(v) { Debug.enemiesEnabled = !!v; if (!v) Enemies.reset(); },
     damagePlayer(n) { Player.damage(n, 'debug'); },
     // dy (opsional): ketinggian relatif terhadap pemain; tanpa dy ketinggian diacak seperti spawn biasa
     spawnEnemy(type, dist, lateral, dy) {
       const e = Enemies.spawnAhead(type, dist, lateral);
-      if (e && dy !== undefined) e.pos.y = Player.pos.y + dy;
+      if (e) { if (dy !== undefined) e.pos.y = Player.pos.y + dy; }
       return !!e;
     },
     killAllEnemies() { for (const e of Enemies.list) if (e.active) Enemies.destroy(e, true); },
@@ -3016,9 +3057,10 @@ window.__game = {
       const steps = Math.round(seconds * 60), godBefore = Debug.god;
       Debug.god = true; Debug.autoInput = true;
       const t0 = performance.now();
-      for (let i = 0; i < steps && Game.state === 'play'; i++) {
+      for (let i = 0; i < steps; i++) {
+        if (Game.state !== 'play') break;
         update(1 / 60);
-        if (renderEvery > 0 && i % renderEvery === 0) render();
+        if (renderEvery > 0) { if (i % renderEvery === 0) render(); }
       }
       const ms = performance.now() - t0;
       Debug.god = godBefore; Debug.autoInput = false;
@@ -3083,7 +3125,7 @@ function disposeGame() {
   });
   geos.forEach((g) => g.dispose());
   mats.forEach((m) => m.dispose());
-  if (Env.sun.shadow && Env.sun.shadow.map) Env.sun.shadow.map.dispose();
+  Env.sun.shadow.map?.dispose();
   renderer.dispose();
   renderer.domElement.remove();
   if (Sfx.ctx) Sfx.ctx.close().catch(() => {});

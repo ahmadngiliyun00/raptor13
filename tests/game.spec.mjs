@@ -19,7 +19,9 @@ const test = base.extend({
     const problems = [];
     const external = [];
     page.on('console', (m) => {
-      if ((m.type() === 'error' || m.type() === 'warning') && !isDriverNoise(m.text())) problems.push(`${m.type()}: ${m.text()}`);
+      if (!['error', 'warning'].includes(m.type())) return;
+      if (isDriverNoise(m.text())) return;
+      problems.push(`${m.type()}: ${m.text()}`);
     });
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
     page.on('request', (r) => {
@@ -42,7 +44,7 @@ const dbg = (page, fn, ...args) => page.evaluate(([f, a]) => window.__game.debug
 
 async function open(page, query = '') {
   await page.goto(`/index.html${query}`);
-  await page.waitForFunction(() => window.__game && window.__game.snapshot().state === 'menu');
+  await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
 }
 
 // Mulai sesi lewat klik tombol MULAI (sekaligus membuka AudioContext)
