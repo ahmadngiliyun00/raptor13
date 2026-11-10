@@ -427,6 +427,7 @@ const CONFIG = {
     radius: 7,
     repairAmount: 30,
     nitroAmount: 0.5,
+    heartChance: 0.14,         // peluang pickup berupa hati (+1 nyawa) bila nyawa belum penuh
   },
   obstacles: {
     pillarsPerChunk: 2,
@@ -475,6 +476,9 @@ const CONFIG = {
     maxAltitude: 260,
     radius: 2.6,               // radius tabrakan
     maxHealth: 100,            // HP penuh per nyawa
+    respawnDelay: 2.0,         // detik sebelum respawn setelah meledak
+    respawnInvuln: 3.0,        // kebal sementara setelah respawn (pesawat berkedip)
+    startInvuln: 1.5,          // kebal di awal sesi
   },
 };
 
@@ -807,6 +811,9 @@ const Player = {
   nitroActive: false,
   nitroFx: 0,          // 0..1 dihaluskan, dipakai kamera, cahaya mesin dan api
   invuln: 0,           // sisa waktu kebal tabrakan
+  spawnInvuln: 0,      // sisa waktu kebal setelah mulai atau respawn
+  lives: 3,
+  respawnTimer: 0,
   warning: false,      // peringatan medan di depan
 
   reset() {
@@ -822,6 +829,8 @@ const Player = {
     this.nitroActive = false;
     this.nitroFx = 0;
     this.invuln = 0;
+    this.spawnInvuln = 0;
+    this.respawnTimer = 0;
     this.warning = false;
     this.forward.set(0, 0, -1);
     this.vel.set(0, 0, -this.speed);
@@ -889,19 +898,51 @@ const Player = {
 
   // Damage ke pemain selalu lewat sistem damage generik
   damage(amount, source) { return applyDamage(this, amount, source, this.pos.x, this.pos.y, this.pos.z); },
-  isInvulnerable() { return !this.alive || Debug.god || Game.state !== 'playing'; },
+  isInvulnerable() { return !this.alive || Debug.god || Game.state !== 'playing' || this.spawnInvuln > 0; },
   onDamaged(amount, source) {
     CamRig.addTrauma(clamp(amount / 30, 0.3, 0.9));
     Events.emit('playerHit', amount, source);
   },
 
+  // HP habis: meledak, nyawa berkurang; respawn bila nyawa masih ada, selain itu game over
   die() {
     this.alive = false;
     this.nitroActive = false;
     this.model.root.visible = false;
+    this.lives = Math.max(0, this.lives - 1);
+    this.respawnTimer = CONFIG.player.respawnDelay;
     CamRig.addTrauma(1);
     Events.emit('playerDeath', this.pos);
     Game.deathTimer = 0;
+  },
+
+  respawn() {
+    const C = CONFIG.player;
+    // Ketinggian aman: di atas medan di sekitar dan di depan
+    let ground = groundHeightAt(this.pos.x, this.pos.z);
+    for (let d = 40; d <= 240; d += 40) {
+      ground = Math.max(ground, groundHeightAt(this.pos.x - Math.sin(this.yaw) * d, this.pos.z - Math.cos(this.yaw) * d));
+    }
+    this.pos.y = clamp(Math.max(this.pos.y, ground + 50), 0, C.maxAltitude - 10);
+    this.pitch = 0; this.roll = 0;
+    this.speed = C.baseSpeed;
+    this.health.reset(C.maxHealth);
+    this.alive = true;
+    this.invuln = 0;
+    this.spawnInvuln = C.respawnInvuln;
+    this.model.root.visible = true;
+    Enemies.bullets.reset();     // adil: peluru musuh yang sedang terbang dihapus
+    Events.emit('playerRespawn', this.lives);
+  },
+
+  addLife() { this.lives = Math.min(CONFIG.difficulty.maxLives, this.lives + 1); },
+
+  // Kedip selama kebal setelah mulai atau respawn
+  updateInvuln(dt) {
+    if (this.spawnInvuln > 0) {
+      this.spawnInvuln = Math.max(0, this.spawnInvuln - dt);
+      this.model.root.visible = this.spawnInvuln <= 0 || Math.floor(this.spawnInvuln * 12) % 2 === 0;
+    }
   },
 
   // Api mesin, glow dan cahaya mengikuti intensitas nitro
@@ -2326,6 +2367,17 @@ const Pickups = {
       const spin = new THREE.Group();
       if (type === 'repair') {
         spin.add(new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.8, 0.8), mat), new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.6, 0.8), mat));
+      } else if (type === 'heart') {
+        // Bentuk hati dari kurva Bezier yang di-extrude
+        const h = new THREE.Shape();
+        h.moveTo(0, -1.3);
+        h.bezierCurveTo(-0.4, -0.9, -1.6, -0.2, -1.6, 0.55);
+        h.bezierCurveTo(-1.6, 1.3, -0.6, 1.55, 0, 0.85);
+        h.bezierCurveTo(0.6, 1.55, 1.6, 1.3, 1.6, 0.55);
+        h.bezierCurveTo(1.6, -0.2, 0.4, -0.9, 0, -1.3);
+        const geo = new THREE.ExtrudeGeometry(h, { depth: 0.6, bevelEnabled: false, curveSegments: 6 });
+        geo.translate(0, 0, -0.3);
+        spin.add(new THREE.Mesh(geo, mat));
       } else {
         const can = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 1.9, 8), mat);
         const tip = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.9, 8), mat);
@@ -2344,6 +2396,7 @@ const Pickups = {
     for (let i = 0; i < 2; i++) {
       this.items.push(make('repair', 0x46e07a, 0x0d4a1e));
       this.items.push(make('nitro', 0xff9a2a, 0x4a2400));
+      this.items.push(make('heart', 0xff4f7a, 0x5a0a1e));
     }
   },
 
@@ -2373,7 +2426,8 @@ const Pickups = {
     this.timer -= dt;
     if (this.timer <= 0) {
       const wantRepair = Player.hp < 70 ? rand() < 0.65 : false;
-      const type = wantRepair ? 'repair' : (rand() < 0.5 ? 'nitro' : 'repair');
+      let type = wantRepair ? 'repair' : (rand() < 0.5 ? 'nitro' : 'repair');
+      if (Player.lives < CONFIG.difficulty.maxLives) { if (rand() < PU.heartChance) type = 'heart'; }
       this.spawnAhead(type);
       this.timer = randRange(PU.interval[0], PU.interval[1]);
     }
@@ -2388,8 +2442,10 @@ const Pickups = {
       if (touching) {
         it.active = false; it.group.visible = false;
         this.collected++;
-        if (it.type === 'repair') Player.heal(PU.repairAmount); else Player.addNitro(PU.nitroAmount);
-        addScore(50, it.type === 'repair' ? 'PERBAIKAN' : 'NITRO');
+        if (it.type === 'repair') Player.heal(PU.repairAmount);
+        else if (it.type === 'heart') Player.addLife();
+        else Player.addNitro(PU.nitroAmount);
+        addScore(50, it.type === 'repair' ? 'PERBAIKAN' : it.type === 'heart' ? 'NYAWA' : 'NITRO');
         Events.emit('pickup', it.type, it.group.position);
         continue;
       }
@@ -2708,7 +2764,11 @@ const ringBurst = (pos, n, r, g, b) => {
   }
 };
 Events.on('ringPassed', (pos) => ringBurst(pos, 40, 1, 0.8, 0.3));
-Events.on('pickup', (type, pos) => (type === 'repair' ? ringBurst(pos, 30, 0.35, 1, 0.5) : ringBurst(pos, 30, 1, 0.6, 0.15)));
+Events.on('pickup', (type, pos) => {
+  if (type === 'repair') ringBurst(pos, 30, 0.35, 1, 0.5);
+  else if (type === 'heart') ringBurst(pos, 30, 1, 0.35, 0.5);
+  else ringBurst(pos, 30, 1, 0.6, 0.15);
+});
 
 /* =====================================================================
    KAMERA CHASE - lag pada rotasi (bukan posisi) agar jarak ke pesawat stabil
@@ -3126,7 +3186,8 @@ Events.on('damage', (entity, dealt, source) => {
   hud.hitTimer = 0.14;
   hud.hitKill = entity.health.dead;
 });
-Events.on('pickup', (type) => showBanner(type === 'repair' ? 'PERBAIKAN' : 'NITRO PENUH', 1100));
+Events.on('pickup', (type) => showBanner(type === 'repair' ? 'PERBAIKAN' : type === 'heart' ? '+1 NYAWA' : 'NITRO PENUH', 1100));
+Events.on('playerRespawn', (lives) => showBanner(`NYAWA TERSISA ${lives}`, 1500));
 // Tulis ke DOM hanya bila nilainya berubah (tanpa closure per frame, tanpa layout berulang)
 function changed(key, value) {
   if (hud.last[key] === value) return false;
@@ -3309,6 +3370,8 @@ function resetSession() {
   rand.reseed(Game.seed);
   World.reset(Game.seed);
   Player.reset();
+  Player.lives = Game.diff.lives;
+  Player.spawnInvuln = CONFIG.player.startInvuln;
   Weapons.reset();
   Enemies.reset();
   Asteroids.reset();
@@ -3511,10 +3574,13 @@ function update(dt) {
     Game.time += dt;
     let ctl = Controls;
     if (Debug.autoInput) { AutoInput.update(Game.time); ctl = AutoInput; }
-    Player.updateNitro(dt, ctl.nitro);
-    Player.update(dt, ctl.pitch, ctl.yaw);
-    updateTerrainCollision(dt);
-    Weapons.update(dt, ctl.fire);
+    if (Player.alive) {
+      Player.updateNitro(dt, ctl.nitro);
+      Player.update(dt, ctl.pitch, ctl.yaw);
+      Player.updateInvuln(dt);
+      updateTerrainCollision(dt);
+    }
+    Weapons.update(dt, Player.alive ? ctl.fire : false);
     Rings.update(dt);
     Pickups.update(dt);
     Waves.update(dt);
@@ -3522,7 +3588,10 @@ function update(dt) {
     updateCombat();
     Combo.update(dt);
     if (Player.alive) Game.score += CONFIG.score.perSecond * dt;
-    else {
+    else if (Player.lives > 0) {
+      Player.respawnTimer -= dt;
+      if (Player.respawnTimer <= 0) Player.respawn();
+    } else {
       // Pesawat terakhir sudah meledak: dunia tetap berjalan sebentar sebelum layar game over
       Game.deathTimer += dt;
       if (Game.deathTimer > 1.8) {
@@ -3569,6 +3638,8 @@ window.__game = {
       health: round2(Player.hp),
       maxHealth: Player.health.maxHp,
       alive: Player.alive,
+      lives: Player.lives,
+      spawnInvulnerable: Player.spawnInvuln > 0,
       nitro: round2(Player.nitro),
       nitroActive: Player.nitroActive,
       nitroLocked: Player.nitroLock > 0,
@@ -3611,6 +3682,9 @@ window.__game = {
     setAutoplay(v) { Debug.autoInput = !!v; if (!v) Controls.reset(); },
     setEnemiesEnabled(v) { Debug.enemiesEnabled = !!v; if (!v) Enemies.reset(); },
     damagePlayer(n) { Player.damage(n, 'debug'); },
+    // Damage langsung tanpa melewati masa kebal (untuk menguji alur nyawa)
+    forceDamagePlayer(n) { const keep = Player.spawnInvuln; Player.spawnInvuln = 0; Player.damage(n, 'debug'); if (Player.alive) Player.spawnInvuln = keep; },
+    setLives(n) { Player.lives = clamp(n | 0, 0, CONFIG.difficulty.maxLives); },
     // dy (opsional): ketinggian relatif terhadap pemain; tanpa dy ketinggian diacak seperti spawn biasa
     spawnEnemy(type, dist, lateral, dy) {
       const e = Enemies.spawnAhead(type, dist, lateral);
