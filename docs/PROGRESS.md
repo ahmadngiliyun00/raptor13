@@ -25,6 +25,7 @@ Berkas ini adalah catatan kerja agar pengerjaan bisa dilanjutkan otomatis setela
 - B3 tabrakan fatal dengan penyebab (tanah, laut, gunung, pohon atau pilar, asteroid raksasa), gerak lambat dan orbit kamera, peringatan, opsi latihan.
 - B4 AI musuh (siklus approach, attack dengan telegraf, break, reposition), batas kecepatan, spawn depan, separasi, kebal 1 detik setelah damage, penanda lead, bantuan bidik Mati, Rendah, Sedang, peringatan musuh di belakang, metrik bot (ambang: tailRatio di bawah 0,25, tabrakan di bawah 4 per menit; hasil uji 0,07 sampai 0,21).
 - B5 laju tembak 10 per detik, peluru 750 ditambah kecepatan pesawat, bolt plasma dengan halo berwarna per peluru, peluru musuh bola magenta, buff OVERDRIVE dan PENGHANCUR 10 detik dari kristal, pengali upgrade permanen Player.upgrades.
+- B6 awan Bumi volumetrik low-poly instanced (kumulus, stratus, serat), dua lapisan, memudar dekat kamera, tabir putih saat menembus awan.
 
 ## Urutan task berikutnya (blok terakhir menang bila bertentangan)
 
@@ -34,7 +35,7 @@ Fase 0, rasa main (paling awal):
 3. (SELESAI) B3 Tabrakan fatal (tanah, laut, gunung, pilar, planet, stasiun, bos, asteroid raksasa) langsung game over dengan penyebab; hapus bantuan naik otomatis dan lantai ketinggian; efek ledakan besar, gerak lambat 0,8 detik, kamera orbit; peringatan TERLALU RENDAH atau TARIK NAIK; opsi "Tabrakan fatal" (default hidup, bila mati hanya damage besar dan pantulan).
 4. (SELESAI) B4 AI musuh: kecepatan 70 sampai 85 persen pemain, maksimum 80 persen kecepatan nitro; siklus APPROACH, ATTACK (tanda sebelum menembak), BREAK, REPOSITION; 80 persen spawn di kerucut depan; jarak pisah antar musuh; kebal 1 detik setelah damage; penanda lead; bantuan bidik Mati, Rendah, Sedang (default Rendah); peringatan musuh di belakang; metrik tes waktu musuh di kerucut belakang dan tabrakan per menit di bawah ambang CONFIG.
 5. (SELESAI) B5 Laju tembak cooldown 0,10 sampai 0,12 detik, kecepatan peluru sekitar 3 kali, bolt plasma merah oranye dengan inti putih dan halo, peluru musuh berbeda (bulat merah magenta); buff OVERDRIVE (laju 1,6 kali) dan PENGHANCUR (damage 1,5 kali) 10 detik dengan ikon dan penghitung; pickup kristal; kartu upgrade permanen (disiapkan untuk sistem kartu S11).
-6. B6 Awan Bumi volumetrik low-poly instanced (kumulus, stratus, serat), dua lapisan, memudar saat kamera dekat, tanpa popping.
+6. (SELESAI) B6 Awan Bumi volumetrik low-poly instanced (kumulus, stratus, serat), dua lapisan, memudar saat kamera dekat, tanpa popping.
 7. B7 Audio mesin: brown noise lewat lowpass ditambah dua sine atau triangle 50 sampai 90 Hz; nitro: whoosh bandpass 400 sampai 2500 Hz 0,4 detik ditambah sub-bass sekali lalu desis; compressor master; tes sanity tanpa NaN dan gain master di bawah 1.
 
 Fase berikutnya:

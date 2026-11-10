@@ -340,6 +340,7 @@
     position: absolute; left: 0; top: 0; transform: translateX(-50%); white-space: nowrap; opacity: 0;
     font-weight: 800; font-size: 16px; color: #fff3c4; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   }
+  #cloud-veil { position: absolute; inset: 0; opacity: 0; background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.55), rgba(240, 244, 250, 0.9)); }
   #vignette {
     position: absolute; inset: 0; opacity: 0;
     background: radial-gradient(ellipse at center, rgba(255, 0, 0, 0) 55%, rgba(200, 0, 0, 0.55) 100%);
@@ -407,6 +408,7 @@
 <!-- HUD (elemen DOM di atas canvas) -->
 <div id="hud" class="hidden">
   <div id="vignette"></div>
+  <div id="cloud-veil"></div>
   <div id="indicators"></div>
   <div id="hpbars"></div>
   <div id="dmgnums"></div>
@@ -2352,72 +2354,122 @@ const Env = {
   },
 };
 
-/* Awan: gugus icosahedron low-poly dalam satu InstancedMesh, dibungkus di sekitar pemain */
+/* Awan volumetrik low-poly: tiga bentuk (kumulus, stratus, serat), masing-masing satu InstancedMesh
+   dari gabungan puff ikosahedron yang dipipihkan. Normal halus per puff, warna vertex putih ke abu
+   kebiruan di bagian bawah, memudar saat kamera sangat dekat, dibungkus di sekitar pemain. */
+const CLOUD_TYPES = {
+  // puffs: [min, max], spread: sebaran puff (x, y, z), squash: pemipihan vertikal, layer: ketinggian
+  cumulus: { puffs: [5, 9], spread: [1.6, 0.5, 1.0], squash: 0.7, size: [16, 30], layer: [135, 175], share: 0.5 },
+  stratus: { puffs: [6, 9], spread: [2.6, 0.12, 1.4], squash: 0.38, size: [22, 38], layer: [225, 248], share: 0.3 },
+  wisp:    { puffs: [3, 5], spread: [3.0, 0.08, 0.5], squash: 0.22, size: [18, 30], layer: [205, 245], share: 0.2 },
+};
 const Clouds = {
-  mesh: null, count: 0, range: 0,
-  data: null,   // per awan: x, y, z, skala, rotasi
+  meshes: [], groups: [], range: 0,
+  veil: 0,     // 0..1 seberapa dalam kamera berada di dalam awan
   _p: new THREE.Vector3(), _q: new THREE.Quaternion(), _s: new THREE.Vector3(),
 
-  // Gabungkan beberapa icosahedron menjadi satu geometri non-indexed (flat-shaded)
-  buildGeometry() {
-    const parts = [[0, 0, 0, 1], [1.1, -0.15, 0.2, 0.75], [-1.05, -0.2, -0.1, 0.7], [0.4, 0.45, -0.3, 0.65], [-0.5, 0.3, 0.45, 0.6]];
-    const arrays = [];
-    let total = 0;
-    for (const [x, y, z, r] of parts) {
-      const g = new THREE.IcosahedronGeometry(r, 0);   // polyhedron three.js sudah non-indexed
-      g.scale(1, 0.62, 1);
-      g.translate(x, y, z);
-      arrays.push(g.attributes.position.array);
-      total += g.attributes.position.array.length;
+  // Satu geometri awan dari beberapa puff. Normal diarahkan dari pusat puff (shading halus).
+  buildGeometry(type, seed) {
+    const T = CLOUD_TYPES[type], rnd = makeRng(seed);
+    const n = T.puffs[0] + Math.floor(rnd() * (T.puffs[1] - T.puffs[0] + 1));
+    const pos = [], nor = [], col = [];
+    for (let k = 0; k < n; k++) {
+      const t = n > 1 ? k / (n - 1) - 0.5 : 0;
+      const cx = t * T.spread[0] * 2 + (rnd() - 0.5) * 0.6, cz = (rnd() - 0.5) * T.spread[2] * 2;
+      const big = 1 - Math.abs(t) * 0.9;   // puff tengah lebih besar
+      const r = (0.55 + rnd() * 0.45) * (0.6 + big * 0.6);
+      const cy = (rnd() - 0.3) * T.spread[1] + r * T.squash * 0.4;
+      const g = new THREE.IcosahedronGeometry(1, 1);
+      const a = g.attributes.position;
+      for (let i = 0; i < a.count; i++) {
+        const x = a.getX(i), y = a.getY(i), z = a.getZ(i);
+        pos.push(cx + x * r, cy + y * r * T.squash, cz + z * r);
+        const sq = Math.max(T.squash, 0.2), l = Math.hypot(x, y / sq, z) || 1;
+        nor.push(x / l, y / sq / l, z / l);
+        // Putih di atas, abu kebiruan di bagian bawah
+        const shade = 0.8 + 0.2 * clamp((y + 0.4) / 1.2, 0, 1);
+        col.push(shade, shade, shade * 1.03);
+      }
       g.dispose();
     }
-    const pos = new Float32Array(total);
-    let o = 0;
-    for (const a of arrays) { pos.set(a, o); o += a.length; }
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    geo.computeVertexNormals();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    geo.computeBoundingSphere();
     return geo;
   },
 
+  // Material bersama: alpha memudar saat kamera sangat dekat (lewat onBeforeCompile)
+  makeMaterial() {
+    const m = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x6b6660, transparent: true, depthWrite: true });
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader
+        .replace('#include <common>', '#include <common>\nvarying float vCamDist;')
+        .replace('#include <project_vertex>', '#include <project_vertex>\nvCamDist = -mvPosition.z;');
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vCamDist;')
+        .replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.a *= smoothstep(8.0, 45.0, vCamDist);');
+    };
+    return m;
+  },
+
   init(count, range) {
-    this.count = count;
     this.range = range;
-    this.mesh = new THREE.InstancedMesh(this.buildGeometry(),
-      new THREE.MeshLambertMaterial({ color: 0xcfcfcf, emissive: 0xa9a197, flatShading: true }), count);
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.mesh.frustumCulled = false;
-    this.data = new Float32Array(count * 5);
-    scene.add(this.mesh);
+    const mat = this.makeMaterial();
+    let seed = 7331;
+    for (const [type, T] of Object.entries(CLOUD_TYPES)) {
+      const n = Math.max(2, Math.round(count * T.share));
+      const mesh = new THREE.InstancedMesh(this.buildGeometry(type, seed++), mat, n);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      mesh.frustumCulled = false;
+      mesh.castShadow = false;
+      mesh.renderOrder = 1;
+      scene.add(mesh);
+      this.meshes.push(mesh);
+      this.groups.push({ type, mesh, n, data: new Float32Array(n * 5) });
+    }
     this.scatter(0, 0);
   },
 
   scatter(cx, cz) {
     const r = this.range, rnd = makeRng(7331);
-    for (let i = 0; i < this.count; i++) {
-      const d = i * 5;
-      this.data[d] = cx + (rnd() * 2 - 1) * r;
-      this.data[d + 1] = 150 + rnd() * 95;
-      this.data[d + 2] = cz + (rnd() * 2 - 1) * r;
-      this.data[d + 3] = 14 + rnd() * 18;
-      this.data[d + 4] = rnd() * Math.PI;
+    for (const g of this.groups) {
+      const T = CLOUD_TYPES[g.type];
+      for (let i = 0; i < g.n; i++) {
+        const d = i * 5;
+        g.data[d] = cx + (rnd() * 2 - 1) * r;
+        g.data[d + 1] = T.layer[0] + rnd() * (T.layer[1] - T.layer[0]);
+        g.data[d + 2] = cz + (rnd() * 2 - 1) * r;
+        g.data[d + 3] = T.size[0] + rnd() * (T.size[1] - T.size[0]);
+        g.data[d + 4] = rnd() * Math.PI;
+      }
     }
   },
 
   update(dt, px, pz) {
-    const r = this.range, D = this.data;
-    for (let i = 0; i < this.count; i++) {
-      const d = i * 5;
-      D[d] += 3 * dt;   // angin pelan
-      // Bungkus ke sisi berlawanan bila terlalu jauh dari pemain
-      if (D[d] - px > r) D[d] -= 2 * r; else if (px - D[d] > r) D[d] += 2 * r;
-      if (D[d + 2] - pz > r) D[d + 2] -= 2 * r; else if (pz - D[d + 2] > r) D[d + 2] += 2 * r;
-      const sc = D[d + 3];
-      this._q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, D[d + 4]);
-      _m4.compose(this._p.set(D[d], D[d + 1], D[d + 2]), this._q, this._s.set(sc, sc, sc));
-      this.mesh.setMatrixAt(i, _m4);
+    const r = this.range, cam = camera.position;
+    let veil = 0;
+    for (const g of this.groups) {
+      const D = g.data, T = CLOUD_TYPES[g.type];
+      for (let i = 0; i < g.n; i++) {
+        const d = i * 5;
+        D[d] += 3 * dt;   // hanyut pelan
+        // Bungkus ke sisi berlawanan di jarak yang sudah tertutup fog (tanpa popping)
+        if (D[d] - px > r) D[d] -= 2 * r; else if (px - D[d] > r) D[d] += 2 * r;
+        if (D[d + 2] - pz > r) D[d + 2] -= 2 * r; else if (pz - D[d + 2] > r) D[d + 2] += 2 * r;
+        const sc = D[d + 3];
+        this._q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, D[d + 4]);
+        _m4.compose(this._p.set(D[d], D[d + 1], D[d + 2]), this._q, this._s.set(sc, sc, sc));
+        g.mesh.setMatrixAt(i, _m4);
+        // Seberapa dalam kamera di dalam awan ini (elipsoid kasar)
+        const dx = (cam.x - D[d]) / (sc * T.spread[0] * 1.4), dy = (cam.y - D[d + 1]) / (sc * Math.max(T.squash, 0.3)), dz = (cam.z - D[d + 2]) / (sc * 1.2);
+        const q = dx * dx + dy * dy + dz * dz;
+        if (q < 1) veil = Math.max(veil, 1 - q);
+      }
+      g.mesh.instanceMatrix.needsUpdate = true;
     }
-    this.mesh.instanceMatrix.needsUpdate = true;
+    this.veil = damp(this.veil, veil, 6, dt);
   },
 };
 Env.init();
@@ -3552,7 +3604,7 @@ const EarthWorld = {
   maxY: CONFIG.player.maxAltitude,
   features: { rings: true, clouds: true },
   objects() {
-    return [...Terrain.slots.map((s) => s.mesh), Env.water, Env.sky, Env.sunMesh, Clouds.mesh, Obstacles.mesh];
+    return [...Terrain.slots.map((s) => s.mesh), Env.water, Env.sky, Env.sunMesh, ...Clouds.meshes, Obstacles.mesh];
   },
   activate() {
     for (const o of this.objects()) o.visible = true;
@@ -4783,6 +4835,8 @@ function updateHud(dt) {
     v = Math.round(1000 / Perf.frameMs);
     if (changed('fps', v)) document.getElementById('fps').textContent = v + ' FPS';
   }
+  v = Math.round((Worlds.active === EarthWorld ? Clouds.veil : 0) * 30) / 30;
+  if (changed('veil', v)) $('cloud-veil').style.opacity = v * 0.8;
   updateIndicators();
   updateHpBars();
   updateLeadMarker();
