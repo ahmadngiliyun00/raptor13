@@ -317,7 +317,7 @@ test('health 0 memicu ledakan dan layar game over, lalu bisa main lagi', async (
   await expect(page.locator('#screen-over')).toBeVisible();
   await expect(page.locator('#hud')).toBeHidden();
   await expect(page.locator('#go-score')).not.toHaveText('');
-  const stored = await page.evaluate(() => window.localStorage.getItem('raptor13.highscore'));
+  const stored = await page.evaluate(() => JSON.parse(window.localStorage.getItem('raptor13.v1')).highScore);
   expect(Number(stored)).toBe((await snap(page)).highScore);
   expect(Number(stored)).toBeGreaterThan(0);
   await page.click('#btn-restart');
