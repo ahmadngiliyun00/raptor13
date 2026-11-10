@@ -166,6 +166,9 @@
   .note { margin: 6px 0 0; font-size: 12px; color: #ffd28a; }
   .link { font: inherit; color: var(--ui-accent); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 0; }
   .btn.danger { color: #ffb0a0; border-color: rgba(255, 120, 100, 0.5); }
+  #lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #ffd24a; transform-origin: center; }
+  #rear-warn { position: absolute; left: 50%; bottom: calc(56px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #ffd0d0; border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.6s steps(2) infinite; }
   #maneuvers { position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 8px; }
   .man {
     position: relative; overflow: hidden; display: flex; align-items: center; gap: 6px; padding: 5px 10px;
@@ -401,6 +404,8 @@
   <div id="dmgnums"></div>
   <div id="critical" class="hidden">INTEGRITAS KRITIS</div>
   <div id="reticle"><i id="hitmark"></i></div>
+  <div id="lead" class="hidden"></div>
+  <div id="rear-warn" class="hidden">MUSUH DI BELAKANG</div>
   <div class="hud-block tl">
     <div class="row"><span class="label">NYAWA</span><span id="hearts"></span></div>
     <div class="row"><span class="label">INTEGRITAS</span><span id="hp-text" class="num">100</span></div>
@@ -545,6 +550,10 @@
           <button type="button" data-v="rendah">Rendah</button><button type="button" data-v="sedang">Sedang</button><button type="button" data-v="tinggi">Tinggi</button>
         </div>
         <p class="note hidden" id="quality-note">Berlaku setelah dimuat ulang. <button type="button" id="btn-reload" class="link">Muat ulang sekarang</button></p>
+      </div>
+      <span class="set-label">Bantuan bidik</span>
+      <div class="seg" data-key="aimAssist">
+        <button type="button" data-v="mati">Mati</button><button type="button" data-v="rendah">Rendah</button><button type="button" data-v="sedang">Sedang</button>
       </div>
       <span class="set-label">Mode kontrol</span>
       <div class="seg" data-key="controlMode">
@@ -720,7 +729,8 @@ const CONFIG = {
     maxPlayerBullets: 80,
     convergeDistance: 160,     // jarak titik temu peluru kedua sayap, juga posisi reticle
     hitPadding: 0.9,           // tambahan radius saat cek kena
-    aimAssistAngle: 5,         // derajat; musuh dalam kerucut ini dibidik otomatis (0 untuk mematikan)
+    // Bantuan bidik dari Pengaturan: kerucut (derajat) dan laju lengkung peluru (radian per detik)
+    aimAssist: { mati: [0, 0], rendah: [3, 0.9], sedang: [5, 1.8] },
     aimAssistRange: 520,
   },
   enemies: {
@@ -732,9 +742,20 @@ const CONFIG = {
     despawnDistance: 1150,
     behindDistance: 220,       // musuh sejauh ini di belakang pemain dianggap tertinggal
     behindTime: [5, 12],       // detik tertinggal sebelum dipindah lagi ke depan (drone, penembak)
+    // Kecepatan relatif pemain: jelajah = fraksi kecepatan dasar pemain, maksimum = fraksi kecepatan nitro
+    cruiseFactor: { drone: 0.75, gunship: 0.82 },
+    maxSpeedFactor: 0.8,       // tidak ada musuh (selain rudal) yang lebih cepat dari 80 persen nitro pemain
+    maxTailTime: 1.5,          // detik maksimum penembak menempel di kerucut belakang pemain sebelum dipaksa menjauh
+    droneMaxTailTime: 1.0,     // drone yang menempel lebih lama dipindah lagi ke depan
+    tailDistance: 220,         // kerucut belakang: dalam jarak ini dan sekitar 45 derajat tepat di belakang
+    separation: 30,            // jarak pisah minimum antar musuh
+    playerSeparation: 40,      // penembak menjaga jarak dari pemain
+    frontSpawnShare: 0.8,      // 80 persen musuh muncul di kerucut depan pemain
     drone: { hp: 30, speed: 46, agility: 1.5, radius: 2.3, contactDamage: 18, score: 100 },
     gunship: {
-      hp: 60, speed: 84, turnRate: 0.95, radius: 3.4, contactDamage: 30, score: 300,
+      hp: 60, speed: 84, turnRate: 0.85, radius: 3.4, contactDamage: 15, score: 300,
+      telegraph: 0.5,          // detik tanda (kilat moncong) sebelum menembak
+      approach: [300, 500], attackTime: [1.5, 2.5], breakTime: [2, 3], repositionTime: [3, 5],
       fireInterval: 1.15, fireRange: 320, fireCone: 0.33, burst: 2,
       bulletSpeed: 175, bulletDamage: 8, extendTime: 3.2,
     },
@@ -786,6 +807,11 @@ const CONFIG = {
     repairAmount: 30,
     nitroAmount: 0.5,
     heartChance: 0.14,         // peluang pickup berupa hati (+1 nyawa) bila nyawa belum penuh
+  },
+  // Ambang keseimbangan tempur yang diperiksa uji bot (dicatat di README)
+  balance: {
+    maxTailRatio: 0.25,        // fraksi waktu ada musuh menempel di belakang pemain
+    maxCollisionsPerMin: 4,    // tabrakan badan musuh dengan pemain per menit
   },
   // Klasifikasi tabrakan: fatal (langsung game over) atau ringan (hanya damage)
   collision: {
@@ -845,6 +871,7 @@ const CONFIG = {
     respawnDelay: 2.0,         // detik sebelum respawn setelah meledak
     respawnInvuln: 3.0,        // kebal sementara setelah respawn (pesawat berkedip)
     startInvuln: 1.5,          // kebal di awal sesi
+    hitInvuln: 1.0,            // kebal sesaat setelah menerima damage apa pun (tidak terkena beruntun)
     criticalHp: 0.25,          // di bawah fraksi HP ini muncul peringatan berkedip dan bunyi
   },
 };
@@ -867,6 +894,7 @@ const SETTING_DEFAULTS = {
   cameraShake: true,
   autoLevel: true,             // penstabil otomatis
   fatalCrash: true,            // tabrakan keras langsung game over
+  aimAssist: 'rendah',         // bantuan bidik: mati | rendah | sedang
   cameraRoll: false,           // kamera ikut berguling
   damageNumbers: true,
   showFps: false,
@@ -878,6 +906,7 @@ const SETTING_ENUMS = {
   quality: ['rendah', 'sedang', 'tinggi'],
   controlMode: ['keyboard', 'hp'],
   terrain: ['space', 'earth'],
+  aimAssist: ['mati', 'rendah', 'sedang'],
 };
 const SETTING_RANGES = { asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100] };
 
@@ -1641,6 +1670,7 @@ const Player = {
   nitroFx: 0,          // 0..1 dihaluskan, dipakai kamera, cahaya mesin dan api
   invuln: 0,           // sisa waktu kebal tabrakan
   spawnInvuln: 0,      // sisa waktu kebal setelah mulai atau respawn
+  hitInvuln: 0,        // sisa waktu kebal setelah menerima damage
   lives: 3,
   respawnTimer: 0,
   warning: '',         // teks peringatan medan ('' bila aman)
@@ -1838,8 +1868,9 @@ const Player = {
     this.lastDamageSource = source;
     return applyDamage(this, amount, source, this.pos.x, this.pos.y, this.pos.z);
   },
-  isInvulnerable() { return !this.alive || Debug.god || Game.state !== 'playing' || this.spawnInvuln > 0; },
+  isInvulnerable() { return !this.alive || Debug.god || Game.state !== 'playing' || this.spawnInvuln > 0 || this.hitInvuln > 0; },
   onDamaged(amount, source) {
+    this.hitInvuln = CONFIG.player.hitInvuln;
     CamRig.addTrauma(clamp(amount / 30, 0.3, 0.9));
     Events.emit('playerHit', amount, source);
   },
@@ -1915,6 +1946,7 @@ const Player = {
 
   // Kedip selama kebal setelah mulai atau respawn
   updateInvuln(dt) {
+    if (this.hitInvuln > 0) this.hitInvuln = Math.max(0, this.hitInvuln - dt);
     if (this.spawnInvuln > 0) {
       this.spawnInvuln = Math.max(0, this.spawnInvuln - dt);
       this.rig.visible = this.spawnInvuln <= 0 || Math.floor(this.spawnInvuln * 12) % 2 === 0;
@@ -2422,6 +2454,7 @@ class BulletPool {
     this.q = new Float32Array(max * 4);
     this.life = new Float32Array(max);
     this.dmg = new Float32Array(max);
+    this.target = new Int16Array(max).fill(-1);   // indeks musuh untuk peluru berpemandu lembut
     this.active = new Uint8Array(max);
     this.alive = 0;
     this.cursor = 0;
@@ -2442,6 +2475,7 @@ class BulletPool {
     this.q[i4] = _qa.x; this.q[i4 + 1] = _qa.y; this.q[i4 + 2] = _qa.z; this.q[i4 + 3] = _qa.w;
     this.life[i] = life;
     this.dmg[i] = damage;
+    this.target[i] = -1;
     this.active[i] = 1;
     return i;
   }
@@ -2500,6 +2534,29 @@ const Weapons = {
     if (firing) this.tryFire();
     else this.cooldown = Math.max(this.cooldown, 0);
     this.pool.update(dt);
+    this.steerBullets(dt);
+  },
+  // Peluru berpemandu lembut: kecepatan diputar sedikit ke arah posisi lead target
+  steerBullets(dt) {
+    const rate = CONFIG.weapons.aimAssist[Save.settings.aimAssist][1];
+    if (rate <= 0) return;
+    const pb = this.pool, maxStep = rate * dt;
+    for (let i = 0; i < pb.max; i++) {
+      if (!pb.active[i]) continue;
+      const ti = pb.target[i];
+      if (ti < 0) continue;
+      const e = Enemies.list[ti];
+      if (!e.active) { pb.target[i] = -1; continue; }
+      const i3 = i * 3;
+      const vx = pb.v[i3], vy = pb.v[i3 + 1], vz = pb.v[i3 + 2], sp = Math.hypot(vx, vy, vz);
+      const dx = e.pos.x - pb.p[i3], dy = e.pos.y - pb.p[i3 + 1], dz = e.pos.z - pb.p[i3 + 2], dl = Math.hypot(dx, dy, dz) || 1;
+      const cosA = (vx * dx + vy * dy + vz * dz) / (sp * dl);
+      if (cosA < 0.9) { pb.target[i] = -1; continue; }   // sudah melewati target
+      const ang = Math.acos(clamp(cosA, -1, 1));
+      const k = ang > 1e-4 ? Math.min(1, maxStep / ang) : 0;
+      _va.set(vx + (dx / dl * sp - vx) * k, vy + (dy / dl * sp - vy) * k, vz + (dz / dl * sp - vz) * k).setLength(sp);
+      pb.v[i3] = _va.x; pb.v[i3 + 1] = _va.y; pb.v[i3 + 2] = _va.z;
+    }
   },
   tryFire() {
     const W = CONFIG.weapons;
@@ -2509,23 +2566,20 @@ const Weapons = {
     const gun = muzzles[this.side % muzzles.length];
     this.side = (this.side + 1) % muzzles.length;                                        // laras bergantian
     _va.copy(gun).applyQuaternion(Player.rig.quaternion).add(Player.pos);                // posisi laras
+    // Arah ke titik temu di depan; bantuan bidik lembut membuat peluru sedikit melengkung ke target
+    _vb.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance).sub(_va).normalize();
     const target = this.findAssistTarget();
-    if (target) {
-      // Aim assist: arahkan ke posisi musuh yang diprediksi saat peluru tiba
-      const t = Math.sqrt(target.pos.distanceToSquared(_va)) / (W.bulletSpeed + Player.speed);
-      _vb.copy(target.vel).multiplyScalar(t).add(target.pos).sub(_va).normalize();
-    } else {
-      _vb.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance).sub(_va).normalize(); // arah ke titik temu
-    }
-    this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, Player.ship.stats.damage);
+    const bi = this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, Player.ship.stats.damage);
+    this.pool.target[bi] = target ? Enemies.list.indexOf(target) : -1;
     this.shotsFired++;
     Events.emit('shot', _va, _vb);
   },
   // Musuh dengan sudut terkecil terhadap arah hidung, di dalam kerucut aim assist
-  findAssistTarget() {
+  findAssistTarget(angleDeg) {
     const W = CONFIG.weapons;
-    if (W.aimAssistAngle <= 0) return null;
-    const minCos = Math.cos(THREE.MathUtils.degToRad(W.aimAssistAngle)), P = Player.pos, f = Player.forward;
+    const ang = angleDeg !== undefined ? angleDeg : W.aimAssist[Save.settings.aimAssist][0];
+    if (ang <= 0) return null;
+    const minCos = Math.cos(THREE.MathUtils.degToRad(ang)), P = Player.pos, f = Player.forward;
     let best = null, bestCos = minCos;
     for (let k = 0; k < Enemies.list.length; k++) {
       const e = Enemies.list[k];
@@ -2618,6 +2672,11 @@ class Enemy {
     this.hpBarTimer = 0;
     this.bank = 0;
     this.behind = 0;
+    this.tail = 0;                      // detik menempel di belakang pemain
+    this.sep = new THREE.Vector3();     // dorongan separasi dari musuh lain
+    this.slotAngle = 0; this.slotDist = 400;
+    this.breakDir = new THREE.Vector3();
+    this.telegraph = 0;
     this.radius = this.cfg.radius;
     scene.add(this.group);
   }
@@ -2668,8 +2727,12 @@ const Enemies = {
     e.pos.set(x, y, z);
     e.dir.set(Player.pos.x - x, 0, Player.pos.z - z).normalize();
     e.vel.copy(e.dir).multiplyScalar(e.cfg.speed);
-    e.state = 'attack';
+    e.state = e.type === 'drone' ? 'attack' : 'approach';
     e.timer = 0;
+    e.tail = 0;
+    e.telegraph = 0;
+    e.slotAngle = randRange(-1.05, 1.05);
+    e.slotDist = randRange(e.cfg.approach ? e.cfg.approach[0] : 300, e.cfg.approach ? e.cfg.approach[1] : 500);
     e.fireCd = randRange(0.8, 1.6);
     e.burstLeft = 0;
     e.hitFlash = 0;
@@ -2683,7 +2746,9 @@ const Enemies = {
   // Muncul di depan pemain dalam kerucut arah terbang
   spawnAhead(type, dist, lateralAngle) {
     const D = CONFIG.enemies.spawnDistance;
-    const ang = Player.yaw + (lateralAngle !== undefined ? lateralAngle : randRange(-0.9, 0.9));
+    // 80 persen di kerucut depan (plus minus 60 derajat), sisanya di samping
+    const side = rand() < CONFIG.enemies.frontSpawnShare ? randRange(-1.05, 1.05) : (rand() < 0.5 ? -1 : 1) * randRange(1.05, 2.0);
+    const ang = Player.yaw + (lateralAngle !== undefined ? lateralAngle : side);
     const d = dist !== undefined ? dist : randRange(D[0], D[1]);
     const x = Player.pos.x - Math.sin(ang) * d, z = Player.pos.z - Math.cos(ang) * d;
     const y = clamp(Player.pos.y + randRange(-20, 35), groundHeightAt(x, z) + 30, Worlds.active.maxY - 15);
@@ -2714,6 +2779,8 @@ const Enemies = {
   update(dt) {
     const diff = Waves.difficulty;
     const P = Player.pos;
+    this.computeSeparation();
+    let tailing = false;
     for (let k = 0; k < this.list.length; k++) {
       const e = this.list[k];
       if (!e.active) continue;
@@ -2728,8 +2795,19 @@ const Enemies = {
         Waves.requeue(e.type);
         continue;
       }
-      if (e.type === 'drone') this.updateDrone(e, dt, dist, diff);
-      else this.updateGunship(e, dt, dist, diff);
+      // Menempel di kerucut belakang pemain (dekat dan di belakang arah terbang)
+      const behindDot = -(_toP.x * Player.forward.x + _toP.y * Player.forward.y + _toP.z * Player.forward.z);
+      const inTail = dist < CONFIG.enemies.tailDistance ? behindDot < -0.7 * dist : false;
+      e.tail = inTail ? e.tail + dt : 0;
+      if (inTail) { tailing = true; if (Game.state === 'playing') Metrics.tailByType[e.type] += dt; }
+      // Drone yang menempel terlalu lama di ekor dipindah lagi ke depan (bukan mengekor terus)
+      if (e.type === 'drone' ? e.tail > CONFIG.enemies.droneMaxTailTime : false) {
+        this.remove(e);
+        Waves.requeue('drone');
+        continue;
+      }
+      if (e.type === 'drone') this.updateDrone(e, dt, dist, diff, inTail);
+      else { this.updateGunship(e, dt, dist, diff); Metrics.seen[e.state] = true; }
 
       // Jaga di atas terrain
       const ground = groundHeightAt(e.pos.x, e.pos.z) + (e.type === 'drone' ? 8 : 18);
@@ -2744,14 +2822,51 @@ const Enemies = {
       }
     }
     this.bullets.update(dt);
+    if (Game.state === 'playing') Metrics.track(dt, tailing);
+    this.rearThreat = tailing;
   },
 
-  // Drone: mengejar pelan, menghadap pemain, cincin berputar
-  updateDrone(e, dt, dist, diff) {
+  // Dorongan separasi antar musuh agar tidak menumpuk dan saling menabrak
+  computeSeparation() {
+    const L = this.list, R = CONFIG.enemies.separation, R2 = R * R;
+    for (let i = 0; i < L.length; i++) L[i].sep.set(0, 0, 0);
+    for (let i = 0; i < L.length; i++) {
+      const a = L[i];
+      if (!a.active) continue;
+      for (let j = i + 1; j < L.length; j++) {
+        const b = L[j];
+        if (!b.active) continue;
+        const dx = a.pos.x - b.pos.x, dy = a.pos.y - b.pos.y, dz = a.pos.z - b.pos.z;
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 > R2 || d2 < 1e-6) continue;
+        const d = Math.sqrt(d2), w = (R - d) / R / d;
+        a.sep.x += dx * w; a.sep.y += dy * w; a.sep.z += dz * w;
+        b.sep.x -= dx * w; b.sep.y -= dy * w; b.sep.z -= dz * w;
+      }
+    }
+  },
+
+  // Kecepatan jelajah dan maksimum musuh dihitung dari kecepatan pemain (CONFIG.enemies)
+  cruiseSpeed(type, diff) {
+    return CONFIG.player.baseSpeed * CONFIG.enemies.cruiseFactor[type] * Math.min(Math.sqrt(diff), 1.15);
+  },
+  maxSpeed() { return CONFIG.player.nitroSpeed * CONFIG.enemies.maxSpeedFactor; },
+
+  // Drone kamikaze: mendekat dari depan dan sengaja menabrak. Bila sudah di belakang pemain
+  // ia tidak bisa menyusul (jelajah lebih lambat dari pemain) dan akhirnya di-recycle ke depan.
+  updateDrone(e, dt, dist, diff, inTail) {
     const c = e.cfg;
-    // Pelan saat dekat, tetapi menyusul bila tertinggal jauh agar tetap relevan
-    const catchUp = 1 + clamp((dist - 250) / 250, 0, 1.3);
-    _desired.copy(_toP).multiplyScalar(1 / Math.max(dist, 0.001)).multiplyScalar(c.speed * Math.min(diff, 1.5) * catchUp);
+    const cruise = this.cruiseSpeed('drone', diff);
+    const behind = (_toP.x * Player.forward.x + _toP.z * Player.forward.z) > 0;   // drone di belakang pemain
+    const speed = behind ? cruise : Math.min(this.maxSpeed(), cruise * (1 + clamp((dist - 250) / 250, 0, 1)));
+    if (inTail) {
+      // Sudah di ekor pemain: menyimpang ke samping, tidak mengejar dari belakang
+      // Sudah di ekor: mengerem dan menyimpang agar cepat keluar dari jangkauan
+      const side = (e.slotAngle >= 0 ? 1 : -1);
+      _desired.set(-Player.forward.z * side, 0.1, Player.forward.x * side).multiplyScalar(speed * 0.4);
+    } else {
+      _desired.copy(_toP).multiplyScalar(1 / Math.max(dist, 0.001)).addScaledVector(e.sep, 0.8).normalize().multiplyScalar(speed);
+    }
     e.vel.x = damp(e.vel.x, _desired.x, c.agility, dt);
     e.vel.y = damp(e.vel.y, _desired.y, c.agility, dt);
     e.vel.z = damp(e.vel.z, _desired.z, c.agility, dt);
@@ -2760,28 +2875,74 @@ const Enemies = {
     if (e.ring) e.ring.rotation.z += dt * 3.5;
   },
 
-  // Pesawat penembak: serang dan tembak, lalu melintas menjauh, lalu berbalik lagi
+  // Penembak: siklus APPROACH (ke slot di busur depan pemain), ATTACK (tanda lalu tembak),
+  // BREAK (menjauh menyamping atau menukik), REPOSITION (berputar balik lebih lambat dari pemain)
   updateGunship(e, dt, dist, diff) {
-    const c = e.cfg;
+    const c = e.cfg, P = Player.pos, f = Player.forward;
+    const cruise = this.cruiseSpeed('gunship', diff), vmax = this.maxSpeed();
+    let speed = cruise, turnRate = c.turnRate;
     _prevDir.copy(e.dir);
-    if (e.state === 'attack') {
-      // Arahkan ke posisi pemain sedikit di depan (lead)
-      _desired.copy(Player.vel).multiplyScalar(0.6).add(Player.pos).sub(e.pos).normalize();
-      if (dist < 45) { e.state = 'extend'; e.timer = c.extendTime; }
+    // Tidak boleh menempel di ekor pemain terlalu lama
+    if (e.tail > CONFIG.enemies.maxTailTime) { this.beginBreak(e); e.tail = 0; }
+    e.timer -= dt;
+    if (e.state === 'approach' || e.state === 'reposition') {
+      // Slot di busur depan pemain (sudut dan jarak dipilih saat masuk state)
+      const hx = f.x, hz = f.z, hl = Math.hypot(hx, hz) || 1;
+      const ca = Math.cos(e.slotAngle), sa = Math.sin(e.slotAngle);
+      const sx = (hx * ca - hz * sa) / hl, sz = (hx * sa + hz * ca) / hl;
+      _va.set(P.x + sx * e.slotDist, P.y + (e.slotAngle > 0 ? 15 : -10), P.z + sz * e.slotDist);
+      _desired.subVectors(_va, e.pos);
+      const dSlot = _desired.length();
+      _desired.multiplyScalar(1 / Math.max(dSlot, 0.001));
+      // Menyusul dari belakang: ambil jalur lebar di samping pemain, tidak lurus di belakang ekor
+      if ((_toP.x * f.x + _toP.z * f.z) > 0 ? dist < 400 : false) {
+        const sideSign = (e.pos.x - P.x) * -f.z + (e.pos.z - P.z) * f.x >= 0 ? 1 : -1;
+        _desired.x += -f.z * sideSign * 1.4;
+        _desired.z += f.x * sideSign * 1.4;
+        _desired.normalize();
+      }
+      if (dSlot > 250) speed = vmax;
+      // Sudah berada di busur depan pemain dalam jangkauan: berbalik menghadap pemain dan menyerang
+      const relFront = -(_toP.x * f.x + _toP.y * f.y + _toP.z * f.z);
+      const inFront = dist < 550 ? relFront > Math.cos(1.22) * dist : false;
+      if (e.state === 'reposition') {
+        turnRate = c.turnRate * 0.6;
+        if (e.timer <= 0) e.state = 'approach';
+      } else if (dSlot < 90 || inFront) {
+        e.state = 'attack';
+        e.timer = randRange(c.attackTime[0], c.attackTime[1]);
+        e.telegraph = c.telegraph;
+      }
+    } else if (e.state === 'attack') {
+      // Bidik posisi pemain sedikit di depan (lead)
+      _desired.copy(Player.vel).multiplyScalar(0.6).add(P).sub(e.pos).normalize();
+      speed = cruise * 0.9;
+      // Serangan hanya dari depan atau samping: bila sudah di belakang pemain, langsung menjauh
+      const rel = -(_toP.x * f.x + _toP.y * f.y + _toP.z * f.z);
+      if (e.timer <= 0 || dist < 70 || rel < -0.2 * dist) this.beginBreak(e);
     } else {
-      _desired.copy(e.dir);
-      _desired.y = Math.max(_desired.y, 0.08);
-      e.timer -= dt;
-      if (e.timer <= 0) e.state = 'attack';
+      // BREAK: menjauh menyamping atau menukik
+      _desired.copy(e.breakDir);
+      speed = cruise * 1.1;
+      if (e.timer <= 0) {
+        e.state = 'reposition';
+        e.timer = randRange(c.repositionTime[0], c.repositionTime[1]);
+        e.slotAngle = randRange(-1.05, 1.05);
+        e.slotDist = randRange(c.approach[0], c.approach[1]);
+      }
     }
-    // Hindari terrain di depan
+    // Separasi dari musuh lain dan jarak aman dari pemain
+    _desired.addScaledVector(e.sep, 1.2);
+    if (dist < CONFIG.enemies.playerSeparation) _desired.addScaledVector(_toP, -1.5 / Math.max(dist, 1));
+    // Hindari medan di depan
     const ahead = groundHeightAt(e.pos.x + e.dir.x * 70, e.pos.z + e.dir.z * 70);
     if (e.pos.y < ahead + 35) _desired.y = Math.max(_desired.y, 0.45);
     _desired.normalize();
-    e.dir.lerp(_desired, clamp(c.turnRate * dt * 1.6, 0, 1)).normalize();
-    const speed = c.speed * Math.sqrt(diff);
+    e.dir.lerp(_desired, clamp(turnRate * dt * 1.6, 0, 1)).normalize();
+    speed = Math.min(speed, vmax);
     e.pos.addScaledVector(e.dir, speed * dt);
     e.vel.copy(e.dir).multiplyScalar(speed);
+    e.speed = speed;
 
     // Miring saat belok
     const turn = (_prevDir.z * e.dir.x - _prevDir.x * e.dir.z) / Math.max(dt, 1e-4);
@@ -2789,27 +2950,57 @@ const Enemies = {
     e.group.lookAt(e.pos.x - e.dir.x, e.pos.y - e.dir.y, e.pos.z - e.dir.z);
     e.group.rotateZ(e.bank);
 
-    // Menembak saat pemain ada di kerucut depan dan dalam jangkauan, dalam semburan pendek
+    // Tembakan adil: tanda (kilat moncong) setengah detik sebelum semburan, hanya saat ATTACK
     e.fireCd -= dt;
-    const canShoot = !(e.state !== 'attack' || dist >= c.fireRange || !Player.alive || e.fireCd > 0);
-    if (canShoot) {
-      const facing = (e.dir.x * _toP.x + e.dir.y * _toP.y + e.dir.z * _toP.z) / Math.max(dist, 0.001);
-      if (facing > Math.cos(c.fireCone)) {
-        const t = dist / c.bulletSpeed;
-        _va.copy(Player.vel).multiplyScalar(t * 0.8).add(Player.pos);
-        _va.x += randRange(-2, 2); _va.y += randRange(-2, 2); _va.z += randRange(-2, 2);
-        _vb.copy(e.pos).addScaledVector(e.dir, 4);
-        _va.sub(_vb).normalize();
-        this.bullets.spawn(_vb.x, _vb.y, _vb.z, _va.x, _va.y, _va.z, c.bulletSpeed, CONFIG.enemies.bulletLife, c.bulletDamage);
-        Events.emit('enemyShot', _vb);
-        if (e.burstLeft <= 0) e.burstLeft = c.burst;
-        e.burstLeft--;
-        e.fireCd = e.burstLeft > 0 ? 0.16 : c.fireInterval / (diff * Game.diff.enemyFire);
-      }
+    if (e.state !== 'attack' || !Player.alive) return;
+    _vb.copy(e.pos).addScaledVector(e.dir, 4);
+    if (e.telegraph > 0) {
+      e.telegraph -= dt;
+      Events.emit('enemyTelegraph', _vb);
+      return;
     }
+    if (dist >= c.fireRange || e.fireCd > 0) return;
+    const facing = (e.dir.x * _toP.x + e.dir.y * _toP.y + e.dir.z * _toP.z) / Math.max(dist, 0.001);
+    if (facing > Math.cos(c.fireCone)) {
+      const t = dist / c.bulletSpeed;
+      _va.copy(Player.vel).multiplyScalar(t * 0.8).add(P);
+      _va.x += randRange(-2, 2); _va.y += randRange(-2, 2); _va.z += randRange(-2, 2);
+      _va.sub(_vb).normalize();
+      this.bullets.spawn(_vb.x, _vb.y, _vb.z, _va.x, _va.y, _va.z, c.bulletSpeed, CONFIG.enemies.bulletLife, c.bulletDamage);
+      Events.emit('enemyShot', _vb);
+      if (e.burstLeft <= 0) e.burstLeft = c.burst;
+      e.burstLeft--;
+      e.fireCd = e.burstLeft > 0 ? 0.16 : c.fireInterval / (diff * Game.diff.enemyFire);
+      if (e.burstLeft <= 0) e.telegraph = c.telegraph;   // semburan berikutnya ditandai lagi
+    }
+  },
+
+  beginBreak(e) {
+    const c = e.cfg;
+    e.state = 'break';
+    e.timer = randRange(c.breakTime[0], c.breakTime[1]);
+    // Arah menjauh: tegak lurus terhadap garis ke pemain, ke sisi acak, sedikit menukik atau naik
+    const side = rand() < 0.5 ? -1 : 1;
+    e.breakDir.set(-_toP.z * side, 0, _toP.x * side).normalize();
+    e.breakDir.y = randRange(-0.35, 0.25);
+    e.breakDir.addScaledVector(_toP, -0.4 / Math.max(_toP.length(), 1)).normalize();
   },
 };
 Enemies.init();
+
+/* Metrik keseimbangan tempur untuk uji bot: waktu ada musuh menempel di belakang dan tabrakan */
+const Metrics = {
+  time: 0, tailTime: 0, collisions: 0,
+  tailByType: { drone: 0, gunship: 0 },
+  seen: {},   // state AI penembak yang pernah dimasuki
+  reset() { this.time = 0; this.tailTime = 0; this.collisions = 0; this.tailByType.drone = 0; this.tailByType.gunship = 0; this.seen = {}; },
+  track(dt, tailing) { this.time += dt; if (tailing) this.tailTime += dt; },
+  summary() {
+    const min = Math.max(this.time / 60, 1e-6);
+    return { time: round2(this.time), tailRatio: round2(this.tailTime / Math.max(this.time, 1e-6)), collisionsPerMin: round2(this.collisions / min),
+      tailByType: { drone: round2(this.tailByType.drone), gunship: round2(this.tailByType.gunship) }, states: Object.keys(this.seen) };
+  },
+};
 
 /* =====================================================================
    GELOMBANG - jumlah musuh dan kesulitan naik tiap gelombang
@@ -3146,6 +3337,7 @@ function updateCombat() {
     if (!e.active) continue;
     const r = e.radius + pr;
     if (e.pos.distanceToSquared(P) < r * r) {
+      Metrics.collisions++;
       Enemies.destroy(e, false);
       Player.damage(e.cfg.contactDamage, 'tabrakan');
     }
@@ -3874,6 +4066,7 @@ Events.on('shot', (pos, dir) => {
   const v = Player.vel;
   FX.fire.emit(pos.x, pos.y, pos.z, v.x + dir.x * 20, v.y + dir.y * 20, v.z + dir.z * 20, 0.08, 2.6, 4, 0.55, 0.95, 1, 1, 0, 0);
 });
+Events.on('enemyTelegraph', (pos) => FX.fire.emit(pos.x, pos.y, pos.z, 0, 0, 0, 0.06, 1.6 + frand() * 1.2, 0, 1, 0.15, 0.25, 0.9, 0, 0));
 Events.on('enemyShot', (pos) => FX.fire.emit(pos.x, pos.y, pos.z, 0, 0, 0, 0.08, 2.2, 0, 1, 0.4, 0.2, 1, 0, 0));
 Events.on('enemyHit', (x, y, z) => FX.sparks(x, y, z, 9));
 Events.on('bulletImpact', (x, y, z) => {
@@ -4497,6 +4690,9 @@ function updateHud(dt) {
   }
   updateIndicators();
   updateHpBars();
+  updateLeadMarker();
+  v = Game.state === 'playing' ? (Player.alive ? Enemies.rearThreat : false) : false;
+  if (changed('rear', v)) $('rear-warn').classList.toggle('hidden', !v);
   updateManeuverHud();
   Touch.updateCooldowns();
   updateDamageNumbers(dt);
@@ -4545,6 +4741,31 @@ function updateHpBars() {
     const b = hud.hpBars[k];
     if (b.shown) { b.shown = false; b.el.style.display = 'none'; }
   }
+}
+
+// Penanda lead: titik di depan musuh terdekat (di busur depan) tempat peluru akan bertemu
+const leadEl = $('lead');
+function updateLeadMarker() {
+  let best = null, bestD = 650 * 650;
+  const P = Player.pos, f = Player.forward;
+  for (let k = 0; k < Enemies.list.length; k++) {
+    const e = Enemies.list[k];
+    if (!e.active) continue;
+    const dx = e.pos.x - P.x, dy = e.pos.y - P.y, dz = e.pos.z - P.z, d2 = dx * dx + dy * dy + dz * dz;
+    if (d2 > bestD) continue;
+    if (dx * f.x + dy * f.y + dz * f.z < Math.sqrt(d2) * 0.5) continue;   // hanya di depan
+    best = e; bestD = d2;
+  }
+  let show = false;
+  if (best ? Player.alive : false) {
+    const t = Math.sqrt(bestD) / (CONFIG.weapons.bulletSpeed + Player.speed);
+    _vc.copy(best.vel).multiplyScalar(t).add(best.pos).project(camera);
+    if (_vc.z < 1) {
+      show = true;
+      leadEl.style.transform = 'translate(' + ((_vc.x + 1) * 0.5 * window.innerWidth).toFixed(1) + 'px, ' + ((1 - _vc.y) * 0.5 * window.innerHeight).toFixed(1) + 'px) rotate(45deg)';
+    }
+  }
+  if (changed('lead', show)) leadEl.classList.toggle('hidden', !show);
 }
 
 // Indikator cooldown manuver
@@ -4777,6 +4998,7 @@ function resetSession(keepWorld = false) {
   Rings.reset();
   Pickups.reset();
   Combo.reset();
+  Metrics.reset();
   hud.vignetteLevel = 0;
   Game.hasSession = true;
 }
@@ -5149,7 +5371,7 @@ const Touch = {
     if (n.nitro > 0) c.nitro = true;
     if (n.fire > 0) c.fire = true;
     // Tembak otomatis: menembak bila ada musuh di kerucut bidik
-    if (Save.settings.autoFire) { if (Game.state === 'playing') { if (Weapons.findAssistTarget()) c.fire = true; } }
+    if (Save.settings.autoFire) { if (Game.state === 'playing') { if (Weapons.findAssistTarget(5)) c.fire = true; } }
   },
   reset() {
     this.pointers.clear();
@@ -5268,10 +5490,13 @@ const AutoInput = {
     const ground = cruise - 55;
     // Bidik musuh terdekat bila ada, selain itu meliuk
     let target = null, best = Infinity;
+    // Seperti pemain sungguhan: utamakan musuh di belahan depan, musuh di belakang dihitung jauh
     for (let k = 0; k < Enemies.list.length; k++) {
       const e = Enemies.list[k];
       if (!e.active) continue;
-      const d2 = e.pos.distanceToSquared(P);
+      let d2 = e.pos.distanceToSquared(P);
+      const front = (e.pos.x - P.x) * Player.forward.x + (e.pos.y - P.y) * Player.forward.y + (e.pos.z - P.z) * Player.forward.z;
+      if (front < 0) d2 *= 9;
       if (d2 < best) { best = d2; target = e; }
     }
     if (target) {
@@ -5439,6 +5664,7 @@ window.__game = {
   resume() { if (Game.state === 'paused') togglePause(); },
   dispose() { disposeGame(); },
   quality() { return { preset: CONFIG.qualityPreset, ...Q }; },
+  config() { return JSON.parse(JSON.stringify({ balance: CONFIG.balance, enemies: CONFIG.enemies, maneuvers: CONFIG.maneuvers, weapons: CONFIG.weapons })); },
   debug: {
     setGod(v) { Debug.god = !!v; },
     // Pengendali otomatis pada permainan real-time (untuk uji soak dengan render sungguhan)
@@ -5446,7 +5672,7 @@ window.__game = {
     setEnemiesEnabled(v) { Debug.enemiesEnabled = !!v; if (!v) Enemies.reset(); },
     damagePlayer(n) { Player.damage(n, 'debug'); },
     // Damage langsung tanpa melewati masa kebal (untuk menguji alur nyawa)
-    forceDamagePlayer(n) { const keep = Player.spawnInvuln; Player.spawnInvuln = 0; Player.damage(n, 'debug'); if (Player.alive) Player.spawnInvuln = keep; },
+    forceDamagePlayer(n) { const keep = Player.spawnInvuln; Player.spawnInvuln = 0; Player.hitInvuln = 0; Player.damage(n, 'debug'); if (Player.alive) Player.spawnInvuln = keep; },
     setLives(n) { Player.lives = clamp(n | 0, 0, CONFIG.difficulty.maxLives); },
     // dy (opsional): ketinggian relatif terhadap pemain; tanpa dy ketinggian diacak seperti spawn biasa
     spawnEnemy(type, dist, lateral, dy) {
@@ -5526,6 +5752,10 @@ window.__game = {
       const D = Obstacles.data, out = [];
       for (let d = 0; d < D.length; d += 5) if (D[d + 4] > 0) out.push({ x: D[d], z: D[d + 1], base: D[d + 2], height: D[d + 3], radius: D[d + 4] });
       return out;
+    },
+    metrics() { return Metrics.summary(); },
+    enemySpeeds() {
+      return { max: Math.max(0, ...Enemies.list.filter((e) => e.active).map((e) => e.vel.length())), limit: round2(Enemies.maxSpeed()), states: Enemies.list.filter((e) => e.active).map((e) => e.state) };
     },
     forceManeuver(type, dir = 1) { return Player.startManeuver(type, dir, true); },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)

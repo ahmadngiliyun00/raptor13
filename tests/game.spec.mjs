@@ -303,6 +303,42 @@ test('B3: opsi Tabrakan fatal mati memberi damage besar dan pantulan', async ({ 
   expect(r.position.y).toBeGreaterThan(s.h);         // memantul, tidak menembus
 });
 
+for (const world of ['earth', 'space']) {
+  test(`B4: simulasi bot ${world}, musuh tidak menempel di ekor dan jarang menabrak, kecepatan dalam batas`, async ({ page }) => {
+    await start(page, { world, enemies: true, seed: 4242 });
+    const r = await page.evaluate(() => {
+      const d = window.__game.debug;
+      let maxSpeed = 0;
+      const states = new Set();
+      for (let i = 0; i < 24; i++) {
+        d.simulate(5, 0);
+        const sp = d.enemySpeeds();
+        maxSpeed = Math.max(maxSpeed, sp.max);
+        sp.states.forEach((x) => states.add(x));
+      }
+      return { m: d.metrics(), maxSpeed, limit: d.enemySpeeds().limit, states: [...states] };
+    });
+    test.info().annotations.push({ type: 'metrik', description: JSON.stringify(r.m) });
+    const cfg = await page.evaluate(() => window.__game.config().balance);
+    expect(r.m.time).toBeGreaterThan(110);
+    expect(r.m.tailRatio).toBeLessThan(cfg.maxTailRatio);
+    expect(r.m.collisionsPerMin).toBeLessThan(cfg.maxCollisionsPerMin);
+    expect(r.maxSpeed).toBeLessThanOrEqual(r.limit + 0.01);
+    for (const st of ['approach', 'attack', 'break', 'reposition']) expect(r.m.states).toContain(st);   // siklus serang terlihat
+  });
+}
+
+test('B4: kebal 1 detik setelah menerima damage', async ({ page }) => {
+  await start(page, { god: false });
+  await page.waitForTimeout(1700);
+  await dbg(page, 'damagePlayer', 10);
+  await dbg(page, 'damagePlayer', 10);
+  expect((await snap(page)).health).toBe(90);        // damage kedua diabaikan
+  await page.waitForTimeout(1100);
+  await dbg(page, 'damagePlayer', 10);
+  expect((await snap(page)).health).toBe(80);
+});
+
 test('W dan S mengubah pitch dan ketinggian', async ({ page }) => {
   await start(page);
   const s0 = await snap(page);
@@ -557,6 +593,7 @@ test('musuh muncul bergelombang, tembakan pemain menghancurkan musuh, combo mena
 
 test('pesawat penembak menembak dan melukai pemain', async ({ page }) => {
   await start(page, { enemies: true, god: false });
+  await page.waitForTimeout(1700);   // lewati kebal awal agar tembakan pertama tercatat
   await dbg(page, 'setEnemiesEnabled', false);
   await dbg(page, 'setEnemiesEnabled', true);
   await dbg(page, 'spawnEnemy', 'gunship', 260, 0, 0);
