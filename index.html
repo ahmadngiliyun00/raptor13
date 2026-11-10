@@ -977,6 +977,78 @@ const JET_NOZZLE = [
   { z: 4.72, w: 0.27, ht: 0.17, hb: 0.17, n: 5, chine: 0 },
 ];
 
+// Tekstur kanvas prosedural untuk jet, dibuat sekali lalu dibagi bersama
+const JetTextures = {
+  ready: false,
+  make(w, h, draw, srgb = true) {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c);
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  },
+  // Garis panel halus: beberapa garis memanjang dan melintang plus deretan paku keling
+  panels(g, w, h, seed) {
+    const rnd = makeRng(seed);
+    g.fillStyle = '#c9ced5';
+    g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 2600; i++) {   // bintik halus agar permukaan tidak terlalu rata
+      const v = 190 + Math.floor(rnd() * 25);
+      g.fillStyle = `rgb(${v},${v + 3},${v + 8})`;
+      g.fillRect(rnd() * w, rnd() * h, 2, 2);
+    }
+    g.strokeStyle = 'rgba(40, 46, 56, 0.45)';
+    g.lineWidth = 1.2;
+    for (let i = 0; i < 7; i++) {
+      const x = Math.round((0.08 + rnd() * 0.84) * w) + 0.5;
+      g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke();
+    }
+    for (let i = 0; i < 4; i++) {
+      const y = Math.round((0.1 + rnd() * 0.8) * h) + 0.5;
+      g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
+    }
+    g.fillStyle = 'rgba(40, 46, 56, 0.35)';
+    for (let i = 0; i < 5; i++) {
+      const x = rnd() * w, y = rnd() * h, horiz = rnd() < 0.5;
+      for (let k = 0; k < 10; k++) g.fillRect(horiz ? x + k * 5 : x, horiz ? y : y + k * 5, 1.5, 1.5);
+    }
+  },
+  init() {
+    if (this.ready) return;
+    this.ready = true;
+    // Env map: gradasi langit, horizon hangat dan tanah, untuk pantulan logam dan kaca
+    this.env = this.make(128, 64, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(0, '#9fc2e8'); gr.addColorStop(0.47, '#efe2cc'); gr.addColorStop(0.53, '#8c8a78'); gr.addColorStop(1, '#3d4636');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+      g.fillStyle = 'rgba(255, 250, 235, 0.9)'; g.beginPath(); g.arc(w * 0.3, h * 0.25, 5, 0, Math.PI * 2); g.fill();
+    });
+    this.env.mapping = THREE.EquirectangularReflectionMapping;
+    this.body = this.make(256, 256, (g, w, h) => this.panels(g, w, h, 11));
+    // Sayap: panel plus garis aksen oranye tipis di tepi depan (u kecil) dan ujung (v besar)
+    this.wing = this.make(256, 256, (g, w, h) => {
+      this.panels(g, w, h, 23);
+      g.fillStyle = '#ff8a2a';
+      g.fillRect(0, 0, Math.round(w * 0.03), h);
+      g.fillRect(0, 0, w, Math.round(h * 0.03));
+    });
+    // Sirip tegak: panel, aksen tepi depan, dan angka 13 sebagai identitas orisinal
+    this.fin = this.make(256, 256, (g, w, h) => {
+      this.panels(g, w, h, 37);
+      g.fillStyle = '#ff8a2a';
+      g.fillRect(0, 0, Math.round(w * 0.035), h);
+      g.font = 'italic 900 112px system-ui, sans-serif';
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 6; g.strokeStyle = 'rgba(30, 34, 42, 0.85)';
+      g.strokeText('13', w * 0.52, h * 0.6);
+      g.fillStyle = '#f2f4f7';
+      g.fillText('13', w * 0.52, h * 0.6);
+    });
+  },
+};
+
 // Penampang badan jet (z dari hidung ke ekor)
 const JET_FUSELAGE = [
   { z: -4.62, w: 0.02, ht: 0.012, hb: 0.01, y: -0.17, n: 2.4, chine: 1 },
@@ -1011,9 +1083,15 @@ function createPlayerJet() {
     return m;
   };
 
-  const matSkin = new THREE.MeshStandardMaterial({ color: 0x5e6976, metalness: 0.45, roughness: 0.5 });
-  const matCanopy = new THREE.MeshStandardMaterial({ color: 0x16202b, metalness: 0.3, roughness: 0.12 });
-  const matDuct = new THREE.MeshStandardMaterial({ color: 0x2c3138, metalness: 0.5, roughness: 0.55, side: THREE.DoubleSide });
+  JetTextures.init();
+  const T = JetTextures;
+  // Abu-abu gelap kebiruan, metalness dan roughness sedang
+  const skin = { color: 0x6f7b89, metalness: 0.5, roughness: 0.5, envMap: T.env, envMapIntensity: 0.6 };
+  const matSkin = new THREE.MeshStandardMaterial({ ...skin, map: T.body });
+  const matWing = new THREE.MeshStandardMaterial({ ...skin, map: T.wing });
+  const matFin = new THREE.MeshStandardMaterial({ ...skin, map: T.fin });
+  const matCanopy = new THREE.MeshStandardMaterial({ color: 0x1d2836, metalness: 0.85, roughness: 0.07, envMap: T.env, envMapIntensity: 1.3 });
+  const matDuct = new THREE.MeshStandardMaterial({ color: 0x3a3f46, metalness: 0.7, roughness: 0.4, envMap: T.env, envMapIntensity: 0.5, side: THREE.DoubleSide });
   const matHole = new THREE.MeshBasicMaterial({ color: 0x07090c });
   const matGlow = new THREE.MeshBasicMaterial({ color: 0xff9a40 });
   const matFlame = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
@@ -1025,14 +1103,16 @@ function createPlayerJet() {
   // Sayap utama, strake (penyambung sayap ke badan) dan stabilizer horizontal, kanan dan kiri
   for (const [plan, y] of [[JET_WING, -0.05], [JET_STRAKE, -0.02], [JET_STAB, -0.06]]) {
     const right = liftingSurface(plan);
-    add(right, matSkin).position.y = y;
-    add(mirrorX(right), matSkin).position.y = y;
+    add(right, matWing).position.y = y;
+    add(mirrorX(right), matWing).position.y = y;
   }
   // Dua sirip tegak, miring keluar sekitar 25 derajat
   for (const side of [1, -1]) {
-    const fin = liftingSurface({ ...JET_FIN, flipBottomU: side > 0, flipTopU: side < 0 });
+    // Permukaan yang menghadap +x butuh u terbalik agar angka 13 terbaca dari kedua sisi;
+    // untuk kedua sirip, permukaan bawah lokal yang menghadap +x setelah diputar
+    const fin = liftingSurface({ ...JET_FIN, flipBottomU: true });
     fin.rotateZ(THREE.MathUtils.degToRad(side > 0 ? 90 - JET_FIN_CANT : 90 + JET_FIN_CANT));
-    const m = add(fin, matSkin);
+    const m = add(fin, matFin);
     m.position.set(side * 0.56, 0.22, 0);
   }
 
