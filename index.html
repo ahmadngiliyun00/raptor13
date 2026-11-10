@@ -1763,8 +1763,10 @@ const Waves = {
     const W = CONFIG.waves;
     this.wave = n;
     this.phase = 'active';
-    this.remDrones = Math.min(3 + 2 * (n - 1), 14);
-    this.remGunships = Math.min(1 + Math.floor((n - 1) / 2), 7);
+    // Jumlah musuh per gelombang dikalikan laju spawn dari tabel kesulitan
+    const rate = Game.diff.spawnRate;
+    this.remDrones = Math.max(1, Math.round(Math.min(3 + 2 * (n - 1), 14) * rate));
+    this.remGunships = Math.max(1, Math.round(Math.min(1 + Math.floor((n - 1) / 2), 7) * rate));
     this.spawnTimer = 0.4;
     this.waveTime = 0;
     this.difficulty = Math.min(1 + W.difficultyStep * (n - 1), W.maxDifficulty);
@@ -1793,7 +1795,7 @@ const Waves = {
       if (this.remGunships > 0) pickGun = this.remDrones === 0 || rand() < this.remGunships / rem;
       const e = Enemies.spawnAhead(pickGun ? 'gunship' : 'drone');
       if (e) { if (pickGun) this.remGunships--; else this.remDrones--; }
-      this.spawnTimer = W.spawnInterval / Math.sqrt(this.difficulty);
+      this.spawnTimer = W.spawnInterval / (Math.sqrt(this.difficulty) * Game.diff.spawnRate);
     }
     const cleared = rem + Enemies.alive === 0;
     if (cleared || this.waveTime > W.maxDuration) {
