@@ -27,7 +27,8 @@ Berkas ini adalah catatan kerja agar pengerjaan bisa dilanjutkan otomatis setela
 - B5 laju tembak 10 per detik, peluru 750 ditambah kecepatan pesawat, bolt plasma dengan halo berwarna per peluru, peluru musuh bola magenta, buff OVERDRIVE dan PENGHANCUR 10 detik dari kristal, pengali upgrade permanen Player.upgrades.
 - B6 awan Bumi volumetrik low-poly instanced (kumulus, stratus, serat), dua lapisan, memudar dekat kamera, tabir putih saat menembus awan.
 - B7 audio mesin brown noise ditambah dua osilator 52 sampai 90 Hz, whoosh dan sub-bass saat nitro mulai lalu desis stabil, compressor ringan, uji sanity.
-- Fase 0 (B1 sampai B7) selesai. Lanjut ke A2.
+- Fase 0 (B1 sampai B7) selesai.
+- A2 hangar (alur MULAI, Pilih Medan, Pilih Kapal, dan tombol HANGAR di menu), kredit dari loot dan 50 persen dibawa pulang saat game over, save v3 dengan migrasi. Interceptor dan Gunship terdaftar dengan statistik akhir tetapi model masih jet sementara sampai A3.
 
 ## Urutan task berikutnya (blok terakhir menang bila bertentangan)
 
@@ -41,7 +42,7 @@ Fase 0, rasa main (paling awal):
 7. (SELESAI) B7 Audio mesin: brown noise lewat lowpass ditambah dua sine atau triangle 50 sampai 90 Hz; nitro: whoosh bandpass 400 sampai 2500 Hz 0,4 detik ditambah sub-bass sekali lalu desis; compressor master; tes sanity tanpa NaN dan gain master di bawah 1.
 
 Fase berikutnya:
-8. A2 Hangar Pilih Kapal (alur MULAI, Pilih Medan, Pilih Kapal), kredit, buka kapal, save v3 dengan migrasi.
+8. (SELESAI) A2 Hangar Pilih Kapal (alur MULAI, Pilih Medan, Pilih Kapal), kredit, buka kapal, save v3 dengan migrasi.
 9. S3 Skybox angkasa (bintang paralaks 3 lapis, nebula, debu dekat kamera, warp streak saat nitro), matahari dan lens flare, EffectComposer dan UnrealBloomPass sesuai preset kualitas.
 10. A3 Starfighter bersayap empat konfigurasi X dengan sayap dinamis dan thruster manuver, varian Interceptor (500 kredit) dan Gunship (1200 kredit), `?shippreview=` (starfighter, jet, interceptor, gunship, piko), minimal 3 putaran iterasi visual.
 11. A4 Robot Piko (model loft, ekspresi mata, bip, panel HUD bersubtitle, batas frekuensi, opsi Bantuan robot, 3 kartu upgrade).

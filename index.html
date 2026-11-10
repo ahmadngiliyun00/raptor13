@@ -147,6 +147,26 @@
   }
   @media (max-width: 640px), (max-height: 520px) { .tcard-art { height: 60px; } .tcard .tdesc { display: none; } }
 
+  /* Hangar */
+  .hangar { max-width: 860px; }
+  .hangar-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; width: 100%; align-items: center; }
+  .hangar-view { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  #hangar-canvas { width: 100%; max-width: 420px; aspect-ratio: 420 / 260; height: auto; border-radius: 8px; touch-action: none; cursor: grab;
+    background: radial-gradient(ellipse at 50% 60%, rgba(80, 110, 150, 0.35), rgba(10, 18, 28, 0.2)); }
+  .hangar-view .arrow { position: absolute; top: 40%; padding: 8px; min-width: 40px; min-height: 40px; }
+  .hangar-view .arrow svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.6; }
+  #hangar-prev { left: 4px; } #hangar-next { right: 4px; }
+  .hangar-info { text-align: left; display: flex; flex-direction: column; gap: 8px; }
+  .hangar-title { display: flex; align-items: baseline; gap: 10px; }
+  .hangar-title b { font-size: 24px; letter-spacing: 0.06em; }
+  .stats-bars { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; font-size: 12px; color: var(--ui-dim); }
+  .stats-bars i { display: block; height: 8px; background: rgba(255, 255, 255, 0.12); border-radius: 2px; overflow: hidden; }
+  .stats-bars i::after { content: ""; display: block; height: 100%; width: var(--v); background: linear-gradient(90deg, #ff8a24, #ffd24a); }
+  .hangar-status { margin: 0; font-weight: 800; letter-spacing: 0.08em; }
+  .hangar-status.locked { color: #ffb0a0; } .hangar-status.picked { color: #8ff0a8; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(0.6); }
+  @media (max-width: 720px), (max-height: 520px) { .hangar-body { grid-template-columns: 1fr 1fr; gap: 10px; } .hangar-title b { font-size: 18px; } }
+
   /* Pengaturan */
   .card.settings { max-width: 640px; max-height: calc(100vh - 48px); overflow-y: auto; }
   .set-grid { display: grid; grid-template-columns: auto 1fr; gap: 12px 18px; align-items: center; width: 100%; text-align: left; }
@@ -437,6 +457,7 @@
     <div class="label">SKOR</div>
     <div id="score" class="num big">0</div>
     <div class="label">TERTINGGI <span id="best" class="num">0</span></div>
+    <div class="label">KREDIT <span id="credits" class="num">0</span></div>
   </div>
   <div class="hud-block bl">
     <div class="stat"><span class="label">KECEPATAN</span><span><span id="speed" class="num">0</span> <span class="unit">km/j</span></span></div>
@@ -504,6 +525,7 @@
     <nav class="menu-list" aria-label="Menu utama">
       <button id="btn-start" class="btn btn-big" type="button">MULAI</button>
       <button id="btn-continue" class="btn hidden" type="button">LANJUTKAN</button>
+      <button id="btn-hangar" class="btn secondary" type="button">HANGAR</button>
       <button id="btn-settings" class="btn secondary" type="button">PENGATURAN</button>
       <button id="btn-about" class="btn secondary" type="button">TENTANG</button>
     </nav>
@@ -532,6 +554,33 @@
       </button>
     </div>
     <button id="btn-terrain-back" class="btn secondary" type="button">KEMBALI</button>
+  </div>
+</div>
+
+<!-- Hangar: pilih kapal (alur mulai atau dari menu utama) -->
+<div id="screen-hangar" class="screen hidden">
+  <div class="card wide hangar">
+    <h2>PILIH KAPAL</h2>
+    <div class="hangar-body">
+      <div class="hangar-view">
+        <canvas id="hangar-canvas" width="420" height="260" aria-label="Pratinjau kapal"></canvas>
+        <button id="hangar-prev" class="btn secondary arrow" type="button" aria-label="Kapal sebelumnya"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <button id="hangar-next" class="btn secondary arrow" type="button" aria-label="Kapal berikutnya"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+        <small class="hint">A dan D atau seret untuk memutar</small>
+      </div>
+      <div class="hangar-info">
+        <div class="hangar-title"><b id="hangar-name">Kapal</b><span id="hangar-world" class="tag"></span></div>
+        <p id="hangar-desc" class="hint"></p>
+        <div id="hangar-stats" class="stats-bars"></div>
+        <p id="hangar-status" class="hangar-status"></p>
+        <p class="hint">Kredit: <b id="hangar-credits">0</b></p>
+      </div>
+    </div>
+    <div class="row-btns">
+      <button id="hangar-back" class="btn secondary" type="button">KEMBALI</button>
+      <button id="hangar-buy" class="btn secondary" type="button">BUKA</button>
+      <button id="hangar-pick" class="btn" type="button">PILIH</button>
+    </div>
   </div>
 </div>
 
@@ -650,6 +699,7 @@
     <span>Gelombang tercapai</span><b id="go-wave">0</b>
     <span>Combo terbaik</span><b id="go-combo">0</b>
     <span>Gerbang dilewati</span><b id="go-rings">0</b>
+    <span>Kredit dibawa pulang</span><b id="go-credits">0</b>
   </div>
   <button id="btn-restart" class="btn" type="button">MAIN LAGI</button>
   <button id="btn-over-menu" class="btn secondary" type="button">MENU UTAMA</button>
@@ -822,6 +872,12 @@ const CONFIG = {
     nitroAmount: 0.5,
     heartChance: 0.14,         // peluang pickup berupa hati (+1 nyawa) bila nyawa belum penuh
   },
+  // Kredit dari loot; saat game over hanya sebagian yang dibawa pulang
+  credits: {
+    drone: 4, gunship: 12,
+    asteroid: { small: 1, medium: 2, large: 4, giant: 10 },
+    keepOnGameOver: 0.5,
+  },
   // Buff sementara dari pickup kristal
   buffs: {
     duration: 10,
@@ -902,8 +958,9 @@ const CONFIG = {
    SAVE LOKAL - satu kunci berversi di localStorage, load dan save terpusat,
    selalu dibungkus try/catch, dengan nilai default aman bila data rusak atau kosong
    ===================================================================== */
-const SAVE_KEY = 'raptor13.v2';
-const SAVE_KEYS_OLD = ['raptor13.v1'];   // dibaca sekali untuk migrasi
+const SAVE_KEY = 'raptor13.v3';
+const SAVE_KEYS_OLD = ['raptor13.v2', 'raptor13.v1'];   // dibaca sekali untuk migrasi (terbaru dulu)
+const SHIP_IDS = ['raptor-j', 'starfighter', 'interceptor', 'gunship'];
 const SETTING_DEFAULTS = {
   difficulty: 'normal',        // mudah | normal | sulit
   terrain: 'space',            // medan default: space | earth
@@ -936,9 +993,10 @@ const Save = {
   data: null,
   defaults() {
     return {
-      version: 2,
+      version: 3,
       settings: { ...SETTING_DEFAULTS },
       highScores: { space: 0, earth: 0 },   // skor tertinggi terpisah per medan
+      ships: { selected: { earth: 'raptor-j', space: 'starfighter' }, unlocked: ['raptor-j', 'starfighter'], credits: 0 },
       stats: { playTime: 0, enemiesDestroyed: 0, asteroidsDestroyed: 0, gamesPlayed: 0 },
     };
   },
@@ -962,6 +1020,12 @@ const Save = {
     }
     const hs = isObj(raw.highScores) ? raw.highScores : {};
     for (const k of Object.keys(d.highScores)) if (Number.isFinite(hs[k])) d.highScores[k] = Math.max(0, Math.floor(hs[k]));
+    // Kapal: pilihan per medan, kapal terbuka dan kredit (skema v3)
+    const sh = isObj(raw.ships) ? raw.ships : {};
+    if (Number.isFinite(sh.credits)) d.ships.credits = Math.max(0, Math.floor(sh.credits));
+    if (Array.isArray(sh.unlocked)) for (const id of sh.unlocked) { if (SHIP_IDS.includes(id) ? !d.ships.unlocked.includes(id) : false) d.ships.unlocked.push(id); }
+    const sel = isObj(sh.selected) ? sh.selected : {};
+    for (const w of ['earth', 'space']) { if (SHIP_IDS.includes(sel[w]) ? d.ships.unlocked.includes(sel[w]) : false) d.ships.selected[w] = sel[w]; }
     // Migrasi v1: satu skor tertinggi dari era medan Bumi saja
     if (Number.isFinite(raw.highScore)) d.highScores.earth = Math.max(d.highScores.earth, Math.floor(raw.highScore));
     const st = isObj(raw.stats) ? raw.stats : {};
@@ -1615,6 +1679,25 @@ const SHIPS = {
     muzzles: [[-1.25, -0.12, -1.2], [1.25, -0.12, -1.2]],
     engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
     radius: 2.6,
+  },
+  // Varian dari pembuat model yang sama dengan parameter berbeda (model dibuat di A3)
+  interceptor: {
+    id: 'interceptor', name: 'Interceptor', worlds: ['space'], cost: 500,
+    desc: 'Varian ramping dan sangat lincah. Cepat menutup jarak, tetapi lapisannya tipis.',
+    build: buildJetRaptor,
+    stats: { speed: 1.18, agility: 1.35, hp: 75, damage: 9, nitro: 1.25 },
+    muzzles: [[-1.25, -0.12, -1.2], [1.25, -0.12, -1.2]],
+    engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
+    radius: 2.3,
+  },
+  gunship: {
+    id: 'gunship', name: 'Gunship', worlds: ['space'], cost: 1200,
+    desc: 'Varian berat berlapis tebal dengan empat laras. Lambat berbelok, tetapi pukulannya keras.',
+    build: buildJetRaptor,
+    stats: { speed: 0.88, agility: 0.8, hp: 160, damage: 14, nitro: 0.85 },
+    muzzles: [[-1.6, -0.12, -1.0], [1.6, -0.12, -1.0], [-0.9, -0.3, -1.6], [0.9, -0.3, -1.6]],
+    engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
+    radius: 3.0,
   },
 };
 const DEFAULT_SHIP = { earth: 'raptor-j', space: 'starfighter' };
@@ -3459,12 +3542,14 @@ function updateCombat() {
 Events.on('enemyDestroyed', (e, byPlayer) => {
   if (!byPlayer) return;
   Game.kills++;
+  Game.credits += CONFIG.credits[e.type] || 0;
   if (rand() < CONFIG.buffs.dropChanceEnemy) Pickups.place(rand() < 0.5 ? 'overdrive' : 'destroyer', e.pos.x, e.pos.y, e.pos.z);
   Combo.registerKill();
   addScore(Math.round(e.cfg.score * Combo.multiplier), e.type === 'drone' ? 'DRONE' : 'PENEMBAK');
 });
 Events.on('asteroidDestroyed', (a, source) => {
   if (source !== 'pemain') return;
+  Game.credits += CONFIG.credits.asteroid[a.size] || 0;
   addScore(Math.round(a.cfg.score * Combo.multiplier), 'ASTEROID');
   // Asteroid sedang dan besar kadang menjatuhkan pickup
   if (a.size !== 'small') {
@@ -4857,6 +4942,8 @@ function updateHud(dt) {
   if (changed('alt', v)) hud.alt.textContent = v;
   v = Game.kills;
   if (changed('kills', v)) hud.kills.textContent = v;
+  v = Game.credits;
+  if (changed('credits', v)) $('credits').textContent = fmtInt(v);
   v = Enemies.alive;
   if (changed('enemies', v)) hud.enemies.textContent = v;
   v = Game.state === 'playing' ? (Player.alive ? Player.warning : '') : '';
@@ -5057,6 +5144,7 @@ const Game = {
   deathCause: '',
   fatal: false,
   slowMo: 0,        // sisa detik nyata gerak lambat
+  credits: 0,       // kredit yang dikumpulkan sesi ini
   time: 0,          // waktu bermain sesi ini (detik)
   stateTime: 0,     // lama berada di state sekarang
   frame: 0,
@@ -5185,7 +5273,7 @@ function resetSession(keepWorld = false) {
   Game.score = 0;
   Game.kills = 0;
   Game.deathTimer = 0;
-  Game.deathCause = ''; Game.fatal = false; Game.slowMo = 0;
+  Game.deathCause = ''; Game.fatal = false; Game.slowMo = 0; Game.credits = 0;
   if (keepWorld) Player.resetForSession(); else resetWorld(chooseSeed());
   Player.lives = Game.diff.lives;
   Player.spawnInvuln = CONFIG.player.startInvuln;
@@ -5259,11 +5347,12 @@ function openTerrainSelect() {
   for (const c of terrainScreen.querySelectorAll('.tcard')) c.classList.toggle('selected', c === pick);
   pick.focus();
 }
-function chooseTerrain(id) {
+function chooseTerrain(id, direct = false) {
   Settings.set('terrain', id);            // pilihan diingat sebagai medan default
   UI.closeOverlay(true);
   if (Worlds.active.id !== id) { Game.hasSession = false; setActiveWorld(id, chooseSeed()); resetWorld(chooseSeed()); }
-  startGame();
+  if (direct) startGame();                // jalan pintas uji: kapal terpilih langsung dipakai
+  else Hangar.open(id, 'start');          // lanjut ke PILIH KAPAL
 }
 for (const c of terrainScreen.querySelectorAll('.tcard')) {
   onButton(c, () => chooseTerrain(c.dataset.world));
@@ -5381,8 +5470,12 @@ const Settings = {
     this.render();
   },
 };
-// Statistik lintas sesi
+// Statistik lintas sesi dan kredit yang dibawa pulang (sebagian)
 Events.on('gameover', () => {
+  const kept = Math.floor(Game.credits * CONFIG.credits.keepOnGameOver);
+  Save.data.ships.credits += kept;
+  Game.creditsKept = kept;
+  document.getElementById('go-credits').textContent = `${fmtInt(kept)} dari ${fmtInt(Game.credits)}`;
   const st = Save.data.stats;
   st.gamesPlayed += 1;
   st.playTime = Math.round(st.playTime + Game.time);
@@ -5674,6 +5767,131 @@ Events.on('settings', () => Touch.updateVisibility());
   onButton(document.getElementById('prompt-no'), () => done(false));
 })();
 
+/* =====================================================================
+   HANGAR - pilih dan buka kapal. Pratinjau memakai renderer kecil terpisah yang
+   hanya aktif saat hangar terbuka.
+   ===================================================================== */
+const STAT_RANGES = {
+  speed: ['Kecepatan', 0.8, 1.25], agility: ['Kelincahan', 0.7, 1.4], hp: ['HP', 60, 170], damage: ['Damage', 8, 15], nitro: ['Nitro', 0.8, 1.3],
+};
+const WORLD_LABEL = { earth: 'BUMI', space: 'ANGKASA' };
+const Hangar = {
+  el: document.getElementById('screen-hangar'),
+  canvas: document.getElementById('hangar-canvas'),
+  renderer: null, scene: null, camera: null, holder: null,
+  models: {}, list: [], index: 0, filter: null, mode: 'menu', angle: 0.6, dragX: null,
+
+  setup() {
+    if (this.renderer) return;
+    this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setSize(420, 260, false);
+    this.scene = new THREE.Scene();
+    this.scene.add(new THREE.HemisphereLight(0xdfe8f2, 0x3a3f46, 1.5));
+    const key = new THREE.DirectionalLight(0xffffff, 2.4);
+    key.position.set(6, 10, 8);
+    this.scene.add(key);
+    this.camera = new THREE.PerspectiveCamera(30, 420 / 260, 0.1, 200);
+    this.camera.position.set(13, 6, 15);
+    this.camera.lookAt(0, -0.5, 0);
+    this.holder = new THREE.Group();
+    this.scene.add(this.holder);
+    // Seret untuk memutar
+    this.canvas.addEventListener('pointerdown', (e) => { this.dragX = e.clientX; try { this.canvas.setPointerCapture(e.pointerId); } catch (err) { /* abaikan */ } });
+    this.canvas.addEventListener('pointermove', (e) => { if (this.dragX !== null) { this.angle += (e.clientX - this.dragX) * 0.012; this.dragX = e.clientX; } });
+    const end = () => { this.dragX = null; };
+    this.canvas.addEventListener('pointerup', end);
+    this.canvas.addEventListener('pointercancel', end);
+  },
+  model(id) {
+    if (!this.models[id]) this.models[id] = SHIPS[id].build(SHIPS[id].params);
+    return this.models[id];
+  },
+  get def() { return this.list[this.index]; },
+  get ships() { return Save.data.ships; },
+
+  // filter: id medan (alur mulai) atau null (semua kapal, dari menu utama)
+  open(filter, mode) {
+    this.setup();
+    this.filter = filter;
+    this.mode = mode;
+    this.list = Object.values(SHIPS).filter((d) => (filter ? d.worlds.includes(filter) : true));
+    const sel = filter ? this.ships.selected[filter] : selectedShip(Worlds.active.id);
+    this.index = Math.max(0, this.list.findIndex((d) => d.id === sel));
+    this.show();
+    UI.openOverlay(this.el);
+    const pick = document.getElementById('hangar-pick');
+    if (!pick.disabled) pick.focus();
+  },
+  step(d) { this.index = (this.index + d + this.list.length) % this.list.length; this.show(); },
+  show() {
+    const def = this.def, sh = this.ships;
+    const unlocked = sh.unlocked.includes(def.id);
+    const picked = def.worlds.some((w) => sh.selected[w] === def.id);
+    while (this.holder.children.length) this.holder.remove(this.holder.children[0]);
+    const m = this.model(def.id);
+    m.root.position.set(0, 0, 0);
+    this.holder.add(m.root);
+    document.getElementById('hangar-name').textContent = def.name;
+    document.getElementById('hangar-world').textContent = def.worlds.map((w) => WORLD_LABEL[w]).join(' ');
+    document.getElementById('hangar-desc').textContent = def.desc;
+    const bars = Object.entries(STAT_RANGES).map(([k, [label, lo, hi]]) => {
+      const v = clamp((def.stats[k] - lo) / (hi - lo), 0.05, 1);
+      return `<span>${label}</span><i style="--v:${Math.round(v * 100)}%"></i>`;
+    });
+    document.getElementById('hangar-stats').innerHTML = bars.join('');
+    const st = document.getElementById('hangar-status');
+    st.textContent = !unlocked ? `TERKUNCI, biaya ${fmtInt(def.cost)} kredit` : picked ? 'TERPILIH' : 'TERSEDIA';
+    st.className = 'hangar-status ' + (!unlocked ? 'locked' : picked ? 'picked' : '');
+    document.getElementById('hangar-credits').textContent = fmtInt(sh.credits);
+    const buy = document.getElementById('hangar-buy'), pick = document.getElementById('hangar-pick');
+    buy.classList.toggle('hidden', unlocked);
+    buy.textContent = `BUKA (${fmtInt(def.cost)})`;
+    buy.disabled = sh.credits < def.cost;
+    pick.disabled = !unlocked;
+    pick.textContent = this.mode === 'start' ? 'PILIH DAN TERBANG' : 'PILIH';
+  },
+  buy() {
+    const def = this.def, sh = this.ships;
+    if (sh.unlocked.includes(def.id) || sh.credits < def.cost) return false;
+    sh.credits -= def.cost;
+    sh.unlocked.push(def.id);
+    Save.save();
+    Events.emit('shipUnlocked', def.id);
+    this.show();
+    document.getElementById('hangar-pick').focus();
+    return true;
+  },
+  pick() {
+    const def = this.def, sh = this.ships;
+    if (!sh.unlocked.includes(def.id)) return false;
+    for (const w of def.worlds) sh.selected[w] = def.id;
+    Save.save();
+    if (def.worlds.includes(Worlds.active.id)) Player.setShip(def.id);
+    UI.closeOverlay(this.mode === 'start');
+    if (this.mode === 'start') startGame();
+    return true;
+  },
+  back() {
+    if (this.mode === 'start') { UI.closeOverlay(true); openTerrainSelect(); } else UI.closeOverlay();
+  },
+  // Dipanggil dari loop render saat hangar terbuka
+  update(dt) {
+    if (UI.overlay !== this.el) return;
+    if (Keyboard.down.KeyA) this.angle -= dt * 2;
+    if (Keyboard.down.KeyD) this.angle += dt * 2;
+    if (this.dragX === null) this.angle += dt * 0.35;
+    this.holder.rotation.set(0.08, this.angle, 0);
+    this.renderer.render(this.scene, this.camera);
+  },
+};
+onButton(document.getElementById('hangar-prev'), () => Hangar.step(-1));
+onButton(document.getElementById('hangar-next'), () => Hangar.step(1));
+onButton(document.getElementById('hangar-buy'), () => Hangar.buy());
+onButton(document.getElementById('hangar-pick'), () => Hangar.pick());
+onButton(document.getElementById('hangar-back'), () => Hangar.back());
+onButton(document.getElementById('btn-hangar'), () => Hangar.open(null, 'menu'));
+
 Settings.init();   // setelah INPUT karena pengaturan diterapkan ke Controls
 
 /* =====================================================================
@@ -5778,6 +5996,7 @@ function update(dt) {
 }
 
 function render() {
+  Hangar.update(lastDt || 0.016);
   Weapons.pool.sync();
   Enemies.bullets.sync();
   if (Game.state === 'playing' || Game.state === 'paused' || Game.state === 'countdown' || Game.state === 'starting') updateHud(lastDt);
@@ -5838,6 +6057,9 @@ window.__game = {
       difficulty: Game.difficultyKey,
       world: Worlds.active.id,
       ship: Player.ship.id,
+      credits: Game.credits,
+      bank: Save.data.ships.credits,
+      unlocked: [...Save.data.ships.unlocked],
       radius: Player.radius,
       settings: { ...Save.settings },
     };
@@ -5850,7 +6072,7 @@ window.__game = {
   },
   start() { if (Game.state === 'menu') startGame(); },
   // Mulai di medan tertentu tanpa melewati layar pilih medan (untuk uji)
-  startIn(worldId) { if (Game.state === 'menu') chooseTerrain(worldId); },
+  startIn(worldId) { if (Game.state === 'menu') chooseTerrain(worldId, true); },
   world() { return Worlds.active.id; },
   // Lewati transisi mulai (untuk uji): langsung ke state playing
   skipTransition() {
@@ -5962,6 +6184,8 @@ window.__game = {
     fireRate() { return round2(1 / Weapons.interval()); },
     bulletDamage() { return round2(Weapons.damage()); },
     audioCheck() { return Sfx.check(); },
+    hangarList() { return Hangar.list.map((d) => d.id); },
+    addCredits(n) { Save.data.ships.credits += n; Save.save(); return Save.data.ships.credits; },
     forceManeuver(type, dir = 1) { return Player.startManeuver(type, dir, true); },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
     shootPlayer(dist = 60) {
