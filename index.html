@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAPTOR13</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1622; }
+  canvas { display: block; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+
+// Scaffold: kubus berputar untuk memastikan importmap dan renderer berjalan.
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.set(0, 1.5, 4);
+camera.lookAt(0, 0, 0);
+
+scene.add(new THREE.HemisphereLight(0x9cc8ff, 0x4a6a3a, 1.2));
+const sun = new THREE.DirectionalLight(0xffe2b8, 2.5);
+sun.position.set(3, 5, 2);
+scene.add(sun);
+
+const cube = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshLambertMaterial({ color: 0x5d6a78 })
+);
+scene.add(cube);
+
+renderer.setAnimationLoop((t) => {
+  cube.rotation.set(t * 0.0005, t * 0.0008, 0);
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

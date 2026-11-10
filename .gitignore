@@ -1,0 +1,15 @@
+# dependensi tooling uji
+node_modules/
+
+# hasil Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# sistem
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

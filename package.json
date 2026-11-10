@@ -1,0 +1,14 @@
+{
+  "name": "raptor13",
+  "version": "0.1.0",
+  "description": "RAPTOR13 - game pesawat 3D arcade di browser, satu file index.html dengan Three.js dari CDN.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "serve": "node tests/static-server.mjs",
+    "pretest": "playwright install chromium",
+    "test": "playwright test"
+  },
+  "devDependencies": {}
+}
