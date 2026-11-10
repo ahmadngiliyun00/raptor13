@@ -196,7 +196,7 @@
   </div>
   <div class="hud-block tc">
     <div class="label">GELOMBANG</div>
-    <div id="wave" class="num big">0</div>
+    <div id="wave" class="num big">-</div>
     <div id="mult" class="off">x1</div>
     <div class="combo-bar"><i id="combo-fill"></i></div>
   </div>
@@ -2621,7 +2621,7 @@ function updateHud(dt) {
   if (changed('nitroLock', v)) hud.nitroBar.classList.toggle('locked', v);
   v = Player.nitroLock > 0 ? 'TERKUNCI' : Player.nitroActive ? 'AKTIF' : '';
   if (changed('nitroTag', v)) hud.nitroTag.textContent = v;
-  v = Waves.wave;
+  v = Waves.wave > 0 ? Waves.wave : '-';
   if (changed('wave', v)) hud.wave.textContent = v;
   v = Combo.multiplier;
   if (changed('mult', v)) { hud.mult.textContent = 'x' + v; hud.mult.className = v > 1 ? '' : 'off'; }
