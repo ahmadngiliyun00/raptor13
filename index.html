@@ -1376,7 +1376,8 @@ const JET_FUSELAGE = [
   { z: 4.50, w: 0.72, ht: 0.24, hb: 0.22, y: 0, n: 4.2, chine: 0.3 },
 ];
 
-function createPlayerJet() {
+// Jet Raptor-J (medan Bumi). Bentuk dipertahankan apa adanya; createPlayerJet adalah nama lama.
+function buildJetRaptor() {
   const root = new THREE.Group();
   root.rotation.order = 'YXZ';
   const body = new THREE.Group();
@@ -1482,8 +1483,55 @@ function createPlayerJet() {
   };
 }
 
-const PlayerModel = createPlayerJet();
-scene.add(PlayerModel.root);
+const createPlayerJet = buildJetRaptor;
+
+/* =====================================================================
+   REGISTRI KAPAL - tiap kapal adalah data: dunia yang didukung, pembuat model,
+   statistik, titik tembak (muzzles), titik api mesin (engines), radius hitbox
+   dan biaya buka dalam kredit. Semua sistem membaca angka dari sini.
+   Statistik relatif: speed, agility dan nitro adalah pengali; hp dan damage absolut.
+   ===================================================================== */
+const SHIPS = {
+  'raptor-j': {
+    id: 'raptor-j', name: 'Raptor-J', worlds: ['earth'], cost: 0,
+    desc: 'Jet tempur atmosfer bersayap trapesium. Seimbang dan stabil di ketinggian rendah.',
+    build: buildJetRaptor,
+    stats: { speed: 1.0, agility: 1.0, hp: 100, damage: 10, nitro: 1.0 },
+    muzzles: [[-1.25, -0.12, -1.2], [1.25, -0.12, -1.2]],
+    engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
+    radius: 2.6,
+  },
+  // Model angkasa dibuat di A3; sementara memakai jet agar sistem lain bisa diuji
+  starfighter: {
+    id: 'starfighter', name: 'Starfighter', worlds: ['space'], cost: 0,
+    desc: 'Kapal tempur angkasa satu pilot bersayap empat yang bisa berputar. Serba bisa.',
+    build: buildJetRaptor,
+    stats: { speed: 1.0, agility: 1.1, hp: 100, damage: 10, nitro: 1.0 },
+    muzzles: [[-1.25, -0.12, -1.2], [1.25, -0.12, -1.2]],
+    engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
+    radius: 2.6,
+  },
+};
+const DEFAULT_SHIP = { earth: 'raptor-j', space: 'starfighter' };
+const MAX_ENGINES = 4;
+// Ubah daftar angka menjadi Vector3 sekali saja
+function prepareShipDef(def) {
+  def.muzzleVecs = def.muzzles.map((m) => new THREE.Vector3(...m));
+  def.engineVecs = def.engines.map((e) => new THREE.Vector3(...e));
+}
+for (const def of Object.values(SHIPS)) prepareShipDef(def);
+
+// Rig pemain: posisi dan rotasi dari fisika; model kapal aktif menjadi anak rig
+const PlayerRig = new THREE.Group();
+PlayerRig.rotation.order = 'YXZ';
+scene.add(PlayerRig);
+const ShipModels = {};      // cache model per id kapal: dibuat sekali, dipakai ulang
+function getShipModel(id) {
+  if (!ShipModels[id]) ShipModels[id] = SHIPS[id].build(SHIPS[id].params);
+  return ShipModels[id];
+}
+const PlayerModel = getShipModel('raptor-j');
+PlayerRig.add(PlayerModel.root);
 
 // Ketinggian permukaan (daratan atau air) di titik x, z. Diganti oleh bagian DUNIA.
 // Ketinggian permukaan padat di titik x, z menurut dunia aktif (angkasa: tidak ada permukaan)
@@ -1491,7 +1539,25 @@ const groundHeightAt = (x, z) => Worlds.active.groundHeightAt(x, z);
 
 const Player = {
   model: PlayerModel,
-  pos: PlayerModel.root.position,
+  rig: PlayerRig,
+  pos: PlayerRig.position,
+  ship: SHIPS['raptor-j'],
+  radius: SHIPS['raptor-j'].radius,
+
+  // Pasang kapal: model ditukar di dalam rig, statistik dan titik tembak ikut definisi kapal
+  setShip(id) {
+    const def = SHIPS[id] || SHIPS['raptor-j'];
+    const model = getShipModel(def.id);
+    if (this.model.root.parent) this.model.root.parent.remove(this.model.root);
+    model.root.position.set(0, 0, 0);
+    model.root.rotation.set(0, 0, 0);
+    this.rig.add(model.root);
+    this.model = model;
+    this.ship = def;
+    this.radius = def.radius;
+    this.health.reset(def.stats.hp);
+    FX.hasPrev = false;
+  },
   vel: new THREE.Vector3(),
   forward: new THREE.Vector3(0, 0, -1),
   yaw: 0, pitch: 0, roll: 0,
@@ -1513,8 +1579,8 @@ const Player = {
     const C = CONFIG.player;
     this.pos.set(0, Worlds.active.safeStartAltitude(), 0);
     this.yaw = 0; this.pitch = 0; this.roll = 0;
-    this.speed = C.baseSpeed;
-    this.health.reset(C.maxHealth);
+    this.speed = C.baseSpeed * this.ship.stats.speed;
+    this.health.reset(this.ship.stats.hp);
     this.alive = true;
     this.nitro = 1;
     this.nitroLock = 0;
@@ -1527,8 +1593,8 @@ const Player = {
     this.warning = false;
     this.forward.set(0, 0, -1);
     this.vel.set(0, 0, -this.speed);
-    this.model.root.visible = true;
-    this.model.root.rotation.set(0, 0, 0);
+    this.rig.visible = true;
+    this.rig.rotation.set(0, 0, 0);
   },
 
   // Fisika arcade: pesawat selalu maju, kontrol mengatur target sudut yang di-damping
@@ -1548,10 +1614,11 @@ const Player = {
     this.pitch = damp(this.pitch, targetPitch, C.pitchResponse, dt);
     this.roll = damp(this.roll, yawIn * C.maxRoll, C.rollResponse, dt);
     // Laju belok sebanding dengan kemiringan sayap, sehingga bank dan belok selalu selaras
-    this.yaw += C.turnRate * (this.roll / C.maxRoll) * dt;
+    this.yaw += C.turnRate * this.ship.stats.agility * (this.roll / C.maxRoll) * dt;
 
     this.nitroFx = damp(this.nitroFx, this.nitroActive ? 1 : 0, 5, dt);
-    const targetSpeed = this.nitroActive ? C.nitroSpeed : C.baseSpeed;
+    const sp = this.ship.stats.speed;
+    const targetSpeed = (this.nitroActive ? C.nitroSpeed : C.baseSpeed) * sp;
     this.speed = damp(this.speed, targetSpeed, this.nitroActive ? C.accel * 1.6 : C.accel, dt);
 
     const cp = Math.cos(this.pitch);
@@ -1564,7 +1631,7 @@ const Player = {
       this.pos.y = floorY;
       if (this.pitch < 0) this.pitch = damp(this.pitch, 0, 8, dt);
     }
-    this.model.root.rotation.set(this.pitch, this.yaw, this.roll);
+    this.rig.rotation.set(this.pitch, this.yaw, this.roll);
   },
 
   // Meter nitro: terkuras saat dipakai, pulih pelan setelah jeda, terkunci sebentar bila habis
@@ -1574,7 +1641,7 @@ const Player = {
     this.nitroActive = !!want;
     if (!this.alive || this.nitroLock > 0 || this.nitro <= 0) this.nitroActive = false;
     if (this.nitroActive) {
-      this.nitro -= N.drainPerSec * dt;
+      this.nitro -= (N.drainPerSec / this.ship.stats.nitro) * dt;   // kapasitas nitro dari kapal
       this.nitroRegenWait = N.regenDelay;
       if (this.nitro <= 0) {
         this.nitro = 0;
@@ -1602,7 +1669,7 @@ const Player = {
   die() {
     this.alive = false;
     this.nitroActive = false;
-    this.model.root.visible = false;
+    this.rig.visible = false;
     this.lives = Math.max(0, this.lives - 1);
     this.respawnTimer = CONFIG.player.respawnDelay;
     CamRig.addTrauma(1);
@@ -1619,12 +1686,12 @@ const Player = {
     }
     this.pos.y = clamp(Math.max(this.pos.y, ground + 50), Worlds.active.minY, Worlds.active.maxY - 10);
     this.pitch = 0; this.roll = 0;
-    this.speed = C.baseSpeed;
-    this.health.reset(C.maxHealth);
+    this.speed = C.baseSpeed * this.ship.stats.speed;
+    this.health.reset(this.ship.stats.hp);
     this.alive = true;
     this.invuln = 0;
     this.spawnInvuln = C.respawnInvuln;
-    this.model.root.visible = true;
+    this.rig.visible = true;
     Enemies.bullets.reset();     // adil: peluru musuh yang sedang terbang dihapus
     Events.emit('playerRespawn', this.lives);
   },
@@ -1632,11 +1699,11 @@ const Player = {
   // Awal sesi dari attract mode: posisi dan arah dipertahankan agar tidak ada lompatan
   resetForSession() {
     const C = CONFIG.player;
-    this.health.reset(C.maxHealth);
+    this.health.reset(this.ship.stats.hp);
     this.alive = true;
     this.nitro = 1; this.nitroLock = 0; this.nitroRegenWait = 0; this.nitroActive = false;
     this.invuln = 0; this.spawnInvuln = 0; this.respawnTimer = 0; this.warning = false;
-    this.model.root.visible = true;
+    this.rig.visible = true;
   },
 
   addLife() { this.lives = Math.min(CONFIG.difficulty.maxLives, this.lives + 1); },
@@ -1645,7 +1712,7 @@ const Player = {
   updateInvuln(dt) {
     if (this.spawnInvuln > 0) {
       this.spawnInvuln = Math.max(0, this.spawnInvuln - dt);
-      this.model.root.visible = this.spawnInvuln <= 0 || Math.floor(this.spawnInvuln * 12) % 2 === 0;
+      this.rig.visible = this.spawnInvuln <= 0 || Math.floor(this.spawnInvuln * 12) % 2 === 0;
     }
   },
 
@@ -1673,7 +1740,7 @@ const Player = {
   },
 };
 
-Player.health = new Health(CONFIG.player.maxHealth, () => Player.die());
+Player.health = new Health(Player.ship.stats.hp, () => Player.die());
 Player.health.invulnerable = () => Player.isInvulnerable();
 Player.health.onDamage = (amount, source) => Player.onDamaged(amount, source);
 
@@ -2233,9 +2300,10 @@ const Weapons = {
     const W = CONFIG.weapons;
     if (!Player.alive || this.cooldown > 0) return;   // cooldown antar tembakan
     this.cooldown = Math.max(this.cooldown, -W.fireInterval) + W.fireInterval;
-    const gun = PlayerModel.guns[this.side];
-    this.side ^= 1;
-    _va.copy(gun).applyQuaternion(PlayerModel.root.quaternion).add(Player.pos);           // posisi laras
+    const muzzles = Player.ship.muzzleVecs;
+    const gun = muzzles[this.side % muzzles.length];
+    this.side = (this.side + 1) % muzzles.length;                                        // laras bergantian
+    _va.copy(gun).applyQuaternion(Player.rig.quaternion).add(Player.pos);                // posisi laras
     const target = this.findAssistTarget();
     if (target) {
       // Aim assist: arahkan ke posisi musuh yang diprediksi saat peluru tiba
@@ -2244,7 +2312,7 @@ const Weapons = {
     } else {
       _vb.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance).sub(_va).normalize(); // arah ke titik temu
     }
-    this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, W.damage);
+    this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, Player.ship.stats.damage);
     this.shotsFired++;
     Events.emit('shot', _va, _vb);
   },
@@ -2820,7 +2888,7 @@ function updateCombat() {
   }
 
   // Peluru musuh terhadap pemain dan terrain
-  const P = Player.pos, pr = CONFIG.player.radius;
+  const P = Player.pos, pr = Player.radius;
   for (let i = 0; i < eb.max; i++) {
     if (!eb.active[i]) continue;
     const i3 = i * 3;
@@ -2958,7 +3026,7 @@ Obstacles.init();
 
 // Tabrakan pemain dengan terrain dan pilar, serta peringatan medan di depan
 function updateTerrainCollision(dt) {
-  const O = CONFIG.obstacles, P = Player.pos, pr = CONFIG.player.radius;
+  const O = CONFIG.obstacles, P = Player.pos, pr = Player.radius;
   Player.invuln = Math.max(0, Player.invuln - dt);
 
   const ground = Terrain.heightAt(P.x, P.z);
@@ -3078,6 +3146,13 @@ function setActiveWorld(id, seed) {
   next.activate();
   next.reset(seed);
   Rings.reset();
+  Player.setShip(selectedShip(next.id));
+}
+// Kapal terpilih untuk medan (dari save; hangar di A2 menambah pilihan)
+function selectedShip(worldId) {
+  const sel = Save.data.ships ? Save.data.ships.selected[worldId] : null;
+  const def = SHIPS[sel];
+  return def ? (def.worlds.includes(worldId) ? sel : DEFAULT_SHIP[worldId]) : DEFAULT_SHIP[worldId];
 }
 
 /* =====================================================================
@@ -3271,7 +3346,7 @@ const Pickups = {
       it.spin.rotation.y += dt * 1.8;
       it.group.position.y = it.baseY + Math.sin(it.t * 2.2) * 0.8;
       const d2 = it.group.position.distanceToSquared(P);
-      const touching = Player.alive ? d2 < (PU.radius + CONFIG.player.radius) ** 2 : false;
+      const touching = Player.alive ? d2 < (PU.radius + Player.radius) ** 2 : false;
       if (touching) {
         it.active = false; it.group.visible = false;
         this.collected++;
@@ -3435,8 +3510,8 @@ const FX = {
   smoke: new ParticleSystem(Math.round(Q.maxParticles * 0.4), false),
   density: Q.particleDensity,
   acc: { flame: 0, smoke: 0, vapor: 0, damage: 0, enemy: 0 },
-  prevNozzle: [new THREE.Vector3(), new THREE.Vector3()],
-  curNozzle: [new THREE.Vector3(), new THREE.Vector3()],
+  prevNozzle: Array.from({ length: 4 }, () => new THREE.Vector3()),
+  curNozzle: Array.from({ length: 4 }, () => new THREE.Vector3()),
   hasPrev: false,
 
   count(n) { return Math.max(1, Math.round(n * this.density)); },
@@ -3504,9 +3579,10 @@ const FX = {
 
   // Emisi kontinu: api dan asap mesin, uap ujung sayap saat nitro, asap saat rusak, jejak musuh
   updateEmitters(dt) {
-    const m = PlayerModel, q = m.root.quaternion, P = Player.pos, f = Player.forward, nf = Player.nitroFx;
-    for (let k = 0; k < 2; k++) this.curNozzle[k].copy(m.nozzles[k]).applyQuaternion(q).add(P);
-    if (!this.hasPrev) { this.prevNozzle[0].copy(this.curNozzle[0]); this.prevNozzle[1].copy(this.curNozzle[1]); this.hasPrev = true; }
+    const m = Player.model, q = Player.rig.quaternion, P = Player.pos, f = Player.forward, nf = Player.nitroFx;
+    const eng = Player.ship.engineVecs, ne = Math.min(eng.length, MAX_ENGINES);
+    for (let k = 0; k < ne; k++) this.curNozzle[k].copy(eng[k]).applyQuaternion(q).add(P);
+    if (!this.hasPrev) { for (let k = 0; k < ne; k++) this.prevNozzle[k].copy(this.curNozzle[k]); this.hasPrev = true; }
 
     if (Player.alive) {
       // Api mesin: lebih banyak, lebih besar dan lebih panjang umur saat nitro (jejak lebih panjang).
@@ -3514,7 +3590,7 @@ const FX = {
       const flames = this.take('flame', 50 + 230 * nf, dt);
       const pv = Player.vel;
       for (let i = 0; i < flames; i++) {
-        const k = i % 2, t = frand();
+        const k = i % ne, t = frand();
         const a = this.prevNozzle[k], b = this.curNozzle[k];
         const hot = frand();
         this.fire.emit(
@@ -3525,7 +3601,7 @@ const FX = {
       }
       const puffs = this.take('smoke', 26 + 40 * nf, dt);
       for (let i = 0; i < puffs; i++) {
-        const k = i % 2, t = frand();
+        const k = i % ne, t = frand();
         const a = this.prevNozzle[k], b = this.curNozzle[k];
         const g = 0.62 + frand() * 0.12;
         this.smoke.emit(
@@ -3536,7 +3612,7 @@ const FX = {
       if (nf > 0.3) {
         const vapor = this.take('vapor', 70 * nf, dt);
         for (let i = 0; i < vapor; i++) {
-          _va.copy(m.wingtips[i % 2]).applyQuaternion(q).add(P);
+          _va.copy(m.wingtips[i % m.wingtips.length]).applyQuaternion(q).add(P);
           this.fire.emit(_va.x, _va.y, _va.z, 0, 0, 0, 0.35 + frand() * 0.2, 0.32, 0.5, 0.75, 0.82, 0.9, 0.35 * nf, 0, 0);
         }
       }
@@ -3548,8 +3624,7 @@ const FX = {
         }
       }
     }
-    this.prevNozzle[0].copy(this.curNozzle[0]);
-    this.prevNozzle[1].copy(this.curNozzle[1]);
+    for (let k = 0; k < ne; k++) this.prevNozzle[k].copy(this.curNozzle[k]);
 
     // Jejak api kecil di belakang pesawat penembak
     const trail = this.take('enemy', 22, dt);
@@ -5010,6 +5085,8 @@ window.__game = {
       highScore: HighScore.value,
       difficulty: Game.difficultyKey,
       world: Worlds.active.id,
+      ship: Player.ship.id,
+      radius: Player.radius,
       settings: { ...Save.settings },
     };
   },
