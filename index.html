@@ -166,6 +166,7 @@ const Game = {
   time: 0,          // waktu bermain sesi ini (detik)
   stateTime: 0,     // lama berada di state sekarang
   frame: 0,
+  muted: false,
 };
 
 function setState(next) {
@@ -196,9 +197,80 @@ function restartGame() {
   startGame();
 }
 
-ui.btnStart.addEventListener('click', () => { ui.btnStart.blur(); startGame(); });
+ui.btnStart.addEventListener('click', () => { ui.btnStart.blur(); onAudioGesture(); startGame(); });
 ui.btnResume.addEventListener('click', () => { ui.btnResume.blur(); togglePause(); });
 ui.btnRestart.addEventListener('click', () => { ui.btnRestart.blur(); restartGame(); });
+
+/* =====================================================================
+   INPUT - keyboard berbasis KeyboardEvent.code (posisi fisik tombol)
+   ===================================================================== */
+const Input = {
+  down: Object.create(null),   // code -> boolean
+  // Sumbu dan aksi yang dibaca oleh gameplay
+  get pitch() { return (this.down.KeyW ? 1 : 0) - (this.down.KeyS ? 1 : 0); },
+  get yaw() { return (this.down.KeyA ? 1 : 0) - (this.down.KeyD ? 1 : 0); },
+  get nitro() { return !!this.down.Space; },
+  get fire() { return !!(this.down.Enter || this.down.NumpadEnter); },
+  reset() { for (const k in this.down) this.down[k] = false; },
+};
+
+// Tombol yang aksi bawaan browsernya harus dicegah (scroll, klik tombol yang sedang fokus)
+const PREVENT_CODES = new Set(['Space', 'Enter', 'NumpadEnter']);
+const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM']);
+
+function onKeyDown(e) {
+  if (!GAME_CODES.has(e.code)) return;
+  if (PREVENT_CODES.has(e.code)) e.preventDefault();
+  Input.down[e.code] = true;
+  if (e.repeat) return;
+  onAudioGesture();
+  switch (e.code) {
+    case 'KeyP':
+    case 'Escape':
+      togglePause();
+      break;
+    case 'KeyR':
+      restartGame();
+      break;
+    case 'KeyM':
+      toggleMute();
+      break;
+    case 'Enter':
+    case 'NumpadEnter':
+      // Enter di layar judul atau game over langsung memulai (jeda singkat agar tembakan tidak ikut restart)
+      if (Game.state === 'menu') startGame();
+      else if (Game.state === 'gameover' && Game.stateTime > 1.0) restartGame();
+      break;
+  }
+}
+
+function onKeyUp(e) {
+  if (!GAME_CODES.has(e.code)) return;
+  if (PREVENT_CODES.has(e.code)) e.preventDefault();
+  Input.down[e.code] = false;
+}
+
+// Reset semua tombol saat jendela kehilangan fokus agar tidak ada tombol "nyangkut"
+function onBlur() {
+  Input.reset();
+  if (Game.state === 'play') setState('pause');
+}
+function onVisibility() {
+  Input.reset();
+  if (document.hidden && Game.state === 'play') setState('pause');
+}
+
+window.addEventListener('keydown', onKeyDown);
+window.addEventListener('keyup', onKeyUp);
+window.addEventListener('blur', onBlur);
+document.addEventListener('visibilitychange', onVisibility);
+
+// Mute global; audio sebenarnya disambungkan di bagian AUDIO
+function toggleMute() {
+  Game.muted = !Game.muted;
+}
+// Dipanggil pada setiap interaksi pengguna; bagian AUDIO mengisi implementasinya
+function onAudioGesture() {}
 
 /* =====================================================================
    UPDATE DAN RENDER
