@@ -14,6 +14,53 @@ model pesawatnya orisinal dan bukan replika pesawat nyata mana pun.
 |---|---|---|
 | ![Layar judul](docs/screenshots/menu.png) | ![Bermain](docs/screenshots/gameplay.png) | ![Game over](docs/screenshots/gameover.png) |
 
+## Model jet
+
+Jet pemain dibangun sepenuhnya secara prosedural di `createPlayerJet()` (bagian PESAWAT PEMAIN
+di `index.html`), tanpa Box, Cylinder, atau Cone sebagai bentuk utama. Total **4.520 segitiga**.
+Panjang badan L = 9,4 unit dengan hidung menghadap -Z; hitbox, titik tembak, dan titik api
+mesin sama dengan model sebelumnya.
+
+| Samping | Atas | Depan |
+|---|---|---|
+| ![Samping](docs/screenshots/jet-side.png) | ![Atas](docs/screenshots/jet-top.png) | ![Depan](docs/screenshots/jet-front.png) |
+| **Tiga perempat depan** | **Tiga perempat belakang** | **Kamera chase** |
+| ![Tiga perempat depan](docs/screenshots/jet-three-quarter-front.png) | ![Tiga perempat belakang](docs/screenshots/jet-three-quarter-rear.png) | ![Chase](docs/screenshots/jet-chase.png) |
+
+![Bank penuh saat nitro](docs/screenshots/jet-gameplay-bank.png)
+
+Teknik yang dipakai:
+
+- **Badan** dari `loftFuselage(sections)`: 17 penampang superellipse dengan 24 titik per ring.
+  Parameter `chine` memperbesar eksponen vertikal sehingga sisi badan menyempit menjadi bibir
+  tajam horizontal. Hidung pipih dan melengkung turun lewat offset y negatif. Normal halus.
+- **Sayap, strake, stabilizer, dan sirip** dari `liftingSurface(planform)`: grid atas dan bawah
+  dengan chord berspasi kosinus dan ketebalan profil airfoil simetris (NACA 4 digit) yang menipis
+  dari pangkal ke ujung. Tepi depan membulat, tepi belakang tajam, ujung terpotong miring,
+  sayap utama sedikit dihedral. Sisi kiri adalah cerminan sisi kanan (indeks dibalik).
+- **Kanopi** dari `LatheGeometry` setengah putaran dengan profil tetesan, diskalakan menjadi
+  elipsoid pipih, plus rangka tipis.
+- **Intake dan nozzle 2D** dari loft penampang persegi panjang bersudut membulat; mulut intake
+  miring (caret) lewat shear per penampang, bagian dalam gelap. Glow nozzle menyala saat nitro.
+- **Material** `MeshStandardMaterial` abu-abu gelap kebiruan dengan env map dari kanvas kecil
+  (gradasi langit dan tanah), serta tekstur kanvas prosedural untuk garis panel halus, aksen
+  oranye tipis di tepi depan sayap dan sirip, dan angka **13** di kedua sirip tegak.
+  Semua geometri, material, dan tekstur dibuat sekali.
+
+### Mode pratinjau jet
+
+Buka `index.html?jetpreview=1` untuk melihat jet saja di latar polos dengan cahaya netral dan
+kamera orbit otomatis. Dari console browser:
+
+```js
+__jetPreview.setView('side')   // side, top, front, rear, three_quarter_front, three_quarter_rear, chase
+__jetPreview.orbit()           // kembali ke orbit otomatis
+__jetPreview.triangles         // jumlah segitiga jet
+__jetPreview.setNitro(1)       // pratinjau api nitro (0 sampai 1)
+```
+
+Screenshot di atas dibuat ulang oleh uji `pratinjau jet` di `tests/game.spec.mjs`.
+
 ## Cara main
 
 Mode permainan adalah bertahan tanpa akhir (endless survival). Pesawat selalu maju sendiri;

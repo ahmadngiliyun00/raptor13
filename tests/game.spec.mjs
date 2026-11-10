@@ -438,3 +438,30 @@ test('screenshot menu, gameplay dan game over', async ({ page }) => {
   await page.waitForTimeout(400);
   await page.screenshot({ path: `${SHOT_DIR}gameover.png` });
 });
+
+test('pratinjau jet: 6 sudut, gameplay bank penuh, dan jumlah segitiga di bawah 8000', async ({ page }) => {
+  await page.setViewportSize({ width: 960, height: 600 });
+  await page.goto('/index.html?jetpreview=1');
+  await page.waitForFunction(() => window.__jetPreview);
+  const tris = await page.evaluate(() => window.__jetPreview.triangles);
+  expect(tris).toBeLessThan(8000);
+  test.info().annotations.push({ type: 'segitiga', description: String(tris) });
+  for (const view of ['side', 'top', 'front', 'three_quarter_front', 'three_quarter_rear', 'chase']) {
+    await page.evaluate((v) => window.__jetPreview.setView(v), view);
+    await page.waitForTimeout(150);
+    await page.screenshot({ path: `${SHOT_DIR}jet-${view.replace(/_/g, '-')}.png` });
+  }
+
+  // Gameplay nyata dari kamera chase saat bank penuh dengan nitro
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await start(page, { seed: 2024 });
+  await page.waitForTimeout(1500);
+  await page.keyboard.down('KeyD');
+  await page.keyboard.down('Space');
+  await page.waitForTimeout(1300);
+  const s = await snap(page);
+  expect(s.roll).toBeLessThan(-0.9);
+  await page.screenshot({ path: `${SHOT_DIR}jet-gameplay-bank.png` });
+  await page.keyboard.up('KeyD');
+  await page.keyboard.up('Space');
+});
