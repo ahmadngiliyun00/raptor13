@@ -31,21 +31,134 @@
   .screen {
     position: fixed; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; gap: 18px; padding: 24px;
-    background: radial-gradient(ellipse at center, rgba(8, 14, 24, 0.35) 0%, rgba(8, 14, 24, 0.82) 100%);
-    text-align: center; z-index: 20;
+    background: radial-gradient(ellipse at center, rgba(8, 14, 24, 0.25) 0%, rgba(8, 14, 24, 0.85) 100%);
+    text-align: center; z-index: 20; overflow-y: auto;
   }
+  .screen h2 { margin: 0; font-size: clamp(32px, 6vw, 56px); letter-spacing: 0.12em; font-style: italic; }
   .btn {
-    font: 700 18px/1 inherit; font-family: inherit; letter-spacing: 0.18em;
-    color: #0b1622; background: var(--ui-accent); border: 0; border-radius: 4px;
-    padding: 14px 34px; cursor: pointer;
+    font-family: inherit; font-weight: 800; font-size: 18px; line-height: 1; letter-spacing: 0.22em;
+    color: #1a0e04; background: linear-gradient(180deg, #ffb45c, #ff8a24); border: 0; border-radius: 4px;
+    padding: 15px 40px; cursor: pointer; box-shadow: 0 6px 24px rgba(255, 138, 36, 0.35);
   }
-  .btn:hover { filter: brightness(1.12); }
-  .btn.secondary { background: transparent; color: var(--ui-fg); border: 1px solid var(--ui-line); }
+  .btn:hover { filter: brightness(1.1); }
+  .btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  .btn.secondary { background: transparent; color: var(--ui-fg); border: 1px solid var(--ui-line); box-shadow: none; font-size: 14px; padding: 12px 26px; }
+  .btn-big { font-size: 22px; padding: 18px 56px; }
+  .hint { margin: 0; color: var(--ui-dim); font-size: 13px; letter-spacing: 0.04em; }
+  kbd {
+    display: inline-block; min-width: 26px; padding: 4px 7px; margin-right: 4px;
+    font: 700 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--ui-fg);
+    background: rgba(255, 255, 255, 0.08); border: 1px solid var(--ui-line); border-bottom-width: 3px; border-radius: 4px; text-align: center;
+  }
+
+  /* Logo teks murni CSS */
+  .logo-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .logo-mark {
+    width: 132px; height: 50px; margin-bottom: 4px;
+    background: linear-gradient(180deg, #ffd08a, #ff7a1a 70%, #c4470e);
+    clip-path: polygon(50% 0, 100% 100%, 66% 80%, 50% 100%, 34% 80%, 0 100%);
+    filter: drop-shadow(0 0 18px rgba(255, 140, 40, 0.55));
+  }
+  .logo {
+    margin: 0; font-weight: 900; font-style: italic; letter-spacing: 0.06em; line-height: 0.95;
+    font-size: clamp(56px, 12vw, 132px);
+    background: linear-gradient(180deg, #ffffff 0%, #d4dee8 46%, #6c7f93 50%, #b2c1d0 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 26px rgba(120, 180, 255, 0.25));
+  }
+  .logo span {
+    background: linear-gradient(180deg, #ffe08a 0%, #ff8a24 55%, #c4470e 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .tagline { margin: 6px 0 0; font-size: 14px; letter-spacing: 0.32em; text-transform: uppercase; color: #c9d6e3; }
+  .controls {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 28px;
+    padding: 16px 22px; background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 6px;
+    text-align: left; font-size: 14px; max-width: 640px; width: 100%;
+  }
+  .controls div { display: flex; align-items: center; gap: 2px; }
+  .controls span { margin-left: 8px; color: #d6e0ea; }
+  .title-foot { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; justify-content: center; color: var(--ui-dim); font-size: 13px; }
+  .title-foot b { color: var(--ui-fg); font-variant-numeric: tabular-nums; }
+  .title-foot select {
+    font: inherit; color: var(--ui-fg); background: rgba(10, 18, 28, 0.8); border: 1px solid var(--ui-line); border-radius: 4px; padding: 4px 6px;
+  }
+  @media (max-width: 560px) { .controls { grid-template-columns: 1fr; } }
+
+  /* Game over */
+  .over-title { color: #ffb0a0; }
+  .record { color: #ffd24a; font-weight: 800; letter-spacing: 0.3em; animation: pulse 0.9s ease-in-out infinite alternate; }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+  .stats {
+    display: grid; grid-template-columns: 1fr auto; gap: 8px 40px; min-width: min(380px, 100%);
+    padding: 16px 24px; background: rgba(10, 18, 28, 0.82); border: 1px solid var(--ui-line); border-radius: 6px; text-align: left;
+  }
+  .stats span { color: var(--ui-dim); }
+  .stats b { text-align: right; font-variant-numeric: tabular-nums; }
 
   /* HUD */
-  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
-  .bar { position: relative; width: 220px; height: 10px; background: rgba(255, 255, 255, 0.12); border: 1px solid var(--ui-line); border-radius: 2px; overflow: hidden; }
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-variant-numeric: tabular-nums; }
+  .hud-block {
+    position: absolute; padding: 10px 14px; background: var(--ui-panel);
+    border: 1px solid var(--ui-line); border-radius: 4px; min-width: 120px;
+  }
+  .hud-block.tl { left: 16px; top: 16px; width: 252px; }
+  .hud-block.tc { left: 50%; top: 16px; transform: translateX(-50%); text-align: center; min-width: 140px; }
+  .hud-block.tr { right: 16px; top: 16px; text-align: right; min-width: 170px; }
+  .hud-block.bl { left: 16px; bottom: 16px; }
+  .hud-block.br { right: 16px; bottom: 16px; text-align: right; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; margin: 2px 0 4px; }
+  .row + .bar { margin-bottom: 8px; }
+  .label { font-size: 11px; letter-spacing: 0.16em; color: var(--ui-dim); }
+  .num { font-weight: 700; }
+  .big { font-size: 26px; line-height: 1.1; }
+  .unit { font-size: 11px; color: var(--ui-dim); }
+  .tag { font-size: 10px; letter-spacing: 0.16em; font-weight: 700; color: var(--ui-accent); }
+  .stat { display: flex; gap: 10px; justify-content: space-between; align-items: baseline; }
+  .stat .num { font-size: 18px; min-width: 64px; text-align: right; }
+  .bar { position: relative; width: 100%; height: 10px; background: rgba(255, 255, 255, 0.12); border: 1px solid var(--ui-line); border-radius: 2px; overflow: hidden; }
   .bar > i { position: absolute; inset: 0; transform-origin: left center; display: block; }
+  #hp-fill { background: linear-gradient(90deg, #2fbf6a, #6ff09a); }
+  #hp-bar.mid #hp-fill { background: linear-gradient(90deg, #d9a21b, #ffd24a); }
+  #hp-bar.low #hp-fill { background: linear-gradient(90deg, #c22a2a, #ff5a4a); }
+  #mult { font-size: 22px; font-weight: 900; color: #ffd24a; font-style: italic; margin-top: 2px; }
+  #mult.off { display: none; }
+  .combo-bar { height: 3px; margin-top: 4px; background: rgba(255, 255, 255, 0.12); }
+  .combo-bar > i { display: block; height: 100%; background: #ffd24a; transform-origin: left center; transform: scaleX(0); }
+  #warning {
+    position: absolute; left: 50%; top: 62%; transform: translateX(-50%);
+    padding: 6px 16px; border: 2px solid var(--ui-bad); color: #ffd0d0; background: rgba(120, 0, 0, 0.45);
+    font-weight: 900; letter-spacing: 0.3em; animation: blink 0.4s steps(2) infinite;
+  }
+  #banner {
+    position: absolute; left: 0; right: 0; top: 24%; text-align: center; opacity: 0;
+    font-size: clamp(28px, 5vw, 48px); font-weight: 900; font-style: italic; letter-spacing: 0.16em;
+    text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 24px rgba(255, 160, 60, 0.5);
+  }
+  #toasts { position: absolute; left: 50%; top: 40%; width: 0; }
+  .toast {
+    position: absolute; left: 0; top: 0; transform: translateX(-50%); white-space: nowrap; opacity: 0;
+    font-weight: 800; font-size: 16px; color: #fff3c4; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  }
+  #vignette {
+    position: absolute; inset: 0; opacity: 0;
+    background: radial-gradient(ellipse at center, rgba(255, 0, 0, 0) 55%, rgba(200, 0, 0, 0.55) 100%);
+  }
+  .ind {
+    position: absolute; left: 0; top: 0; width: 0; height: 0; display: none;
+    border-top: 9px solid transparent; border-bottom: 9px solid transparent; border-left: 16px solid #ff4a3a;
+    margin: -9px 0 0 -8px; filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.7));
+  }
+  .ind.gunship { border-left-color: #ffa040; }
+  #mute-badge {
+    position: fixed; right: 16px; bottom: 96px; z-index: 30; padding: 4px 10px; font-size: 11px; letter-spacing: 0.16em;
+    background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 3px; color: var(--ui-dim);
+  }
+  @media (max-width: 720px) {
+    .hud-block.tl { width: 190px; }
+    .hud-block.tc { top: 92px; }
+    .big { font-size: 20px; }
+  }
   #nitro-fill { background: linear-gradient(90deg, #ff7a1a, #ffd24a); }
   #nitro-bar.locked #nitro-fill { background: #7a3d22; }
   #nitro-bar.locked { animation: blink 0.35s steps(2) infinite; }
@@ -72,29 +185,93 @@
 
 <!-- HUD (elemen DOM di atas canvas) -->
 <div id="hud" class="hidden">
+  <div id="vignette"></div>
+  <div id="indicators"></div>
   <div id="reticle"></div>
-  <div class="hud-block" id="hud-tl">
-    <div class="label">NITRO</div>
+  <div class="hud-block tl">
+    <div class="row"><span class="label">INTEGRITAS</span><span id="hp-text" class="num">100</span></div>
+    <div class="bar" id="hp-bar"><i id="hp-fill"></i></div>
+    <div class="row"><span class="label">NITRO</span><span id="nitro-tag" class="tag"></span></div>
     <div class="bar" id="nitro-bar"><i id="nitro-fill"></i></div>
   </div>
+  <div class="hud-block tc">
+    <div class="label">GELOMBANG</div>
+    <div id="wave" class="num big">0</div>
+    <div id="mult" class="off">x1</div>
+    <div class="combo-bar"><i id="combo-fill"></i></div>
+  </div>
+  <div class="hud-block tr">
+    <div class="label">SKOR</div>
+    <div id="score" class="num big">0</div>
+    <div class="label">TERTINGGI <span id="best" class="num">0</span></div>
+  </div>
+  <div class="hud-block bl">
+    <div class="stat"><span class="label">KECEPATAN</span><span><span id="speed" class="num">0</span> <span class="unit">km/j</span></span></div>
+    <div class="stat"><span class="label">KETINGGIAN</span><span><span id="alt" class="num">0</span> <span class="unit">m</span></span></div>
+  </div>
+  <div class="hud-block br">
+    <div class="stat"><span class="label">MUSUH HANCUR</span><span id="kills" class="num">0</span></div>
+    <div class="stat"><span class="label">MUSUH AKTIF</span><span id="enemies" class="num">0</span></div>
+  </div>
+  <div id="warning" class="hidden">TARIK NAIK!</div>
+  <div id="banner"></div>
+  <div id="toasts"></div>
 </div>
+<div id="mute-badge" class="hidden">SUARA MATI (M)</div>
 
 <!-- Layar judul -->
 <div id="screen-title" class="screen">
-  <h1>RAPTOR13</h1>
-  <button id="btn-start" class="btn" type="button">MULAI</button>
+  <div class="logo-wrap">
+    <div class="logo-mark"></div>
+    <h1 class="logo">RAPTOR<span>13</span></h1>
+    <p class="tagline">Superioritas udara dimulai dari sini.</p>
+  </div>
+  <button id="btn-start" class="btn btn-big" type="button">MULAI</button>
+  <div class="controls">
+    <div><kbd>W</kbd><kbd>S</kbd><span>Hidung naik dan turun</span></div>
+    <div><kbd>A</kbd><kbd>D</kbd><span>Belok sambil miring</span></div>
+    <div><kbd>Spasi</kbd><span>Tahan untuk nitro</span></div>
+    <div><kbd>Enter</kbd><span>Tahan untuk menembak</span></div>
+    <div><kbd>P</kbd><kbd>Esc</kbd><span>Jeda</span></div>
+    <div><kbd>R</kbd><span>Ulang dari awal</span></div>
+    <div><kbd>M</kbd><span>Suara hidup atau mati</span></div>
+    <div><span style="margin-left:0">Lewati gerbang emas untuk bonus</span></div>
+  </div>
+  <div class="title-foot">
+    <span>Skor tertinggi: <b id="title-best">0</b></span>
+    <label>Kualitas:
+      <select id="quality-select">
+        <option value="rendah">Rendah</option>
+        <option value="sedang">Sedang</option>
+        <option value="tinggi">Tinggi</option>
+      </select>
+    </label>
+  </div>
 </div>
 
 <!-- Layar jeda -->
 <div id="screen-pause" class="screen hidden">
   <h2>JEDA</h2>
-  <button id="btn-resume" class="btn" type="button">LANJUT</button>
+  <button id="btn-resume" class="btn" type="button">LANJUTKAN</button>
+  <button id="btn-pause-restart" class="btn secondary" type="button">ULANG DARI AWAL</button>
+  <p class="hint"><kbd>P</kbd> atau <kbd>Esc</kbd> lanjut, <kbd>R</kbd> ulang, <kbd>M</kbd> suara</p>
 </div>
 
 <!-- Layar game over -->
 <div id="screen-over" class="screen hidden">
-  <h2>PESAWAT JATUH</h2>
+  <h2 class="over-title">PESAWAT JATUH</h2>
+  <div id="new-record" class="record hidden">REKOR BARU!</div>
+  <div class="stats">
+    <span>Skor</span><b id="go-score">0</b>
+    <span>Skor tertinggi</span><b id="go-best">0</b>
+    <span>Waktu bertahan</span><b id="go-time">0:00</b>
+    <span>Musuh dihancurkan</span><b id="go-kills">0</b>
+    <span>Gelombang tercapai</span><b id="go-wave">0</b>
+    <span>Combo terbaik</span><b id="go-combo">0</b>
+    <span>Gerbang dilewati</span><b id="go-rings">0</b>
+  </div>
   <button id="btn-restart" class="btn" type="button">MAIN LAGI</button>
+  <p class="hint">atau tekan <kbd>R</kbd> atau <kbd>Enter</kbd></p>
 </div>
 
 <script type="module">
@@ -2098,6 +2275,158 @@ const CamRig = {
 CamRig.reset();
 
 /* =====================================================================
+   HUD - elemen DOM, ditulis hanya saat nilainya berubah
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+const hud = {
+  root: $('hud'),
+  reticle: $('reticle'),
+  hpBar: $('hp-bar'), hpFill: $('hp-fill'), hpText: $('hp-text'),
+  nitroBar: $('nitro-bar'), nitroFill: $('nitro-fill'), nitroTag: $('nitro-tag'),
+  wave: $('wave'), mult: $('mult'), comboFill: $('combo-fill'),
+  score: $('score'), best: $('best'),
+  speed: $('speed'), alt: $('alt'), kills: $('kills'), enemies: $('enemies'),
+  warning: $('warning'), banner: $('banner'), toasts: $('toasts'), vignette: $('vignette'),
+  indicators: [], indicatorType: [],
+  toastPool: [], toastNext: 0,
+  vignetteLevel: 0,
+  last: Object.create(null),
+};
+// Pool elemen DOM untuk indikator musuh dan popup skor (dibuat sekali)
+for (let i = 0; i < 8; i++) {
+  const el = document.createElement('div');
+  el.className = 'ind';
+  $('indicators').appendChild(el);
+  hud.indicators.push(el);
+  hud.indicatorType.push('');
+}
+for (let i = 0; i < 6; i++) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  hud.toasts.appendChild(el);
+  hud.toastPool.push(el);
+}
+
+/* Skor tertinggi di localStorage, selalu dibungkus try/catch */
+const HighScore = {
+  key: 'raptor13.highscore',
+  value: 0,
+  load() {
+    try {
+      const v = parseInt(window.localStorage.getItem(this.key) || '0', 10);
+      this.value = Number.isFinite(v) && v > 0 ? v : 0;
+    } catch (err) { this.value = 0; }
+  },
+  submit(score) {
+    const s = Math.floor(score);
+    if (s <= this.value) return false;
+    this.value = s;
+    try { window.localStorage.setItem(this.key, String(s)); } catch (err) { /* penyimpanan tidak tersedia */ }
+    return true;
+  },
+};
+HighScore.load();
+
+function showBanner(text, duration = 1800) {
+  hud.banner.textContent = text;
+  hud.banner.animate(
+    [{ opacity: 0, transform: 'scale(1.3)' }, { opacity: 1, transform: 'scale(1)', offset: 0.15 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }],
+    { duration, easing: 'ease-out' }
+  );
+}
+function showToast(text) {
+  const el = hud.toastPool[hud.toastNext];
+  hud.toastNext = (hud.toastNext + 1) % hud.toastPool.length;
+  el.textContent = text;
+  el.animate(
+    [{ opacity: 0, transform: 'translate(-50%, 10px)' }, { opacity: 1, transform: 'translate(-50%, 0)', offset: 0.15 }, { opacity: 0, transform: 'translate(-50%, -46px)' }],
+    { duration: 1100, easing: 'ease-out' }
+  );
+}
+const fmtInt = (n) => Math.floor(n).toLocaleString('id-ID');
+const fmtTime = (t) => { const m = Math.floor(t / 60), s = Math.floor(t % 60); return `${m}:${s < 10 ? '0' : ''}${s}`; };
+
+Events.on('waveStart', (n) => showBanner(`GELOMBANG ${n}`));
+Events.on('waveCleared', (n) => showToast(`GELOMBANG ${n} SELESAI`));
+Events.on('score', (amount, label) => {
+  const m = Combo.multiplier;
+  showToast(`+${amount} ${label}${m > 1 && (label === 'DRONE' || label === 'PENEMBAK') ? `  x${m}` : ''}`);
+});
+Events.on('playerHit', (amount) => { hud.vignetteLevel = Math.min(1, hud.vignetteLevel + amount / 20); });
+Events.on('pickup', (type) => showBanner(type === 'repair' ? 'PERBAIKAN' : 'NITRO PENUH', 1100));
+// Tulis ke DOM hanya bila berubah, agar tidak memicu layout setiap frame
+function hudSet(key, value, apply) {
+  if (hud.last[key] === value) return;
+  hud.last[key] = value;
+  apply(value);
+}
+function updateHud(dt) {
+  const hp = Player.health / CONFIG.player.maxHealth;
+  hudSet('hp', Math.round(hp * 200) / 200, (v) => { hud.hpFill.style.transform = `scaleX(${v})`; });
+  hudSet('hpText', Math.ceil(Player.health), (v) => { hud.hpText.textContent = v; });
+  hudSet('hpClass', hp < 0.3 ? 'low' : hp < 0.6 ? 'mid' : '', (v) => { hud.hpBar.className = 'bar ' + v; });
+  hudSet('nitro', Math.round(Player.nitro * 200) / 200, (v) => { hud.nitroFill.style.transform = `scaleX(${v})`; });
+  hudSet('nitroLock', Player.nitroLock > 0, (v) => hud.nitroBar.classList.toggle('locked', v));
+  hudSet('nitroTag', Player.nitroLock > 0 ? 'TERKUNCI' : Player.nitroActive ? 'AKTIF' : '', (v) => { hud.nitroTag.textContent = v; });
+  hudSet('wave', Waves.wave, (v) => { hud.wave.textContent = v; });
+  const m = Combo.multiplier;
+  hudSet('mult', m, (v) => { hud.mult.textContent = `x${v}`; hud.mult.className = v > 1 ? '' : 'off'; });
+  hudSet('combo', Math.round((Combo.timer / CONFIG.combo.window) * 50) / 50, (v) => { hud.comboFill.style.transform = `scaleX(${Math.max(v, 0)})`; });
+  hudSet('score', Math.floor(Game.score), (v) => { hud.score.textContent = fmtInt(v); });
+  hudSet('best', Math.max(HighScore.value, Math.floor(Game.score)), (v) => { hud.best.textContent = fmtInt(v); });
+  hudSet('speed', Math.round(Player.speed * 12), (v) => { hud.speed.textContent = v; });
+  hudSet('alt', Math.round(Player.pos.y * 4), (v) => { hud.alt.textContent = v; });
+  hudSet('kills', Game.kills, (v) => { hud.kills.textContent = v; });
+  hudSet('enemies', Enemies.alive, (v) => { hud.enemies.textContent = v; });
+  hudSet('warning', Player.warning && Game.state === 'play', (v) => hud.warning.classList.toggle('hidden', !v));
+
+  // Vignette merah: kilat saat kena, berdenyut saat kesehatan rendah
+  hud.vignetteLevel = Math.max(0, hud.vignetteLevel - dt * 1.8);
+  const lowPulse = hp < 0.3 && Player.alive ? 0.25 + 0.2 * Math.sin(Game.time * 6) : 0;
+  hudSet('vig', Math.round(Math.max(hud.vignetteLevel, lowPulse) * 50) / 50, (v) => { hud.vignette.style.opacity = v; });
+
+  updateIndicators();
+  // Reticle: proyeksi titik konvergensi peluru di depan pesawat
+  _vc.copy(Player.pos).addScaledVector(Player.forward, CONFIG.weapons.convergeDistance).project(camera);
+  const visible = _vc.z < 1 && Player.alive;
+  const x = Math.round((_vc.x + 1) * 0.5 * window.innerWidth);
+  const y = Math.round((1 - _vc.y) * 0.5 * window.innerHeight);
+  hudSet('reticleVis', visible, (v) => { hud.reticle.style.visibility = v ? 'visible' : 'hidden'; });
+  hudSet('reticle', x * 100000 + y, () => { hud.reticle.style.transform = `translate(${x}px, ${y}px)`; });
+}
+
+// Penanda musuh di luar layar: panah di tepi layar yang menunjuk arah musuh
+function updateIndicators() {
+  const w = window.innerWidth, h = window.innerHeight, margin = 28;
+  let n = 0;
+  for (let k = 0; k < Enemies.list.length && n < hud.indicators.length; k++) {
+    const e = Enemies.list[k];
+    if (!e.active) continue;
+    _vc.copy(e.pos).project(camera);
+    let x = _vc.x, y = _vc.y;
+    const behind = _vc.z > 1;
+    if (!behind && x >= -1 && x <= 1 && y >= -1 && y <= 1) continue;   // terlihat di layar
+    if (behind) { x = -x; y = -y; if (Math.abs(x) < 1e-3 && Math.abs(y) < 1e-3) y = -1; }
+    const s = 1 / Math.max(Math.abs(x), Math.abs(y));
+    x *= s; y *= s;
+    const px = clamp((x * 0.5 + 0.5) * w, margin, w - margin);
+    const py = clamp((0.5 - y * 0.5) * h, margin, h - margin);
+    const ang = Math.atan2(-y, x);
+    const el = hud.indicators[n];
+    if (hud.indicatorType[n] !== e.type) {
+      hud.indicatorType[n] = e.type;
+      el.className = 'ind ' + e.type;
+      el.style.display = 'block';
+    }
+    el.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) rotate(${ang.toFixed(3)}rad)`;
+    n++;
+  }
+  for (let k = n; k < hud.indicators.length; k++) {
+    if (hud.indicatorType[k] !== '') { hud.indicatorType[k] = ''; hud.indicators[k].style.display = 'none'; }
+  }
+}
+
+/* =====================================================================
    GAME STATE - menu, play, pause, dying, gameover
    ===================================================================== */
 const ui = {
@@ -2106,7 +2435,10 @@ const ui = {
   over: document.getElementById('screen-over'),
   btnStart: document.getElementById('btn-start'),
   btnResume: document.getElementById('btn-resume'),
+  btnPauseRestart: document.getElementById('btn-pause-restart'),
   btnRestart: document.getElementById('btn-restart'),
+  quality: document.getElementById('quality-select'),
+  muteBadge: document.getElementById('mute-badge'),
 };
 
 const Game = {
@@ -2126,7 +2458,7 @@ function setState(next) {
   ui.title.classList.toggle('hidden', next !== 'menu');
   ui.pause.classList.toggle('hidden', next !== 'pause');
   ui.over.classList.toggle('hidden', next !== 'gameover');
-  document.getElementById('hud').classList.toggle('hidden', next === 'menu');
+  document.getElementById('hud').classList.toggle('hidden', next === 'menu' || next === 'gameover');
 }
 
 // Reset seluruh state sesi tanpa membuat ulang objek (semua pool dipakai ulang)
@@ -2147,6 +2479,7 @@ function resetSession() {
   Combo.reset();
   FX.reset();
   CamRig.reset();
+  hud.vignetteLevel = 0;
 }
 
 function startGame() {
@@ -2166,35 +2499,31 @@ function restartGame() {
 
 ui.btnStart.addEventListener('click', () => { ui.btnStart.blur(); onAudioGesture(); startGame(); });
 ui.btnResume.addEventListener('click', () => { ui.btnResume.blur(); togglePause(); });
-ui.btnRestart.addEventListener('click', () => { ui.btnRestart.blur(); restartGame(); });
+ui.btnRestart.addEventListener('click', () => { ui.btnRestart.blur(); onAudioGesture(); restartGame(); });
+ui.btnPauseRestart.addEventListener('click', () => { ui.btnPauseRestart.blur(); restartGame(); });
 
-/* =====================================================================
-   HUD - elemen DOM, ditulis hanya saat nilainya berubah
-   ===================================================================== */
-const hud = {
-  root: document.getElementById('hud'),
-  reticle: document.getElementById('reticle'),
-  nitroBar: document.getElementById('nitro-bar'),
-  nitroFill: document.getElementById('nitro-fill'),
-  last: Object.create(null),
-};
-// Tulis ke DOM hanya bila berubah, agar tidak memicu layout setiap frame
-function hudSet(key, value, apply) {
-  if (hud.last[key] === value) return;
-  hud.last[key] = value;
-  apply(value);
-}
-function updateHud() {
-  hudSet('nitro', Math.round(Player.nitro * 200) / 200, (v) => { hud.nitroFill.style.transform = `scaleX(${v})`; });
-  hudSet('nitroLock', Player.nitroLock > 0, (v) => hud.nitroBar.classList.toggle('locked', v));
-  // Reticle: proyeksi titik konvergensi peluru di depan pesawat
-  _vc.copy(Player.pos).addScaledVector(Player.forward, CONFIG.weapons.convergeDistance).project(camera);
-  const visible = _vc.z < 1 && Player.alive;
-  const x = Math.round((_vc.x + 1) * 0.5 * window.innerWidth);
-  const y = Math.round((1 - _vc.y) * 0.5 * window.innerHeight);
-  hudSet('reticleVis', visible, (v) => { hud.reticle.style.visibility = v ? 'visible' : 'hidden'; });
-  hudSet('reticle', x * 100000 + y, () => { hud.reticle.style.transform = `translate(${x}px, ${y}px)`; });
-}
+// Pilihan kualitas memuat ulang halaman dengan parameter ?kualitas=
+ui.quality.value = CONFIG.qualityPreset;
+ui.quality.addEventListener('change', () => {
+  const url = new URL(window.location.href);
+  url.searchParams.set('kualitas', ui.quality.value);
+  window.location.href = url.toString();
+});
+document.getElementById('title-best').textContent = fmtInt(HighScore.value);
+
+// Isi layar game over dan simpan skor tertinggi
+Events.on('gameover', () => {
+  const isRecord = HighScore.submit(Game.score);
+  document.getElementById('new-record').classList.toggle('hidden', !isRecord);
+  document.getElementById('go-score').textContent = fmtInt(Game.score);
+  document.getElementById('go-best').textContent = fmtInt(HighScore.value);
+  document.getElementById('go-time').textContent = fmtTime(Game.time);
+  document.getElementById('go-kills').textContent = Game.kills;
+  document.getElementById('go-wave').textContent = Waves.wave;
+  document.getElementById('go-combo').textContent = Combo.best;
+  document.getElementById('go-rings').textContent = Rings.passed;
+  document.getElementById('title-best').textContent = fmtInt(HighScore.value);
+});
 
 /* =====================================================================
    INPUT - keyboard berbasis KeyboardEvent.code (posisi fisik tombol)
@@ -2263,6 +2592,7 @@ document.addEventListener('visibilitychange', onVisibility);
 // Mute global; audio sebenarnya disambungkan di bagian AUDIO
 function toggleMute() {
   Game.muted = !Game.muted;
+  ui.muteBadge.classList.toggle('hidden', !Game.muted);
 }
 // Dipanggil pada setiap interaksi pengguna; bagian AUDIO mengisi implementasinya
 function onAudioGesture() {}
@@ -2271,7 +2601,9 @@ function onAudioGesture() {}
    UPDATE DAN RENDER
    ===================================================================== */
 
+let lastDt = 0;
 function update(dt) {
+  lastDt = dt;
   Game.stateTime += dt;
   if (Game.state === 'play') {
     Game.time += dt;
@@ -2309,7 +2641,7 @@ function update(dt) {
 function render() {
   Weapons.pool.sync();
   Enemies.bullets.sync();
-  if (Game.state !== 'menu') updateHud();
+  if (Game.state !== 'menu') updateHud(lastDt);
   renderer.render(scene, camera);
 }
 
@@ -2348,6 +2680,8 @@ window.__game = {
       pickupsCollected: Pickups.collected,
       warning: Player.warning,
       invulnerable: Player.invuln > 0,
+      highScore: HighScore.value,
+      overlay: Game.state === 'menu' ? 'title' : Game.state === 'pause' ? 'pause' : Game.state === 'gameover' ? 'gameover' : 'none',
     };
   },
   // Kunci seed dunia dan gameplay; berlaku pada sesi berikutnya (start atau restart)
