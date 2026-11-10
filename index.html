@@ -116,7 +116,28 @@
   }
   .screen.pause .card { max-width: 380px; }
   .screen.pause .menu-list .btn { text-align: center; }
-  .row-btns { display: flex; gap: 12px; }
+  .row-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  /* Pengaturan */
+  .card.settings { max-width: 640px; max-height: calc(100vh - 48px); overflow-y: auto; }
+  .set-grid { display: grid; grid-template-columns: auto 1fr; gap: 12px 18px; align-items: center; width: 100%; text-align: left; }
+  .set-label { color: var(--ui-dim); font-size: 13px; letter-spacing: 0.06em; }
+  .seg { display: inline-flex; border: 1px solid var(--ui-line); border-radius: 6px; overflow: hidden; }
+  .set-grid > .seg { justify-self: start; }
+  .seg button { font: inherit; font-size: 14px; color: var(--ui-fg); background: transparent; border: 0; padding: 9px 14px; cursor: pointer; min-height: 40px; }
+  .seg button + button { border-left: 1px solid var(--ui-line); }
+  .seg button.on { background: var(--ui-accent); color: #1a0e04; font-weight: 800; }
+  .seg button:focus-visible { outline: 2px solid #fff; outline-offset: -3px; }
+  .range-wrap { display: flex; align-items: center; gap: 10px; }
+  .range-wrap input { flex: 1; accent-color: var(--ui-accent); min-height: 32px; }
+  .range-wrap output { min-width: 58px; text-align: right; font-variant-numeric: tabular-nums; }
+  .tog { display: flex; align-items: center; gap: 8px; cursor: pointer; min-height: 32px; }
+  .tog input { width: 20px; height: 20px; accent-color: var(--ui-accent); }
+  .tog-list { display: grid; gap: 4px; }
+  .note { margin: 6px 0 0; font-size: 12px; color: #ffd28a; }
+  .link { font: inherit; color: var(--ui-accent); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 0; }
+  .btn.danger { color: #ffb0a0; border-color: rgba(255, 120, 100, 0.5); }
+  #fps { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); font-size: 11px; color: var(--ui-dim); letter-spacing: 0.1em; }
+  @media (max-width: 560px) { .set-grid { grid-template-columns: 1fr; } }
   #countdown {
     position: fixed; inset: 0; z-index: 25; display: flex; flex-direction: column; align-items: center; justify-content: center;
     pointer-events: none; background: rgba(6, 10, 18, 0.2);
@@ -303,6 +324,7 @@
     <div class="stat"><span class="label">MUSUH AKTIF</span><span id="enemies" class="num">0</span></div>
   </div>
   <div id="warning" class="hidden">TARIK NAIK!</div>
+  <div id="fps" class="hidden">0 FPS</div>
   <div id="banner"></div>
   <div id="toasts"></div>
 </div>
@@ -333,6 +355,52 @@
     <div class="title-foot"><span>Skor tertinggi: <b id="title-best">0</b></span></div>
     <p class="hint keys-hint"><kbd>W</kbd><kbd>S</kbd> naik turun, <kbd>A</kbd><kbd>D</kbd> belok, <kbd>Spasi</kbd> nitro, <kbd>Enter</kbd> tembak, <kbd>P</kbd> jeda</p>
     <p class="hint">Panah atas dan bawah untuk memilih, Enter untuk menekan</p>
+  </div>
+</div>
+
+<!-- Pengaturan: tersimpan otomatis -->
+<div id="screen-settings" class="screen hidden">
+  <div class="card settings">
+    <h2>PENGATURAN</h2>
+    <div class="set-grid">
+      <span class="set-label">Kesulitan</span>
+      <div class="seg" data-key="difficulty">
+        <button type="button" data-v="mudah">Mudah</button><button type="button" data-v="normal">Normal</button><button type="button" data-v="sulit">Sulit</button>
+      </div>
+      <span class="set-label">Kepadatan asteroid</span>
+      <div class="range-wrap"><input type="range" min="0" max="2" step="1" data-key="asteroidDensity" aria-label="Kepadatan asteroid"><output data-for="asteroidDensity"></output></div>
+      <span class="set-label">Volume utama</span>
+      <div class="range-wrap"><input type="range" min="0" max="100" step="5" data-key="volMaster" aria-label="Volume utama"><output data-for="volMaster"></output></div>
+      <span class="set-label">Volume efek</span>
+      <div class="range-wrap"><input type="range" min="0" max="100" step="5" data-key="volSfx" aria-label="Volume efek"><output data-for="volSfx"></output></div>
+      <span class="set-label">Volume mesin</span>
+      <div class="range-wrap"><input type="range" min="0" max="100" step="5" data-key="volEngine" aria-label="Volume mesin"><output data-for="volEngine"></output></div>
+      <span class="set-label">Suara</span>
+      <label class="tog"><input type="checkbox" data-key="muted"> Bisukan</label>
+      <span class="set-label">Kualitas grafis</span>
+      <div>
+        <div class="seg" data-key="quality">
+          <button type="button" data-v="rendah">Rendah</button><button type="button" data-v="sedang">Sedang</button><button type="button" data-v="tinggi">Tinggi</button>
+        </div>
+        <p class="note hidden" id="quality-note">Berlaku setelah dimuat ulang. <button type="button" id="btn-reload" class="link">Muat ulang sekarang</button></p>
+      </div>
+      <span class="set-label">Mode kontrol</span>
+      <div class="seg" data-key="controlMode">
+        <button type="button" data-v="keyboard">Keyboard</button><button type="button" data-v="hp">HP (sentuh)</button>
+      </div>
+      <span class="set-label">Opsi</span>
+      <div class="tog-list">
+        <label class="tog"><input type="checkbox" data-key="invertPitch"> Balik arah naik turun</label>
+        <label class="tog"><input type="checkbox" data-key="cameraShake"> Getar kamera</label>
+        <label class="tog"><input type="checkbox" data-key="damageNumbers"> Angka damage</label>
+        <label class="tog"><input type="checkbox" data-key="showFps"> Tampilkan FPS</label>
+        <label class="tog"><input type="checkbox" data-key="autoFire"> Tembak otomatis (mode HP)</label>
+      </div>
+    </div>
+    <div class="row-btns">
+      <button id="btn-reset-data" class="btn secondary danger" type="button">RESET DATA</button>
+      <button id="btn-settings-back" class="btn" type="button">KEMBALI</button>
+    </div>
   </div>
 </div>
 
@@ -593,7 +661,91 @@ const CONFIG = {
   },
 };
 
-// Pilih preset kualitas dari URL bila ada, misalnya index.html?kualitas=rendah
+/* =====================================================================
+   SAVE LOKAL - satu kunci berversi di localStorage, load dan save terpusat,
+   selalu dibungkus try/catch, dengan nilai default aman bila data rusak atau kosong
+   ===================================================================== */
+const SAVE_KEY = 'raptor13.v1';
+const SETTING_DEFAULTS = {
+  difficulty: 'normal',        // mudah | normal | sulit
+  asteroidDensity: 1,          // 0 Sedikit, 1 Normal, 2 Banyak
+  volMaster: 80, volSfx: 80, volEngine: 60,   // 0..100
+  muted: false,
+  quality: 'sedang',           // rendah | sedang | tinggi
+  controlMode: 'keyboard',     // keyboard | hp
+  invertPitch: false,
+  cameraShake: true,
+  damageNumbers: true,
+  showFps: false,
+  autoFire: false,             // tembak otomatis di mode HP
+  touchPromptShown: false,
+};
+const SETTING_ENUMS = {
+  difficulty: ['mudah', 'normal', 'sulit'],
+  quality: ['rendah', 'sedang', 'tinggi'],
+  controlMode: ['keyboard', 'hp'],
+};
+const SETTING_RANGES = { asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100] };
+
+const Save = {
+  data: null,
+  defaults() {
+    return {
+      version: 1,
+      settings: { ...SETTING_DEFAULTS },
+      highScore: 0,
+      stats: { playTime: 0, enemiesDestroyed: 0, asteroidsDestroyed: 0, gamesPlayed: 0 },
+    };
+  },
+  // Terima hanya field yang dikenal dengan tipe dan rentang yang benar
+  sanitize(raw) {
+    const d = this.defaults();
+    if (!raw || typeof raw !== 'object') return d;
+    const rs = raw.settings && typeof raw.settings === 'object' ? raw.settings : {};
+    for (const k of Object.keys(SETTING_DEFAULTS)) {
+      const v = rs[k], def = SETTING_DEFAULTS[k];
+      if (typeof v !== typeof def) continue;
+      if (SETTING_ENUMS[k]) { if (SETTING_ENUMS[k].includes(v)) d.settings[k] = v; continue; }
+      if (typeof def === 'number') {
+        if (!Number.isFinite(v)) continue;
+        const r = SETTING_RANGES[k];
+        d.settings[k] = r ? Math.min(r[1], Math.max(r[0], Math.round(v))) : v;
+        continue;
+      }
+      d.settings[k] = v;
+    }
+    if (Number.isFinite(raw.highScore)) d.highScore = Math.max(0, Math.floor(raw.highScore));
+    const st = raw.stats && typeof raw.stats === 'object' ? raw.stats : {};
+    for (const k of Object.keys(d.stats)) if (Number.isFinite(st[k])) d.stats[k] = Math.max(0, st[k]);
+    return d;
+  },
+  load() {
+    let raw = null;
+    try {
+      const txt = window.localStorage.getItem(SAVE_KEY);
+      raw = txt ? JSON.parse(txt) : null;
+    } catch (err) { raw = null; }
+    this.data = this.sanitize(raw);
+    // Migrasi sekali dari kunci skor tertinggi versi lama
+    try {
+      const old = parseInt(window.localStorage.getItem('raptor13.highscore') || '0', 10);
+      if (Number.isFinite(old)) { if (old > this.data.highScore) this.data.highScore = old; }
+    } catch (err) { /* abaikan */ }
+  },
+  save() {
+    try { window.localStorage.setItem(SAVE_KEY, JSON.stringify(this.data)); } catch (err) { /* penyimpanan tidak tersedia */ }
+  },
+  reset() {
+    try { window.localStorage.removeItem(SAVE_KEY); window.localStorage.removeItem('raptor13.highscore'); } catch (err) { /* abaikan */ }
+    this.data = this.defaults();
+    this.save();
+  },
+  get settings() { return this.data.settings; },
+};
+Save.load();
+CONFIG.qualityPreset = Save.settings.quality;
+
+// Pilih preset kualitas dari URL bila ada (menimpa pengaturan), misalnya index.html?kualitas=rendah
 (() => {
   try {
     const q = new URLSearchParams(location.search).get('kualitas');
@@ -3354,7 +3506,7 @@ const Sfx = {
     const ctx = this.ctx, A = CONFIG.audio;
 
     this.master = ctx.createGain();
-    this.master.gain.value = Game.muted ? 0 : A.masterVolume;
+    this.master.gain.value = 0;   // diatur applyVolumes setelah init
     const comp = ctx.createDynamicsCompressor();
     comp.threshold.value = -16; comp.ratio.value = 4;
     this.master.connect(comp);
@@ -3388,6 +3540,7 @@ const Sfx = {
     ns.start();
     this.nitro = { filter: nfl, gain: ng };
     this.ready = true;
+    this.applyVolumes();
   },
 
   resume() {
@@ -3397,9 +3550,12 @@ const Sfx = {
     if (this.ctx?.state === 'running') this.ctx.suspend().catch(() => {});
   },
 
-  setMuted(m) {
+  // Volume dari Pengaturan (0..100) dan mute
+  applyVolumes() {
     if (!this.ready) return;
-    this.master.gain.setTargetAtTime(m ? 0 : CONFIG.audio.masterVolume, this.ctx.currentTime, 0.02);
+    const s = Save.settings;
+    const v = Game.muted ? 0 : CONFIG.audio.masterVolume * (s.volMaster / 100);
+    this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
   },
 
   // Parameter kontinu hanya dijadwalkan ulang bila berubah cukup besar
@@ -3638,24 +3794,17 @@ for (let i = 0; i < 6; i++) {
 }
 
 /* Skor tertinggi di localStorage, selalu dibungkus try/catch */
+// Skor tertinggi disimpan lewat modul Save
 const HighScore = {
-  key: 'raptor13.highscore',
-  value: 0,
-  load() {
-    try {
-      const v = parseInt(window.localStorage.getItem(this.key) || '0', 10);
-      this.value = Number.isFinite(v) ? Math.max(v, 0) : 0;
-    } catch (err) { this.value = 0; }
-  },
+  get value() { return Save.data.highScore; },
   submit(score) {
     const s = Math.floor(score);
-    if (s <= this.value) return false;
-    this.value = s;
-    try { window.localStorage.setItem(this.key, String(s)); } catch (err) { /* penyimpanan tidak tersedia */ }
+    if (s <= Save.data.highScore) return false;
+    Save.data.highScore = s;
+    Save.save();
     return true;
   },
 };
-HighScore.load();
 
 function showBanner(text, duration = 1800) {
   hud.banner.textContent = text;
@@ -3743,6 +3892,10 @@ function updateHud(dt) {
   v = Math.round(Math.max(hud.vignetteLevel, lowPulse) * 50) / 50;
   if (changed('vig', v)) hud.vignette.style.opacity = v;
 
+  if (Save.settings.showFps) {
+    v = Math.round(1000 / Perf.frameMs);
+    if (changed('fps', v)) document.getElementById('fps').textContent = v + ' FPS';
+  }
   updateIndicators();
   updateHpBars();
   updateDamageNumbers(dt);
@@ -3951,7 +4104,7 @@ const UI = {
     return null;
   },
   buttons(root) {
-    return Array.from(root.querySelectorAll('button')).filter((b) => b.offsetParent !== null);
+    return Array.from(root.querySelectorAll('button, input')).filter((b) => b.offsetParent !== null);
   },
   // Fokus tombol pertama hanya bila pengguna sedang memakai keyboard (agar sorotan tidak mengganggu klik)
   usingKeyboard: false,
@@ -4088,6 +4241,90 @@ Events.on('gameover', () => {
 });
 
 /* =====================================================================
+   PENGATURAN - panel overlay, tersimpan otomatis lewat Save
+   ===================================================================== */
+const DENSITY_LABELS = ['Sedikit', 'Normal', 'Banyak'];
+const Settings = {
+  el: document.getElementById('screen-settings'),
+  bootQuality: CONFIG.qualityPreset,
+  get s() { return Save.settings; },
+  // Terapkan semua pengaturan ke sistem game
+  apply() {
+    const s = this.s;
+    Game.difficultyKey = s.difficulty;           // nyawa dan HP musuh berlaku pada sesi berikutnya
+    Asteroids.densityLevel = s.asteroidDensity;
+    Controls.invertPitch = s.invertPitch;
+    CamRig.shakeEnabled = s.cameraShake;
+    hud.showDamageNumbers = s.damageNumbers;
+    document.getElementById('fps').classList.toggle('hidden', !s.showFps);
+    if (Game.muted !== s.muted) { Game.muted = s.muted; ui.btnMute.setAttribute('aria-pressed', String(Game.muted)); }
+    Sfx.applyVolumes();
+    Events.emit('settings', s);
+  },
+  set(key, value) {
+    this.s[key] = value;
+    Save.save();
+    this.apply();
+    this.render();
+  },
+  // Sinkronkan tampilan panel dengan nilai tersimpan
+  render() {
+    const s = this.s;
+    for (const seg of this.el.querySelectorAll('.seg')) {
+      for (const b of seg.querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === s[seg.dataset.key]);
+    }
+    for (const inp of this.el.querySelectorAll('input[type=range]')) {
+      inp.value = s[inp.dataset.key];
+      const out = this.el.querySelector(`output[data-for="${inp.dataset.key}"]`);
+      out.textContent = inp.dataset.key === 'asteroidDensity' ? DENSITY_LABELS[s.asteroidDensity] : s[inp.dataset.key] + '%';
+    }
+    for (const inp of this.el.querySelectorAll('input[type=checkbox]')) inp.checked = !!s[inp.dataset.key];
+    document.getElementById('quality-note').classList.toggle('hidden', s.quality === this.bootQuality);
+  },
+  init() {
+    for (const seg of this.el.querySelectorAll('.seg')) {
+      for (const b of seg.querySelectorAll('button')) {
+        b.addEventListener('click', () => this.set(seg.dataset.key, b.dataset.v));
+      }
+    }
+    for (const inp of this.el.querySelectorAll('input[type=range]')) {
+      inp.addEventListener('input', () => this.set(inp.dataset.key, Number(inp.value)));
+    }
+    for (const inp of this.el.querySelectorAll('input[type=checkbox]')) {
+      inp.addEventListener('change', () => this.set(inp.dataset.key, inp.checked));
+    }
+    document.getElementById('btn-reload').addEventListener('click', () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('kualitas');
+      window.location.href = url.toString();
+    });
+    onButton(document.getElementById('btn-settings-back'), () => UI.closeOverlay());
+    onButton(document.getElementById('btn-reset-data'), () => UI.confirm('RESET DATA?',
+      'Skor tertinggi, statistik dan semua pengaturan akan dihapus. Tindakan ini tidak bisa dibatalkan.', () => {
+        Save.reset();
+        this.apply();
+        this.render();
+        document.getElementById('title-best').textContent = fmtInt(HighScore.value);
+        UI.openOverlay(this.el);
+      }));
+    const open = () => { this.render(); UI.openOverlay(this.el); };
+    onButton(ui.btnSettings, open);
+    onButton(ui.btnPauseSettings, open);
+    this.apply();
+    this.render();
+  },
+};
+// Statistik lintas sesi
+Events.on('gameover', () => {
+  const st = Save.data.stats;
+  st.gamesPlayed += 1;
+  st.playTime = Math.round(st.playTime + Game.time);
+  st.enemiesDestroyed += Game.kills;
+  st.asteroidsDestroyed += Asteroids.destroyedCount;
+  Save.save();
+});
+
+/* =====================================================================
    INPUT - satu state abstrak (naik, turun, kiri, kanan, tembak, nitro) yang
    diisi oleh beberapa sumber: keyboard dan touch. Logika game hanya membaca
    Controls, sehingga tidak peduli dari mana input berasal.
@@ -4134,6 +4371,16 @@ function menuKeyHandler(code) {
   const root = UI.activeScreen();
   if (!root) return false;
   UI.usingKeyboard = true;
+  const ae = document.activeElement;
+  if (code === 'ArrowLeft' || code === 'ArrowRight') {
+    if (ae ? ae.type === 'range' : false) {
+      const step = Number(ae.step) || 1;
+      ae.value = Number(ae.value) + (code === 'ArrowRight' ? step : -step);
+      ae.dispatchEvent(new Event('input'));
+      return true;
+    }
+    return UI.moveFocus(code === 'ArrowRight' ? 1 : -1);
+  }
   if (code === 'ArrowUp') return UI.moveFocus(-1);
   if (code === 'ArrowDown') return UI.moveFocus(1);
   if (code === 'Escape') {
@@ -4212,10 +4459,10 @@ document.addEventListener('visibilitychange', onVisibility);
 
 // Mute global lewat master gain
 function toggleMute() {
-  Game.muted = !Game.muted;
-  ui.btnMute.setAttribute('aria-pressed', String(Game.muted));
-  Sfx.setMuted(Game.muted);
+  Settings.set('muted', !Game.muted);
 }
+
+Settings.init();   // setelah INPUT karena pengaturan diterapkan ke Controls
 
 /* =====================================================================
    UPDATE DAN RENDER
@@ -4369,6 +4616,7 @@ window.__game = {
       invulnerable: Player.invuln > 0,
       highScore: HighScore.value,
       difficulty: Game.difficultyKey,
+      settings: { ...Save.settings },
     };
   },
   // Kunci seed dunia dan gameplay; berlaku pada sesi berikutnya (start atau restart)
