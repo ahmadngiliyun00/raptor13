@@ -362,6 +362,25 @@ test('B5: laju tembak sesuai CONFIG, OVERDRIVE dan PENGHANCUR menaikkan laju dan
   await expect(page.locator('.buff[data-buff="destroyer"]')).toBeVisible();
 });
 
+test('B7: sanity audio mesin dan nitro (tanpa NaN, master di bawah 1, frekuensi mesin rendah)', async ({ page }) => {
+  await start(page);
+  await page.waitForTimeout(600);
+  const a = await dbg(page, 'audioCheck');
+  expect(a.ready).toBe(true);
+  expect(a.finite).toBe(true);
+  expect(a.master).toBeLessThan(1);
+  expect(a.values[4]).toBeGreaterThanOrEqual(50); expect(a.values[4]).toBeLessThanOrEqual(90);
+  expect(a.values[5]).toBeGreaterThanOrEqual(50); expect(a.values[5]).toBeLessThanOrEqual(92);
+  await page.keyboard.down('Space');
+  await page.waitForTimeout(700);
+  const n = await dbg(page, 'audioCheck');
+  await page.keyboard.up('Space');
+  expect(n.finite).toBe(true);
+  expect(n.values[7]).toBeGreaterThan(0.02);         // desis nitro terdengar
+  await page.waitForTimeout(1200);
+  expect((await dbg(page, 'audioCheck')).values[7]).toBeLessThan(0.01);   // memudar setelah dilepas
+});
+
 test('W dan S mengubah pitch dan ketinggian', async ({ page }) => {
   await start(page);
   const s0 = await snap(page);

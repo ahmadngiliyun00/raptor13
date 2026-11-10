@@ -853,8 +853,8 @@ const CONFIG = {
   },
   audio: {
     masterVolume: 0.7,
-    engineVolume: 0.08,
-    nitroVolume: 0.2,
+    engineVolume: 0.06,        // mesin lebih pelan dari tembakan dan ledakan
+    nitroVolume: 0.07,
     hearingDistance: 650,      // suara musuh tidak terdengar lebih jauh dari ini
   },
   sky: {
@@ -4417,7 +4417,8 @@ const Sfx = {
   ctx: null, master: null, noise: null, ready: false,
   engine: null, nitro: null,
   lastShot: 0, lastHit: 0, lastTick: 0, warnTimer: 0, critTimer: 0,
-  cache: { ef: -1, e2: -1, sub: -1, flt: -1, eg: -1, ng: -1, nf: -1 },
+  cache: { ef: -1, e2: -1, flt: -1, eg: -1, ng: -1 },
+  wasNitro: false,
 
   init() {
     if (this.ctx) return;
@@ -4433,7 +4434,8 @@ const Sfx = {
     this.master = ctx.createGain();
     this.master.gain.value = 0;   // diatur applyVolumes setelah init
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -16; comp.ratio.value = 4;
+    // Compressor ringan pada master agar tidak clipping
+    comp.threshold.value = -18; comp.ratio.value = 3; comp.knee.value = 12; comp.attack.value = 0.005; comp.release.value = 0.2;
     this.master.connect(comp);
     comp.connect(ctx.destination);
     // Bus per kategori: efek (suara sekali bunyi) dan mesin (dengung mesin dan nitro)
@@ -4448,23 +4450,31 @@ const Sfx = {
     const data = this.noise.getChannelData(0);
     for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
 
-    // Mesin: dua osilator dan sub, lewat lowpass; pitch mengikuti kecepatan
-    const e1 = ctx.createOscillator(); e1.type = 'sawtooth'; e1.frequency.value = 60;
-    const e2 = ctx.createOscillator(); e2.type = 'triangle'; e2.frequency.value = 121;
-    const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.value = 30;
-    const ef = ctx.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 500; ef.Q.value = 1.5;
-    const eg = ctx.createGain(); eg.gain.value = 0;
-    e1.connect(ef); e2.connect(ef); sub.connect(ef); ef.connect(eg); eg.connect(this.engineBus);
-    const rumble = ctx.createBufferSource(); rumble.buffer = this.noise; rumble.loop = true;
-    const rf = ctx.createBiquadFilter(); rf.type = 'lowpass'; rf.frequency.value = 260;
-    const rg = ctx.createGain(); rg.gain.value = 0.5;
-    rumble.connect(rf); rf.connect(rg); rg.connect(eg);
-    e1.start(); e2.start(); sub.start(); rumble.start();
-    this.engine = { e1, e2, sub, filter: ef, gain: eg };
+    // Brown noise (noise cokelat): integrasi noise putih, berat di frekuensi rendah
+    const blen = Math.floor(ctx.sampleRate * 3);
+    this.brown = ctx.createBuffer(1, blen, ctx.sampleRate);
+    const bd = this.brown.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < blen; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; bd[i] = last * 3.5; }
 
-    // Deru nitro: noise bandpass yang dikeraskan saat nitro aktif
+    // Mesin: brown noise lewat lowpass ditambah dua osilator lembut (sine dan triangle) 50 sampai 90 Hz.
+    // Tanpa gelombang saw dan tanpa modulasi cepat agar tidak terdengar seperti gas motor.
+    const brownSrc = ctx.createBufferSource(); brownSrc.buffer = this.brown; brownSrc.loop = true;
+    const ef = ctx.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 260; ef.Q.value = 0.5;
+    const bg = ctx.createGain(); bg.gain.value = 0.9;
+    const e1 = ctx.createOscillator(); e1.type = 'sine'; e1.frequency.value = 54;
+    const e2 = ctx.createOscillator(); e2.type = 'triangle'; e2.frequency.value = 70;
+    const og = ctx.createGain(); og.gain.value = 0.35;
+    const eg = ctx.createGain(); eg.gain.value = 0;
+    brownSrc.connect(ef); ef.connect(bg); bg.connect(eg);
+    e1.connect(og); e2.connect(og); og.connect(eg);
+    eg.connect(this.engineBus);
+    brownSrc.start(); e1.start(); e2.start();
+    this.engine = { e1, e2, filter: ef, gain: eg };
+
+    // Nitro: desis udara stabil (noise lewat highpass) yang memudar halus saat berhenti
     const ns = ctx.createBufferSource(); ns.buffer = this.noise; ns.loop = true;
-    const nfl = ctx.createBiquadFilter(); nfl.type = 'bandpass'; nfl.frequency.value = 700; nfl.Q.value = 0.7;
+    const nfl = ctx.createBiquadFilter(); nfl.type = 'highpass'; nfl.frequency.value = 1800; nfl.Q.value = 0.4;
     const ng = ctx.createGain(); ng.gain.value = 0;
     ns.connect(nfl); nfl.connect(ng); ng.connect(this.engineBus);
     ns.start();
@@ -4503,14 +4513,16 @@ const Sfx = {
     const A = CONFIG.audio, on = Game.state === 'playing' ? Player.alive : false;
     const nf = Player.nitroFx;
     const sn = clamp((Player.speed - 40) / 100, 0, 1);
-    const f = 52 + sn * 60 + nf * 18;
-    this.setParam('ef', this.engine.e1.frequency, f, 0.5);
-    this.setParam('e2', this.engine.e2.frequency, f * 2.01, 1);
-    this.setParam('sub', this.engine.sub.frequency, f * 0.5, 0.3);
-    this.setParam('flt', this.engine.filter.frequency, 380 + sn * 700 + nf * 900, 8, 0.08);
-    this.setParam('eg', this.engine.gain.gain, on ? A.engineVolume * (1 + nf * 0.5) : 0, 0.002, 0.1);
-    this.setParam('ng', this.nitro.gain.gain, on ? nf * A.nitroVolume : 0, 0.004, 0.08);
-    this.setParam('nf', this.nitro.filter.frequency, 600 + nf * 1100, 10);
+    // Pitch mengikuti kecepatan dengan smoothing lambat (konstanta waktu 0,4 detik)
+    this.setParam('ef', this.engine.e1.frequency, 52 + sn * 22, 0.4, 0.4);
+    this.setParam('e2', this.engine.e2.frequency, 68 + sn * 22, 0.4, 0.4);
+    this.setParam('flt', this.engine.filter.frequency, 220 + sn * 260 + nf * 180, 6, 0.4);
+    this.setParam('eg', this.engine.gain.gain, on ? A.engineVolume * (1 + nf * 0.3) : 0, 0.002, 0.25);
+    // Desis nitro stabil, memudar halus saat berhenti
+    const nitroOn = on ? Player.nitroActive : false;
+    this.setParam('ng', this.nitro.gain.gain, nitroOn ? A.nitroVolume : 0, 0.004, nitroOn ? 0.15 : 0.3);
+    if (nitroOn ? !this.wasNitro : false) this.nitroStart();
+    this.wasNitro = nitroOn;
 
     // Bip peringatan HP kritis
     if (on ? Player.health.ratio < CONFIG.player.criticalHp : false) {
@@ -4522,6 +4534,31 @@ const Sfx = {
       this.warnTimer -= dt;
       if (this.warnTimer <= 0) { this.warnTimer = 0.35; this.tone('square', 1040, 1040, 0.07, 0.05); }
     } else this.warnTimer = 0;
+  },
+
+  // Awal nitro: whoosh noise bandpass menyapu 400 ke 2500 Hz selama 0,4 detik, plus satu dentuman sub-bass
+  nitroStart() {
+    if (!this.ready) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const src = ctx.createBufferSource(); src.buffer = this.noise;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.2;
+    bp.frequency.setValueAtTime(400, t);
+    bp.frequency.exponentialRampToValueAtTime(2500, t + 0.4);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.18);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+    src.connect(bp); bp.connect(g); g.connect(this.sfxBus);
+    src.start(t, Math.random() * 1.2); src.stop(t + 0.6);
+    this.tone('sine', 58, 40, 0.38, 0.28);
+  },
+
+  // Uji sanity: semua gain dan frekuensi berhingga, gain master di bawah 1
+  check() {
+    if (!this.ready) return { ready: false };
+    const vals = [this.master.gain.value, this.sfxBus.gain.value, this.engineBus.gain.value, this.engine.gain.gain.value,
+      this.engine.e1.frequency.value, this.engine.e2.frequency.value, this.engine.filter.frequency.value, this.nitro.gain.gain.value];
+    return { ready: true, finite: vals.every((v) => Number.isFinite(v)), master: this.master.gain.value, engine: this.engine.gain.gain.value, values: vals };
   },
 
   attenuation(dist) {
@@ -5924,6 +5961,7 @@ window.__game = {
     activateBuff(type) { Buffs.activate(type); return true; },
     fireRate() { return round2(1 / Weapons.interval()); },
     bulletDamage() { return round2(Weapons.damage()); },
+    audioCheck() { return Sfx.check(); },
     forceManeuver(type, dir = 1) { return Player.startManeuver(type, dir, true); },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
     shootPlayer(dist = 60) {

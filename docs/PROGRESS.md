@@ -26,6 +26,8 @@ Berkas ini adalah catatan kerja agar pengerjaan bisa dilanjutkan otomatis setela
 - B4 AI musuh (siklus approach, attack dengan telegraf, break, reposition), batas kecepatan, spawn depan, separasi, kebal 1 detik setelah damage, penanda lead, bantuan bidik Mati, Rendah, Sedang, peringatan musuh di belakang, metrik bot (ambang: tailRatio di bawah 0,25, tabrakan di bawah 4 per menit; hasil uji 0,07 sampai 0,21).
 - B5 laju tembak 10 per detik, peluru 750 ditambah kecepatan pesawat, bolt plasma dengan halo berwarna per peluru, peluru musuh bola magenta, buff OVERDRIVE dan PENGHANCUR 10 detik dari kristal, pengali upgrade permanen Player.upgrades.
 - B6 awan Bumi volumetrik low-poly instanced (kumulus, stratus, serat), dua lapisan, memudar dekat kamera, tabir putih saat menembus awan.
+- B7 audio mesin brown noise ditambah dua osilator 52 sampai 90 Hz, whoosh dan sub-bass saat nitro mulai lalu desis stabil, compressor ringan, uji sanity.
+- Fase 0 (B1 sampai B7) selesai. Lanjut ke A2.
 
 ## Urutan task berikutnya (blok terakhir menang bila bertentangan)
 
@@ -36,7 +38,7 @@ Fase 0, rasa main (paling awal):
 4. (SELESAI) B4 AI musuh: kecepatan 70 sampai 85 persen pemain, maksimum 80 persen kecepatan nitro; siklus APPROACH, ATTACK (tanda sebelum menembak), BREAK, REPOSITION; 80 persen spawn di kerucut depan; jarak pisah antar musuh; kebal 1 detik setelah damage; penanda lead; bantuan bidik Mati, Rendah, Sedang (default Rendah); peringatan musuh di belakang; metrik tes waktu musuh di kerucut belakang dan tabrakan per menit di bawah ambang CONFIG.
 5. (SELESAI) B5 Laju tembak cooldown 0,10 sampai 0,12 detik, kecepatan peluru sekitar 3 kali, bolt plasma merah oranye dengan inti putih dan halo, peluru musuh berbeda (bulat merah magenta); buff OVERDRIVE (laju 1,6 kali) dan PENGHANCUR (damage 1,5 kali) 10 detik dengan ikon dan penghitung; pickup kristal; kartu upgrade permanen (disiapkan untuk sistem kartu S11).
 6. (SELESAI) B6 Awan Bumi volumetrik low-poly instanced (kumulus, stratus, serat), dua lapisan, memudar saat kamera dekat, tanpa popping.
-7. B7 Audio mesin: brown noise lewat lowpass ditambah dua sine atau triangle 50 sampai 90 Hz; nitro: whoosh bandpass 400 sampai 2500 Hz 0,4 detik ditambah sub-bass sekali lalu desis; compressor master; tes sanity tanpa NaN dan gain master di bawah 1.
+7. (SELESAI) B7 Audio mesin: brown noise lewat lowpass ditambah dua sine atau triangle 50 sampai 90 Hz; nitro: whoosh bandpass 400 sampai 2500 Hz 0,4 detik ditambah sub-bass sekali lalu desis; compressor master; tes sanity tanpa NaN dan gain master di bawah 1.
 
 Fase berikutnya:
 8. A2 Hangar Pilih Kapal (alur MULAI, Pilih Medan, Pilih Kapal), kredit, buka kapal, save v3 dengan migrasi.
