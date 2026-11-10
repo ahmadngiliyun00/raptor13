@@ -3594,6 +3594,11 @@ const Sfx = {
     comp.threshold.value = -16; comp.ratio.value = 4;
     this.master.connect(comp);
     comp.connect(ctx.destination);
+    // Bus per kategori: efek (suara sekali bunyi) dan mesin (dengung mesin dan nitro)
+    this.sfxBus = ctx.createGain();
+    this.engineBus = ctx.createGain();
+    this.sfxBus.connect(this.master);
+    this.engineBus.connect(this.master);
 
     // Buffer noise putih 2 detik, dipakai ulang oleh semua suara berbasis noise
     const len = Math.floor(ctx.sampleRate * 2);
@@ -3607,7 +3612,7 @@ const Sfx = {
     const sub = ctx.createOscillator(); sub.type = 'sine'; sub.frequency.value = 30;
     const ef = ctx.createBiquadFilter(); ef.type = 'lowpass'; ef.frequency.value = 500; ef.Q.value = 1.5;
     const eg = ctx.createGain(); eg.gain.value = 0;
-    e1.connect(ef); e2.connect(ef); sub.connect(ef); ef.connect(eg); eg.connect(this.master);
+    e1.connect(ef); e2.connect(ef); sub.connect(ef); ef.connect(eg); eg.connect(this.engineBus);
     const rumble = ctx.createBufferSource(); rumble.buffer = this.noise; rumble.loop = true;
     const rf = ctx.createBiquadFilter(); rf.type = 'lowpass'; rf.frequency.value = 260;
     const rg = ctx.createGain(); rg.gain.value = 0.5;
@@ -3619,7 +3624,7 @@ const Sfx = {
     const ns = ctx.createBufferSource(); ns.buffer = this.noise; ns.loop = true;
     const nfl = ctx.createBiquadFilter(); nfl.type = 'bandpass'; nfl.frequency.value = 700; nfl.Q.value = 0.7;
     const ng = ctx.createGain(); ng.gain.value = 0;
-    ns.connect(nfl); nfl.connect(ng); ng.connect(this.master);
+    ns.connect(nfl); nfl.connect(ng); ng.connect(this.engineBus);
     ns.start();
     this.nitro = { filter: nfl, gain: ng };
     this.ready = true;
@@ -3637,8 +3642,11 @@ const Sfx = {
   applyVolumes() {
     if (!this.ready) return;
     const s = Save.settings;
+    const t = this.ctx.currentTime;
     const v = Game.muted ? 0 : CONFIG.audio.masterVolume * (s.volMaster / 100);
-    this.master.gain.setTargetAtTime(v, this.ctx.currentTime, 0.02);
+    this.master.gain.setTargetAtTime(v, t, 0.02);
+    this.sfxBus.gain.setTargetAtTime(s.volSfx / 100, t, 0.02);
+    this.engineBus.gain.setTargetAtTime(s.volEngine / 100, t, 0.02);
   },
 
   // Parameter kontinu hanya dijadwalkan ulang bila berubah cukup besar
@@ -3690,7 +3698,7 @@ const Sfx = {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(this.master);
+    o.connect(g); g.connect(this.sfxBus);
     o.start(t); o.stop(t + dur + 0.02);
   },
 
@@ -3705,7 +3713,7 @@ const Sfx = {
     const g = ctx.createGain();
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(fl); fl.connect(g); g.connect(this.master);
+    src.connect(fl); fl.connect(g); g.connect(this.sfxBus);
     src.start(t, Math.random() * 1.5);
     src.stop(t + dur + 0.02);
   },
@@ -4797,6 +4805,7 @@ window.__game = {
       fps: Math.round(1000 / Perf.frameMs),
       workMs: round2(Perf.workMs),
       audio: Sfx.ctx ? Sfx.ctx.state : 'belum dibuat',
+      volumes: Sfx.ready ? { master: round2(Sfx.master.gain.value), sfx: round2(Sfx.sfxBus.gain.value), engine: round2(Sfx.engineBus.gain.value) } : null,
       multiplier: Combo.multiplier,
       combo: Combo.count,
       ringsPassed: Rings.passed,
