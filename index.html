@@ -41,6 +41,23 @@
   }
   .btn:hover { filter: brightness(1.12); }
   .btn.secondary { background: transparent; color: var(--ui-fg); border: 1px solid var(--ui-line); }
+
+  /* HUD */
+  #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
+  .bar { position: relative; width: 220px; height: 10px; background: rgba(255, 255, 255, 0.12); border: 1px solid var(--ui-line); border-radius: 2px; overflow: hidden; }
+  .bar > i { position: absolute; inset: 0; transform-origin: left center; display: block; }
+  #nitro-fill { background: linear-gradient(90deg, #ff7a1a, #ffd24a); }
+  #nitro-bar.locked #nitro-fill { background: #7a3d22; }
+  #nitro-bar.locked { animation: blink 0.35s steps(2) infinite; }
+  @keyframes blink { 50% { border-color: var(--ui-bad); } }
+  #reticle {
+    position: absolute; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px;
+    border: 2px solid rgba(170, 255, 230, 0.85); border-radius: 50%;
+    will-change: transform;
+  }
+  #reticle::before, #reticle::after { content: ""; position: absolute; background: rgba(170, 255, 230, 0.85); }
+  #reticle::before { left: 50%; top: -9px; bottom: -9px; width: 2px; margin-left: -1px; clip-path: polygon(0 0, 100% 0, 100% 9px, 0 9px, 0 calc(100% - 9px), 100% calc(100% - 9px), 100% 100%, 0 100%); }
+  #reticle::after { top: 50%; left: -9px; right: -9px; height: 2px; margin-top: -1px; clip-path: polygon(0 0, 9px 0, 9px 100%, 0 100%, calc(100% - 9px) 0, 100% 0, 100% 100%, calc(100% - 9px) 100%); }
 </style>
 <script type="importmap">
 {
@@ -52,6 +69,15 @@
 </head>
 <body>
 <div id="game"></div>
+
+<!-- HUD (elemen DOM di atas canvas) -->
+<div id="hud" class="hidden">
+  <div id="reticle"></div>
+  <div class="hud-block" id="hud-tl">
+    <div class="label">NITRO</div>
+    <div class="bar" id="nitro-bar"><i id="nitro-fill"></i></div>
+  </div>
+</div>
 
 <!-- Layar judul -->
 <div id="screen-title" class="screen">
@@ -114,6 +140,21 @@ const CONFIG = {
     mountainMaskFreq: 1 / 1500,
     ridgeFreq: 1 / 360,
     mountainHeight: 115,
+  },
+  nitro: {
+    drainPerSec: 0.28,         // meter penuh habis sekitar 3,5 detik
+    regenPerSec: 0.085,        // pulih pelan saat tidak dipakai
+    regenDelay: 0.8,           // jeda sebelum mulai pulih setelah dilepas
+    lockoutTime: 2.0,          // jeda wajib setelah meter benar-benar habis
+  },
+  weapons: {
+    fireInterval: 0.09,        // cooldown antar tembakan (detik)
+    bulletSpeed: 330,          // ditambah kecepatan pesawat
+    bulletLife: 1.4,
+    damage: 1,
+    maxPlayerBullets: 80,
+    convergeDistance: 160,     // jarak titik temu peluru kedua sayap, juga posisi reticle
+    hitPadding: 0.9,           // tambahan radius saat cek kena
   },
   sky: {
     zenith: 0x4a86c8,
@@ -409,6 +450,9 @@ const Player = {
   speed: 0,
   health: 100,
   alive: true,
+  nitro: 1,            // meter nitro 0..1
+  nitroLock: 0,        // sisa jeda setelah meter habis
+  nitroRegenWait: 0,   // sisa jeda sebelum meter mulai pulih
   nitroActive: false,
   nitroFx: 0,          // 0..1 dihaluskan, dipakai kamera, cahaya mesin dan api
 
@@ -419,6 +463,9 @@ const Player = {
     this.speed = C.baseSpeed;
     this.health = C.maxHealth;
     this.alive = true;
+    this.nitro = 1;
+    this.nitroLock = 0;
+    this.nitroRegenWait = 0;
     this.nitroActive = false;
     this.nitroFx = 0;
     this.forward.set(0, 0, -1);
@@ -461,6 +508,38 @@ const Player = {
     }
     this.model.root.rotation.set(this.pitch, this.yaw, this.roll);
   },
+
+  // Meter nitro: terkuras saat dipakai, pulih pelan setelah jeda, terkunci sebentar bila habis
+  updateNitro(dt, want) {
+    const N = CONFIG.nitro;
+    if (this.nitroLock > 0) this.nitroLock = Math.max(0, this.nitroLock - dt);
+    this.nitroActive = want && this.alive && this.nitroLock <= 0 && this.nitro > 0;
+    if (this.nitroActive) {
+      this.nitro -= N.drainPerSec * dt;
+      this.nitroRegenWait = N.regenDelay;
+      if (this.nitro <= 0) {
+        this.nitro = 0;
+        this.nitroActive = false;
+        this.nitroLock = N.lockoutTime;
+      }
+    } else {
+      this.nitroRegenWait -= dt;
+      if (this.nitroRegenWait <= 0) this.nitro = Math.min(1, this.nitro + N.regenPerSec * dt);
+    }
+  },
+  addNitro(amount) { this.nitro = Math.min(1, this.nitro + amount); },
+
+  // Api mesin, glow dan cahaya mengikuti intensitas nitro
+  updateVisuals(dt, t) {
+    const m = this.model, nf = this.nitroFx;
+    const flicker = 0.9 + 0.1 * Math.sin(t * 61) + 0.06 * Math.sin(t * 97);
+    for (const f of m.flames) f.scale.set(1 + nf * 0.5, 1 + nf * 0.5, (0.45 + nf * 2.0) * flicker);
+    m.matFlame.opacity = 0.3 + 0.6 * nf;
+    m.light.intensity = nf * CONFIG.light.nitroLightIntensity * flicker;
+    m.matGlow.color.lerpColors(this._glowBase, this._glowHot, nf);
+  },
+  _glowBase: new THREE.Color(0xff9a40),
+  _glowHot: new THREE.Color(0xfff0c0),
 
   // Autopilot untuk latar layar judul: meliuk pelan dan menjaga ketinggian
   autopilot(dt, t) {
@@ -780,7 +859,7 @@ const Env = {
     const waterGeo = new THREE.PlaneGeometry(size, size, 1, 1);
     waterGeo.rotateX(-Math.PI / 2);
     this.water = new THREE.Mesh(waterGeo, new THREE.MeshPhongMaterial({
-      color: 0x2f79ad, specular: 0xffe7c4, shininess: 70, flatShading: true,
+      color: 0x2f79ad, specular: 0x6d6250, shininess: 45, flatShading: true,
     }));
     this.water.receiveShadow = Q.shadows;
     this.water.position.y = CONFIG.world.waterLevel;
@@ -805,6 +884,115 @@ const Env = {
 Env.init();
 World.reset(CONFIG.seed);
 Player.reset();
+
+/* =====================================================================
+   PELURU - pool berbasis InstancedMesh dan array bertipe, tanpa alokasi per frame
+   ===================================================================== */
+const _m4 = new THREE.Matrix4();
+const _qa = new THREE.Quaternion();
+const _va = new THREE.Vector3();
+const _vb = new THREE.Vector3();
+const _vc = new THREE.Vector3();
+const _one = new THREE.Vector3(1, 1, 1);
+const AXIS_Z = new THREE.Vector3(0, 0, 1);
+
+class BulletPool {
+  constructor(max, geometry, material) {
+    this.max = max;
+    this.mesh = new THREE.InstancedMesh(geometry, material, max);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.count = 0;
+    this.mesh.frustumCulled = false;
+    this.p = new Float32Array(max * 3);
+    this.prev = new Float32Array(max * 3);
+    this.v = new Float32Array(max * 3);
+    this.q = new Float32Array(max * 4);
+    this.life = new Float32Array(max);
+    this.dmg = new Float32Array(max);
+    this.active = new Uint8Array(max);
+    this.alive = 0;
+    this.cursor = 0;
+    scene.add(this.mesh);
+  }
+  spawn(x, y, z, dx, dy, dz, speed, life, damage) {
+    let i = -1;
+    for (let k = 0; k < this.max; k++) {
+      const c = (this.cursor + k) % this.max;
+      if (!this.active[c]) { i = c; break; }
+    }
+    if (i < 0) i = this.cursor; else this.alive++;   // pool penuh: timpa slot tertua
+    this.cursor = (i + 1) % this.max;
+    const i3 = i * 3, i4 = i * 4;
+    this.p[i3] = this.prev[i3] = x; this.p[i3 + 1] = this.prev[i3 + 1] = y; this.p[i3 + 2] = this.prev[i3 + 2] = z;
+    this.v[i3] = dx * speed; this.v[i3 + 1] = dy * speed; this.v[i3 + 2] = dz * speed;
+    _qa.setFromUnitVectors(AXIS_Z, _va.set(dx, dy, dz));
+    this.q[i4] = _qa.x; this.q[i4 + 1] = _qa.y; this.q[i4 + 2] = _qa.z; this.q[i4 + 3] = _qa.w;
+    this.life[i] = life;
+    this.dmg[i] = damage;
+    this.active[i] = 1;
+    return i;
+  }
+  kill(i) { if (this.active[i]) { this.active[i] = 0; this.alive--; } }
+  update(dt) {
+    const p = this.p, prev = this.prev, v = this.v;
+    for (let i = 0; i < this.max; i++) {
+      if (!this.active[i]) continue;
+      this.life[i] -= dt;
+      if (this.life[i] <= 0) { this.kill(i); continue; }
+      const i3 = i * 3;
+      prev[i3] = p[i3]; prev[i3 + 1] = p[i3 + 1]; prev[i3 + 2] = p[i3 + 2];
+      p[i3] += v[i3] * dt; p[i3 + 1] += v[i3 + 1] * dt; p[i3 + 2] += v[i3 + 2] * dt;
+    }
+  }
+  // Salin peluru aktif ke instance 0..n-1 lalu set count = n
+  sync() {
+    let n = 0;
+    for (let i = 0; i < this.max; i++) {
+      if (!this.active[i]) continue;
+      const i3 = i * 3, i4 = i * 4;
+      _va.set(this.p[i3], this.p[i3 + 1], this.p[i3 + 2]);
+      _qa.set(this.q[i4], this.q[i4 + 1], this.q[i4 + 2], this.q[i4 + 3]);
+      _m4.compose(_va, _qa, _one);
+      this.mesh.setMatrixAt(n++, _m4);
+    }
+    this.mesh.count = n;
+    this.mesh.instanceMatrix.needsUpdate = true;
+  }
+  reset() { this.active.fill(0); this.alive = 0; this.cursor = 0; this.mesh.count = 0; }
+}
+
+/* =====================================================================
+   SENJATA PEMAIN - cooldown, sayap bergantian, konvergensi ke reticle
+   ===================================================================== */
+const Weapons = {
+  pool: new BulletPool(
+    CONFIG.weapons.maxPlayerBullets,
+    new THREE.BoxGeometry(0.34, 0.34, 5.5),
+    new THREE.MeshBasicMaterial({ color: 0xb4f8ff })
+  ),
+  cooldown: 0,
+  side: 0,
+  shotsFired: 0,
+  reset() { this.cooldown = 0; this.side = 0; this.shotsFired = 0; this.pool.reset(); },
+  update(dt, firing) {
+    const W = CONFIG.weapons;
+    this.cooldown -= dt;
+    if (firing && Player.alive && this.cooldown <= 0) {
+      this.cooldown = Math.max(this.cooldown, -W.fireInterval) + W.fireInterval;
+      const gun = PlayerModel.guns[this.side];
+      this.side ^= 1;
+      _va.copy(gun).applyQuaternion(PlayerModel.root.quaternion).add(Player.pos);           // posisi laras
+      _vb.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance).sub(_va).normalize(); // arah ke titik temu
+      this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, W.damage);
+      this.shotsFired++;
+      onPlayerShot(_va, _vb);
+    }
+    if (!firing && this.cooldown < 0) this.cooldown = 0;
+    this.pool.update(dt);
+  },
+};
+// Kait efek tembakan (partikel dan suara), diisi bagian PARTIKEL dan AUDIO
+function onPlayerShot(pos, dir) {}
 
 /* =====================================================================
    KAMERA CHASE - lag pada rotasi (bukan posisi) agar jarak ke pesawat stabil
@@ -888,6 +1076,7 @@ function setState(next) {
   ui.title.classList.toggle('hidden', next !== 'menu');
   ui.pause.classList.toggle('hidden', next !== 'pause');
   ui.over.classList.toggle('hidden', next !== 'gameover');
+  document.getElementById('hud').classList.toggle('hidden', next === 'menu');
 }
 
 // Reset seluruh state sesi tanpa membuat ulang objek (semua pool dipakai ulang)
@@ -895,6 +1084,7 @@ function resetSession() {
   Game.time = 0;
   World.reset(CONFIG.seed);
   Player.reset();
+  Weapons.reset();
   CamRig.reset();
 }
 
@@ -916,6 +1106,34 @@ function restartGame() {
 ui.btnStart.addEventListener('click', () => { ui.btnStart.blur(); onAudioGesture(); startGame(); });
 ui.btnResume.addEventListener('click', () => { ui.btnResume.blur(); togglePause(); });
 ui.btnRestart.addEventListener('click', () => { ui.btnRestart.blur(); restartGame(); });
+
+/* =====================================================================
+   HUD - elemen DOM, ditulis hanya saat nilainya berubah
+   ===================================================================== */
+const hud = {
+  root: document.getElementById('hud'),
+  reticle: document.getElementById('reticle'),
+  nitroBar: document.getElementById('nitro-bar'),
+  nitroFill: document.getElementById('nitro-fill'),
+  last: Object.create(null),
+};
+// Tulis ke DOM hanya bila berubah, agar tidak memicu layout setiap frame
+function hudSet(key, value, apply) {
+  if (hud.last[key] === value) return;
+  hud.last[key] = value;
+  apply(value);
+}
+function updateHud() {
+  hudSet('nitro', Math.round(Player.nitro * 200) / 200, (v) => { hud.nitroFill.style.transform = `scaleX(${v})`; });
+  hudSet('nitroLock', Player.nitroLock > 0, (v) => hud.nitroBar.classList.toggle('locked', v));
+  // Reticle: proyeksi titik konvergensi peluru di depan pesawat
+  _vc.copy(Player.pos).addScaledVector(Player.forward, CONFIG.weapons.convergeDistance).project(camera);
+  const visible = _vc.z < 1 && Player.alive;
+  const x = Math.round((_vc.x + 1) * 0.5 * window.innerWidth);
+  const y = Math.round((1 - _vc.y) * 0.5 * window.innerHeight);
+  hudSet('reticleVis', visible, (v) => { hud.reticle.style.visibility = v ? 'visible' : 'hidden'; });
+  hudSet('reticle', x * 100000 + y, () => { hud.reticle.style.transform = `translate(${x}px, ${y}px)`; });
+}
 
 /* =====================================================================
    INPUT - keyboard berbasis KeyboardEvent.code (posisi fisik tombol)
@@ -996,11 +1214,14 @@ function update(dt) {
   Game.stateTime += dt;
   if (Game.state === 'play') {
     Game.time += dt;
+    Player.updateNitro(dt, Input.nitro);
     Player.update(dt, Input.pitch, Input.yaw);
+    Weapons.update(dt, Input.fire);
   } else if (Game.state === 'menu') {
     Player.autopilot(dt, Game.stateTime);
   }
   if (Game.state !== 'pause') {
+    Player.updateVisuals(dt, Game.stateTime);
     World.update(Player.pos.x, Player.pos.z);
     CamRig.update(dt);
     Env.update();
@@ -1008,8 +1229,11 @@ function update(dt) {
 }
 
 function render() {
+  Weapons.pool.sync();
+  if (Game.state !== 'menu') updateHud();
   renderer.render(scene, camera);
 }
+
 
 /* =====================================================================
    MAIN LOOP - requestAnimationFrame dengan delta time yang di-clamp
