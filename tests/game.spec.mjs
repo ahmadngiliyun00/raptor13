@@ -200,6 +200,45 @@ test('B1: Shift menahan pandangan ke belakang', async ({ page }) => {
   await page.keyboard.up('ShiftLeft');
 });
 
+test('B2: Balik Arah membalik heading 180 derajat dan cooldown mencegah pemakaian beruntun', async ({ page }) => {
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { window.__game.debug.clearAsteroids(); window.__game.debug.setAsteroidDensity(0); });
+  await page.waitForTimeout(1700);   // lewati kebal awal dan biarkan penstabil bekerja
+  const y0 = (await snap(page)).yaw;
+  await page.keyboard.press('KeyX');
+  expect((await snap(page)).maneuver).toBe('immelmann');
+  await page.waitForTimeout(2300);
+  const s = await snap(page);
+  const diff = Math.abs(Math.atan2(Math.sin(s.yaw - y0), Math.cos(s.yaw - y0)));
+  expect(diff).toBeGreaterThan(Math.PI - 0.35);     // arah berlawanan
+  expect(s.up.y).toBeGreaterThan(0.8);              // datar dan tegak
+  expect(s.cooldowns.immelmann).toBeGreaterThan(0);
+  await page.keyboard.press('KeyX');
+  expect((await snap(page)).maneuver).toBe(null);    // masih cooldown
+});
+
+test('B2: gulung tong kebal peluru, looping kembali ke arah semula', async ({ page }) => {
+  await start(page, { world: 'space', god: false });
+  await page.evaluate(() => { window.__game.debug.clearAsteroids(); window.__game.debug.setAsteroidDensity(0); });
+  await page.waitForTimeout(1700);
+  await page.keyboard.press('KeyZ');
+  await page.waitForTimeout(150);
+  await dbg(page, 'shootPlayer', 40);
+  await page.waitForTimeout(500);
+  expect((await snap(page)).health).toBe(100);       // kebal selama gulungan
+  await page.waitForTimeout(500);
+  await dbg(page, 'shootPlayer', 40);
+  await page.waitForTimeout(400);
+  expect((await snap(page)).health).toBeLessThan(100);
+  const y0 = (await snap(page)).yaw;
+  expect(await dbg(page, 'forceManeuver', 'loop')).toBe(true);
+  await page.waitForTimeout(2900);
+  const s = await snap(page);
+  const diff = Math.abs(Math.atan2(Math.sin(s.yaw - y0), Math.cos(s.yaw - y0)));
+  expect(diff).toBeLessThan(0.35);
+  expect(s.maneuver).toBe(null);
+});
+
 test('W dan S mengubah pitch dan ketinggian', async ({ page }) => {
   await start(page);
   const s0 = await snap(page);

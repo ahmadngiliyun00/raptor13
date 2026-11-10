@@ -166,7 +166,18 @@
   .note { margin: 6px 0 0; font-size: 12px; color: #ffd28a; }
   .link { font: inherit; color: var(--ui-accent); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 0; }
   .btn.danger { color: #ffb0a0; border-color: rgba(255, 120, 100, 0.5); }
-  #fps { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); font-size: 11px; color: var(--ui-dim); letter-spacing: 0.1em; }
+  #maneuvers { position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 8px; }
+  .man {
+    position: relative; overflow: hidden; display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+    background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 4px; font-size: 11px; letter-spacing: 0.1em;
+  }
+  .man i { position: absolute; inset: 0; background: rgba(255, 154, 60, 0.28); transform-origin: left center; transform: scaleX(0); }
+  .man b, .man span { position: relative; }
+  .man b { font-family: ui-monospace, Menlo, monospace; color: var(--ui-accent); }
+  .man.ready { border-color: rgba(255, 154, 60, 0.7); }
+  .man.active { background: rgba(255, 154, 60, 0.45); }
+  body.mode-hp #maneuvers { display: none; }
+  #fps { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); font-size: 11px; color: var(--ui-dim); letter-spacing: 0.1em; }
   @media (max-width: 560px) { .set-grid { grid-template-columns: 1fr; } }
   #countdown {
     position: fixed; inset: 0; z-index: 25; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -194,6 +205,9 @@
   .t-fire { right: 0; bottom: 0; width: 100px; height: 100px; background: rgba(255, 90, 60, 0.35) !important; }
   .t-fire.on { background: rgba(255, 90, 60, 0.7) !important; }
   .t-nitro { left: 0; bottom: 8px; width: 76px; height: 76px; }
+  #touch .t-man { width: 58px; height: 40px; border-radius: 10px; font-size: 10px; top: 0; }
+  .t-roll { left: 0; } .t-imm { left: 66px; } .t-loop { left: 132px; }
+  #touch .t-man.cool { opacity: 0.45; }
   body.mode-hp .hud-block.bl, body.mode-hp .hud-block.br { bottom: auto; top: calc(150px + env(safe-area-inset-top)); }
   body.mode-hp .hud-block.br { top: calc(150px + env(safe-area-inset-top)); }
   .tool .ic-hp { display: none; }
@@ -413,6 +427,11 @@
     <div class="stat"><span class="label">MUSUH AKTIF</span><span id="enemies" class="num">0</span></div>
   </div>
   <div id="warning" class="hidden">TARIK NAIK!</div>
+  <div id="maneuvers">
+    <div class="man" data-man="roll"><i></i><b>Z</b><span>GULUNG</span></div>
+    <div class="man" data-man="immelmann"><i></i><b>X</b><span>BALIK</span></div>
+    <div class="man" data-man="loop"><i></i><b>C</b><span>LOOP</span></div>
+  </div>
   <div id="fps" class="hidden">0 FPS</div>
   <div id="banner"></div>
   <div id="toasts"></div>
@@ -428,6 +447,9 @@
   <div class="actions">
     <button class="tbtn t-nitro" data-act="nitro" type="button">NITRO</button>
     <button class="tbtn t-fire" data-act="fire" type="button">TEMBAK</button>
+    <button class="tbtn t-man t-roll" data-man="roll" type="button">GULUNG</button>
+    <button class="tbtn t-man t-imm" data-man="immelmann" type="button">BALIK</button>
+    <button class="tbtn t-man t-loop" data-man="loop" type="button">LOOP</button>
   </div>
 </div>
 <div id="rotate-hint" class="screen hidden"><div class="card"><h2>PUTAR LAYAR</h2><p class="hint">Mode HP dimainkan mendatar (landscape). Putar perangkatmu untuk melanjutkan.</p></div></div>
@@ -644,6 +666,13 @@ const CONFIG = {
     rollRate: 2.6,             // laju roll saat A atau D ditekan sambil pitch
     autoLevelRate: 1.1,        // laju penstabil otomatis mengembalikan hidung ke horizon
     climbSpeedFactor: 0.15,    // kecepatan naik 15 persen saat menukik, turun 15 persen saat menanjak
+  },
+  // Manuver akrobatik: durasi dan cooldown dalam detik
+  maneuvers: {
+    roll: { label: 'GULUNG', key: 'Z', duration: 0.85, cooldown: 4, sideShift: 16 },   // kebal peluru selama gulungan
+    immelmann: { label: 'BALIK', key: 'X', duration: 1.9, cooldown: 6 },              // setengah looping lalu setengah gulungan
+    loop: { label: 'LOOP', key: 'C', duration: 2.6, cooldown: 5 },
+    doubleTapWindow: 0.28,     // ketuk ganda A atau D untuk gulung tong
   },
   camera: {
     fov: 68,                   // FOV normal
@@ -1576,6 +1605,9 @@ const Player = {
   _up: new THREE.Vector3(0, 1, 0),
   _right: new THREE.Vector3(1, 0, 0),
   autoLevel: true,
+  maneuver: null,                     // { type, t, dur, dir, applied }
+  cooldowns: { roll: 0, immelmann: 0, loop: 0 },
+  get rolling() { return this.maneuver ? this.maneuver.type === 'roll' : false; },
   yaw: 0, pitch: 0, roll: 0,
   speed: 0,
   health: null,        // komponen Health, dibuat setelah definisi objek
@@ -1596,6 +1628,8 @@ const Player = {
     this.pos.set(0, Worlds.active.safeStartAltitude(), 0);
     this.yaw = 0; this.pitch = 0; this.roll = 0;
     this.quat.identity();
+    this.maneuver = null;
+    this.cooldowns.roll = 0; this.cooldowns.immelmann = 0; this.cooldowns.loop = 0;
     this.speed = C.baseSpeed * this.ship.stats.speed;
     this.health.reset(this.ship.stats.hp);
     this.alive = true;
@@ -1621,14 +1655,21 @@ const Player = {
   update(dt, pitchIn, yawIn) {
     const C = CONFIG.player, F = CONFIG.flight, W = Worlds.active, q = this.quat;
     const agility = this.ship.stats.agility;
+    for (const k in this.cooldowns) if (this.cooldowns[k] > 0) this.cooldowns[k] = Math.max(0, this.cooldowns[k] - dt);
+    if (this.maneuver) {
+      this.updateManeuver(dt);
+      pitchIn = 0; yawIn = 0;
+    }
     this.basis();
     const f = this.forward, up = this._up, right = this._right;
     const vertical = Math.abs(f.y) > 0.94;                // dekat tegak lurus: bank tidak terdefinisi
     const bank = Math.atan2(right.y, up.y);               // positif = miring kiri; sekitar pi = terbalik
 
     // Pitch: rotasi di sumbu kanan lokal (positif = hidung naik)
-    if (pitchIn !== 0) this.rotateLocal(_AX_X, pitchIn * F.pitchRate * agility * dt);
-    if (pitchIn !== 0) {
+    if (this.maneuver) { /* manuver mengendalikan orientasi */ }
+    else if (pitchIn !== 0) this.rotateLocal(_AX_X, pitchIn * F.pitchRate * agility * dt);
+    if (this.maneuver) { /* tanpa koreksi bank selama manuver */ }
+    else if (pitchIn !== 0) {
       // Tarik sambil belok dalam posisi tegak: bank menuju target (belokan tajam).
       // Saat terbalik atau vertikal, A dan D menjadi laju roll. W saja tidak dikoreksi agar looping bersih.
       if (yawIn !== 0) {
@@ -1656,7 +1697,7 @@ const Player = {
     // Belok: yaw di sumbu tegak dunia sebanding bank (hanya saat tidak terbalik), diperkecil saat menanjak tajam
     this.basis();
     const bank2 = Math.atan2(this._right.y, this._up.y);
-    if (Math.abs(bank2) < Math.PI / 2) {
+    if (this.maneuver ? false : Math.abs(bank2) < Math.PI / 2) {
       const horiz = Math.sqrt(Math.max(0, 1 - this.forward.y * this.forward.y));
       const turn = C.turnRate * agility * clamp(Math.sin(bank2) / Math.sin(C.maxRoll), -1.2, 1.2) * horiz;
       _qb.setFromAxisAngle(_AX_Y, turn * dt);
@@ -1678,6 +1719,49 @@ const Player = {
     if (this.pos.y < W.minY) this.pos.y = W.minY;
     this.rig.quaternion.copy(q);
     this.syncEuler();
+  },
+
+  // Mulai manuver bila tidak sedang bermanuver dan cooldown sudah habis
+  startManeuver(type, dir = 1, force = false) {
+    if (!this.alive || Game.state !== 'playing') return false;
+    if (this.maneuver) return false;
+    if (!force) { if (this.cooldowns[type] > 0) return false; }
+    const M = CONFIG.maneuvers[type];
+    this.maneuver = { type, t: 0, dur: M.duration, dir: dir < 0 ? -1 : 1, applied: 0, applied2: 0 };
+    this.cooldowns[type] = M.cooldown;
+    Events.emit('maneuver', type);
+    return true;
+  },
+  // Kurva halus 0..1 untuk sudut manuver
+  ease(x) { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); },
+  updateManeuver(dt) {
+    const m = this.maneuver;
+    m.t += dt;
+    const k = Math.min(1, m.t / m.dur);
+    if (m.type === 'roll') {
+      // Satu putaran penuh di sumbu depan, sambil bergeser menyamping untuk menghindar
+      const target = this.ease(k) * Math.PI * 2 * m.dir;
+      this.rotateLocal(_AX_Z, target - m.applied);
+      m.applied = target;
+      this.basis();
+      const shift = -m.dir * CONFIG.maneuvers.roll.sideShift * Math.sin(Math.PI * k) * dt * 2;
+      this.pos.x += this._right.x * shift;
+      this.pos.z += this._right.z * shift;
+    } else if (m.type === 'immelmann') {
+      // 60 persen waktu: setengah looping naik; sisanya: setengah gulungan kembali tegak
+      const kp = clamp(k / 0.6, 0, 1), kr = clamp((k - 0.6) / 0.4, 0, 1);
+      const pTarget = this.ease(kp) * Math.PI;
+      this.rotateLocal(_AX_X, pTarget - m.applied);
+      m.applied = pTarget;
+      const rTarget = this.ease(kr) * Math.PI;
+      this.rotateLocal(_AX_Z, rTarget - m.applied2);
+      m.applied2 = rTarget;
+    } else {
+      const target = this.ease(k) * Math.PI * 2;
+      this.rotateLocal(_AX_X, target - m.applied);
+      m.applied = target;
+    }
+    if (k >= 1) this.maneuver = null;
   },
 
   // Vektor arah dari quaternion (tanpa alokasi)
@@ -2964,7 +3048,7 @@ function updateCombat() {
     if (!eb.active[i]) continue;
     const i3 = i * 3;
     const bx = eb.p[i3], by = eb.p[i3 + 1], bz = eb.p[i3 + 2];
-    if (Player.alive) {
+    if (Player.alive ? !Player.rolling : false) {   // gulung tong: kebal peluru musuh
       if (segmentHitsSphere(eb.prev[i3], eb.prev[i3 + 1], eb.prev[i3 + 2], bx, by, bz, P.x, P.y, P.z, pr)) {
         eb.kill(i);
         Events.emit('bulletImpact', bx, by, bz);
@@ -4332,6 +4416,8 @@ function updateHud(dt) {
   }
   updateIndicators();
   updateHpBars();
+  updateManeuverHud();
+  Touch.updateCooldowns();
   updateDamageNumbers(dt);
   v = Game.state === 'playing' ? (Player.alive ? hp < CONFIG.player.criticalHp : false) : false;
   if (changed('critical', v)) $('critical').classList.toggle('hidden', !v);
@@ -4377,6 +4463,20 @@ function updateHpBars() {
   for (let k = hpBarCount; k < hud.hpBars.length; k++) {
     const b = hud.hpBars[k];
     if (b.shown) { b.shown = false; b.el.style.display = 'none'; }
+  }
+}
+
+// Indikator cooldown manuver
+hud.mans = {};
+for (const el of document.querySelectorAll('#maneuvers .man')) hud.mans[el.dataset.man] = { el, fill: el.querySelector('i') };
+function updateManeuverHud() {
+  for (const k in hud.mans) {
+    const cd = Player.cooldowns[k], tot = CONFIG.maneuvers[k].cooldown;
+    const active = Player.maneuver ? Player.maneuver.type === k : false;
+    const v = Math.round((cd / tot) * 40) / 40;
+    if (changed('man' + k, v)) hud.mans[k].fill.style.transform = 'scaleX(' + v + ')';
+    const cls = active ? 'man active' : cd <= 0 ? 'man ready' : 'man';
+    if (changed('manc' + k, cls)) hud.mans[k].el.className = cls;
   }
 }
 
@@ -4809,6 +4909,7 @@ const Controls = {
 // Sumber keyboard: berbasis KeyboardEvent.code (posisi fisik tombol)
 const Keyboard = {
   down: Object.create(null),   // code -> boolean
+  lastTap: { code: '', t: 0 },
   fill(c) {
     const d = this.down;
     if (d.KeyW) c.up = true;
@@ -4826,7 +4927,7 @@ Controls.addSource(Keyboard);
 // Tombol yang aksi bawaan browsernya harus dicegah (scroll, klik tombol yang sedang fokus)
 const PREVENT_CODES = new Set(['Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM',
-  'ShiftLeft', 'ShiftRight',
+  'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 // Navigasi menu dengan keyboard: panah atas dan bawah memilih, Enter menekan, Esc menutup overlay.
 // Mengembalikan true bila tombol sudah ditangani.
@@ -4895,6 +4996,25 @@ function onKeyDown(e) {
     case 'KeyM':
       toggleMute();
       break;
+    case 'KeyZ':
+      Player.startManeuver('roll', Keyboard.down.KeyD ? -1 : 1);
+      break;
+    case 'KeyX':
+      Player.startManeuver('immelmann');
+      break;
+    case 'KeyC':
+      Player.startManeuver('loop');
+      break;
+    case 'KeyA':
+    case 'KeyD': {
+      // Ketuk ganda A atau D: gulung tong ke arah itu
+      const now = performance.now() / 1000;
+      if (Keyboard.lastTap.code === code) {
+        if (now - Keyboard.lastTap.t < CONFIG.maneuvers.doubleTapWindow) Player.startManeuver('roll', code === 'KeyD' ? -1 : 1);
+      }
+      Keyboard.lastTap.code = code; Keyboard.lastTap.t = now;
+      break;
+    }
   }
 }
 
@@ -4964,7 +5084,15 @@ const Touch = {
   },
   init() {
     for (const b of this.root.querySelectorAll('[data-act]')) this.buttons[b.dataset.act] = b;
+    this.manButtons = Array.from(this.root.querySelectorAll('[data-man]'));
     const down = (e) => {
+      // Tombol manuver: sekali tekan
+      const mb = e.target.closest('[data-man]');
+      if (mb) {
+        e.preventDefault();
+        Player.startManeuver(mb.dataset.man, this.counts.right > 0 ? -1 : 1);
+        return;
+      }
       const b = e.target.closest('[data-act]');
       if (!b) return;
       e.preventDefault();
@@ -4986,6 +5114,14 @@ const Touch = {
     this.root.addEventListener('pointercancel', up);
     this.root.addEventListener('lostpointercapture', up);
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
+  },
+  // Tombol manuver meredup saat cooldown
+  updateCooldowns() {
+    if (!this.enabled) return;
+    for (const b of this.manButtons) {
+      const cool = Player.cooldowns[b.dataset.man] > 0;
+      if (b.classList.contains('cool') !== cool) b.classList.toggle('cool', cool);
+    }
   },
   // Kontrol sentuh hanya tampil di mode HP saat bermain
   updateVisibility() {
@@ -5183,6 +5319,8 @@ window.__game = {
       pickupsCollected: Pickups.collected,
       warning: Player.warning,
       invulnerable: Player.invuln > 0,
+      maneuver: Player.maneuver ? Player.maneuver.type : null,
+      cooldowns: { ...Player.cooldowns },
       highScore: HighScore.value,
       difficulty: Game.difficultyKey,
       world: Worlds.active.id,
@@ -5272,6 +5410,15 @@ window.__game = {
     setAsteroidDensity(level) { Asteroids.densityLevel = clamp(level | 0, 0, 2); },
     // Hasil kali titik arah pandang kamera dengan arah terbang pesawat (1 depan, -1 belakang)
     cameraForwardDot() { camera.getWorldDirection(_vc); return round2(_vc.dot(Player.forward)); },
+    forceManeuver(type, dir = 1) { return Player.startManeuver(type, dir, true); },
+    // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
+    shootPlayer(dist = 60) {
+      const P = Player.pos, f = Player.forward;
+      _va.copy(P).addScaledVector(f, dist);
+      _vb.copy(P).sub(_va).normalize();
+      Enemies.bullets.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, 300 + Player.speed, 2, CONFIG.enemies.gunship.bulletDamage);
+      return true;
+    },
     killAllEnemies() { for (const e of Enemies.list) if (e.active) Enemies.destroy(e, true); },
     // Taruh cincin tepat di jalur terbang pemain (jarak dalam unit)
     placeRingAhead(dist = 120) {
