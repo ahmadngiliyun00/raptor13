@@ -88,6 +88,22 @@ const CONFIG = {
   maxDelta: 0.05,              // batas atas delta time per frame (detik)
   seed: 1337,                  // seed awal dunia dan gameplay
   camera: { fov: 68, near: 0.5 },
+  world: { waterLevel: 0 },
+  player: {
+    startAltitude: 110,
+    baseSpeed: 70,             // unit per detik
+    nitroSpeed: 128,
+    accel: 1.6,                // respons perubahan kecepatan
+    maxPitch: 0.62,            // radian, batas sudut hidung naik atau turun
+    maxRoll: 1.05,             // radian, batas kemiringan sayap saat belok
+    pitchResponse: 3.2,
+    rollResponse: 4.0,
+    turnRate: 1.15,            // radian per detik pada kemiringan penuh
+    minAltitude: 6,            // jarak minimum di atas permukaan air
+    maxAltitude: 260,
+    radius: 2.6,               // radius tabrakan
+    maxHealth: 100,
+  },
 };
 
 // Pilih preset kualitas dari URL bila ada, misalnya index.html?kualitas=rendah
@@ -150,6 +166,265 @@ function onResize() {
 window.addEventListener('resize', onResize);
 
 /* =====================================================================
+   GEOMETRI PROSEDURAL - pembantu untuk model low-poly flat-shaded
+   ===================================================================== */
+// Menyusun segitiga non-indexed; orientasi tiap segitiga dibalik otomatis bila normalnya
+// berlawanan dengan arah petunjuk (hx, hy, hz) sehingga semua sisi menghadap keluar.
+class FacetBuilder {
+  constructor() { this.pos = []; }
+  tri(a, b, c, hx, hy, hz) {
+    const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2];
+    const vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    if (nx * hx + ny * hy + nz * hz < 0) this.pos.push(a[0], a[1], a[2], c[0], c[1], c[2], b[0], b[1], b[2]);
+    else this.pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+  }
+  quad(a, b, c, d, hx, hy, hz) { this.tri(a, b, c, hx, hy, hz); this.tri(a, c, d, hx, hy, hz); }
+  build() {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
+    g.computeVertexNormals(); // non-indexed: normal per sisi, jadi tampak flat
+    return g;
+  }
+}
+
+// Badan pesawat dari beberapa penampang bersudut (chine) yang disambung sepanjang sumbu Z
+function loftGeometry(sections) {
+  const ring = (s) => {
+    const { z, w, ht, hb } = s, y = s.y || 0;
+    return [
+      [0, y + ht, z], [w * 0.55, y + ht * 0.78, z], [w, y, z], [w * 0.62, y - hb, z],
+      [0, y - hb, z], [-w * 0.62, y - hb, z], [-w, y, z], [-w * 0.55, y + ht * 0.78, z],
+    ];
+  };
+  const rings = sections.map(ring);
+  const fb = new FacetBuilder();
+  const n = rings[0].length;
+  for (let i = 0; i < rings.length - 1; i++) {
+    for (let k = 0; k < n; k++) {
+      const a = rings[i][k], b = rings[i][(k + 1) % n], c = rings[i + 1][(k + 1) % n], d = rings[i + 1][k];
+      const cy = (sections[i].y || 0);
+      fb.quad(a, b, c, d, (a[0] + b[0] + c[0] + d[0]) / 4, (a[1] + b[1] + c[1] + d[1]) / 4 - cy, 0);
+    }
+  }
+  const capFan = (r, s, hz) => {
+    const center = [0, s.y || 0, s.z];
+    for (let k = 0; k < n; k++) fb.tri(center, r[k], r[(k + 1) % n], 0, 0, hz);
+  };
+  capFan(rings[0], sections[0], -1);
+  capFan(rings[rings.length - 1], sections[sections.length - 1], 1);
+  return fb.build();
+}
+
+// Pelat datar dari poligon cembung di bidang XZ (sayap, stabilizer, sirip)
+function slabGeometry(poly, thickness) {
+  const fb = new FacetBuilder();
+  const t = thickness / 2, n = poly.length;
+  let cx = 0, cz = 0;
+  for (const p of poly) { cx += p[0] / n; cz += p[1] / n; }
+  const top = poly.map(([x, z]) => [x, t, z]);
+  const bot = poly.map(([x, z]) => [x, -t, z]);
+  for (let i = 1; i < n - 1; i++) {
+    fb.tri(top[0], top[i], top[i + 1], 0, 1, 0);
+    fb.tri(bot[0], bot[i], bot[i + 1], 0, -1, 0);
+  }
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    const hx = (poly[i][0] + poly[j][0]) / 2 - cx, hz = (poly[i][1] + poly[j][1]) / 2 - cz;
+    fb.quad(top[i], top[j], bot[j], bot[i], hx, 0, hz);
+  }
+  return fb.build();
+}
+const mirrorPoly = (poly) => poly.map(([x, z]) => [-x, z]);
+
+/* =====================================================================
+   PESAWAT PEMAIN - model prosedural orisinal bergaya jet siluman
+   Hidung menghadap -Z. Bentuk bersudut, dua mesin, dua sirip ekor miring.
+   ===================================================================== */
+function buildPlayerModel() {
+  const root = new THREE.Group();
+  root.rotation.order = 'YXZ';
+  const body = new THREE.Group();
+  root.add(body);
+
+  const matBody = new THREE.MeshPhongMaterial({ color: 0x66727f, specular: 0x2c3846, shininess: 30, flatShading: true });
+  const matPanel = new THREE.MeshPhongMaterial({ color: 0x55606c, specular: 0x222c38, shininess: 24, flatShading: true });
+  const matDark = new THREE.MeshPhongMaterial({ color: 0x353c45, specular: 0x161b22, shininess: 16, flatShading: true });
+  const matCanopy = new THREE.MeshPhongMaterial({ color: 0x1a2633, specular: 0xffcf7a, shininess: 90, flatShading: true });
+  const matNozzle = new THREE.MeshPhongMaterial({ color: 0x2a2d32, specular: 0x111111, shininess: 10, flatShading: true });
+  const matIntake = new THREE.MeshBasicMaterial({ color: 0x0b0d10 });
+  const matGlow = new THREE.MeshBasicMaterial({ color: 0xff9a40 });
+  const matFlame = new THREE.MeshBasicMaterial({
+    color: 0xff8a2a, transparent: true, opacity: 0.35,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+  const matNavL = new THREE.MeshBasicMaterial({ color: 0xff3030 });
+  const matNavR = new THREE.MeshBasicMaterial({ color: 0x30ff70 });
+
+  const add = (geo, mat, x = 0, y = 0, z = 0, shadow = true) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.castShadow = shadow;
+    m.receiveShadow = shadow;
+    body.add(m);
+    return m;
+  };
+
+  // Badan utama dengan penampang chine
+  add(loftGeometry([
+    { z: -4.7, w: 0.03, ht: 0.03, hb: 0.03, y: -0.05 },
+    { z: -3.7, w: 0.36, ht: 0.24, hb: 0.18, y: -0.03 },
+    { z: -2.3, w: 0.72, ht: 0.46, hb: 0.3 },
+    { z: -0.6, w: 1.08, ht: 0.5, hb: 0.36 },
+    { z: 1.6, w: 1.14, ht: 0.42, hb: 0.36 },
+    { z: 3.4, w: 0.98, ht: 0.34, hb: 0.3 },
+    { z: 3.85, w: 0.9, ht: 0.3, hb: 0.28 },
+  ]), matBody);
+
+  // Sayap utama trapesium dengan sapuan depan sekitar 40 derajat
+  const wingR = [[0.8, -1.3], [4.7, 1.9], [4.7, 2.55], [0.8, 2.95]];
+  add(slabGeometry(wingR, 0.14), matPanel, 0, -0.06, 0);
+  add(slabGeometry(mirrorPoly(wingR), 0.14), matPanel, 0, -0.06, 0);
+  // Perpanjangan akar sayap ke arah hidung
+  const lerxR = [[0.7, -2.7], [1.15, -1.2], [1.15, 0.4], [0.7, 0.4]];
+  add(slabGeometry(lerxR, 0.1), matBody, 0, 0.0, 0);
+  add(slabGeometry(mirrorPoly(lerxR), 0.1), matBody, 0, 0.0, 0);
+
+  // Stabilizer horizontal
+  const stabR = [[0.75, 3.0], [2.65, 3.85], [2.65, 4.35], [0.75, 4.25]];
+  add(slabGeometry(stabR, 0.1), matPanel, 0, -0.04, 0);
+  add(slabGeometry(mirrorPoly(stabR), 0.1), matPanel, 0, -0.04, 0);
+
+  // Dua sirip tegak yang miring keluar (dibangun di bidang XZ lalu diputar)
+  const finPoly = [[0, 1.75], [1.9, 3.05], [1.9, 3.6], [0, 3.7]];
+  const finR = slabGeometry(finPoly, 0.1); finR.rotateZ(THREE.MathUtils.degToRad(64));
+  const finL = slabGeometry(finPoly, 0.1); finL.rotateZ(THREE.MathUtils.degToRad(116));
+  add(finR, matBody, 0.78, 0.28, 0);
+  add(finL, matBody, -0.78, 0.28, 0);
+
+  // Kanopi kokpit
+  const canopy = new THREE.SphereGeometry(0.5, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2);
+  canopy.scale(0.62, 0.78, 2.7);
+  add(canopy, matCanopy, 0, 0.34, -2.05);
+
+  // Saluran udara masuk bersudut di kedua sisi
+  for (const s of [-1, 1]) {
+    const intake = add(new THREE.BoxGeometry(0.5, 0.62, 1.9), matDark, s * 1.05, -0.1, -0.35);
+    intake.rotation.set(0, s * 0.07, s * -0.14);
+    const mouth = add(new THREE.BoxGeometry(0.4, 0.5, 0.04), matIntake, s * 1.0, -0.1, -1.31, false);
+    mouth.rotation.copy(intake.rotation);
+  }
+
+  // Dua mesin dengan nozzle kotak, glow, dan nyala api (diperbesar saat nitro)
+  const flames = [];
+  const flameGeo = new THREE.ConeGeometry(0.24, 2.2, 7, 1, true);
+  flameGeo.rotateX(Math.PI / 2);
+  flameGeo.translate(0, 0, 1.1);
+  for (const s of [-1, 1]) {
+    add(new THREE.BoxGeometry(0.62, 0.52, 0.9), matNozzle, s * 0.48, -0.02, 4.2);
+    add(new THREE.BoxGeometry(0.46, 0.36, 0.04), matGlow, s * 0.48, -0.02, 4.66, false);
+    const f = add(flameGeo, matFlame, s * 0.48, -0.02, 4.68, false);
+    f.scale.set(1, 1, 0.4);
+    flames.push(f);
+  }
+
+  // Lampu navigasi di ujung sayap
+  const navGeo = new THREE.SphereGeometry(0.09, 6, 4);
+  add(navGeo, matNavL, -4.65, -0.04, 2.3, false);
+  add(navGeo, matNavR, 4.65, -0.04, 2.3, false);
+
+  // Cahaya mesin, intensitas 0 saat normal dan naik saat nitro.
+  // Lampu tidak pernah disembunyikan agar jumlah lampu tetap dan shader tidak dikompilasi ulang.
+  const light = new THREE.PointLight(0xff8a3a, 0, 28, 2);
+  light.position.set(0, 0.2, 5.4);
+  root.add(light);
+
+  return {
+    root, body, flames, light, matGlow, matFlame,
+    nozzles: [new THREE.Vector3(-0.48, -0.02, 4.75), new THREE.Vector3(0.48, -0.02, 4.75)],
+    guns: [new THREE.Vector3(-1.25, -0.12, -1.2), new THREE.Vector3(1.25, -0.12, -1.2)],
+    wingtips: [new THREE.Vector3(-4.65, -0.04, 2.4), new THREE.Vector3(4.65, -0.04, 2.4)],
+  };
+}
+
+const PlayerModel = buildPlayerModel();
+scene.add(PlayerModel.root);
+
+// Ketinggian permukaan (daratan atau air) di titik x, z. Diganti oleh bagian DUNIA.
+let groundHeightAt = (x, z) => CONFIG.world.waterLevel;
+
+const Player = {
+  model: PlayerModel,
+  pos: PlayerModel.root.position,
+  vel: new THREE.Vector3(),
+  forward: new THREE.Vector3(0, 0, -1),
+  yaw: 0, pitch: 0, roll: 0,
+  speed: 0,
+  health: 100,
+  alive: true,
+  nitroActive: false,
+
+  reset() {
+    const C = CONFIG.player;
+    this.pos.set(0, C.startAltitude, 0);
+    this.yaw = 0; this.pitch = 0; this.roll = 0;
+    this.speed = C.baseSpeed;
+    this.health = C.maxHealth;
+    this.alive = true;
+    this.nitroActive = false;
+    this.forward.set(0, 0, -1);
+    this.vel.set(0, 0, -this.speed);
+    this.model.root.visible = true;
+    this.model.root.rotation.set(0, 0, 0);
+  },
+
+  // Fisika arcade: pesawat selalu maju, kontrol mengatur target sudut yang di-damping
+  update(dt, pitchIn, yawIn) {
+    const C = CONFIG.player;
+    let targetPitch = pitchIn * C.maxPitch;
+
+    // Plafon: hidung dipaksa turun saat mendekati ketinggian maksimum
+    const ceilRoom = C.maxAltitude - this.pos.y;
+    if (ceilRoom < 25 && targetPitch > 0) targetPitch *= clamp(ceilRoom / 25, 0, 1);
+    if (ceilRoom <= 0) targetPitch = Math.min(targetPitch, -0.12);
+    // Lantai: tidak bisa menukik di bawah ketinggian minimum di atas air
+    const floorY = CONFIG.world.waterLevel + C.minAltitude;
+    if (this.pos.y < floorY + 10 && targetPitch < 0) targetPitch *= clamp((this.pos.y - floorY) / 10, 0, 1);
+
+    this.pitch = damp(this.pitch, targetPitch, C.pitchResponse, dt);
+    this.roll = damp(this.roll, yawIn * C.maxRoll, C.rollResponse, dt);
+    // Laju belok sebanding dengan kemiringan sayap, sehingga bank dan belok selalu selaras
+    this.yaw += C.turnRate * (this.roll / C.maxRoll) * dt;
+
+    const targetSpeed = this.nitroActive ? C.nitroSpeed : C.baseSpeed;
+    this.speed = damp(this.speed, targetSpeed, this.nitroActive ? C.accel * 1.6 : C.accel, dt);
+
+    const cp = Math.cos(this.pitch);
+    this.forward.set(-Math.sin(this.yaw) * cp, Math.sin(this.pitch), -Math.cos(this.yaw) * cp);
+    this.vel.copy(this.forward).multiplyScalar(this.speed);
+    this.pos.addScaledVector(this.vel, dt);
+
+    if (this.pos.y > C.maxAltitude) this.pos.y = C.maxAltitude;
+    if (this.pos.y < floorY) {
+      this.pos.y = floorY;
+      if (this.pitch < 0) this.pitch = damp(this.pitch, 0, 8, dt);
+    }
+    this.model.root.rotation.set(this.pitch, this.yaw, this.roll);
+  },
+
+  // Autopilot untuk latar layar judul: meliuk pelan dan menjaga ketinggian
+  autopilot(dt, t) {
+    const ground = Math.max(groundHeightAt(this.pos.x, this.pos.z), CONFIG.world.waterLevel);
+    const targetY = ground + 75;
+    const pitchIn = clamp((targetY - this.pos.y) * 0.04, -0.6, 0.6);
+    const yawIn = Math.sin(t * 0.23) * 0.45;
+    this.update(dt, pitchIn, yawIn);
+    if (this.pos.y < ground + 35) this.pos.y = ground + 35;
+  },
+};
+Player.reset();
+
+/* =====================================================================
    GAME STATE - menu, play, pause, dying, gameover
    ===================================================================== */
 const ui = {
@@ -180,6 +455,7 @@ function setState(next) {
 // Reset seluruh state sesi tanpa membuat ulang objek (semua pool dipakai ulang)
 function resetSession() {
   Game.time = 0;
+  Player.reset();
 }
 
 function startGame() {
@@ -275,9 +551,27 @@ function onAudioGesture() {}
 /* =====================================================================
    UPDATE DAN RENDER
    ===================================================================== */
+// Lampu dan kamera sementara (diganti oleh bagian DUNIA dan KAMERA)
+scene.add(new THREE.HemisphereLight(0x9cc8ff, 0x5b7a3a, 1.2));
+const tmpSun = new THREE.DirectionalLight(0xffe2b8, 2.4);
+tmpSun.position.set(50, 60, -40);
+scene.add(tmpSun);
+const _camOff = new THREE.Vector3();
+function updateCamera() {
+  _camOff.set(0, 4, 14).applyAxisAngle(THREE.Object3D.DEFAULT_UP, Player.yaw);
+  camera.position.copy(Player.pos).add(_camOff);
+  camera.lookAt(Player.pos);
+}
+
 function update(dt) {
   Game.stateTime += dt;
-  if (Game.state === 'play') Game.time += dt;
+  if (Game.state === 'play') {
+    Game.time += dt;
+    Player.update(dt, Input.pitch, Input.yaw);
+  } else if (Game.state === 'menu') {
+    Player.autopilot(dt, Game.stateTime);
+  }
+  updateCamera(dt);
 }
 
 function render() {
