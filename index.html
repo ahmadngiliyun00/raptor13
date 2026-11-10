@@ -2856,28 +2856,56 @@ Events.on('gameover', () => {
 });
 
 /* =====================================================================
-   INPUT - keyboard berbasis KeyboardEvent.code (posisi fisik tombol)
+   INPUT - satu state abstrak (naik, turun, kiri, kanan, tembak, nitro) yang
+   diisi oleh beberapa sumber: keyboard dan touch. Logika game hanya membaca
+   Controls, sehingga tidak peduli dari mana input berasal.
    ===================================================================== */
-const Input = {
-  down: Object.create(null),   // code -> boolean
-  // Sumbu dan aksi yang dibaca oleh gameplay
-  get pitch() { return (this.down.KeyW ? 1 : 0) - (this.down.KeyS ? 1 : 0); },
-  get yaw() { return (this.down.KeyA ? 1 : 0) - (this.down.KeyD ? 1 : 0); },
-  get nitro() { return !!this.down.Space; },
-  get fire() { return !!(this.down.Enter || this.down.NumpadEnter); },
-  reset() { for (const k in this.down) this.down[k] = false; },
+const Controls = {
+  up: false, down: false, left: false, right: false, fire: false, nitro: false,
+  invertPitch: false,
+  sources: [],
+  addSource(src) { this.sources.push(src); },
+  // Dipanggil sekali per frame: gabungkan (OR) semua sumber
+  update() {
+    this.up = false; this.down = false; this.left = false; this.right = false; this.fire = false; this.nitro = false;
+    for (let i = 0; i < this.sources.length; i++) this.sources[i].fill(this);
+  },
+  reset() { for (let i = 0; i < this.sources.length; i++) this.sources[i].reset(); this.update(); },
+  // Sumbu turunan yang dipakai fisika pesawat
+  get pitch() { const p = (this.up ? 1 : 0) - (this.down ? 1 : 0); return this.invertPitch ? -p : p; },
+  get yaw() { return (this.left ? 1 : 0) - (this.right ? 1 : 0); },
 };
 
+// Sumber keyboard: berbasis KeyboardEvent.code (posisi fisik tombol)
+const Keyboard = {
+  down: Object.create(null),   // code -> boolean
+  fill(c) {
+    const d = this.down;
+    if (d.KeyW) c.up = true;
+    if (d.KeyS) c.down = true;
+    if (d.KeyA) c.left = true;
+    if (d.KeyD) c.right = true;
+    if (d.Space) c.nitro = true;
+    if (d.Enter || d.NumpadEnter) c.fire = true;
+  },
+  reset() { for (const k in this.down) this.down[k] = false; },
+};
+Controls.addSource(Keyboard);
+
 // Tombol yang aksi bawaan browsernya harus dicegah (scroll, klik tombol yang sedang fokus)
-const PREVENT_CODES = new Set(['Space', 'Enter', 'NumpadEnter']);
-const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM']);
+const PREVENT_CODES = new Set(['Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM',
+  'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+// Navigasi menu dengan keyboard (diisi bagian MENU); mengembalikan true bila tombol sudah ditangani
+let menuKeyHandler = () => false;
 
 function onKeyDown(e) {
   if (!GAME_CODES.has(e.code)) return;
   if (PREVENT_CODES.has(e.code)) e.preventDefault();
-  Input.down[e.code] = true;
+  Keyboard.down[e.code] = true;
   if (e.repeat) return;
   onAudioGesture();
+  if (menuKeyHandler(e.code)) return;
   switch (e.code) {
     case 'KeyP':
     case 'Escape':
@@ -2901,16 +2929,16 @@ function onKeyDown(e) {
 function onKeyUp(e) {
   if (!GAME_CODES.has(e.code)) return;
   if (PREVENT_CODES.has(e.code)) e.preventDefault();
-  Input.down[e.code] = false;
+  Keyboard.down[e.code] = false;
 }
 
 // Reset semua tombol saat jendela kehilangan fokus agar tidak ada tombol "nyangkut"
 function onBlur() {
-  Input.reset();
+  Controls.reset();
   if (Game.state === 'playing') setState('paused');
 }
 function onVisibility() {
-  Input.reset();
+  Controls.reset();
   if (document.hidden) { if (Game.state === 'playing') setState('paused'); }
 }
 
@@ -2964,13 +2992,14 @@ const AutoInput = {
 let lastDt = 0;
 function update(dt) {
   lastDt = dt;
+  Controls.update();
   Game.stateTime += dt;
   if (Game.state === 'countdown') {
     // Hitung mundur sebelum simulasi berjalan lagi
     if (Game.stateTime >= CONFIG.countdownTime) setState('playing');
   } else if (Game.state === 'playing') {
     Game.time += dt;
-    let ctl = Input;
+    let ctl = Controls;
     if (Debug.autoInput) { AutoInput.update(Game.time); ctl = AutoInput; }
     Player.updateNitro(dt, ctl.nitro);
     Player.update(dt, ctl.pitch, ctl.yaw);
@@ -3064,7 +3093,7 @@ window.__game = {
   debug: {
     setGod(v) { Debug.god = !!v; },
     // Pengendali otomatis pada permainan real-time (untuk uji soak dengan render sungguhan)
-    setAutoplay(v) { Debug.autoInput = !!v; if (!v) Input.reset(); },
+    setAutoplay(v) { Debug.autoInput = !!v; if (!v) Controls.reset(); },
     setEnemiesEnabled(v) { Debug.enemiesEnabled = !!v; if (!v) Enemies.reset(); },
     damagePlayer(n) { Player.damage(n, 'debug'); },
     // dy (opsional): ketinggian relatif terhadap pemain; tanpa dy ketinggian diacak seperti spawn biasa
@@ -3094,7 +3123,7 @@ window.__game = {
       }
       const ms = performance.now() - t0;
       Debug.god = godBefore; Debug.autoInput = false;
-      Input.reset();
+      Controls.reset();
       return { steps, msPerStep: round2(ms / steps) };
     },
     // Ringkasan sumber daya untuk deteksi kebocoran setelah restart berulang
