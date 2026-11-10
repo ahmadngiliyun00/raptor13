@@ -311,6 +311,7 @@ const CONFIG = {
   camera: {
     fov: 68,                   // FOV normal
     nitroFov: 84,              // FOV melebar saat nitro
+    cinematicFov: 50,          // FOV kamera sinematik di menu
     near: 0.5,
     distance: 14,              // jarak di belakang pesawat
     height: 4.2,
@@ -2329,10 +2330,17 @@ Events.on('pickup', (type, pos) => (type === 'repair' ? ringBurst(pos, 30, 0.35,
    ===================================================================== */
 const CamRig = {
   yaw: 0, pitch: 0, roll: 0, trauma: 0, t: 0,
+  blend: 1,             // 0 = kamera sinematik (menu), 1 = kamera chase (bermain)
+  blendFrom: 1, blendTo: 1, blendTime: 0, blendDur: 0,
+  shakeEnabled: true,
   offset: new THREE.Vector3(),
   look: new THREE.Vector3(),
   q: new THREE.Quaternion(),
   e: new THREE.Euler(0, 0, 0, 'YXZ'),
+  chasePos: new THREE.Vector3(), chaseQuat: new THREE.Quaternion(),
+  cinePos: new THREE.Vector3(), cineQuat: new THREE.Quaternion(),
+  // Shot sinematik: 0 orbit lambat, 1 flyby (kamera diam, pesawat melintas)
+  shot: 0, shotTime: 0, flyby: new THREE.Vector3(),
 
   reset() {
     this.yaw = Player.yaw; this.pitch = 0; this.roll = 0; this.trauma = 0;
@@ -2340,29 +2348,83 @@ const CamRig = {
     camera.updateProjectionMatrix();
   },
   addTrauma(amount) { this.trauma = Math.min(1, this.trauma + amount); },
+  // Pindah mode dengan transisi mulus (durasi detik, 0 berarti langsung)
+  setMode(mode, duration = 0) {
+    const target = mode === 'chase' ? 1 : 0;
+    if (duration <= 0) { this.blend = target; this.blendDur = 0; return; }
+    this.blendFrom = this.blend; this.blendTo = target; this.blendTime = 0; this.blendDur = duration;
+  },
+  get transitioning() { return this.blendDur > 0; },
+
+  // Pose kamera chase: lag pada rotasi, bukan posisi
+  computeChase(dt) {
+    const C = CONFIG.camera;
+    this.yaw = dampAngle(this.yaw, Player.yaw, C.rotLag, dt);
+    this.pitch = damp(this.pitch, Player.pitch * C.pitchFollow, C.rotLag, dt);
+    this.roll = damp(this.roll, Player.roll * C.rollFollow, C.rotLag, dt);
+    this.e.set(this.pitch, this.yaw, 0);
+    this.q.setFromEuler(this.e);
+    this.offset.set(0, C.height, C.distance + Player.nitroFx * C.nitroPullBack).applyQuaternion(this.q);
+    camera.position.copy(Player.pos).add(this.offset);
+    const minY = groundHeightAt(camera.position.x, camera.position.z) + 2.5;
+    if (camera.position.y < minY) camera.position.y = minY;
+    this.look.set(0, C.lookHeight, -C.lookAhead).applyQuaternion(this.q).add(Player.pos);
+    camera.lookAt(this.look);
+    camera.rotateZ(this.roll);
+    this.chasePos.copy(camera.position);
+    this.chaseQuat.copy(camera.quaternion);
+  },
+
+  // Pose kamera sinematik untuk menu: orbit lambat dan flyby bergantian
+  computeCinematic(dt) {
+    const P = Player.pos;
+    this.shotTime += dt;
+    if (this.shot === 0) {
+      const a = this.shotTime * 0.16 + Player.yaw + 2.2;
+      const d = 30 + Math.sin(this.shotTime * 0.3) * 7;
+      camera.position.set(P.x + Math.sin(a) * d, P.y + 7 + Math.sin(this.shotTime * 0.21) * 5, P.z + Math.cos(a) * d);
+      if (this.shotTime > 14) this.startFlyby();
+    } else {
+      camera.position.copy(this.flyby);
+      const passed = this.flyby.distanceToSquared(P) > 160 * 160;
+      const behind = (P.x - this.flyby.x) * Player.forward.x + (P.z - this.flyby.z) * Player.forward.z > 0;
+      if (this.shotTime > 9 || (passed ? behind : false)) { this.shot = 0; this.shotTime = 0; }
+    }
+    const minY = groundHeightAt(camera.position.x, camera.position.z) + 4;
+    if (camera.position.y < minY) camera.position.y = minY;
+    camera.lookAt(P);
+    this.cinePos.copy(camera.position);
+    this.cineQuat.copy(camera.quaternion);
+  },
+  startFlyby() {
+    // Kamera ditaruh di depan jalur pesawat, sedikit ke samping dan di bawah
+    const f = Player.forward, P = Player.pos;
+    this.flyby.set(P.x + f.x * 140 - f.z * 18, P.y - 6, P.z + f.z * 140 + f.x * 18);
+    this.shot = 1; this.shotTime = 0;
+  },
 
   update(dt) {
     const C = CONFIG.camera;
     this.t += dt;
-    this.yaw = dampAngle(this.yaw, Player.yaw, C.rotLag, dt);
-    this.pitch = damp(this.pitch, Player.pitch * C.pitchFollow, C.rotLag, dt);
-    this.roll = damp(this.roll, Player.roll * C.rollFollow, C.rotLag, dt);
-    const nf = Player.nitroFx;
-
-    this.e.set(this.pitch, this.yaw, 0);
-    this.q.setFromEuler(this.e);
-    this.offset.set(0, C.height, C.distance + nf * C.nitroPullBack).applyQuaternion(this.q);
-    camera.position.copy(Player.pos).add(this.offset);
-    const minY = groundHeightAt(camera.position.x, camera.position.z) + 2.5;
-    if (camera.position.y < minY) camera.position.y = minY;
-
-    this.look.set(0, C.lookHeight, -C.lookAhead).applyQuaternion(this.q).add(Player.pos);
-    camera.lookAt(this.look);
-    camera.rotateZ(this.roll);
+    if (this.blendDur > 0) {
+      this.blendTime += dt;
+      const k = clamp(this.blendTime / this.blendDur, 0, 1);
+      this.blend = lerp(this.blendFrom, this.blendTo, k * k * (3 - 2 * k));
+      if (k >= 1) this.blendDur = 0;
+    }
+    // Pose chase selalu dihitung agar lag-nya siap saat transisi dimulai
+    this.computeChase(dt);
+    if (this.blend < 1) {
+      this.computeCinematic(dt);
+      const b = this.blend;
+      camera.position.lerpVectors(this.cinePos, this.chasePos, b);
+      camera.quaternion.slerpQuaternions(this.cineQuat, this.chaseQuat, b);
+    }
 
     // Getar: kombinasi sinus berfrekuensi berbeda, lebih halus dari jitter acak
     this.trauma = Math.max(0, this.trauma - C.shakeDecay * dt);
-    const s = this.trauma * this.trauma * C.shakeHit + nf * C.shakeNitro;
+    const nf = Player.nitroFx;
+    const s = this.shakeEnabled ? (this.trauma * this.trauma * C.shakeHit + nf * C.shakeNitro) * this.blend : 0;
     if (s > 1e-4) {
       const t = this.t;
       camera.position.x += (Math.sin(t * 37.1) + 0.5 * Math.sin(t * 23.7)) * s;
@@ -2370,7 +2432,7 @@ const CamRig = {
       camera.rotateZ(Math.sin(t * 29.3) * s * 0.02);
     }
 
-    const targetFov = lerp(C.fov, C.nitroFov, nf);
+    const targetFov = lerp(C.cinematicFov, lerp(C.fov, C.nitroFov, nf), this.blend);
     if (Math.abs(targetFov - camera.fov) > 0.01) {
       camera.fov = targetFov;
       camera.updateProjectionMatrix();
@@ -2378,6 +2440,12 @@ const CamRig = {
   },
 };
 CamRig.reset();
+CamRig.setMode('cinematic');
+// Menu memakai kamera sinematik, bermain memakai kamera chase
+Events.on('state', (next) => {
+  if (next === 'menu') CamRig.setMode('cinematic');
+  else if (next === 'playing') { if (CamRig.blend < 1) { if (!CamRig.transitioning) CamRig.setMode('chase'); } }
+});
 
 /* =====================================================================
    AUDIO - semua suara disintesis dengan WebAudio, tanpa file.
