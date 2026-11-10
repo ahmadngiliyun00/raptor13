@@ -865,6 +865,70 @@ function loftFuselage(sections, M = 24, opts = {}) {
   return mb.build();
 }
 
+// Profil airfoil simetris (NACA 4 digit), dinormalisasi sehingga puncaknya sekitar 1 di 30 persen chord
+const airfoil = (c) => (0.2969 * Math.sqrt(c) - 0.126 * c - 0.3516 * c * c + 0.2843 * c * c * c - 0.1036 * c * c * c * c) / 0.1;
+
+// Permukaan angkat (sayap, strake, stabilizer, sirip) di bidang XZ lokal: x = bentang, z = chord.
+// Tepi depan dari (rootX, rootLE) ke (tipXLE, tipLE), tepi belakang dari (rootX, rootTE) ke (tipXTE, tipTE).
+// Ujung terpotong miring bila tipXLE berbeda dari tipXTE. Ketebalan menipis dari pangkal ke ujung.
+function liftingSurface(o) {
+  const ns = o.ns || 6, nc = o.nc || 10, dih = Math.tan(((o.dihedral || 0) * Math.PI) / 180);
+  const bottomScale = o.bottomScale !== undefined ? o.bottomScale : 0.85;
+  const mb = new MeshBuilder();
+  const top = [], bot = [];
+  for (let j = 0; j <= ns; j++) {
+    const t = j / ns;
+    const lx = lerp(o.rootX, o.tipXLE, t), lz = lerp(o.rootLE, o.tipLE, t);
+    const tx = lerp(o.rootX, o.tipXTE, t), tz = lerp(o.rootTE, o.tipTE, t);
+    const th = lerp(o.thickRoot, o.thickTip, t);
+    const rowT = [], rowB = [];
+    for (let i = 0; i <= nc; i++) {
+      const c = (1 - Math.cos((i / nc) * Math.PI)) / 2;     // rapat di tepi depan dan belakang
+      const x = lerp(lx, tx, c), z = lerp(lz, tz, c);
+      const yb = (x - o.rootX) * dih;
+      const f = Math.max(airfoil(c), 0) * th;
+      const iT = o.flipTopU ? mb.v(x, yb + f, z, 1 - c, t) : mb.v(x, yb + f, z, c, t);
+      rowT.push(iT);
+      // Tepi depan dan belakang: atas dan bawah berbagi vertex (tepi depan membulat, tepi belakang tajam)
+      if (i === 0 || i === nc) rowB.push(iT);
+      else rowB.push(o.flipBottomU ? mb.v(x, yb - f * bottomScale, z, 1 - c, t) : mb.v(x, yb - f * bottomScale, z, c, t));
+    }
+    top.push(rowT); bot.push(rowB);
+  }
+  for (let j = 0; j < ns; j++) {
+    for (let i = 0; i < nc; i++) {
+      mb.quad(top[j][i], top[j][i + 1], top[j + 1][i + 1], top[j + 1][i], 0, 1, 0);
+      mb.quad(bot[j][i], bot[j][i + 1], bot[j + 1][i + 1], bot[j + 1][i], 0, -1, 0);
+    }
+  }
+  // Tutup ujung (sisi pangkal tersembunyi di dalam badan)
+  const T = top[ns], B = bot[ns];
+  for (let i = 0; i < nc; i++) {
+    if (T[i] === B[i]) { if (T[i + 1] !== B[i + 1]) mb.tri(T[i], T[i + 1], B[i + 1], 1, 0, 0); continue; }
+    if (T[i + 1] === B[i + 1]) { mb.tri(T[i], T[i + 1], B[i], 1, 0, 0); continue; }
+    mb.quad(T[i], T[i + 1], B[i + 1], B[i], 1, 0, 0);
+  }
+  return mb.build();
+}
+
+// Cermin terhadap bidang YZ: skala x = -1 lalu balik urutan indeks agar normal tetap menghadap keluar
+function mirrorX(geo) {
+  const g = geo.clone();
+  g.scale(-1, 1, 1);
+  const idx = g.index.array;
+  for (let i = 0; i < idx.length; i += 3) { const t = idx[i + 1]; idx[i + 1] = idx[i + 2]; idx[i + 2] = t; }
+  g.index.needsUpdate = true;
+  g.computeVertexNormals();
+  return g;
+}
+
+// Planform permukaan jet (sisi kanan), satuan dunia
+const JET_WING = { rootX: 0.55, rootLE: -0.95, rootTE: 2.8, tipXLE: 2.92, tipLE: 1.2, tipXTE: 2.74, tipTE: 2.45, thickRoot: 0.13, thickTip: 0.035, dihedral: 3, ns: 7, nc: 12 };
+const JET_STRAKE = { rootX: 0.42, rootLE: -2.75, rootTE: -0.45, tipXLE: 0.9, tipLE: -0.95, tipXTE: 0.9, tipTE: -0.45, thickRoot: 0.06, thickTip: 0.05, ns: 3, nc: 8 };
+const JET_STAB = { rootX: 0.5, rootLE: 3.05, rootTE: 4.75, tipXLE: 1.95, tipLE: 4.5, tipXTE: 1.85, tipTE: 4.95, thickRoot: 0.07, thickTip: 0.022, ns: 5, nc: 10 };
+const JET_FIN = { rootX: 0, rootLE: 1.85, rootTE: 3.75, tipXLE: 1.5, tipLE: 3.2, tipXTE: 1.4, tipTE: 3.95, thickRoot: 0.08, thickTip: 0.03, ns: 6, nc: 10, bottomScale: 1 };
+const JET_FIN_CANT = 25;   // derajat, sirip miring keluar
+
 // Penampang badan jet (z dari hidung ke ekor)
 const JET_FUSELAGE = [
   { z: -4.62, w: 0.02, ht: 0.012, hb: 0.01, y: -0.17, n: 2.4, chine: 1 },
@@ -904,6 +968,20 @@ function createPlayerJet() {
   const matFlame = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
 
   add(loftFuselage(JET_FUSELAGE, 24, { tipLength: 0.12 }), matSkin);
+
+  // Sayap utama, strake (penyambung sayap ke badan) dan stabilizer horizontal, kanan dan kiri
+  for (const [plan, y] of [[JET_WING, -0.05], [JET_STRAKE, -0.02], [JET_STAB, -0.06]]) {
+    const right = liftingSurface(plan);
+    add(right, matSkin).position.y = y;
+    add(mirrorX(right), matSkin).position.y = y;
+  }
+  // Dua sirip tegak, miring keluar sekitar 25 derajat
+  for (const side of [1, -1]) {
+    const fin = liftingSurface({ ...JET_FIN, flipBottomU: side > 0, flipTopU: side < 0 });
+    fin.rotateZ(THREE.MathUtils.degToRad(side > 0 ? 90 - JET_FIN_CANT : 90 + JET_FIN_CANT));
+    const m = add(fin, matSkin);
+    m.position.set(side * 0.56, 0.22, 0);
+  }
 
   const flames = [];
   const light = new THREE.PointLight(0xff8a3a, 0, 28, 2);
