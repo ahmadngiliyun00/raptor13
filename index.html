@@ -103,7 +103,37 @@ const CONFIG = {
     shakeHit: 0.9,             // amplitudo getar saat kena hit (unit)
     shakeNitro: 0.08,          // getar halus konstan saat nitro
   },
-  world: { waterLevel: 0 },
+  world: {
+    waterLevel: 0,
+    chunkSize: 200,            // ukuran satu potong terrain (unit)
+    chunkSegments: 20,         // jumlah sel per sisi potong terrain
+    rebuildsPerFrame: 3,       // batas potong terrain yang dibangun ulang per frame
+    baseFreq: 1 / 520,         // frekuensi noise bukit
+    hillHeight: 48,
+    baseHeight: 9,
+    mountainMaskFreq: 1 / 1500,
+    ridgeFreq: 1 / 360,
+    mountainHeight: 115,
+  },
+  sky: {
+    zenith: 0x4a86c8,
+    horizon: 0xe6d5bd,         // juga dipakai sebagai warna fog
+    sunColor: 0xffd9a0,
+    sunElevation: 32,          // derajat
+    sunAzimuth: 115,           // derajat ke kanan dari arah awal pemain
+    fogNearFactor: 0.3,        // fog mulai pada fraksi jarak pandang
+  },
+  light: {
+    sunColor: 0xffe0b5,
+    sunIntensity: 2.4,
+    hemiSky: 0x9cc8ff,
+    hemiGround: 0x6b8f4a,
+    hemiIntensity: 1.5,
+    nitroLightIntensity: 45,
+    shadowFrustum: 120,        // lebar kotak shadow yang mengikuti pemain
+    shadowBias: -0.0005,
+    shadowNormalBias: 0.04,
+  },
   player: {
     startAltitude: 110,
     baseSpeed: 70,             // unit per detik
@@ -166,8 +196,10 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pixelRatioMax, 2
 renderer.setSize(window.innerWidth, window.innerHeight);
 container.appendChild(renderer.domElement);
 
+renderer.shadowMap.enabled = Q.shadows;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9ec4e6);
 const camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, window.innerWidth / window.innerHeight, CONFIG.camera.near, 2000);
 camera.position.set(0, 3, 10);
 
@@ -382,7 +414,7 @@ const Player = {
 
   reset() {
     const C = CONFIG.player;
-    this.pos.set(0, C.startAltitude, 0);
+    this.pos.set(0, World.safeStartAltitude(), 0);
     this.yaw = 0; this.pitch = 0; this.roll = 0;
     this.speed = C.baseSpeed;
     this.health = C.maxHealth;
@@ -432,14 +464,346 @@ const Player = {
 
   // Autopilot untuk latar layar judul: meliuk pelan dan menjaga ketinggian
   autopilot(dt, t) {
-    const ground = Math.max(groundHeightAt(this.pos.x, this.pos.z), CONFIG.world.waterLevel);
-    const targetY = ground + 75;
-    const pitchIn = clamp((targetY - this.pos.y) * 0.04, -0.6, 0.6);
+    // Lihat ke depan agar tidak menabrak lereng di jalur terbang
+    let ground = groundHeightAt(this.pos.x, this.pos.z);
+    for (let d = 60; d <= 300; d += 60) {
+      ground = Math.max(ground, groundHeightAt(this.pos.x - Math.sin(this.yaw) * d, this.pos.z - Math.cos(this.yaw) * d));
+    }
+    const targetY = Math.min(ground + 60, CONFIG.player.maxAltitude - 10);
+    const pitchIn = clamp((targetY - this.pos.y) * 0.05, -0.5, 1);
     const yawIn = Math.sin(t * 0.23) * 0.45;
     this.update(dt, pitchIn, yawIn);
     if (this.pos.y < ground + 35) this.pos.y = ground + 35;
   },
 };
+
+/* =====================================================================
+   NOISE - simplex noise 2D kecil dengan permutasi ber-seed
+   ===================================================================== */
+const F2 = 0.5 * (Math.sqrt(3) - 1), G2 = (3 - Math.sqrt(3)) / 6;
+const GRAD_X = new Float32Array([1, -1, 1, -1, 1, -1, 0, 0]);
+const GRAD_Y = new Float32Array([1, 1, -1, -1, 0, 0, 1, -1]);
+class SimplexNoise2D {
+  constructor(random) {
+    this.perm = new Uint8Array(512);
+    this.pmod = new Uint8Array(512);
+    this.reseed(random);
+  }
+  reseed(random) {
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    for (let i = 255; i > 0; i--) { const j = Math.floor(random() * (i + 1)); const t = p[i]; p[i] = p[j]; p[j] = t; }
+    for (let i = 0; i < 512; i++) { this.perm[i] = p[i & 255]; this.pmod[i] = this.perm[i] & 7; }
+  }
+  noise(xin, yin) {
+    const perm = this.perm, pmod = this.pmod;
+    const s = (xin + yin) * F2;
+    const i = Math.floor(xin + s), j = Math.floor(yin + s);
+    const t = (i + j) * G2;
+    const x0 = xin - (i - t), y0 = yin - (j - t);
+    const i1 = x0 > y0 ? 1 : 0, j1 = 1 - i1;
+    const x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
+    const x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
+    const ii = i & 255, jj = j & 255;
+    let n = 0, tt, g;
+    tt = 0.5 - x0 * x0 - y0 * y0;
+    if (tt > 0) { g = pmod[ii + perm[jj]]; tt *= tt; n += tt * tt * (GRAD_X[g] * x0 + GRAD_Y[g] * y0); }
+    tt = 0.5 - x1 * x1 - y1 * y1;
+    if (tt > 0) { g = pmod[ii + i1 + perm[jj + j1]]; tt *= tt; n += tt * tt * (GRAD_X[g] * x1 + GRAD_Y[g] * y1); }
+    tt = 0.5 - x2 * x2 - y2 * y2;
+    if (tt > 0) { g = pmod[ii + 1 + perm[jj + 1]]; tt *= tt; n += tt * tt * (GRAD_X[g] * x2 + GRAD_Y[g] * y2); }
+    return 70 * n; // kira-kira -1..1
+  }
+}
+
+// Hash integer deterministik untuk variasi warna dan penempatan objek per sel
+function hash3(x, z, k) {
+  let h = Math.imul(x | 0, 374761393) ^ Math.imul(z | 0, 668265263) ^ Math.imul(k | 0, 1442695041);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+const imod = (a, n) => ((a % n) + n) % n;
+
+/* =====================================================================
+   DUNIA - terrain ber-potong yang di-recycle, laut, langit, matahari, fog, cahaya
+   ===================================================================== */
+const World = {
+  C: CONFIG.world.chunkSize,
+  S: CONFIG.world.chunkSegments,
+  R: Q.chunkRadius,
+  N: Q.chunkRadius * 2 + 1,
+  noise: new SimplexNoise2D(makeRng(CONFIG.seed)),
+  slots: [],
+  material: new THREE.MeshLambertMaterial({ vertexColors: true }),
+  viewDistance: Q.chunkRadius * CONFIG.world.chunkSize,
+  palette: {
+    seabed: new THREE.Color(0x7d9a7e), sand: new THREE.Color(0xd9c48f),
+    grassLow: new THREE.Color(0x7aab4c), grass: new THREE.Color(0x5f9640),
+    forest: new THREE.Color(0x467a38), rock: new THREE.Color(0x8a7e6c),
+    rockDark: new THREE.Color(0x766b5d), rockHigh: new THREE.Color(0x9c9384),
+    snow: new THREE.Color(0xeef1f3),
+  },
+
+  init() {
+    const C = this.C, S = this.S, vCount = S * S * 6;
+    for (let k = 0; k < this.N * this.N; k++) {
+      const geo = new THREE.BufferGeometry();
+      const pos = new THREE.BufferAttribute(new Float32Array(vCount * 3), 3).setUsage(THREE.DynamicDrawUsage);
+      const nor = new THREE.BufferAttribute(new Float32Array(vCount * 3), 3).setUsage(THREE.DynamicDrawUsage);
+      const col = new THREE.BufferAttribute(new Float32Array(vCount * 3), 3).setUsage(THREE.DynamicDrawUsage);
+      geo.setAttribute('position', pos);
+      geo.setAttribute('normal', nor);
+      geo.setAttribute('color', col);
+      // Bounding sphere tetap (koordinat lokal) agar frustum culling tidak perlu dihitung ulang
+      geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(C / 2, 60, C / 2), C * 0.71 + 140);
+      const mesh = new THREE.Mesh(geo, this.material);
+      mesh.receiveShadow = Q.shadows;
+      mesh.castShadow = false;
+      mesh.matrixAutoUpdate = false;
+      scene.add(mesh);
+      this.slots.push({ mesh, geo, pos, nor, col, heights: new Float32Array((S + 1) * (S + 1)), cx: 1e9, cz: 1e9, built: false, index: k });
+    }
+  },
+
+  setSeed(seed) { this.noise.reseed(makeRng(seed)); },
+
+  // Ketinggian analitik dari noise
+  heightRaw(x, z) {
+    const n = this.noise, W = CONFIG.world;
+    let e = 0, amp = 1, f = W.baseFreq, norm = 0;
+    for (let o = 0; o < 4; o++) {
+      e += amp * n.noise(x * f + o * 31.7, z * f - o * 17.3);
+      norm += amp; amp *= 0.42; f *= 2.05;
+    }
+    e /= norm;
+    const mask = smoothstep(0.05, 0.7, n.noise(x * W.mountainMaskFreq + 71.3, z * W.mountainMaskFreq - 12.9));
+    const r = 1 - Math.abs(n.noise(x * W.ridgeFreq - 43.1, z * W.ridgeFreq + 91.7));
+    let h = e * W.hillHeight + W.baseHeight + r * r * r * mask * W.mountainHeight;
+    if (h < 0) h *= 0.6;
+    return h;
+  },
+
+  // Ketinggian terrain persis sama dengan segitiga mesh (dipakai untuk tabrakan)
+  heightAt(x, z) {
+    const C = this.C, S = this.S, N = this.N, cell = C / S;
+    const cx = Math.floor(x / C), cz = Math.floor(z / C);
+    const slot = this.slots[imod(cx, N) + imod(cz, N) * N];
+    const lx = (x - cx * C) / cell, lz = (z - cz * C) / cell;
+    let i = Math.floor(lx), j = Math.floor(lz);
+    if (i > S - 1) i = S - 1; if (j > S - 1) j = S - 1;
+    if (i < 0) i = 0; if (j < 0) j = 0;
+    const fx = lx - i, fz = lz - j;
+    let h00, h10, h01, h11;
+    if (slot.built && slot.cx === cx && slot.cz === cz) {
+      const H = slot.heights, w = S + 1;
+      h00 = H[j * w + i]; h10 = H[j * w + i + 1]; h01 = H[(j + 1) * w + i]; h11 = H[(j + 1) * w + i + 1];
+    } else {
+      const ox = cx * C, oz = cz * C;
+      h00 = this.heightRaw(ox + i * cell, oz + j * cell);
+      h10 = this.heightRaw(ox + (i + 1) * cell, oz + j * cell);
+      h01 = this.heightRaw(ox + i * cell, oz + (j + 1) * cell);
+      h11 = this.heightRaw(ox + (i + 1) * cell, oz + (j + 1) * cell);
+    }
+    if (fz > fx) return h00 + (h11 - h01) * fx + (h01 - h00) * fz;
+    return h00 + (h10 - h00) * fx + (h11 - h10) * fz;
+  },
+
+  colorFor(h, ny, jitter, out) {
+    const P = this.palette;
+    let c;
+    if (h < -1.5) c = P.seabed;
+    else if (h < 3.5) c = P.sand;
+    else if (h > 128 && ny > 0.62) c = P.snow;
+    else if (ny < 0.74) c = h > 100 ? P.rockHigh : P.rockDark;
+    else if (h > 105) c = P.rockHigh;
+    else if (h > 80) c = P.rock;
+    else if (h > 50) c = P.forest;
+    else if (h > 22) c = P.grass;
+    else c = P.grassLow;
+    const j = 0.92 + jitter * 0.16;
+    out[0] = c.r * j; out[1] = c.g * j; out[2] = c.b * j;
+  },
+
+  rebuild(slot, cx, cz) {
+    const C = this.C, S = this.S, cell = C / S, w = S + 1, H = slot.heights;
+    const ox = cx * C, oz = cz * C;
+    for (let j = 0; j <= S; j++) for (let i = 0; i <= S; i++) H[j * w + i] = this.heightRaw(ox + i * cell, oz + j * cell);
+
+    const P = slot.pos.array, Nn = slot.nor.array, Cc = slot.col.array, rgb = this._rgb;
+    let p = 0;
+    const writeTri = (ax, ay, az, bx, by, bz, cx2, cy, cz2, jitter) => {
+      const ux = bx - ax, uy = by - ay, uz = bz - az, vx = cx2 - ax, vy = cy - ay, vz = cz2 - az;
+      let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+      const len = Math.hypot(nx, ny, nz) || 1;
+      nx /= len; ny /= len; nz /= len;
+      this.colorFor((ay + by + cy) / 3, ny, jitter, rgb);
+      P[p] = ax; P[p + 1] = ay; P[p + 2] = az;
+      P[p + 3] = bx; P[p + 4] = by; P[p + 5] = bz;
+      P[p + 6] = cx2; P[p + 7] = cy; P[p + 8] = cz2;
+      for (let k = 0; k < 9; k += 3) {
+        Nn[p + k] = nx; Nn[p + k + 1] = ny; Nn[p + k + 2] = nz;
+        Cc[p + k] = rgb[0]; Cc[p + k + 1] = rgb[1]; Cc[p + k + 2] = rgb[2];
+      }
+      p += 9;
+    };
+    for (let j = 0; j < S; j++) {
+      for (let i = 0; i < S; i++) {
+        const h00 = H[j * w + i], h10 = H[j * w + i + 1], h01 = H[(j + 1) * w + i], h11 = H[(j + 1) * w + i + 1];
+        const x0 = i * cell, x1 = x0 + cell, z0 = j * cell, z1 = z0 + cell;
+        const gx = cx * S + i, gz = cz * S + j;
+        // Diagonal dari sudut 00 ke 11, cocok dengan rumus heightAt
+        writeTri(x0, h00, z0, x0, h01, z1, x1, h11, z1, hash3(gx, gz, 1));
+        writeTri(x0, h00, z0, x1, h11, z1, x1, h10, z0, hash3(gx, gz, 2));
+      }
+    }
+    slot.pos.needsUpdate = true; slot.nor.needsUpdate = true; slot.col.needsUpdate = true;
+    slot.cx = cx; slot.cz = cz; slot.built = true;
+    slot.mesh.position.set(ox, 0, oz);
+    slot.mesh.updateMatrix();
+    this.onChunkRebuilt(slot);
+  },
+  _rgb: [0, 0, 0],
+  onChunkRebuilt(slot) {},   // diisi bagian RINTANGAN
+
+  // Recycle toroidal: slot (i, j) selalu memegang potong dengan cx mod N = i dan cz mod N = j
+  update(px, pz, force = false) {
+    const C = this.C, N = this.N, R = this.R;
+    const bx = Math.floor(px / C) - R, bz = Math.floor(pz / C) - R;
+    let budget = force ? Infinity : CONFIG.world.rebuildsPerFrame;
+    for (let k = 0; k < this.slots.length && budget > 0; k++) {
+      const slot = this.slots[k];
+      const i = k % N, j = (k - i) / N;
+      const cx = bx + imod(i - bx, N), cz = bz + imod(j - bz, N);
+      if (slot.cx !== cx || slot.cz !== cz) { this.rebuild(slot, cx, cz); budget--; }
+    }
+  },
+
+  reset(seed) {
+    this.setSeed(seed);
+    for (const slot of this.slots) { slot.built = false; slot.cx = 1e9; slot.cz = 1e9; }
+    this.update(0, 0, true);
+  },
+
+  // Ketinggian awal yang aman: di atas puncak tertinggi di jalur awal pemain
+  safeStartAltitude() {
+    let maxH = CONFIG.world.waterLevel;
+    for (let d = 0; d <= 600; d += 25) {
+      for (let lat = -60; lat <= 60; lat += 30) maxH = Math.max(maxH, this.heightAt(lat, -d));
+    }
+    return clamp(Math.max(CONFIG.player.startAltitude, maxH + 35), 0, CONFIG.player.maxAltitude - 15);
+  },
+};
+World.init();
+groundHeightAt = (x, z) => Math.max(World.heightAt(x, z), CONFIG.world.waterLevel);
+
+// Konversi hex ke nilai sRGB mentah untuk shader yang tidak memakai konversi ruang warna three.js
+const srgbVec3 = (hex) => {
+  const o = { r: 0, g: 0, b: 0 };
+  new THREE.Color(hex).getRGB(o, THREE.SRGBColorSpace);
+  return new THREE.Vector3(o.r, o.g, o.b);
+};
+
+const Env = {
+  sunDir: new THREE.Vector3(),
+  init() {
+    const S = CONFIG.sky, L = CONFIG.light;
+    const el = THREE.MathUtils.degToRad(S.sunElevation), az = THREE.MathUtils.degToRad(S.sunAzimuth);
+    this.sunDir.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)).normalize();
+
+    // Fog dengan warna sama persis dengan horizon langit
+    const fogFar = World.viewDistance * 0.97;
+    scene.fog = new THREE.Fog(S.horizon, fogFar * S.fogNearFactor, fogFar);
+    camera.far = fogFar * 1.3;
+    camera.updateProjectionMatrix();
+
+    // Langit gradient dengan halo matahari (shader, selalu di belakang semua objek)
+    this.skyMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uZenith: { value: srgbVec3(S.zenith) },
+        uHorizon: { value: srgbVec3(S.horizon) },
+        uSunColor: { value: srgbVec3(S.sunColor) },
+        uSunDir: { value: this.sunDir },
+      },
+      vertexShader: /* glsl */`
+        varying vec3 vDir;
+        void main() {
+          vDir = position;
+          vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          gl_Position = p.xyww * vec4(1.0, 1.0, 0.99999, 1.0);
+        }`,
+      fragmentShader: /* glsl */`
+        uniform vec3 uZenith; uniform vec3 uHorizon; uniform vec3 uSunColor; uniform vec3 uSunDir;
+        varying vec3 vDir;
+        void main() {
+          vec3 d = normalize(vDir);
+          float h = clamp(d.y, 0.0, 1.0);
+          vec3 col = mix(uHorizon, uZenith, pow(h, 0.5));
+          float s = max(dot(d, uSunDir), 0.0);
+          col += uSunColor * (pow(s, 8.0) * 0.22 + pow(s, 90.0) * 0.45) * smoothstep(-0.02, 0.08, d.y);
+          gl_FragColor = vec4(col, 1.0);
+        }`,
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false,
+    });
+    this.sky = new THREE.Mesh(new THREE.SphereGeometry(10, 32, 16), this.skyMat);
+    this.sky.renderOrder = -10;
+    this.sky.frustumCulled = false;
+    scene.add(this.sky);
+
+    // Mesh matahari: piringan yang selalu menghadap kamera, searah dengan DirectionalLight
+    this.sunMesh = new THREE.Mesh(
+      new THREE.CircleGeometry(1, 24),
+      new THREE.MeshBasicMaterial({ color: 0xfff3d6, fog: false, depthWrite: false })
+    );
+    this.sunMesh.renderOrder = -9;
+    this.sunMesh.frustumCulled = false;
+    scene.add(this.sunMesh);
+
+    // Cahaya: satu DirectionalLight matahari dan satu HemisphereLight
+    this.hemi = new THREE.HemisphereLight(L.hemiSky, L.hemiGround, L.hemiIntensity);
+    scene.add(this.hemi);
+    this.sun = new THREE.DirectionalLight(L.sunColor, L.sunIntensity);
+    this.sun.castShadow = Q.shadows;
+    if (Q.shadows) {
+      const sc = this.sun.shadow.camera, half = L.shadowFrustum / 2;
+      sc.left = -half; sc.right = half; sc.top = half; sc.bottom = -half;
+      sc.near = 1; sc.far = 900;
+      this.sun.shadow.mapSize.set(Q.shadowMapSize, Q.shadowMapSize);
+      this.sun.shadow.bias = L.shadowBias;
+      this.sun.shadow.normalBias = L.shadowNormalBias;
+    }
+    scene.add(this.sun, this.sun.target);
+
+    // Laut: satu bidang besar yang mengikuti pemain
+    const size = (World.N + 2) * World.C;
+    const waterGeo = new THREE.PlaneGeometry(size, size, 1, 1);
+    waterGeo.rotateX(-Math.PI / 2);
+    this.water = new THREE.Mesh(waterGeo, new THREE.MeshPhongMaterial({
+      color: 0x2f79ad, specular: 0xffe7c4, shininess: 70, flatShading: true,
+    }));
+    this.water.receiveShadow = Q.shadows;
+    this.water.position.y = CONFIG.world.waterLevel;
+    scene.add(this.water);
+  },
+
+  update() {
+    const p = Player.pos;
+    // Shadow camera berpusat pada pemain: frustum kecil sehingga tajam dan murah
+    this.sun.position.copy(p).addScaledVector(this.sunDir, 300);
+    this.sun.target.position.copy(p);
+    this.sky.position.copy(camera.position);
+    const d = camera.far * 0.7;
+    this.sunMesh.position.copy(camera.position).addScaledVector(this.sunDir, d);
+    this.sunMesh.scale.setScalar(d * 0.035);
+    this.sunMesh.lookAt(camera.position);
+    const C = World.C;
+    this.water.position.x = Math.round(p.x / C) * C;
+    this.water.position.z = Math.round(p.z / C) * C;
+  },
+};
+Env.init();
+World.reset(CONFIG.seed);
 Player.reset();
 
 /* =====================================================================
@@ -529,6 +893,7 @@ function setState(next) {
 // Reset seluruh state sesi tanpa membuat ulang objek (semua pool dipakai ulang)
 function resetSession() {
   Game.time = 0;
+  World.reset(CONFIG.seed);
   Player.reset();
   CamRig.reset();
 }
@@ -626,11 +991,6 @@ function onAudioGesture() {}
 /* =====================================================================
    UPDATE DAN RENDER
    ===================================================================== */
-// Lampu sementara (diganti oleh bagian DUNIA)
-scene.add(new THREE.HemisphereLight(0x9cc8ff, 0x5b7a3a, 1.2));
-const tmpSun = new THREE.DirectionalLight(0xffe2b8, 2.4);
-tmpSun.position.set(50, 60, -40);
-scene.add(tmpSun);
 
 function update(dt) {
   Game.stateTime += dt;
@@ -640,7 +1000,11 @@ function update(dt) {
   } else if (Game.state === 'menu') {
     Player.autopilot(dt, Game.stateTime);
   }
-  if (Game.state !== 'pause') CamRig.update(dt);
+  if (Game.state !== 'pause') {
+    World.update(Player.pos.x, Player.pos.z);
+    CamRig.update(dt);
+    Env.update();
+  }
 }
 
 function render() {
