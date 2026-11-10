@@ -285,9 +285,9 @@ import * as THREE from 'three';
    CONFIG - semua konstanta gameplay dan kualitas ada di sini
    ===================================================================== */
 const QUALITY_PRESETS = {
-  rendah: { shadows: false, shadowMapSize: 1024, maxParticles: 900,  particleDensity: 0.5,  chunkRadius: 2, pixelRatioMax: 1,   antialias: false },
-  sedang: { shadows: true,  shadowMapSize: 1024, maxParticles: 1800, particleDensity: 0.8,  chunkRadius: 3, pixelRatioMax: 1.5, antialias: true },
-  tinggi: { shadows: true,  shadowMapSize: 2048, maxParticles: 3200, particleDensity: 1.0,  chunkRadius: 4, pixelRatioMax: 2,   antialias: true },
+  rendah: { shadows: false, shadowMapSize: 1024, maxParticles: 900,  particleDensity: 0.5,  chunkRadius: 2, pixelRatioMax: 1,   antialias: false, clouds: 18 },
+  sedang: { shadows: true,  shadowMapSize: 1024, maxParticles: 1800, particleDensity: 0.8,  chunkRadius: 3, pixelRatioMax: 1.5, antialias: true,  clouds: 32 },
+  tinggi: { shadows: true,  shadowMapSize: 2048, maxParticles: 3200, particleDensity: 1.0,  chunkRadius: 4, pixelRatioMax: 2,   antialias: true,  clouds: 48 },
 };
 
 const CONFIG = {
@@ -1193,7 +1193,77 @@ const Env = {
     this.water.position.z = Math.round(p.z / C) * C;
   },
 };
+
+/* Awan: gugus icosahedron low-poly dalam satu InstancedMesh, dibungkus di sekitar pemain */
+const Clouds = {
+  mesh: null, count: 0, range: 0,
+  data: null,   // per awan: x, y, z, skala, rotasi
+  _p: new THREE.Vector3(), _q: new THREE.Quaternion(), _s: new THREE.Vector3(),
+
+  // Gabungkan beberapa icosahedron menjadi satu geometri non-indexed (flat-shaded)
+  buildGeometry() {
+    const parts = [[0, 0, 0, 1], [1.1, -0.15, 0.2, 0.75], [-1.05, -0.2, -0.1, 0.7], [0.4, 0.45, -0.3, 0.65], [-0.5, 0.3, 0.45, 0.6]];
+    const arrays = [];
+    let total = 0;
+    for (const [x, y, z, r] of parts) {
+      const g = new THREE.IcosahedronGeometry(r, 0);   // polyhedron three.js sudah non-indexed
+      g.scale(1, 0.62, 1);
+      g.translate(x, y, z);
+      arrays.push(g.attributes.position.array);
+      total += g.attributes.position.array.length;
+      g.dispose();
+    }
+    const pos = new Float32Array(total);
+    let o = 0;
+    for (const a of arrays) { pos.set(a, o); o += a.length; }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.computeVertexNormals();
+    return geo;
+  },
+
+  init(count, range) {
+    this.count = count;
+    this.range = range;
+    this.mesh = new THREE.InstancedMesh(this.buildGeometry(),
+      new THREE.MeshLambertMaterial({ color: 0xcfcfcf, emissive: 0xa9a197, flatShading: true }), count);
+    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.mesh.frustumCulled = false;
+    this.data = new Float32Array(count * 5);
+    scene.add(this.mesh);
+    this.scatter(0, 0);
+  },
+
+  scatter(cx, cz) {
+    const r = this.range, rnd = makeRng(7331);
+    for (let i = 0; i < this.count; i++) {
+      const d = i * 5;
+      this.data[d] = cx + (rnd() * 2 - 1) * r;
+      this.data[d + 1] = 150 + rnd() * 95;
+      this.data[d + 2] = cz + (rnd() * 2 - 1) * r;
+      this.data[d + 3] = 14 + rnd() * 18;
+      this.data[d + 4] = rnd() * Math.PI;
+    }
+  },
+
+  update(dt, px, pz) {
+    const r = this.range, D = this.data;
+    for (let i = 0; i < this.count; i++) {
+      const d = i * 5;
+      D[d] += 3 * dt;   // angin pelan
+      // Bungkus ke sisi berlawanan bila terlalu jauh dari pemain
+      if (D[d] - px > r) D[d] -= 2 * r; else if (px - D[d] > r) D[d] += 2 * r;
+      if (D[d + 2] - pz > r) D[d + 2] -= 2 * r; else if (pz - D[d + 2] > r) D[d + 2] += 2 * r;
+      const sc = D[d + 3];
+      this._q.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, D[d + 4]);
+      _m4.compose(this._p.set(D[d], D[d + 1], D[d + 2]), this._q, this._s.set(sc, sc, sc));
+      this.mesh.setMatrixAt(i, _m4);
+    }
+    this.mesh.instanceMatrix.needsUpdate = true;
+  },
+};
 Env.init();
+Clouds.init(Q.clouds, World.viewDistance);
 World.reset(CONFIG.seed);
 Player.reset();
 
@@ -3095,6 +3165,7 @@ function update(dt) {
     Player.updateVisuals(dt, Game.stateTime);
     FX.update(dt);
     World.update(Player.pos.x, Player.pos.z);
+    Clouds.update(dt, Player.pos.x, Player.pos.z);
     CamRig.update(dt);
     Env.update();
   }
