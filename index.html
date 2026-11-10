@@ -112,7 +112,8 @@ const QUALITY_PRESETS = {
 const CONFIG = {
   qualityPreset: 'sedang',     // rendah | sedang | tinggi (bisa ditimpa lewat ?kualitas=)
   maxDelta: 0.05,              // batas atas delta time per frame (detik)
-  seed: 1337,                  // seed awal dunia dan gameplay
+  seed: 1337,                  // seed dunia di layar judul
+  randomSeedPerRun: true,      // tiap sesi main memakai seed baru (kecuali dikunci lewat __game.setSeed)
   camera: {
     fov: 68,                   // FOV normal
     nitroFov: 84,              // FOV melebar saat nitro
@@ -156,6 +157,29 @@ const CONFIG = {
     convergeDistance: 160,     // jarak titik temu peluru kedua sayap, juga posisi reticle
     hitPadding: 0.9,           // tambahan radius saat cek kena
   },
+  enemies: {
+    maxDrones: 16,             // ukuran pool drone
+    maxGunships: 8,            // ukuran pool pesawat penembak
+    maxBullets: 140,           // ukuran pool peluru musuh
+    bulletLife: 3.0,
+    spawnDistance: [380, 480], // jarak muncul di depan pemain
+    despawnDistance: 1150,
+    drone: { hp: 3, speed: 46, agility: 1.5, radius: 2.3, contactDamage: 18, score: 100 },
+    gunship: {
+      hp: 8, speed: 84, turnRate: 0.95, radius: 3.4, contactDamage: 30, score: 300,
+      fireInterval: 1.15, fireRange: 320, fireCone: 0.33, burst: 2,
+      bulletSpeed: 175, bulletDamage: 7, extendTime: 3.2,
+    },
+  },
+  waves: {
+    firstDelay: 2.5,           // jeda sebelum gelombang pertama
+    breakTime: 3.5,            // jeda antar gelombang
+    spawnInterval: 1.3,
+    maxDuration: 55,           // gelombang berikut dimulai walau musuh masih tersisa
+    difficultyStep: 0.09,      // kenaikan kesulitan per gelombang
+    maxDifficulty: 1.9,
+  },
+  score: { perSecond: 5 },
   sky: {
     zenith: 0x4a86c8,
     horizon: 0xe6d5bd,         // juga dipakai sebagai warna fog
@@ -227,6 +251,30 @@ function makeRng(seed) {
 }
 const rand = makeRng(CONFIG.seed);
 const randRange = (a, b) => a + (b - a) * rand();
+
+// Event bus kecil: efek, audio dan HUD mendaftar sekali saat init, jadi restart tidak menumpuk listener
+const Events = {
+  map: Object.create(null),
+  on(name, fn) { (this.map[name] || (this.map[name] = [])).push(fn); },
+  emit(name, a, b, c, d) {
+    const list = this.map[name];
+    if (list) for (let i = 0; i < list.length; i++) list[i](a, b, c, d);
+  },
+};
+
+// Saklar debug (dipakai uji otomatis lewat window.__game)
+const Debug = { god: false, enemiesEnabled: true, fixedSeed: null };
+
+// Uji tabrakan segmen (gerak peluru satu frame) terhadap bola, tanpa alokasi
+function segmentHitsSphere(ax, ay, az, bx, by, bz, cx, cy, cz, r) {
+  const dx = bx - ax, dy = by - ay, dz = bz - az;
+  const fx = cx - ax, fy = cy - ay, fz = cz - az;
+  const len2 = dx * dx + dy * dy + dz * dz;
+  let t = len2 > 0 ? (fx * dx + fy * dy + fz * dz) / len2 : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const qx = ax + dx * t - cx, qy = ay + dy * t - cy, qz = az + dz * t - cz;
+  return qx * qx + qy * qy + qz * qz <= r * r;
+}
 
 /* =====================================================================
    RENDERER, SCENE, KAMERA
@@ -528,6 +576,24 @@ const Player = {
     }
   },
   addNitro(amount) { this.nitro = Math.min(1, this.nitro + amount); },
+  heal(amount) { this.health = Math.min(CONFIG.player.maxHealth, this.health + amount); },
+
+  damage(amount, source) {
+    if (!this.alive || Debug.god || Game.state !== 'play') return;
+    this.health = Math.max(0, this.health - amount);
+    CamRig.addTrauma(clamp(amount / 30, 0.3, 0.9));
+    Events.emit('playerHit', amount, source);
+    if (this.health <= 0) this.die();
+  },
+
+  die() {
+    this.alive = false;
+    this.nitroActive = false;
+    this.model.root.visible = false;
+    CamRig.addTrauma(1);
+    Events.emit('playerDeath', this.pos);
+    setState('dying');
+  },
 
   // Api mesin, glow dan cahaya mengikuti intensitas nitro
   updateVisuals(dt, t) {
@@ -985,14 +1051,378 @@ const Weapons = {
       _vb.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance).sub(_va).normalize(); // arah ke titik temu
       this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, W.damage);
       this.shotsFired++;
-      onPlayerShot(_va, _vb);
+      Events.emit('shot', _va, _vb);
     }
     if (!firing && this.cooldown < 0) this.cooldown = 0;
     this.pool.update(dt);
   },
 };
-// Kait efek tembakan (partikel dan suara), diisi bagian PARTIKEL dan AUDIO
-function onPlayerShot(pos, dir) {}
+
+/* =====================================================================
+   MUSUH - model, pool, AI sederhana, gelombang dan tembakan musuh
+   ===================================================================== */
+function buildDroneModel() {
+  const g = new THREE.Group();
+  const matHull = new THREE.MeshPhongMaterial({ color: 0x3d434c, specular: 0x222222, shininess: 25, flatShading: true });
+  const matAccent = new THREE.MeshPhongMaterial({ color: 0xc0462c, emissive: 0x3a0d04, shininess: 20, flatShading: true });
+  const matEye = new THREE.MeshBasicMaterial({ color: 0xff3b30 });
+  const add = (geo, mat, x, y, z, shadow = true) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z); m.castShadow = shadow; g.add(m); return m;
+  };
+  add(new THREE.IcosahedronGeometry(1.25, 0), matHull, 0, 0, 0);
+  add(new THREE.OctahedronGeometry(0.55, 0), matEye, 0, 0, -1.05, false);
+  const ring = add(new THREE.TorusGeometry(1.95, 0.17, 4, 12), matAccent, 0, 0, 0.1);
+  ring.name = 'ring';
+  const spike = new THREE.ConeGeometry(0.28, 1.2, 4);
+  for (let k = 0; k < 4; k++) {
+    const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
+    const m = add(spike, matHull, Math.cos(a) * 1.45, Math.sin(a) * 1.45, 0.2);
+    m.rotation.z = a - Math.PI / 2;
+  }
+  return g;
+}
+
+function buildGunshipModel() {
+  const g = new THREE.Group();
+  const matRed = new THREE.MeshPhongMaterial({ color: 0x8c3330, specular: 0x331111, shininess: 22, flatShading: true });
+  const matDark = new THREE.MeshPhongMaterial({ color: 0x3a3d44, specular: 0x181818, shininess: 18, flatShading: true });
+  const matCanopy = new THREE.MeshPhongMaterial({ color: 0xffa64a, emissive: 0x4a2000, shininess: 80, flatShading: true });
+  const matGlow = new THREE.MeshBasicMaterial({ color: 0xff5a2a });
+  const add = (geo, mat, x = 0, y = 0, z = 0, shadow = true) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z); m.castShadow = shadow; g.add(m); return m;
+  };
+  add(loftGeometry([
+    { z: -3.9, w: 0.03, ht: 0.03, hb: 0.03 },
+    { z: -2.4, w: 0.45, ht: 0.36, hb: 0.26 },
+    { z: 0.0, w: 0.72, ht: 0.5, hb: 0.36 },
+    { z: 2.6, w: 0.62, ht: 0.4, hb: 0.32 },
+    { z: 3.1, w: 0.52, ht: 0.32, hb: 0.28 },
+  ]), matDark);
+  const wing = [[0.5, -1.0], [3.7, 2.3], [3.7, 2.8], [0.5, 2.95]];
+  add(slabGeometry(wing, 0.14), matRed, 0, -0.05, 0);
+  add(slabGeometry(mirrorPoly(wing), 0.14), matRed, 0, -0.05, 0);
+  const canard = [[0.4, -2.5], [1.5, -1.8], [1.5, -1.45], [0.4, -1.45]];
+  add(slabGeometry(canard, 0.08), matRed, 0, 0.05, 0);
+  add(slabGeometry(mirrorPoly(canard), 0.08), matRed, 0, 0.05, 0);
+  const fin = slabGeometry([[0, 0.7], [1.9, 2.4], [1.9, 2.9], [0, 3.05]], 0.1);
+  fin.rotateZ(Math.PI / 2);
+  add(fin, matRed, 0, 0.35, 0);
+  const canopy = new THREE.SphereGeometry(0.4, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2);
+  canopy.scale(0.9, 0.9, 2.4);
+  add(canopy, matCanopy, 0, 0.3, -1.6);
+  add(new THREE.BoxGeometry(0.62, 0.42, 0.06), matGlow, 0, -0.02, 3.13, false);
+  return g;
+}
+
+class Enemy {
+  constructor(type, template) {
+    this.type = type;
+    this.cfg = CONFIG.enemies[type];
+    this.group = template.clone();      // clone berbagi geometry dan material dengan template
+    this.group.visible = false;
+    this.ring = this.group.getObjectByName('ring') || null;
+    this.pos = this.group.position;
+    this.dir = new THREE.Vector3(0, 0, -1);
+    this.vel = new THREE.Vector3();
+    this.active = false;
+    this.hp = 0;
+    this.state = 'attack';
+    this.timer = 0;
+    this.fireCd = 0;
+    this.burstLeft = 0;
+    this.hitFlash = 0;
+    this.bank = 0;
+    this.radius = this.cfg.radius;
+    scene.add(this.group);
+  }
+}
+
+const _toP = new THREE.Vector3();
+const _desired = new THREE.Vector3();
+const _prevDir = new THREE.Vector3();
+
+const Enemies = {
+  list: [],
+  alive: 0,
+  bullets: null,
+
+  init() {
+    const droneT = buildDroneModel(), gunT = buildGunshipModel();
+    for (let i = 0; i < CONFIG.enemies.maxDrones; i++) this.list.push(new Enemy('drone', droneT));
+    for (let i = 0; i < CONFIG.enemies.maxGunships; i++) this.list.push(new Enemy('gunship', gunT));
+    this.bullets = new BulletPool(
+      CONFIG.enemies.maxBullets,
+      new THREE.BoxGeometry(0.5, 0.5, 3.0),
+      new THREE.MeshBasicMaterial({ color: 0xff6a3a })
+    );
+  },
+
+  reset() {
+    for (const e of this.list) { e.active = false; e.group.visible = false; }
+    this.alive = 0;
+    this.bullets.reset();
+  },
+
+  spawn(type, x, y, z) {
+    const e = this.list.find((en) => !en.active && en.type === type);
+    if (!e) return null;
+    e.active = true;
+    e.group.visible = true;
+    e.hp = e.cfg.hp;
+    e.pos.set(x, y, z);
+    e.dir.set(Player.pos.x - x, 0, Player.pos.z - z).normalize();
+    e.vel.copy(e.dir).multiplyScalar(e.cfg.speed);
+    e.state = 'attack';
+    e.timer = 0;
+    e.fireCd = randRange(0.8, 1.6);
+    e.burstLeft = 0;
+    e.hitFlash = 0;
+    e.bank = 0;
+    e.group.scale.setScalar(1);
+    this.alive++;
+    return e;
+  },
+
+  // Muncul di depan pemain dalam kerucut arah terbang
+  spawnAhead(type, dist, lateralAngle) {
+    const D = CONFIG.enemies.spawnDistance;
+    const ang = Player.yaw + (lateralAngle !== undefined ? lateralAngle : randRange(-0.9, 0.9));
+    const d = dist !== undefined ? dist : randRange(D[0], D[1]);
+    const x = Player.pos.x - Math.sin(ang) * d, z = Player.pos.z - Math.cos(ang) * d;
+    const y = clamp(Player.pos.y + randRange(-20, 35), groundHeightAt(x, z) + 30, CONFIG.player.maxAltitude - 15);
+    return this.spawn(type, x, y, z);
+  },
+
+  remove(e) {
+    if (!e.active) return;
+    e.active = false;
+    e.group.visible = false;
+    this.alive--;
+  },
+
+  // Musuh hancur: byPlayer true berarti ditembak pemain (dapat skor)
+  destroy(e, byPlayer) {
+    if (!e.active) return;
+    this.remove(e);
+    Events.emit('enemyDestroyed', e, byPlayer);
+  },
+
+  damage(e, amount, x, y, z) {
+    e.hp -= amount;
+    e.hitFlash = 0.12;
+    Events.emit('enemyHit', x, y, z);
+    if (e.hp <= 0) this.destroy(e, true);
+  },
+
+  update(dt) {
+    const diff = Waves.difficulty;
+    const P = Player.pos;
+    for (const e of this.list) {
+      if (!e.active) continue;
+      _toP.subVectors(P, e.pos);
+      const dist = _toP.length();
+      if (dist > CONFIG.enemies.despawnDistance) { this.remove(e); continue; }
+      if (e.type === 'drone') this.updateDrone(e, dt, dist, diff);
+      else this.updateGunship(e, dt, dist, diff);
+
+      // Jaga di atas terrain
+      const ground = groundHeightAt(e.pos.x, e.pos.z) + (e.type === 'drone' ? 8 : 18);
+      if (e.pos.y < ground) e.pos.y = damp(e.pos.y, ground, 6, dt) + 0.2;
+      if (e.pos.y > CONFIG.player.maxAltitude + 20) e.pos.y = CONFIG.player.maxAltitude + 20;
+
+      // Efek kena: berdenyut sebentar
+      if (e.hitFlash > 0) {
+        e.hitFlash -= dt;
+        e.group.scale.setScalar(1 + Math.max(e.hitFlash, 0) * 2.2);
+      }
+    }
+    this.bullets.update(dt);
+  },
+
+  // Drone: mengejar pelan, menghadap pemain, cincin berputar
+  updateDrone(e, dt, dist, diff) {
+    const c = e.cfg;
+    // Pelan saat dekat, tetapi menyusul bila tertinggal jauh agar tetap relevan
+    const catchUp = 1 + clamp((dist - 250) / 250, 0, 1.3);
+    _desired.copy(_toP).multiplyScalar(1 / Math.max(dist, 0.001)).multiplyScalar(c.speed * Math.min(diff, 1.5) * catchUp);
+    e.vel.x = damp(e.vel.x, _desired.x, c.agility, dt);
+    e.vel.y = damp(e.vel.y, _desired.y, c.agility, dt);
+    e.vel.z = damp(e.vel.z, _desired.z, c.agility, dt);
+    e.pos.addScaledVector(e.vel, dt);
+    e.group.lookAt(e.pos.x * 2 - Player.pos.x, e.pos.y * 2 - Player.pos.y, e.pos.z * 2 - Player.pos.z);
+    if (e.ring) e.ring.rotation.z += dt * 3.5;
+  },
+
+  // Pesawat penembak: serang dan tembak, lalu melintas menjauh, lalu berbalik lagi
+  updateGunship(e, dt, dist, diff) {
+    const c = e.cfg;
+    _prevDir.copy(e.dir);
+    if (e.state === 'attack') {
+      // Arahkan ke posisi pemain sedikit di depan (lead)
+      _desired.copy(Player.vel).multiplyScalar(0.6).add(Player.pos).sub(e.pos).normalize();
+      if (dist < 45) { e.state = 'extend'; e.timer = c.extendTime; }
+    } else {
+      _desired.copy(e.dir);
+      _desired.y = Math.max(_desired.y, 0.08);
+      e.timer -= dt;
+      if (e.timer <= 0) e.state = 'attack';
+    }
+    // Hindari terrain di depan
+    const ahead = groundHeightAt(e.pos.x + e.dir.x * 70, e.pos.z + e.dir.z * 70);
+    if (e.pos.y < ahead + 35) _desired.y = Math.max(_desired.y, 0.45);
+    _desired.normalize();
+    e.dir.lerp(_desired, clamp(c.turnRate * dt * 1.6, 0, 1)).normalize();
+    const speed = c.speed * Math.sqrt(diff);
+    e.pos.addScaledVector(e.dir, speed * dt);
+
+    // Miring saat belok
+    const turn = (_prevDir.z * e.dir.x - _prevDir.x * e.dir.z) / Math.max(dt, 1e-4);
+    e.bank = damp(e.bank, clamp(-turn * 1.4, -1.0, 1.0), 4, dt);
+    e.group.lookAt(e.pos.x - e.dir.x, e.pos.y - e.dir.y, e.pos.z - e.dir.z);
+    e.group.rotateZ(e.bank);
+
+    // Menembak saat pemain ada di kerucut depan dan dalam jangkauan, dalam semburan pendek
+    e.fireCd -= dt;
+    if (e.state === 'attack' && dist < c.fireRange && Player.alive && e.fireCd <= 0) {
+      const facing = (e.dir.x * _toP.x + e.dir.y * _toP.y + e.dir.z * _toP.z) / Math.max(dist, 0.001);
+      if (facing > Math.cos(c.fireCone)) {
+        const t = dist / c.bulletSpeed;
+        _va.copy(Player.vel).multiplyScalar(t * 0.8).add(Player.pos);
+        _va.x += randRange(-2, 2); _va.y += randRange(-2, 2); _va.z += randRange(-2, 2);
+        _vb.copy(e.pos).addScaledVector(e.dir, 4);
+        _va.sub(_vb).normalize();
+        this.bullets.spawn(_vb.x, _vb.y, _vb.z, _va.x, _va.y, _va.z, c.bulletSpeed, CONFIG.enemies.bulletLife,
+          c.bulletDamage * (1 + (diff - 1) * 0.5));
+        Events.emit('enemyShot', _vb);
+        if (e.burstLeft <= 0) e.burstLeft = c.burst;
+        e.burstLeft--;
+        e.fireCd = e.burstLeft > 0 ? 0.16 : c.fireInterval / diff;
+      }
+    }
+  },
+};
+Enemies.init();
+
+/* =====================================================================
+   GELOMBANG - jumlah musuh dan kesulitan naik tiap gelombang
+   ===================================================================== */
+const Waves = {
+  wave: 0, phase: 'break', timer: 0, waveTime: 0, spawnTimer: 0,
+  remDrones: 0, remGunships: 0, difficulty: 1,
+
+  reset() {
+    this.wave = 0; this.phase = 'break'; this.timer = CONFIG.waves.firstDelay;
+    this.waveTime = 0; this.spawnTimer = 0; this.remDrones = 0; this.remGunships = 0; this.difficulty = 1;
+  },
+
+  start(n) {
+    const W = CONFIG.waves;
+    this.wave = n;
+    this.phase = 'active';
+    this.remDrones = Math.min(3 + 2 * (n - 1), 14);
+    this.remGunships = Math.min(1 + Math.floor((n - 1) / 2), 7);
+    this.spawnTimer = 0.4;
+    this.waveTime = 0;
+    this.difficulty = Math.min(1 + W.difficultyStep * (n - 1), W.maxDifficulty);
+    Events.emit('waveStart', n);
+  },
+
+  update(dt) {
+    if (!Debug.enemiesEnabled) return;
+    const W = CONFIG.waves;
+    if (this.phase === 'break') {
+      this.timer -= dt;
+      if (this.timer <= 0) this.start(this.wave + 1);
+      return;
+    }
+    this.waveTime += dt;
+    this.spawnTimer -= dt;
+    const rem = this.remDrones + this.remGunships;
+    if (rem > 0 && this.spawnTimer <= 0) {
+      const pickGun = this.remGunships > 0 && (this.remDrones === 0 || rand() < this.remGunships / rem);
+      const e = Enemies.spawnAhead(pickGun ? 'gunship' : 'drone');
+      if (e) { if (pickGun) this.remGunships--; else this.remDrones--; }
+      this.spawnTimer = W.spawnInterval / Math.sqrt(this.difficulty);
+    }
+    if ((rem === 0 && Enemies.alive === 0) || this.waveTime > W.maxDuration) {
+      this.phase = 'break';
+      this.timer = W.breakTime;
+      Events.emit('waveCleared', this.wave);
+    }
+  },
+};
+
+/* =====================================================================
+   TABRAKAN DAN DAMAGE - jarak kuadrat dan uji segmen ke bola
+   ===================================================================== */
+function updateCombat() {
+  const pb = Weapons.pool, eb = Enemies.bullets, list = Enemies.list, pad = CONFIG.weapons.hitPadding;
+
+  // Peluru pemain terhadap musuh dan terrain
+  for (let i = 0; i < pb.max; i++) {
+    if (!pb.active[i]) continue;
+    const i3 = i * 3;
+    const ax = pb.prev[i3], ay = pb.prev[i3 + 1], az = pb.prev[i3 + 2];
+    const bx = pb.p[i3], by = pb.p[i3 + 1], bz = pb.p[i3 + 2];
+    let hit = false;
+    for (let k = 0; k < list.length; k++) {
+      const e = list[k];
+      if (!e.active) continue;
+      const r = e.radius + pad;
+      const ex = e.pos.x - bx, ey = e.pos.y - by, ez = e.pos.z - bz;
+      if (ex * ex + ey * ey + ez * ez > (r + 40) * (r + 40)) continue;   // tolak cepat
+      if (segmentHitsSphere(ax, ay, az, bx, by, bz, e.pos.x, e.pos.y, e.pos.z, r)) {
+        pb.kill(i);
+        Enemies.damage(e, pb.dmg[i], bx, by, bz);
+        hit = true;
+        break;
+      }
+    }
+    if (!hit && by < groundHeightAt(bx, bz)) {
+      pb.kill(i);
+      Events.emit('bulletImpact', bx, by, bz);
+    }
+  }
+
+  // Peluru musuh terhadap pemain dan terrain
+  const P = Player.pos, pr = CONFIG.player.radius;
+  for (let i = 0; i < eb.max; i++) {
+    if (!eb.active[i]) continue;
+    const i3 = i * 3;
+    const bx = eb.p[i3], by = eb.p[i3 + 1], bz = eb.p[i3 + 2];
+    if (Player.alive && segmentHitsSphere(eb.prev[i3], eb.prev[i3 + 1], eb.prev[i3 + 2], bx, by, bz, P.x, P.y, P.z, pr)) {
+      eb.kill(i);
+      Events.emit('bulletImpact', bx, by, bz);
+      Player.damage(eb.dmg[i], 'peluru');
+      continue;
+    }
+    if (by < groundHeightAt(bx, bz)) eb.kill(i);
+  }
+
+  // Tabrakan badan musuh dengan pemain
+  if (!Player.alive) return;
+  for (let k = 0; k < list.length; k++) {
+    const e = list[k];
+    if (!e.active) continue;
+    const r = e.radius + pr;
+    if (e.pos.distanceToSquared(P) < r * r) {
+      Enemies.destroy(e, false);
+      Player.damage(e.cfg.contactDamage, 'tabrakan');
+    }
+  }
+}
+
+// Skor saat musuh hancur oleh tembakan pemain
+Events.on('enemyDestroyed', (e, byPlayer) => {
+  if (!byPlayer) return;
+  Game.kills++;
+  addScore(e.cfg.score);
+});
+function addScore(base) {
+  Game.score += base;
+}
 
 /* =====================================================================
    KAMERA CHASE - lag pada rotasi (bukan posisi) agar jarak ke pesawat stabil
@@ -1068,6 +1498,9 @@ const Game = {
   stateTime: 0,     // lama berada di state sekarang
   frame: 0,
   muted: false,
+  score: 0,
+  kills: 0,
+  seed: CONFIG.seed,
 };
 
 function setState(next) {
@@ -1082,9 +1515,16 @@ function setState(next) {
 // Reset seluruh state sesi tanpa membuat ulang objek (semua pool dipakai ulang)
 function resetSession() {
   Game.time = 0;
-  World.reset(CONFIG.seed);
+  Game.score = 0;
+  Game.kills = 0;
+  Game.seed = Debug.fixedSeed !== null ? Debug.fixedSeed
+    : CONFIG.randomSeedPerRun ? (Math.random() * 4294967296) >>> 0 : CONFIG.seed;
+  rand.reseed(Game.seed);
+  World.reset(Game.seed);
   Player.reset();
   Weapons.reset();
+  Enemies.reset();
+  Waves.reset();
   CamRig.reset();
 }
 
@@ -1217,6 +1657,18 @@ function update(dt) {
     Player.updateNitro(dt, Input.nitro);
     Player.update(dt, Input.pitch, Input.yaw);
     Weapons.update(dt, Input.fire);
+    Waves.update(dt);
+    Enemies.update(dt);
+    updateCombat();
+    Game.score += CONFIG.score.perSecond * dt;
+  } else if (Game.state === 'dying') {
+    // Pesawat sudah meledak: dunia tetap berjalan sebentar sebelum layar game over
+    Weapons.update(dt, false);
+    Enemies.update(dt);
+    if (Game.stateTime > 1.8) {
+      setState('gameover');
+      Events.emit('gameover');
+    }
   } else if (Game.state === 'menu') {
     Player.autopilot(dt, Game.stateTime);
   }
@@ -1230,10 +1682,53 @@ function update(dt) {
 
 function render() {
   Weapons.pool.sync();
+  Enemies.bullets.sync();
   if (Game.state !== 'menu') updateHud();
   renderer.render(scene, camera);
 }
 
+
+/* =====================================================================
+   HOOK DEBUG - window.__game untuk uji otomatis (ringkas dan aman)
+   ===================================================================== */
+const round2 = (v) => Math.round(v * 100) / 100;
+window.__game = {
+  // Ringkasan state yang aman dibaca (salinan nilai, bukan referensi objek internal)
+  snapshot() {
+    return {
+      state: Game.state,
+      time: round2(Game.time),
+      score: Math.floor(Game.score),
+      kills: Game.kills,
+      seed: Game.seed,
+      health: round2(Player.health),
+      alive: Player.alive,
+      nitro: round2(Player.nitro),
+      nitroActive: Player.nitroActive,
+      nitroLocked: Player.nitroLock > 0,
+      speed: round2(Player.speed),
+      yaw: round2(Player.yaw), pitch: round2(Player.pitch), roll: round2(Player.roll),
+      position: { x: round2(Player.pos.x), y: round2(Player.pos.y), z: round2(Player.pos.z) },
+      wave: Waves.wave,
+      enemies: Enemies.alive,
+      playerBullets: Weapons.pool.alive,
+      enemyBullets: Enemies.bullets.alive,
+      shotsFired: Weapons.shotsFired,
+      muted: Game.muted,
+    };
+  },
+  // Kunci seed dunia dan gameplay; berlaku pada sesi berikutnya (start atau restart)
+  setSeed(n) { Debug.fixedSeed = n === null ? null : (n >>> 0); },
+  start() { if (Game.state === 'menu' || Game.state === 'gameover') startGame(); },
+  restart() { restartGame(); },
+  debug: {
+    setGod(v) { Debug.god = !!v; },
+    setEnemiesEnabled(v) { Debug.enemiesEnabled = !!v; if (!v) Enemies.reset(); },
+    damagePlayer(n) { Player.damage(n, 'debug'); },
+    spawnEnemy(type, dist, lateral) { return !!Enemies.spawnAhead(type, dist, lateral); },
+    killAllEnemies() { for (const e of Enemies.list) if (e.active) Enemies.destroy(e, true); },
+  },
+};
 
 /* =====================================================================
    MAIN LOOP - requestAnimationFrame dengan delta time yang di-clamp
