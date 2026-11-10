@@ -87,7 +87,22 @@ const CONFIG = {
   qualityPreset: 'sedang',     // rendah | sedang | tinggi (bisa ditimpa lewat ?kualitas=)
   maxDelta: 0.05,              // batas atas delta time per frame (detik)
   seed: 1337,                  // seed awal dunia dan gameplay
-  camera: { fov: 68, near: 0.5 },
+  camera: {
+    fov: 68,                   // FOV normal
+    nitroFov: 84,              // FOV melebar saat nitro
+    near: 0.5,
+    distance: 14,              // jarak di belakang pesawat
+    height: 4.2,
+    nitroPullBack: 3.5,        // tambahan jarak saat nitro
+    lookAhead: 30,
+    lookHeight: 2,
+    rotLag: 4.5,               // makin kecil makin besar lag rotasi kamera
+    pitchFollow: 0.55,         // seberapa besar kamera ikut pitch pesawat
+    rollFollow: 0.2,           // seberapa besar kamera ikut miring
+    shakeDecay: 1.8,           // trauma berkurang per detik
+    shakeHit: 0.9,             // amplitudo getar saat kena hit (unit)
+    shakeNitro: 0.08,          // getar halus konstan saat nitro
+  },
   world: { waterLevel: 0 },
   player: {
     startAltitude: 110,
@@ -363,6 +378,7 @@ const Player = {
   health: 100,
   alive: true,
   nitroActive: false,
+  nitroFx: 0,          // 0..1 dihaluskan, dipakai kamera, cahaya mesin dan api
 
   reset() {
     const C = CONFIG.player;
@@ -372,6 +388,7 @@ const Player = {
     this.health = C.maxHealth;
     this.alive = true;
     this.nitroActive = false;
+    this.nitroFx = 0;
     this.forward.set(0, 0, -1);
     this.vel.set(0, 0, -this.speed);
     this.model.root.visible = true;
@@ -396,6 +413,7 @@ const Player = {
     // Laju belok sebanding dengan kemiringan sayap, sehingga bank dan belok selalu selaras
     this.yaw += C.turnRate * (this.roll / C.maxRoll) * dt;
 
+    this.nitroFx = damp(this.nitroFx, this.nitroActive ? 1 : 0, 5, dt);
     const targetSpeed = this.nitroActive ? C.nitroSpeed : C.baseSpeed;
     this.speed = damp(this.speed, targetSpeed, this.nitroActive ? C.accel * 1.6 : C.accel, dt);
 
@@ -423,6 +441,62 @@ const Player = {
   },
 };
 Player.reset();
+
+/* =====================================================================
+   KAMERA CHASE - lag pada rotasi (bukan posisi) agar jarak ke pesawat stabil
+   di kecepatan berapa pun, FOV melebar saat nitro, dan getaran berbasis trauma
+   ===================================================================== */
+const CamRig = {
+  yaw: 0, pitch: 0, roll: 0, trauma: 0, t: 0,
+  offset: new THREE.Vector3(),
+  look: new THREE.Vector3(),
+  q: new THREE.Quaternion(),
+  e: new THREE.Euler(0, 0, 0, 'YXZ'),
+
+  reset() {
+    this.yaw = Player.yaw; this.pitch = 0; this.roll = 0; this.trauma = 0;
+    camera.fov = CONFIG.camera.fov;
+    camera.updateProjectionMatrix();
+  },
+  addTrauma(amount) { this.trauma = Math.min(1, this.trauma + amount); },
+
+  update(dt) {
+    const C = CONFIG.camera;
+    this.t += dt;
+    this.yaw = dampAngle(this.yaw, Player.yaw, C.rotLag, dt);
+    this.pitch = damp(this.pitch, Player.pitch * C.pitchFollow, C.rotLag, dt);
+    this.roll = damp(this.roll, Player.roll * C.rollFollow, C.rotLag, dt);
+    const nf = Player.nitroFx;
+
+    this.e.set(this.pitch, this.yaw, 0);
+    this.q.setFromEuler(this.e);
+    this.offset.set(0, C.height, C.distance + nf * C.nitroPullBack).applyQuaternion(this.q);
+    camera.position.copy(Player.pos).add(this.offset);
+    const minY = groundHeightAt(camera.position.x, camera.position.z) + 2.5;
+    if (camera.position.y < minY) camera.position.y = minY;
+
+    this.look.set(0, C.lookHeight, -C.lookAhead).applyQuaternion(this.q).add(Player.pos);
+    camera.lookAt(this.look);
+    camera.rotateZ(this.roll);
+
+    // Getar: kombinasi sinus berfrekuensi berbeda, lebih halus dari jitter acak
+    this.trauma = Math.max(0, this.trauma - C.shakeDecay * dt);
+    const s = this.trauma * this.trauma * C.shakeHit + nf * C.shakeNitro;
+    if (s > 1e-4) {
+      const t = this.t;
+      camera.position.x += (Math.sin(t * 37.1) + 0.5 * Math.sin(t * 23.7)) * s;
+      camera.position.y += (Math.sin(t * 41.3) + 0.5 * Math.sin(t * 19.1)) * s;
+      camera.rotateZ(Math.sin(t * 29.3) * s * 0.02);
+    }
+
+    const targetFov = lerp(C.fov, C.nitroFov, nf);
+    if (Math.abs(targetFov - camera.fov) > 0.01) {
+      camera.fov = targetFov;
+      camera.updateProjectionMatrix();
+    }
+  },
+};
+CamRig.reset();
 
 /* =====================================================================
    GAME STATE - menu, play, pause, dying, gameover
@@ -456,6 +530,7 @@ function setState(next) {
 function resetSession() {
   Game.time = 0;
   Player.reset();
+  CamRig.reset();
 }
 
 function startGame() {
@@ -551,17 +626,11 @@ function onAudioGesture() {}
 /* =====================================================================
    UPDATE DAN RENDER
    ===================================================================== */
-// Lampu dan kamera sementara (diganti oleh bagian DUNIA dan KAMERA)
+// Lampu sementara (diganti oleh bagian DUNIA)
 scene.add(new THREE.HemisphereLight(0x9cc8ff, 0x5b7a3a, 1.2));
 const tmpSun = new THREE.DirectionalLight(0xffe2b8, 2.4);
 tmpSun.position.set(50, 60, -40);
 scene.add(tmpSun);
-const _camOff = new THREE.Vector3();
-function updateCamera() {
-  _camOff.set(0, 4, 14).applyAxisAngle(THREE.Object3D.DEFAULT_UP, Player.yaw);
-  camera.position.copy(Player.pos).add(_camOff);
-  camera.lookAt(Player.pos);
-}
 
 function update(dt) {
   Game.stateTime += dt;
@@ -571,7 +640,7 @@ function update(dt) {
   } else if (Game.state === 'menu') {
     Player.autopilot(dt, Game.stateTime);
   }
-  updateCamera(dt);
+  if (Game.state !== 'pause') CamRig.update(dt);
 }
 
 function render() {
