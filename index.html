@@ -169,6 +169,12 @@
     border: 2px solid rgba(170, 255, 230, 0.85); border-radius: 50%;
     will-change: transform;
   }
+  #hitmark { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; opacity: 0; transform: rotate(45deg); }
+  #hitmark.on { opacity: 1; }
+  #hitmark::before, #hitmark::after { content: ""; position: absolute; background: #fff; }
+  #hitmark::before { left: 50%; top: 0; bottom: 0; width: 2px; margin-left: -1px; clip-path: polygon(0 0, 100% 0, 100% 34%, 0 34%, 0 66%, 100% 66%, 100% 100%, 0 100%); }
+  #hitmark::after { top: 50%; left: 0; right: 0; height: 2px; margin-top: -1px; clip-path: polygon(0 0, 34% 0, 34% 100%, 0 100%, 66% 0, 100% 0, 100% 100%, 66% 100%); }
+  #hitmark.kill::before, #hitmark.kill::after { background: #ff4a3a; }
   #reticle::before, #reticle::after { content: ""; position: absolute; background: rgba(170, 255, 230, 0.85); }
   #reticle::before { left: 50%; top: -9px; bottom: -9px; width: 2px; margin-left: -1px; clip-path: polygon(0 0, 100% 0, 100% 9px, 0 9px, 0 calc(100% - 9px), 100% calc(100% - 9px), 100% 100%, 0 100%); }
   #reticle::after { top: 50%; left: -9px; right: -9px; height: 2px; margin-top: -1px; clip-path: polygon(0 0, 9px 0, 9px 100%, 0 100%, calc(100% - 9px) 0, 100% 0, 100% 100%, calc(100% - 9px) 100%); }
@@ -191,7 +197,7 @@
 <div id="hud" class="hidden">
   <div id="vignette"></div>
   <div id="indicators"></div>
-  <div id="reticle"></div>
+  <div id="reticle"><i id="hitmark"></i></div>
   <div class="hud-block tl">
     <div class="row"><span class="label">INTEGRITAS</span><span id="hp-text" class="num">100</span></div>
     <div class="bar" id="hp-bar"><i id="hp-fill"></i></div>
@@ -347,7 +353,7 @@ const CONFIG = {
     fireInterval: 0.09,        // cooldown antar tembakan (detik)
     bulletSpeed: 330,          // ditambah kecepatan pesawat
     bulletLife: 1.4,
-    damage: 1,
+    damage: 10,                // damage per peluru pemain
     maxPlayerBullets: 80,
     convergeDistance: 160,     // jarak titik temu peluru kedua sayap, juga posisi reticle
     hitPadding: 0.9,           // tambahan radius saat cek kena
@@ -363,11 +369,11 @@ const CONFIG = {
     despawnDistance: 1150,
     behindDistance: 220,       // musuh sejauh ini di belakang pemain dianggap tertinggal
     behindTime: [5, 12],       // detik tertinggal sebelum dipindah lagi ke depan (drone, penembak)
-    drone: { hp: 3, speed: 46, agility: 1.5, radius: 2.3, contactDamage: 18, score: 100 },
+    drone: { hp: 30, speed: 46, agility: 1.5, radius: 2.3, contactDamage: 18, score: 100 },
     gunship: {
-      hp: 8, speed: 84, turnRate: 0.95, radius: 3.4, contactDamage: 30, score: 300,
+      hp: 60, speed: 84, turnRate: 0.95, radius: 3.4, contactDamage: 30, score: 300,
       fireInterval: 1.15, fireRange: 320, fireCone: 0.33, burst: 2,
-      bulletSpeed: 175, bulletDamage: 7, extendTime: 3.2,
+      bulletSpeed: 175, bulletDamage: 8, extendTime: 3.2,
     },
   },
   waves: {
@@ -400,8 +406,8 @@ const CONFIG = {
   obstacles: {
     pillarsPerChunk: 2,
     pillarChance: 0.55,
-    terrainDamage: 35,
-    pillarDamage: 40,
+    terrainDamage: 40,         // menabrak tanah
+    pillarDamage: 40,          // menabrak rintangan keras
     invulnTime: 1.0,           // kebal tabrakan sesaat setelah menabrak
     warnAhead: 150,            // jarak cek peringatan medan di depan
   },
@@ -443,7 +449,7 @@ const CONFIG = {
     minAltitude: 6,            // jarak minimum di atas permukaan air
     maxAltitude: 260,
     radius: 2.6,               // radius tabrakan
-    maxHealth: 100,
+    maxHealth: 100,            // HP penuh per nyawa
   },
 };
 
@@ -492,6 +498,46 @@ const Events = {
     if (list) for (let i = 0; i < list.length; i++) list[i](a, b, c, d);
   },
 };
+
+/* =====================================================================
+   KOMPONEN HP DAN SISTEM DAMAGE - dipakai bersama oleh pemain, musuh dan asteroid
+   ===================================================================== */
+class Health {
+  constructor(maxHp, onDeath) {
+    this.maxHp = maxHp;
+    this.hp = maxHp;
+    this.onDeath = onDeath || null;      // dipanggil sekali saat hp mencapai 0
+    this.onDamage = null;                // dipanggil setiap menerima damage (jumlah, sumber)
+    this.invulnerable = null;            // fungsi (sumber) yang mengembalikan true bila kebal
+  }
+  reset(maxHp = this.maxHp) { this.maxHp = maxHp; this.hp = maxHp; }
+  get ratio() { return this.maxHp > 0 ? this.hp / this.maxHp : 0; }
+  get dead() { return this.hp <= 0; }
+  heal(amount) { if (this.hp > 0) this.hp = Math.min(this.maxHp, this.hp + amount); }
+  // Mengembalikan jumlah damage yang benar-benar diterima
+  takeDamage(amount, source) {
+    if (this.hp <= 0 || amount <= 0) return 0;
+    if (this.invulnerable) { if (this.invulnerable(source)) return 0; }
+    const dealt = Math.min(this.hp, amount);
+    this.hp = Math.max(0, this.hp - amount);
+    if (this.onDamage) this.onDamage(dealt, source);
+    if (this.hp <= 0) { if (this.onDeath) this.onDeath(source); }
+    return dealt;
+  }
+}
+
+// Satu pintu untuk semua damage: pengali kesulitan diterapkan pada damage yang diterima pemain
+// (HP musuh dan asteroid sudah dikalikan saat spawn). Posisi dipakai untuk angka damage dan percikan.
+const _dmgPos = new THREE.Vector3();
+function applyDamage(entity, amount, source, x, y, z) {
+  const amt = entity === Player ? amount * Game.diff.damageTaken : amount;
+  const dealt = entity.health.takeDamage(amt, source);
+  if (dealt > 0) {
+    _dmgPos.set(x, y, z);
+    Events.emit('damage', entity, dealt, source, _dmgPos);
+  }
+  return dealt;
+}
 
 // Saklar debug (dipakai uji otomatis lewat window.__game)
 const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false };
@@ -728,7 +774,7 @@ const Player = {
   forward: new THREE.Vector3(0, 0, -1),
   yaw: 0, pitch: 0, roll: 0,
   speed: 0,
-  health: 100,
+  health: null,        // komponen Health, dibuat setelah definisi objek
   alive: true,
   nitro: 1,            // meter nitro 0..1
   nitroLock: 0,        // sisa jeda setelah meter habis
@@ -743,7 +789,7 @@ const Player = {
     this.pos.set(0, World.safeStartAltitude(), 0);
     this.yaw = 0; this.pitch = 0; this.roll = 0;
     this.speed = C.baseSpeed;
-    this.health = C.maxHealth;
+    this.health.reset(C.maxHealth);
     this.alive = true;
     this.nitro = 1;
     this.nitroLock = 0;
@@ -813,14 +859,15 @@ const Player = {
     }
   },
   addNitro(amount) { this.nitro = Math.min(1, this.nitro + amount); },
-  heal(amount) { this.health = Math.min(CONFIG.player.maxHealth, this.health + amount); },
+  heal(amount) { this.health.heal(amount); },
+  get hp() { return this.health.hp; },
 
-  damage(amount, source) {
-    if (!this.alive || Debug.god || Game.state !== 'playing') return;
-    this.health = Math.max(0, this.health - amount);
+  // Damage ke pemain selalu lewat sistem damage generik
+  damage(amount, source) { return applyDamage(this, amount, source, this.pos.x, this.pos.y, this.pos.z); },
+  isInvulnerable() { return !this.alive || Debug.god || Game.state !== 'playing'; },
+  onDamaged(amount, source) {
     CamRig.addTrauma(clamp(amount / 30, 0.3, 0.9));
     Events.emit('playerHit', amount, source);
-    if (this.health <= 0) this.die();
   },
 
   die() {
@@ -858,6 +905,10 @@ const Player = {
     if (this.pos.y < ground + 35) this.pos.y = ground + 35;
   },
 };
+
+Player.health = new Health(CONFIG.player.maxHealth, () => Player.die());
+Player.health.invulnerable = () => Player.isInvulnerable();
+Player.health.onDamage = (amount, source) => Player.onDamaged(amount, source);
 
 /* =====================================================================
    NOISE - simplex noise 2D kecil dengan permutasi ber-seed
@@ -1469,7 +1520,7 @@ class Enemy {
     this.dir = new THREE.Vector3(0, 0, -1);
     this.vel = new THREE.Vector3();
     this.active = false;
-    this.hp = 0;
+    this.health = new Health(this.cfg.hp, () => Enemies.destroy(this, true));
     this.state = 'attack';
     this.timer = 0;
     this.fireCd = 0;
@@ -1523,7 +1574,7 @@ const Enemies = {
     if (!e) return null;
     e.active = true;
     e.group.visible = true;
-    e.hp = e.cfg.hp;
+    e.health.reset(e.cfg.hp * Game.diff.enemyHp);
     e.pos.set(x, y, z);
     e.dir.set(Player.pos.x - x, 0, Player.pos.z - z).normalize();
     e.vel.copy(e.dir).multiplyScalar(e.cfg.speed);
@@ -1564,10 +1615,9 @@ const Enemies = {
   },
 
   damage(e, amount, x, y, z) {
-    e.hp -= amount;
     e.hitFlash = 0.12;
     Events.emit('enemyHit', x, y, z);
-    if (e.hp <= 0) this.destroy(e, true);
+    applyDamage(e, amount, 'pemain', x, y, z);
   },
 
   update(dt) {
@@ -1658,12 +1708,11 @@ const Enemies = {
         _va.x += randRange(-2, 2); _va.y += randRange(-2, 2); _va.z += randRange(-2, 2);
         _vb.copy(e.pos).addScaledVector(e.dir, 4);
         _va.sub(_vb).normalize();
-        this.bullets.spawn(_vb.x, _vb.y, _vb.z, _va.x, _va.y, _va.z, c.bulletSpeed, CONFIG.enemies.bulletLife,
-          c.bulletDamage * (1 + (diff - 1) * 0.5));
+        this.bullets.spawn(_vb.x, _vb.y, _vb.z, _va.x, _va.y, _va.z, c.bulletSpeed, CONFIG.enemies.bulletLife, c.bulletDamage);
         Events.emit('enemyShot', _vb);
         if (e.burstLeft <= 0) e.burstLeft = c.burst;
         e.burstLeft--;
-        e.fireCd = e.burstLeft > 0 ? 0.16 : c.fireInterval / diff;
+        e.fireCd = e.burstLeft > 0 ? 0.16 : c.fireInterval / (diff * Game.diff.enemyFire);
       }
     }
   },
@@ -2075,7 +2124,7 @@ const Pickups = {
     const PU = CONFIG.pickups, P = Player.pos;
     this.timer -= dt;
     if (this.timer <= 0) {
-      const wantRepair = Player.health < 70 ? rand() < 0.65 : false;
+      const wantRepair = Player.hp < 70 ? rand() < 0.65 : false;
       const type = wantRepair ? 'repair' : (rand() < 0.5 ? 'nitro' : 'repair');
       this.spawnAhead(type);
       this.timer = randRange(PU.interval[0], PU.interval[1]);
@@ -2333,8 +2382,8 @@ const FX = {
           this.fire.emit(_va.x, _va.y, _va.z, 0, 0, 0, 0.35 + frand() * 0.2, 0.32, 0.5, 0.75, 0.82, 0.9, 0.35 * nf, 0, 0);
         }
       }
-      if (Player.health < 35) {
-        const dmg = this.take('damage', 30 * (1 - Player.health / 35) + 6, dt);
+      if (Player.hp < 35) {
+        const dmg = this.take('damage', 30 * (1 - Player.hp / 35) + 6, dt);
         for (let i = 0; i < dmg; i++) {
           this.smoke.emit(P.x + (frand() - 0.5) * 1.5, P.y + 0.4, P.z + (frand() - 0.5) * 1.5,
             -f.x * 4, 1.5, -f.z * 4, 1.2 + frand(), 1.2, 4, 0.12, 0.12, 0.13, 0.5, 1.0, -1);
@@ -2726,6 +2775,8 @@ const hud = {
   indicators: [], indicatorType: [],
   toastPool: [], toastNext: 0,
   vignetteLevel: 0,
+  hitTimer: 0, hitKill: false,
+  hitmark: $('hitmark'),
   last: Object.create(null),
 };
 // Pool elemen DOM untuk indikator musuh dan popup skor (dibuat sekali)
@@ -2791,6 +2842,12 @@ Events.on('score', (amount, label) => {
   showToast(`+${amount} ${label}${suffix}`);
 });
 Events.on('playerHit', (amount) => { hud.vignetteLevel = Math.min(1, hud.vignetteLevel + amount / 20); });
+// Hit marker di reticle saat peluru pemain memberi damage (merah bila target hancur)
+Events.on('damage', (entity, dealt, source) => {
+  if (source !== 'pemain') return;
+  hud.hitTimer = 0.14;
+  hud.hitKill = entity.health.dead;
+});
 Events.on('pickup', (type) => showBanner(type === 'repair' ? 'PERBAIKAN' : 'NITRO PENUH', 1100));
 // Tulis ke DOM hanya bila nilainya berubah (tanpa closure per frame, tanpa layout berulang)
 function changed(key, value) {
@@ -2799,11 +2856,11 @@ function changed(key, value) {
   return true;
 }
 function updateHud(dt) {
-  const hp = Player.health / CONFIG.player.maxHealth;
+  const hp = Player.health.ratio;
   let v;
   v = Math.round(hp * 200) / 200;
   if (changed('hp', v)) hud.hpFill.style.transform = 'scaleX(' + v + ')';
-  v = Math.ceil(Player.health);
+  v = Math.ceil(Player.hp);
   if (changed('hpText', v)) hud.hpText.textContent = v;
   v = hp < 0.3 ? 'bar low' : hp < 0.6 ? 'bar mid' : 'bar';
   if (changed('hpClass', v)) hud.hpBar.className = v;
@@ -2841,6 +2898,10 @@ function updateHud(dt) {
   if (changed('vig', v)) hud.vignette.style.opacity = v;
 
   updateIndicators();
+
+  hud.hitTimer = Math.max(0, hud.hitTimer - dt);
+  v = hud.hitTimer > 0 ? (hud.hitKill ? 'on kill' : 'on') : '';
+  if (changed('hitmark', v)) hud.hitmark.className = v;
 
   // Reticle: proyeksi titik konvergensi peluru di depan pesawat
   _vc.copy(Player.pos).addScaledVector(Player.forward, CONFIG.weapons.convergeDistance).project(camera);
@@ -3193,7 +3254,8 @@ window.__game = {
       score: Math.floor(Game.score),
       kills: Game.kills,
       seed: Game.seed,
-      health: round2(Player.health),
+      health: round2(Player.hp),
+      maxHealth: Player.health.maxHp,
       alive: Player.alive,
       nitro: round2(Player.nitro),
       nitroActive: Player.nitroActive,
