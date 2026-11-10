@@ -48,14 +48,15 @@ async function open(page, query = '') {
 }
 
 // Mulai sesi lewat klik tombol MULAI (sekaligus membuka AudioContext)
-async function start(page, { seed = 1234, enemies = false, god = true } = {}) {
+async function start(page, { seed = 1234, enemies = false, god = true, world = 'earth' } = {}) {
   await open(page);
   await page.evaluate(([s, e, g]) => {
     window.__game.setSeed(s);
     window.__game.debug.setEnemiesEnabled(e);
     window.__game.debug.setGod(g);
   }, [seed, enemies, god]);
-  await page.click('#btn-start');
+  await page.click('#btn-start');                         // MULAI membuka PILIH MEDAN
+  await page.click(`.tcard[data-world="${world}"]`);
   await page.evaluate(() => window.__game.skipTransition());
   await expect.poll(async () => (await snap(page)).state).toBe('playing');
 }
@@ -98,6 +99,7 @@ test('S1: Enter menembak lewat alur nyata, peluru bertambah, bergerak dan terlih
   await open(page);
   await page.evaluate(() => { window.__game.setSeed(77); window.__game.debug.setGod(true); window.__game.debug.setEnemiesEnabled(false); });
   await page.click('#btn-start');                       // klik mouse seperti pemain sungguhan
+  await page.keyboard.press('Enter');                   // kartu Luar Angkasa sudah tersorot
   await expect.poll(async () => (await snap(page)).state, { timeout: 4000 }).toBe('playing');
   expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);   // tombol tidak lagi fokus
   const before = await snap(page);
@@ -135,6 +137,40 @@ test('S1: Enter dengan e.code kosong tetap terbaca dan di-preventDefault', async
   await page.waitForTimeout(300);
   await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: '' })));
   expect((await snap(page)).shotsFired).toBeGreaterThan(0);
+});
+
+test('S2: medan angkasa jadi default, pilihan medan tersimpan setelah reload, skor per medan', async ({ page }) => {
+  await open(page);
+  expect((await snap(page)).world).toBe('space');                       // attract mode berlatar angkasa
+  await page.click('#btn-start');
+  await expect(page.locator('#screen-terrain')).toBeVisible();
+  expect(await page.evaluate(() => document.activeElement.dataset.world)).toBe('space');
+  await page.click('.tcard[data-world="earth"]');
+  await page.evaluate(() => window.__game.skipTransition());
+  expect((await snap(page)).world).toBe('earth');
+  await page.reload();
+  await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
+  const s = await snap(page);
+  expect(s.world).toBe('earth');                                        // pilihan diingat
+  expect(s.settings.terrain).toBe('earth');
+  const save = await page.evaluate(() => JSON.parse(localStorage.getItem('raptor13.v2')));
+  expect(Object.keys(save.highScores).sort()).toEqual(['earth', 'space']);
+});
+
+test('S2: medan Bumi tetap berfungsi dan data save v1 lama termigrasi', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('raptor13.v2')) localStorage.setItem('raptor13.v1', JSON.stringify({ version: 1, settings: { difficulty: 'sulit' }, highScore: 4321 }));
+  });
+  await open(page);
+  const s = await snap(page);
+  expect(s.settings.difficulty).toBe('sulit');
+  await page.click('#btn-start');
+  await expect(page.locator('[data-best="earth"]')).toHaveText('4.321');   // skor v1 dimigrasikan ke medan Bumi
+  await page.click('.tcard[data-world="earth"]');
+  await page.evaluate(() => window.__game.skipTransition());
+  await page.waitForTimeout(500);
+  expect((await snap(page)).world).toBe('earth');
+  expect((await snap(page)).state).toBe('playing');
 });
 
 test('W dan S mengubah pitch dan ketinggian', async ({ page }) => {
@@ -317,7 +353,7 @@ test('health 0 memicu ledakan dan layar game over, lalu bisa main lagi', async (
   await expect(page.locator('#screen-over')).toBeVisible();
   await expect(page.locator('#hud')).toBeHidden();
   await expect(page.locator('#go-score')).not.toHaveText('');
-  const stored = await page.evaluate(() => JSON.parse(window.localStorage.getItem('raptor13.v1')).highScore);
+  const stored = await page.evaluate(() => JSON.parse(window.localStorage.getItem('raptor13.v2')).highScores.earth);
   expect(Number(stored)).toBe((await snap(page)).highScore);
   expect(Number(stored)).toBeGreaterThan(0);
   await page.click('#btn-restart');
@@ -447,7 +483,8 @@ for (const q of ['rendah', 'tinggi']) {
     await open(page, `?kualitas=${q}`);
     expect((await page.evaluate(() => window.__game.quality())).preset).toBe(q);
     await page.click('#btn-start');
-    await page.waitForTimeout(1500);
+    await page.click('.tcard[data-world="earth"]');
+    await page.waitForTimeout(2000);
     expect((await snap(page)).state).toBe('playing');
   });
 }
@@ -461,6 +498,8 @@ test('screenshot menu, gameplay dan game over', async ({ page }) => {
   // Gameplay: nitro, tembakan, musuh di depan, dan cincin
   await page.evaluate(() => { window.__game.setSeed(2024); window.__game.debug.setEnemiesEnabled(true); window.__game.debug.setGod(true); });
   await page.click('#btn-start');
+  await page.click('.tcard[data-world="earth"]');
+  await page.evaluate(() => window.__game.skipTransition());
   await expect.poll(async () => (await snap(page)).wave, { timeout: 6000 }).toBe(1);
   await page.waitForTimeout(600);
   await page.keyboard.down('Space');

@@ -117,6 +117,36 @@
   .screen.pause .card { max-width: 380px; }
   .screen.pause .menu-list .btn { text-align: center; }
   .row-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  /* Pilih medan */
+  .card.wide { max-width: 760px; }
+  .terrain-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
+  .tcard {
+    display: flex; flex-direction: column; gap: 8px; text-align: left; cursor: pointer; padding: 12px;
+    font: inherit; color: var(--ui-fg); background: rgba(255, 255, 255, 0.04); border: 2px solid var(--ui-line); border-radius: 8px;
+  }
+  .tcard b { font-size: 18px; letter-spacing: 0.06em; }
+  .tcard .tdesc { color: #c9d6e3; font-size: 13px; }
+  .tcard small { color: var(--ui-dim); }
+  .tcard.selected { border-color: var(--ui-accent); background: rgba(255, 154, 60, 0.12); }
+  .tcard:focus-visible, .tcard:focus { outline: 3px solid #fff; outline-offset: 2px; }
+  .tcard-art { display: block; height: 110px; border-radius: 6px; }
+  .art-space {
+    background:
+      radial-gradient(circle at 72% 38%, #f6c27a 0 18px, #c98b45 19px 22px, transparent 23px),
+      radial-gradient(ellipse at 72% 38%, transparent 30px, rgba(240, 200, 140, 0.55) 31px 33px, transparent 34px),
+      radial-gradient(circle at 20% 30%, #fff 0 1px, transparent 2px), radial-gradient(circle at 40% 70%, #fff 0 1px, transparent 2px),
+      radial-gradient(circle at 85% 80%, #cfe 0 1px, transparent 2px), radial-gradient(circle at 10% 85%, #fff 0 1px, transparent 2px),
+      radial-gradient(ellipse at 30% 60%, rgba(180, 60, 200, 0.45), transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(40, 160, 220, 0.4), transparent 55%), #04050d;
+  }
+  .art-earth {
+    background:
+      linear-gradient(160deg, transparent 55%, #4f8a3c 56%, #3d6e34 75%, #2f79ad 76%),
+      linear-gradient(200deg, transparent 60%, #8a7e6c 61%, #766b5d 80%),
+      linear-gradient(180deg, #4a86c8 0%, #e6d5bd 55%);
+  }
+  @media (max-width: 640px), (max-height: 520px) { .tcard-art { height: 60px; } .tcard .tdesc { display: none; } }
+
   /* Pengaturan */
   .card.settings { max-width: 640px; max-height: calc(100vh - 48px); overflow-y: auto; }
   .set-grid { display: grid; grid-template-columns: auto 1fr; gap: 12px 18px; align-items: center; width: 100%; text-align: left; }
@@ -441,11 +471,37 @@
   </div>
 </div>
 
+<!-- Pilih medan: muncul setelah MULAI -->
+<div id="screen-terrain" class="screen hidden">
+  <div class="card wide">
+    <h2>PILIH MEDAN</h2>
+    <div class="terrain-cards">
+      <button class="tcard" data-world="space" type="button">
+        <span class="tcard-art art-space"></span>
+        <b>Luar Angkasa</b>
+        <span class="tdesc">Sabuk asteroid, komet, planet raksasa dan pos musuh di sektor tanpa batas.</span>
+        <small>Skor tertinggi <i data-best="space">0</i></small>
+      </button>
+      <button class="tcard" data-world="earth" type="button">
+        <span class="tcard-art art-earth"></span>
+        <b>Atmosfer Bumi</b>
+        <span class="tdesc">Terbang rendah di atas pegunungan, laut dan pilar batu.</span>
+        <small>Skor tertinggi <i data-best="earth">0</i></small>
+      </button>
+    </div>
+    <button id="btn-terrain-back" class="btn secondary" type="button">KEMBALI</button>
+  </div>
+</div>
+
 <!-- Pengaturan: tersimpan otomatis -->
 <div id="screen-settings" class="screen hidden">
   <div class="card settings">
     <h2>PENGATURAN</h2>
     <div class="set-grid">
+      <span class="set-label">Medan default</span>
+      <div class="seg" data-key="terrain">
+        <button type="button" data-v="space">Luar Angkasa</button><button type="button" data-v="earth">Atmosfer Bumi</button>
+      </div>
       <span class="set-label">Kesulitan</span>
       <div class="seg" data-key="difficulty">
         <button type="button" data-v="mudah">Mudah</button><button type="button" data-v="normal">Normal</button><button type="button" data-v="sulit">Sulit</button>
@@ -748,9 +804,11 @@ const CONFIG = {
    SAVE LOKAL - satu kunci berversi di localStorage, load dan save terpusat,
    selalu dibungkus try/catch, dengan nilai default aman bila data rusak atau kosong
    ===================================================================== */
-const SAVE_KEY = 'raptor13.v1';
+const SAVE_KEY = 'raptor13.v2';
+const SAVE_KEYS_OLD = ['raptor13.v1'];   // dibaca sekali untuk migrasi
 const SETTING_DEFAULTS = {
   difficulty: 'normal',        // mudah | normal | sulit
+  terrain: 'space',            // medan default: space | earth
   asteroidDensity: 1,          // 0 Sedikit, 1 Normal, 2 Banyak
   volMaster: 80, volSfx: 80, volEngine: 60,   // 0..100
   muted: false,
@@ -767,6 +825,7 @@ const SETTING_ENUMS = {
   difficulty: ['mudah', 'normal', 'sulit'],
   quality: ['rendah', 'sedang', 'tinggi'],
   controlMode: ['keyboard', 'hp'],
+  terrain: ['space', 'earth'],
 };
 const SETTING_RANGES = { asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100] };
 
@@ -774,9 +833,9 @@ const Save = {
   data: null,
   defaults() {
     return {
-      version: 1,
+      version: 2,
       settings: { ...SETTING_DEFAULTS },
-      highScore: 0,
+      highScores: { space: 0, earth: 0 },   // skor tertinggi terpisah per medan
       stats: { playTime: 0, enemiesDestroyed: 0, asteroidsDestroyed: 0, gamesPlayed: 0 },
     };
   },
@@ -797,29 +856,33 @@ const Save = {
       }
       d.settings[k] = v;
     }
-    if (Number.isFinite(raw.highScore)) d.highScore = Math.max(0, Math.floor(raw.highScore));
+    const hs = raw.highScores && typeof raw.highScores === 'object' ? raw.highScores : {};
+    for (const k of Object.keys(d.highScores)) if (Number.isFinite(hs[k])) d.highScores[k] = Math.max(0, Math.floor(hs[k]));
+    // Migrasi v1: satu skor tertinggi dari era medan Bumi saja
+    if (Number.isFinite(raw.highScore)) d.highScores.earth = Math.max(d.highScores.earth, Math.floor(raw.highScore));
     const st = raw.stats && typeof raw.stats === 'object' ? raw.stats : {};
     for (const k of Object.keys(d.stats)) if (Number.isFinite(st[k])) d.stats[k] = Math.max(0, st[k]);
     return d;
   },
   load() {
     let raw = null;
-    try {
-      const txt = window.localStorage.getItem(SAVE_KEY);
-      raw = txt ? JSON.parse(txt) : null;
-    } catch (err) { raw = null; }
+    const read = (key) => { try { const txt = window.localStorage.getItem(key); return txt ? JSON.parse(txt) : null; } catch (err) { return null; } };
+    raw = read(SAVE_KEY);
+    if (!raw) for (const k of SAVE_KEYS_OLD) { raw = read(k); if (raw) break; }   // migrasi dari skema lama
     this.data = this.sanitize(raw);
-    // Migrasi sekali dari kunci skor tertinggi versi lama
+    // Migrasi sekali dari kunci skor tertinggi versi pertama (medan Bumi)
     try {
       const old = parseInt(window.localStorage.getItem('raptor13.highscore') || '0', 10);
-      if (Number.isFinite(old)) { if (old > this.data.highScore) this.data.highScore = old; }
+      if (Number.isFinite(old)) { if (old > this.data.highScores.earth) this.data.highScores.earth = old; }
     } catch (err) { /* abaikan */ }
   },
   save() {
     try { window.localStorage.setItem(SAVE_KEY, JSON.stringify(this.data)); } catch (err) { /* penyimpanan tidak tersedia */ }
   },
   reset() {
-    try { window.localStorage.removeItem(SAVE_KEY); window.localStorage.removeItem('raptor13.highscore'); } catch (err) { /* abaikan */ }
+    try {
+      for (const k of [SAVE_KEY, ...SAVE_KEYS_OLD, 'raptor13.highscore']) window.localStorage.removeItem(k);
+    } catch (err) { /* abaikan */ }
     this.data = this.defaults();
     this.save();
   },
@@ -913,6 +976,9 @@ function applyDamage(entity, amount, source, x, y, z) {
   }
   return dealt;
 }
+
+// Registri dunia: semua sistem gameplay hanya bicara dengan Worlds.active (EarthWorld atau SpaceWorld)
+const Worlds = { active: null, list: {} };
 
 // Saklar debug (dipakai uji otomatis lewat window.__game)
 const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false };
@@ -1419,7 +1485,8 @@ const PlayerModel = createPlayerJet();
 scene.add(PlayerModel.root);
 
 // Ketinggian permukaan (daratan atau air) di titik x, z. Diganti oleh bagian DUNIA.
-let groundHeightAt = (x, z) => CONFIG.world.waterLevel;
+// Ketinggian permukaan padat di titik x, z menurut dunia aktif (angkasa: tidak ada permukaan)
+const groundHeightAt = (x, z) => Worlds.active.groundHeightAt(x, z);
 
 const Player = {
   model: PlayerModel,
@@ -1443,7 +1510,7 @@ const Player = {
 
   reset() {
     const C = CONFIG.player;
-    this.pos.set(0, World.safeStartAltitude(), 0);
+    this.pos.set(0, Worlds.active.safeStartAltitude(), 0);
     this.yaw = 0; this.pitch = 0; this.roll = 0;
     this.speed = C.baseSpeed;
     this.health.reset(C.maxHealth);
@@ -1469,11 +1536,12 @@ const Player = {
     let targetPitch = pitchIn * C.maxPitch;
 
     // Plafon: hidung dipaksa turun saat mendekati ketinggian maksimum
-    const ceilRoom = C.maxAltitude - this.pos.y;
+    const W = Worlds.active;
+    const ceilRoom = W.maxY - this.pos.y;
     if (targetPitch > 0) targetPitch *= clamp(ceilRoom / 25, 0, 1);
     if (ceilRoom <= 0) targetPitch = Math.min(targetPitch, -0.12);
     // Lantai: tidak bisa menukik di bawah ketinggian minimum di atas air
-    const floorY = CONFIG.world.waterLevel + C.minAltitude;
+    const floorY = W.minY;
     if (targetPitch < 0) targetPitch *= clamp((this.pos.y - floorY) / 10, 0, 1);
 
     this.pitch = damp(this.pitch, targetPitch, C.pitchResponse, dt);
@@ -1490,7 +1558,7 @@ const Player = {
     this.vel.copy(this.forward).multiplyScalar(this.speed);
     this.pos.addScaledVector(this.vel, dt);
 
-    if (this.pos.y > C.maxAltitude) this.pos.y = C.maxAltitude;
+    if (this.pos.y > W.maxY) this.pos.y = W.maxY;
     if (this.pos.y < floorY) {
       this.pos.y = floorY;
       if (this.pitch < 0) this.pitch = damp(this.pitch, 0, 8, dt);
@@ -1548,7 +1616,7 @@ const Player = {
     for (let d = 40; d <= 240; d += 40) {
       ground = Math.max(ground, groundHeightAt(this.pos.x - Math.sin(this.yaw) * d, this.pos.z - Math.cos(this.yaw) * d));
     }
-    this.pos.y = clamp(Math.max(this.pos.y, ground + 50), 0, C.maxAltitude - 10);
+    this.pos.y = clamp(Math.max(this.pos.y, ground + 50), Worlds.active.minY, Worlds.active.maxY - 10);
     this.pitch = 0; this.roll = 0;
     this.speed = C.baseSpeed;
     this.health.reset(C.maxHealth);
@@ -1594,16 +1662,13 @@ const Player = {
 
   // Autopilot untuk latar layar judul: meliuk pelan dan menjaga ketinggian
   autopilot(dt, t) {
-    // Lihat ke depan agar tidak menabrak lereng di jalur terbang
-    let ground = groundHeightAt(this.pos.x, this.pos.z);
-    for (let d = 60; d <= 300; d += 60) {
-      ground = Math.max(ground, groundHeightAt(this.pos.x - Math.sin(this.yaw) * d, this.pos.z - Math.cos(this.yaw) * d));
-    }
-    const targetY = Math.min(ground + 60, CONFIG.player.maxAltitude - 10);
+    // Ketinggian jelajah dari dunia aktif (Bumi: di atas lereng di depan, angkasa: gelombang pelan)
+    const targetY = Worlds.active.autopilotTargetY(this.pos.x, this.pos.z, this.yaw, t);
     const pitchIn = clamp((targetY - this.pos.y) * 0.05, -0.5, 1);
     const yawIn = Math.sin(t * 0.23) * 0.45;
     this.update(dt, pitchIn, yawIn);
-    if (this.pos.y < ground + 35) this.pos.y = ground + 35;
+    const ground = groundHeightAt(this.pos.x, this.pos.z);
+    if (this.pos.y < ground + 35) this.pos.y = ground + 35;   // jaminan tidak menabrak (attract mode tanpa tabrakan)
   },
 };
 
@@ -1663,7 +1728,7 @@ const imod = (a, n) => ((a % n) + n) % n;
 /* =====================================================================
    DUNIA - terrain ber-potong yang di-recycle, laut, langit, matahari, fog, cahaya
    ===================================================================== */
-const World = {
+const Terrain = {
   C: CONFIG.world.chunkSize,
   S: CONFIG.world.chunkSegments,
   R: Q.chunkRadius,
@@ -1833,11 +1898,10 @@ const World = {
     for (let d = 0; d <= 600; d += 25) {
       for (let lat = -60; lat <= 60; lat += 30) maxH = Math.max(maxH, this.heightAt(lat, -d));
     }
-    return clamp(Math.max(CONFIG.player.startAltitude, maxH + 35), 0, CONFIG.player.maxAltitude - 15);
+    return clamp(Math.max(CONFIG.player.startAltitude, maxH + 35), 0, Worlds.active.maxY - 15);
   },
 };
-World.init();
-groundHeightAt = (x, z) => Math.max(World.heightAt(x, z), CONFIG.world.waterLevel);
+Terrain.init();
 
 // Konversi hex ke nilai sRGB mentah untuk shader yang tidak memakai konversi ruang warna three.js
 const srgbVec3 = (hex) => {
@@ -1854,8 +1918,9 @@ const Env = {
     this.sunDir.set(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)).normalize();
 
     // Fog dengan warna sama persis dengan horizon langit
-    const fogFar = World.viewDistance * 0.97;
-    scene.fog = new THREE.Fog(S.horizon, fogFar * S.fogNearFactor, fogFar);
+    const fogFar = Terrain.viewDistance * 0.97;
+    this.earthFog = new THREE.Fog(S.horizon, fogFar * S.fogNearFactor, fogFar);
+    scene.fog = this.earthFog;
     camera.far = fogFar * 1.3;
     camera.updateProjectionMatrix();
 
@@ -1919,7 +1984,7 @@ const Env = {
     scene.add(this.sun, this.sun.target);
 
     // Laut: satu bidang besar yang mengikuti pemain
-    const size = (World.N + 2) * World.C;
+    const size = (Terrain.N + 2) * Terrain.C;
     const waterGeo = new THREE.PlaneGeometry(size, size, 1, 1);
     waterGeo.rotateX(-Math.PI / 2);
     this.water = new THREE.Mesh(waterGeo, new THREE.MeshPhongMaterial({
@@ -1930,17 +1995,32 @@ const Env = {
     scene.add(this.water);
   },
 
-  update() {
+  // Cahaya per dunia: Bumi (matahari hangat dan langit biru), angkasa (matahari jauh, ambient biru gelap)
+  setLighting(kind) {
+    const L = CONFIG.light;
+    if (kind === 'space') {
+      this.sun.color.setHex(0xfff1dc); this.sun.intensity = 3.0;
+      this.hemi.color.setHex(0x223355); this.hemi.groundColor.setHex(0x05060a); this.hemi.intensity = 0.55;
+    } else {
+      this.sun.color.setHex(L.sunColor); this.sun.intensity = L.sunIntensity;
+      this.hemi.color.setHex(L.hemiSky); this.hemi.groundColor.setHex(L.hemiGround); this.hemi.intensity = L.hemiIntensity;
+    }
+  },
+  // Shadow camera berpusat pada pemain: frustum kecil sehingga tajam dan murah
+  followLight() {
     const p = Player.pos;
-    // Shadow camera berpusat pada pemain: frustum kecil sehingga tajam dan murah
     this.sun.position.copy(p).addScaledVector(this.sunDir, 300);
     this.sun.target.position.copy(p);
+  },
+  update() {
+    const p = Player.pos;
+    this.followLight();
     this.sky.position.copy(camera.position);
     const d = camera.far * 0.7;
     this.sunMesh.position.copy(camera.position).addScaledVector(this.sunDir, d);
     this.sunMesh.scale.setScalar(d * 0.035);
     this.sunMesh.lookAt(camera.position);
-    const C = World.C;
+    const C = Terrain.C;
     this.water.position.x = Math.round(p.x / C) * C;
     this.water.position.z = Math.round(p.z / C) * C;
   },
@@ -2015,9 +2095,7 @@ const Clouds = {
   },
 };
 Env.init();
-Clouds.init(Q.clouds, World.viewDistance);
-World.reset(CONFIG.seed);
-Player.reset();
+Clouds.init(Q.clouds, Terrain.viewDistance);
 
 /* =====================================================================
    PELURU - pool berbasis InstancedMesh dan array bertipe, tanpa alokasi per frame
@@ -2334,7 +2412,7 @@ const Enemies = {
     const ang = Player.yaw + (lateralAngle !== undefined ? lateralAngle : randRange(-0.9, 0.9));
     const d = dist !== undefined ? dist : randRange(D[0], D[1]);
     const x = Player.pos.x - Math.sin(ang) * d, z = Player.pos.z - Math.cos(ang) * d;
-    const y = clamp(Player.pos.y + randRange(-20, 35), groundHeightAt(x, z) + 30, CONFIG.player.maxAltitude - 15);
+    const y = clamp(Player.pos.y + randRange(-20, 35), groundHeightAt(x, z) + 30, Worlds.active.maxY - 15);
     return this.spawn(type, x, y, z);
   },
 
@@ -2382,7 +2460,7 @@ const Enemies = {
       // Jaga di atas terrain
       const ground = groundHeightAt(e.pos.x, e.pos.z) + (e.type === 'drone' ? 8 : 18);
       if (e.pos.y < ground) e.pos.y = damp(e.pos.y, ground, 6, dt) + 0.2;
-      if (e.pos.y > CONFIG.player.maxAltitude + 20) e.pos.y = CONFIG.player.maxAltitude + 20;
+      if (e.pos.y > Worlds.active.maxY + 20) e.pos.y = Worlds.active.maxY + 20;
 
       // Efek kena: berdenyut sebentar
       if (e.hpBarTimer > 0) e.hpBarTimer -= dt;
@@ -2618,7 +2696,7 @@ const Asteroids = {
     const x = P.x - Math.sin(ang) * d, z = P.z - Math.cos(ang) * d;
     const r = A.sizes[size].radius;
     const y = dy !== undefined ? P.y + dy
-      : clamp(P.y + randRange(-45, 55), groundHeightAt(x, z) + r + 12, CONFIG.player.maxAltitude - r);
+      : clamp(P.y + randRange(-45, 55), groundHeightAt(x, z) + r + 12, Worlds.active.maxY - r);
     return this.spawn(size, x, y, z);
   },
 
@@ -2734,7 +2812,7 @@ function updateCombat() {
       }
     }
     if (hit) continue;
-    if (by < groundHeightAt(bx, bz) || Obstacles.collide(bx, by, bz, 0) >= 0) {
+    if (Worlds.active.solidAt(bx, by, bz)) {
       pb.kill(i);
       Events.emit('bulletImpact', bx, by, bz);
     }
@@ -2822,7 +2900,7 @@ const Obstacles = {
   _rocks: [new THREE.Color(0x8a7f72), new THREE.Color(0x7a7064), new THREE.Color(0x968b7c)],
 
   init() {
-    const count = World.slots.length * this.maxPer;
+    const count = Terrain.slots.length * this.maxPer;
     const geo = new THREE.CylinderGeometry(0.55, 1, 1, 6, 1);
     geo.translate(0, 0.5, 0);
     this.mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }), count);
@@ -2833,11 +2911,11 @@ const Obstacles = {
     _m4.makeScale(0, 0, 0);
     for (let i = 0; i < count; i++) { this.mesh.setMatrixAt(i, _m4); this.mesh.setColorAt(i, this._rocks[0]); }
     scene.add(this.mesh);
-    World.onChunkRebuilt = (slot) => this.placeForChunk(slot);
+    Terrain.onChunkRebuilt = (slot) => this.placeForChunk(slot);
   },
 
   placeForChunk(slot) {
-    const O = CONFIG.obstacles, C = World.C, cx = slot.cx, cz = slot.cz;
+    const O = CONFIG.obstacles, C = Terrain.C, cx = slot.cx, cz = slot.cz;
     for (let k = 0; k < this.maxPer; k++) {
       const idx = slot.index * this.maxPer + k, d = idx * 5;
       this.data[d + 4] = 0;
@@ -2845,7 +2923,7 @@ const Obstacles = {
       if (hash3(cx, cz, 10 + k) < O.pillarChance) {
         const x = cx * C + (0.15 + 0.7 * hash3(cx, cz, 20 + k)) * C;
         const z = cz * C + (0.15 + 0.7 * hash3(cx, cz, 30 + k)) * C;
-        const ground = World.heightAt(x, z);
+        const ground = Terrain.heightAt(x, z);
         if (ground > 4 ? ground < 95 : false) {
           const base = ground - 4, height = 45 + 70 * hash3(cx, cz, 40 + k), radius = 6 + 5 * hash3(cx, cz, 50 + k);
           this.data[d] = x; this.data[d + 1] = z; this.data[d + 2] = base; this.data[d + 3] = height; this.data[d + 4] = radius;
@@ -2882,7 +2960,7 @@ function updateTerrainCollision(dt) {
   const O = CONFIG.obstacles, P = Player.pos, pr = CONFIG.player.radius;
   Player.invuln = Math.max(0, Player.invuln - dt);
 
-  const ground = World.heightAt(P.x, P.z);
+  const ground = Terrain.heightAt(P.x, P.z);
   let crashed = false;
   if (P.y - pr * 0.6 < ground) {
     P.y = ground + pr * 0.6 + 4;
@@ -2912,10 +2990,93 @@ function updateTerrainCollision(dt) {
   for (let k = 1; k <= 3; k++) {
     const dist = (O.warnAhead / 3) * k;
     const x = P.x + Player.forward.x * dist, y = P.y + Player.forward.y * dist, z = P.z + Player.forward.z * dist;
-    if (y - World.heightAt(x, z) < 6) { warn = true; break; }
+    if (y - Terrain.heightAt(x, z) < 6) { warn = true; break; }
   }
   const lowOverLand = ground > CONFIG.world.waterLevel + 1 ? P.y - ground < 12 : false;
   Player.warning = warn || lowOverLand;
+}
+
+/* =====================================================================
+   DUNIA (antarmuka) - EarthWorld dan SpaceWorld dengan antarmuka yang sama:
+   activate, deactivate, reset, update, follow, groundHeightAt, solidAt, collide,
+   safeStartAltitude, autopilotTargetY, minY, maxY dan features. Sistem HP, damage,
+   peluru, pickup, HUD dan input tidak bergantung pada jenis dunia.
+   ===================================================================== */
+const EarthWorld = {
+  id: 'earth',
+  label: 'Atmosfer Bumi',
+  minY: CONFIG.world.waterLevel + CONFIG.player.minAltitude,
+  maxY: CONFIG.player.maxAltitude,
+  features: { rings: true, clouds: true },
+  objects() {
+    return [...Terrain.slots.map((s) => s.mesh), Env.water, Env.sky, Env.sunMesh, Clouds.mesh, Obstacles.mesh];
+  },
+  activate() {
+    for (const o of this.objects()) o.visible = true;
+    scene.background = null;
+    const fogFar = Terrain.viewDistance * 0.97;
+    scene.fog = Env.earthFog;
+    camera.far = fogFar * 1.3;
+    camera.updateProjectionMatrix();
+    Env.setLighting('earth');
+    FX.setFog(scene.fog.near, scene.fog.far);
+  },
+  deactivate() { for (const o of this.objects()) o.visible = false; },
+  reset(seed) { Terrain.reset(seed); },
+  update(dt, P) { Terrain.update(P.x, P.z); Clouds.update(dt, P.x, P.z); },
+  follow() { Env.update(); },
+  groundHeightAt(x, z) { return Math.max(Terrain.heightAt(x, z), CONFIG.world.waterLevel); },
+  // Peluru berhenti di tanah, air atau pilar
+  solidAt(x, y, z) { return y < this.groundHeightAt(x, z) || Obstacles.collide(x, y, z, 0) >= 0; },
+  collide(dt) { updateTerrainCollision(dt); },
+  safeStartAltitude() { return Terrain.safeStartAltitude(); },
+  // Ketinggian jelajah autopilot: di atas lereng tertinggi di depan
+  autopilotTargetY(x, z, yaw) {
+    let ground = this.groundHeightAt(x, z);
+    for (let d = 60; d <= 300; d += 60) ground = Math.max(ground, this.groundHeightAt(x - Math.sin(yaw) * d, z - Math.cos(yaw) * d));
+    return Math.min(ground + 60, this.maxY - 10);
+  },
+};
+
+const SpaceWorld = {
+  id: 'space',
+  label: 'Luar Angkasa',
+  minY: -3000,
+  maxY: 3000,
+  features: { rings: false, clouds: false },
+  viewDistance: 6000,
+  objects() { return []; },
+  activate() {
+    for (const o of this.objects()) o.visible = true;
+    scene.background = new THREE.Color(0x02030a);
+    scene.fog = null;
+    camera.far = this.viewDistance;
+    camera.updateProjectionMatrix();
+    Env.setLighting('space');
+    FX.setFog(this.viewDistance * 0.5, this.viewDistance);
+    Player.warning = false;
+  },
+  deactivate() { for (const o of this.objects()) o.visible = false; },
+  reset() {},
+  update() {},
+  follow() { Env.followLight(); },
+  groundHeightAt() { return -1e9; },
+  solidAt() { return false; },
+  collide(dt) { Player.invuln = Math.max(0, Player.invuln - dt); },
+  safeStartAltitude() { return 0; },
+  autopilotTargetY(x, z, yaw, t) { return Math.sin(t * 0.12) * 40; },
+};
+Worlds.list = { earth: EarthWorld, space: SpaceWorld };
+
+// Ganti dunia aktif: yang lama disembunyikan, yang baru diaktifkan lalu di-reset
+function setActiveWorld(id, seed) {
+  const next = Worlds.list[id] || SpaceWorld;
+  if (Worlds.active) { if (Worlds.active !== next) Worlds.active.deactivate(); }
+  Worlds.active = next;
+  for (const w of Object.values(Worlds.list)) if (w !== next) w.deactivate();
+  next.activate();
+  next.reset(seed);
+  Rings.reset();
 }
 
 /* =====================================================================
@@ -2984,7 +3145,7 @@ const Rings = {
     const x = ax - Math.sin(yaw) * d, z = az - Math.cos(yaw) * d;
     let ground = groundHeightAt(x, z);
     ground = Math.max(ground, groundHeightAt(x + 15, z), groundHeightAt(x - 15, z), groundHeightAt(x, z + 15), groundHeightAt(x, z - 15));
-    const y = clamp(ay + randRange(-25, 25), ground + R.radius + 18, CONFIG.player.maxAltitude - 25);
+    const y = clamp(ay + randRange(-25, 25), ground + R.radius + 18, Worlds.active.maxY - 25);
     this.place(x, y, z, yaw);
   },
 
@@ -3088,7 +3249,7 @@ const Pickups = {
   spawnAhead(type) {
     const ang = Player.yaw + randRange(-0.35, 0.35), d = randRange(300, 420);
     const x = Player.pos.x - Math.sin(ang) * d, z = Player.pos.z - Math.cos(ang) * d;
-    const y = clamp(Player.pos.y + randRange(-15, 15), groundHeightAt(x, z) + 15, CONFIG.player.maxAltitude - 20);
+    const y = clamp(Player.pos.y + randRange(-15, 15), groundHeightAt(x, z) + 15, Worlds.active.maxY - 20);
     return this.place(type, x, y, z);
   },
 
@@ -3280,6 +3441,9 @@ const FX = {
   count(n) { return Math.max(1, Math.round(n * this.density)); },
   reset() { this.fire.reset(); this.smoke.reset(); this.hasPrev = false; for (const k in this.acc) this.acc[k] = 0; },
   setViewport(h) { this.fire.setViewport(h); this.smoke.setViewport(h); },
+  setFog(near, far) {
+    for (const ps of [this.fire, this.smoke]) { ps.material.uniforms.uFogNear.value = near; ps.material.uniforms.uFogFar.value = far; }
+  },
   // Ambil jumlah partikel dari akumulator laju (partikel per detik), tidak bergantung frame rate
   take(key, rate, dt) {
     this.acc[key] += rate * this.density * dt;
@@ -3440,6 +3604,10 @@ Events.on('pickup', (type, pos) => {
   else if (type === 'heart') ringBurst(pos, 30, 1, 0.35, 0.5);
   else ringBurst(pos, 30, 1, 0.6, 0.15);
 });
+
+// Dunia awal mengikuti pengaturan Medan default (angkasa bila belum pernah diubah)
+setActiveWorld(Save.settings.terrain, CONFIG.seed);
+Player.reset();
 
 /* =====================================================================
    KAMERA CHASE - lag pada rotasi (bukan posisi) agar jarak ke pesawat stabil
@@ -3887,15 +4055,20 @@ for (let i = 0; i < 6; i++) {
 /* Skor tertinggi di localStorage, selalu dibungkus try/catch */
 // Skor tertinggi disimpan lewat modul Save
 const HighScore = {
-  get value() { return Save.data.highScore; },
+  get value() { return Save.data.highScores[Worlds.active.id]; },
+  of(worldId) { return Save.data.highScores[worldId] || 0; },
   submit(score) {
-    const s = Math.floor(score);
-    if (s <= Save.data.highScore) return false;
-    Save.data.highScore = s;
+    const s = Math.floor(score), id = Worlds.active.id;
+    if (s <= Save.data.highScores[id]) return false;
+    Save.data.highScores[id] = s;
     Save.save();
     return true;
   },
 };
+function renderTitleBest() {
+  document.getElementById('title-best').textContent = `Angkasa ${fmtInt(HighScore.of('space'))}, Bumi ${fmtInt(HighScore.of('earth'))}`;
+  for (const el of document.querySelectorAll('[data-best]')) el.textContent = fmtInt(HighScore.of(el.dataset.best));
+}
 
 function showBanner(text, duration = 1800) {
   hud.banner.textContent = text;
@@ -4138,7 +4311,7 @@ function setState(next) {
   ui.btnPause.classList.toggle('hidden', !(next === 'playing' || next === 'countdown'));
   ui.countdown.classList.toggle('hidden', next !== 'countdown');
   countdownShown = -1;
-  if (next === 'menu') document.getElementById('title-best').textContent = fmtInt(HighScore.value);
+  if (next === 'menu') renderTitleBest();
   Events.emit('state', next, prev);
   UI.focusFirst();
 }
@@ -4225,7 +4398,7 @@ const chooseSeed = () => (Debug.fixedSeed !== null ? Debug.fixedSeed
 function resetWorld(seed) {
   Game.seed = seed;
   rand.reseed(seed);
-  World.reset(seed);
+  Worlds.active.reset(seed);
   Player.reset();
   Asteroids.reset();
   Enemies.reset();
@@ -4301,7 +4474,27 @@ function onButton(btn, fn) {
     fn();
   });
 }
-onButton(ui.btnStart, startGame);
+// MULAI membuka PILIH MEDAN; kartu medan default sudah tersorot sehingga bisa langsung Enter
+const terrainScreen = document.getElementById('screen-terrain');
+function openTerrainSelect() {
+  renderTitleBest();
+  UI.openOverlay(terrainScreen);
+  const pick = terrainScreen.querySelector(`.tcard[data-world="${Save.settings.terrain}"]`);
+  for (const c of terrainScreen.querySelectorAll('.tcard')) c.classList.toggle('selected', c === pick);
+  pick.focus();
+}
+function chooseTerrain(id) {
+  Settings.set('terrain', id);            // pilihan diingat sebagai medan default
+  UI.closeOverlay(true);
+  if (Worlds.active.id !== id) { Game.hasSession = false; setActiveWorld(id, chooseSeed()); resetWorld(chooseSeed()); }
+  startGame();
+}
+for (const c of terrainScreen.querySelectorAll('.tcard')) {
+  onButton(c, () => chooseTerrain(c.dataset.world));
+  c.addEventListener('focus', () => { for (const o of terrainScreen.querySelectorAll('.tcard')) o.classList.toggle('selected', o === c); });
+}
+onButton(document.getElementById('btn-terrain-back'), () => UI.closeOverlay());
+onButton(ui.btnStart, openTerrainSelect);
 onButton(ui.btnContinue, continueGame);
 onButton(ui.btnAbout, () => UI.openOverlay(ui.about));
 onButton(ui.btnAboutBack, () => UI.closeOverlay());
@@ -4315,7 +4508,7 @@ onButton(ui.btnPauseMenu, () => UI.confirm('KE MENU UTAMA?', 'Sesi ini tetap ter
 onButton(ui.confirmNo, () => UI.closeOverlay());
 onButton(ui.confirmYes, () => { const fn = UI.confirmAction; UI.confirmAction = null; UI.closeOverlay(true); if (fn) fn(); });
 document.getElementById('about-version').textContent = CONFIG.version;
-document.getElementById('title-best').textContent = fmtInt(HighScore.value);
+renderTitleBest();
 
 // Isi layar game over dan simpan skor tertinggi
 Events.on('gameover', () => {
@@ -4328,7 +4521,7 @@ Events.on('gameover', () => {
   document.getElementById('go-wave').textContent = Waves.wave;
   document.getElementById('go-combo').textContent = Combo.best;
   document.getElementById('go-rings').textContent = Rings.passed;
-  document.getElementById('title-best').textContent = fmtInt(HighScore.value);
+  renderTitleBest();
 });
 
 /* =====================================================================
@@ -4350,6 +4543,10 @@ const Settings = {
     document.getElementById('fps').classList.toggle('hidden', !s.showFps);
     if (Game.muted !== s.muted) { Game.muted = s.muted; ui.btnMute.setAttribute('aria-pressed', String(Game.muted)); }
     Sfx.applyVolumes();
+    // Medan default berubah di menu tanpa sesi: attract mode langsung pindah dunia
+    if (Game.state === 'menu') {
+      if (!Game.hasSession) { if (Worlds.active.id !== s.terrain) { setActiveWorld(s.terrain, chooseSeed()); resetWorld(chooseSeed()); CamRig.reset(); } }
+    }
     Events.emit('settings', s);
   },
   set(key, value) {
@@ -4395,7 +4592,7 @@ const Settings = {
         Save.reset();
         this.apply();
         this.render();
-        document.getElementById('title-best').textContent = fmtInt(HighScore.value);
+        renderTitleBest();
         UI.openOverlay(this.el);
       }));
     const open = () => { this.render(); UI.openOverlay(this.el); };
@@ -4670,10 +4867,8 @@ const AutoInput = {
   pitch: 0, yaw: 0, nitro: false, fire: false,
   update(t) {
     const P = Player.pos;
-    let ground = groundHeightAt(P.x, P.z);
-    for (let d = 50; d <= 250; d += 50) {
-      ground = Math.max(ground, groundHeightAt(P.x - Math.sin(Player.yaw) * d, P.z - Math.cos(Player.yaw) * d));
-    }
+    const cruise = Worlds.active.autopilotTargetY(P.x, P.z, Player.yaw, t);
+    const ground = cruise - 55;
     // Bidik musuh terdekat bila ada, selain itu meliuk
     let target = null, best = Infinity;
     for (let k = 0; k < Enemies.list.length; k++) {
@@ -4714,10 +4909,10 @@ function update(dt) {
       Player.updateNitro(dt, ctl.nitro);
       Player.update(dt, ctl.pitch, ctl.yaw);
       Player.updateInvuln(dt);
-      updateTerrainCollision(dt);
+      Worlds.active.collide(dt);
     }
     Weapons.update(dt, Player.alive ? ctl.fire : false);
-    Rings.update(dt);
+    if (Worlds.active.features.rings) Rings.update(dt);
     Pickups.update(dt);
     Waves.update(dt);
     Enemies.update(dt);
@@ -4750,13 +4945,12 @@ function update(dt) {
   if (Game.simulating) {
     Player.updateVisuals(dt, Game.stateTime);
     FX.update(dt);
-    World.update(Player.pos.x, Player.pos.z);
-    Clouds.update(dt, Player.pos.x, Player.pos.z);
+    Worlds.active.update(dt, Player.pos);
     Asteroids.update(dt);
   }
   if (Game.state !== 'paused') {
     CamRig.update(dt);
-    Env.update();
+    Worlds.active.follow();   // langit, cahaya dan latar mengikuti kamera dan pemain
   }
   Sfx.update(dt);   // selalu dipanggil: saat jeda gain mesin turun ke 0
 }
@@ -4814,6 +5008,7 @@ window.__game = {
       invulnerable: Player.invuln > 0,
       highScore: HighScore.value,
       difficulty: Game.difficultyKey,
+      world: Worlds.active.id,
       settings: { ...Save.settings },
     };
   },
@@ -4824,6 +5019,9 @@ window.__game = {
     if (Game.state === 'menu') { if (!Game.hasSession) resetWorld(chooseSeed()); }
   },
   start() { if (Game.state === 'menu') startGame(); },
+  // Mulai di medan tertentu tanpa melewati layar pilih medan (untuk uji)
+  startIn(worldId) { if (Game.state === 'menu') chooseTerrain(worldId); },
+  world() { return Worlds.active.id; },
   // Lewati transisi mulai (untuk uji): langsung ke state playing
   skipTransition() {
     if (Game.state !== 'starting') return;
