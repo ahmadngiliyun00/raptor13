@@ -4,9 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RAPTOR13</title>
+<meta name="description" content="RAPTOR13 - game pesawat 3D arcade di browser. Superioritas udara dimulai dari sini.">
+<link rel="icon" href="data:,">
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1622; }
-  canvas { display: block; }
+  :root {
+    --ui-fg: #e8eef5;
+    --ui-dim: #9fb0c2;
+    --ui-accent: #ff9a3c;
+    --ui-good: #5fe08a;
+    --ui-bad: #ff4d4d;
+    --ui-panel: rgba(10, 18, 28, 0.55);
+    --ui-line: rgba(200, 220, 240, 0.25);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #0b1622; color: var(--ui-fg);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    user-select: none; -webkit-user-select: none;
+  }
+  #game { position: fixed; inset: 0; }
+  #game canvas { display: block; width: 100%; height: 100%; }
+  .hidden { display: none !important; }
+
+  /* Layar overlay (judul, jeda, game over) */
+  .screen {
+    position: fixed; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px; padding: 24px;
+    background: radial-gradient(ellipse at center, rgba(8, 14, 24, 0.35) 0%, rgba(8, 14, 24, 0.82) 100%);
+    text-align: center; z-index: 20;
+  }
+  .btn {
+    font: 700 18px/1 inherit; font-family: inherit; letter-spacing: 0.18em;
+    color: #0b1622; background: var(--ui-accent); border: 0; border-radius: 4px;
+    padding: 14px 34px; cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.12); }
+  .btn.secondary { background: transparent; color: var(--ui-fg); border: 1px solid var(--ui-line); }
 </style>
 <script type="importmap">
 {
@@ -17,35 +51,180 @@
 </script>
 </head>
 <body>
+<div id="game"></div>
+
+<!-- Layar judul -->
+<div id="screen-title" class="screen">
+  <h1>RAPTOR13</h1>
+  <button id="btn-start" class="btn" type="button">MULAI</button>
+</div>
+
+<!-- Layar jeda -->
+<div id="screen-pause" class="screen hidden">
+  <h2>JEDA</h2>
+  <button id="btn-resume" class="btn" type="button">LANJUT</button>
+</div>
+
+<!-- Layar game over -->
+<div id="screen-over" class="screen hidden">
+  <h2>PESAWAT JATUH</h2>
+  <button id="btn-restart" class="btn" type="button">MAIN LAGI</button>
+</div>
+
 <script type="module">
 import * as THREE from 'three';
 
-// Scaffold: kubus berputar untuk memastikan importmap dan renderer berjalan.
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+/* =====================================================================
+   CONFIG - semua konstanta gameplay dan kualitas ada di sini
+   ===================================================================== */
+const QUALITY_PRESETS = {
+  rendah: { shadows: false, shadowMapSize: 1024, maxParticles: 900,  particleDensity: 0.5,  chunkRadius: 2, pixelRatioMax: 1,   antialias: false },
+  sedang: { shadows: true,  shadowMapSize: 1024, maxParticles: 1800, particleDensity: 0.8,  chunkRadius: 3, pixelRatioMax: 1.5, antialias: true },
+  tinggi: { shadows: true,  shadowMapSize: 2048, maxParticles: 3200, particleDensity: 1.0,  chunkRadius: 4, pixelRatioMax: 2,   antialias: true },
+};
+
+const CONFIG = {
+  qualityPreset: 'sedang',     // rendah | sedang | tinggi (bisa ditimpa lewat ?kualitas=)
+  maxDelta: 0.05,              // batas atas delta time per frame (detik)
+  seed: 1337,                  // seed awal dunia dan gameplay
+  camera: { fov: 68, near: 0.5 },
+};
+
+// Pilih preset kualitas dari URL bila ada, misalnya index.html?kualitas=rendah
+(() => {
+  try {
+    const q = new URLSearchParams(location.search).get('kualitas');
+    if (q && QUALITY_PRESETS[q]) CONFIG.qualityPreset = q;
+  } catch (err) { /* abaikan, pakai default */ }
+})();
+const Q = QUALITY_PRESETS[CONFIG.qualityPreset];
+
+/* =====================================================================
+   UTIL - matematika kecil dan random ber-seed
+   ===================================================================== */
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+// Damping eksponensial yang tidak bergantung frame rate
+const damp = (a, b, lambda, dt) => a + (b - a) * (1 - Math.exp(-lambda * dt));
+const wrapAngle = (a) => { a = (a + Math.PI) % (Math.PI * 2); if (a < 0) a += Math.PI * 2; return a - Math.PI; };
+const dampAngle = (a, b, lambda, dt) => a + wrapAngle(b - a) * (1 - Math.exp(-lambda * dt));
+const smoothstep = (e0, e1, x) => { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+
+// mulberry32: PRNG kecil ber-seed, dipakai untuk semua random gameplay agar bisa diuji ulang
+function makeRng(seed) {
+  let s = seed >>> 0;
+  const rng = () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  rng.reseed = (n) => { s = n >>> 0; };
+  return rng;
+}
+const rand = makeRng(CONFIG.seed);
+const randRange = (a, b) => a + (b - a) * rand();
+
+/* =====================================================================
+   RENDERER, SCENE, KAMERA
+   ===================================================================== */
+const container = document.getElementById('game');
+const renderer = new THREE.WebGLRenderer({ antialias: Q.antialias, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pixelRatioMax, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
+container.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 1.5, 4);
-camera.lookAt(0, 0, 0);
+scene.background = new THREE.Color(0x9ec4e6);
+const camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, window.innerWidth / window.innerHeight, CONFIG.camera.near, 2000);
+camera.position.set(0, 3, 10);
 
-scene.add(new THREE.HemisphereLight(0x9cc8ff, 0x4a6a3a, 1.2));
-const sun = new THREE.DirectionalLight(0xffe2b8, 2.5);
-sun.position.set(3, 5, 2);
-scene.add(sun);
+function onResize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pixelRatioMax, 2));
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', onResize);
 
-const cube = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshLambertMaterial({ color: 0x5d6a78 })
-);
-scene.add(cube);
+/* =====================================================================
+   GAME STATE - menu, play, pause, dying, gameover
+   ===================================================================== */
+const ui = {
+  title: document.getElementById('screen-title'),
+  pause: document.getElementById('screen-pause'),
+  over: document.getElementById('screen-over'),
+  btnStart: document.getElementById('btn-start'),
+  btnResume: document.getElementById('btn-resume'),
+  btnRestart: document.getElementById('btn-restart'),
+};
 
-renderer.setAnimationLoop((t) => {
-  cube.rotation.set(t * 0.0005, t * 0.0008, 0);
+const Game = {
+  state: 'menu',
+  time: 0,          // waktu bermain sesi ini (detik)
+  stateTime: 0,     // lama berada di state sekarang
+  frame: 0,
+};
+
+function setState(next) {
+  Game.state = next;
+  Game.stateTime = 0;
+  ui.title.classList.toggle('hidden', next !== 'menu');
+  ui.pause.classList.toggle('hidden', next !== 'pause');
+  ui.over.classList.toggle('hidden', next !== 'gameover');
+}
+
+// Reset seluruh state sesi tanpa membuat ulang objek (semua pool dipakai ulang)
+function resetSession() {
+  Game.time = 0;
+}
+
+function startGame() {
+  resetSession();
+  setState('play');
+}
+
+function togglePause() {
+  if (Game.state === 'play') setState('pause');
+  else if (Game.state === 'pause') setState('play');
+}
+
+function restartGame() {
+  if (Game.state === 'menu') return;
+  startGame();
+}
+
+ui.btnStart.addEventListener('click', () => { ui.btnStart.blur(); startGame(); });
+ui.btnResume.addEventListener('click', () => { ui.btnResume.blur(); togglePause(); });
+ui.btnRestart.addEventListener('click', () => { ui.btnRestart.blur(); restartGame(); });
+
+/* =====================================================================
+   UPDATE DAN RENDER
+   ===================================================================== */
+function update(dt) {
+  Game.stateTime += dt;
+  if (Game.state === 'play') Game.time += dt;
+}
+
+function render() {
   renderer.render(scene, camera);
-});
+}
+
+/* =====================================================================
+   MAIN LOOP - requestAnimationFrame dengan delta time yang di-clamp
+   ===================================================================== */
+let lastTime = performance.now();
+function frame(now) {
+  const dt = Math.min(Math.max((now - lastTime) / 1000, 0), CONFIG.maxDelta);
+  lastTime = now;
+  Game.frame++;
+  update(dt);
+  render();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>
