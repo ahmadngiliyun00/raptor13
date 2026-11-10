@@ -56,6 +56,7 @@ async function start(page, { seed = 1234, enemies = false, god = true } = {}) {
     window.__game.debug.setGod(g);
   }, [seed, enemies, god]);
   await page.click('#btn-start');
+  await page.evaluate(() => window.__game.skipTransition());
   await expect.poll(async () => (await snap(page)).state).toBe('playing');
 }
 
@@ -73,6 +74,7 @@ test('halaman termuat tanpa console error dan menampilkan layar judul', async ({
   await expect(page.locator('.logo')).toHaveText('RAPTOR13');
   await expect(page.locator('.tagline')).toHaveText('Superioritas udara dimulai dari sini.');
   await expect(page.locator('#btn-start')).toHaveText('MULAI');
+  await expect(page.locator('#btn-continue')).toBeHidden();   // belum ada sesi yang dijeda
   await expect(page.locator('#hud')).toBeHidden();
   const s = await snap(page);
   expect(s.state).toBe('menu');
@@ -90,6 +92,49 @@ test('klik MULAI memulai game dan membuka audio', async ({ page }) => {
   expect(b.position.z).toBeLessThan(a.position.z);   // pesawat selalu maju otomatis
   expect(b.health).toBe(100);
   expect(b.audio).toBe('running');
+});
+
+test('S1: Enter menembak lewat alur nyata, peluru bertambah, bergerak dan terlihat', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => { window.__game.setSeed(77); window.__game.debug.setGod(true); window.__game.debug.setEnemiesEnabled(false); });
+  await page.click('#btn-start');                       // klik mouse seperti pemain sungguhan
+  await expect.poll(async () => (await snap(page)).state, { timeout: 4000 }).toBe('playing');
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);   // tombol tidak lagi fokus
+  const before = await snap(page);
+  await page.keyboard.down('Enter');
+  await page.waitForTimeout(300);
+  const b1 = await dbg(page, 'bullets');
+  const contrast = await dbg(page, 'bulletPixelContrast');
+  await page.waitForTimeout(120);
+  const b2 = await dbg(page, 'bullets');
+  await page.keyboard.up('Enter');
+  const after = await snap(page);
+  expect(after.shotsFired).toBeGreaterThan(before.shotsFired);
+  expect(b1.list.length).toBeGreaterThan(0);
+  expect(b1.instances).toBe(b1.list.length);
+  expect(b1.visible).toBe(true);
+  // Bergerak: peluru yang sama berpindah lebih dari 5 unit dalam 120 ms
+  const moved = b1.list.some((a) => {
+    const b = b2.list.find((x) => x.id === a.id);
+    return b ? Math.hypot(b.world.x - a.world.x, b.world.y - a.world.y, b.world.z - a.world.z) > 5 : false;
+  });
+  expect(moved).toBe(true);
+  // Terlihat: ada di layar dan piksel di posisinya berubah nyata saat peluru dirender
+  expect(b1.list.some((b) => b.onScreen)).toBe(true);
+  expect(contrast).toBeGreaterThan(40);
+});
+
+test('S1: Enter dengan e.code kosong tetap terbaca dan di-preventDefault', async ({ page }) => {
+  await start(page);
+  const r = await page.evaluate(() => {
+    const ev = new KeyboardEvent('keydown', { key: 'Enter', code: '', cancelable: true });
+    window.dispatchEvent(ev);
+    return ev.defaultPrevented;
+  });
+  expect(r).toBe(true);
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: '' })));
+  expect((await snap(page)).shotsFired).toBeGreaterThan(0);
 });
 
 test('W dan S mengubah pitch dan ketinggian', async ({ page }) => {
@@ -251,10 +296,10 @@ test('M mematikan dan menyalakan suara', async ({ page }) => {
   await start(page);
   await page.keyboard.press('KeyM');
   expect((await snap(page)).muted).toBe(true);
-  await expect(page.locator('#mute-badge')).toBeVisible();
+  await expect(page.locator('#btn-mute')).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('KeyM');
   expect((await snap(page)).muted).toBe(false);
-  await expect(page.locator('#mute-badge')).toBeHidden();
+  await expect(page.locator('#btn-mute')).toHaveAttribute('aria-pressed', 'false');
 });
 
 test('health 0 memicu ledakan dan layar game over, lalu bisa main lagi', async ({ page }) => {

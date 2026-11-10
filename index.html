@@ -426,8 +426,8 @@ const CONFIG = {
   },
   weapons: {
     fireInterval: 0.09,        // cooldown antar tembakan (detik)
-    bulletSpeed: 330,          // ditambah kecepatan pesawat
-    bulletLife: 1.4,
+    bulletSpeed: 250,          // ditambah kecepatan pesawat; cukup lambat agar jejaknya terlihat
+    bulletLife: 1.7,
     damage: 10,                // damage per peluru pemain
     maxPlayerBullets: 80,
     convergeDistance: 160,     // jarak titik temu peluru kedua sayap, juga posisi reticle
@@ -1754,13 +1754,41 @@ const _vc = new THREE.Vector3();
 const _one = new THREE.Vector3(1, 1, 1);
 const AXIS_Z = new THREE.Vector3(0, 0, 1);
 
+// Kapsul memanjang sepanjang sumbu z (Lathe), dipakai untuk peluru bercahaya
+function capsuleGeometry(radius, length, seg = 8) {
+  const pts = [];
+  const half = length / 2;
+  for (let i = 0; i <= 6; i++) {   // ujung belakang membulat, badan lurus, ujung depan membulat
+    const a = (i / 6) * (Math.PI / 2);
+    pts.push(new THREE.Vector2(Math.sin(a) * radius, -half - radius + (1 - Math.cos(a)) * radius));
+  }
+  for (let i = 0; i <= 6; i++) {
+    const a = (i / 6) * (Math.PI / 2);
+    pts.push(new THREE.Vector2(Math.cos(a) * radius, half + Math.sin(a) * radius));
+  }
+  const g = new THREE.LatheGeometry(pts, seg);
+  g.rotateX(Math.PI / 2);
+  return g;
+}
+
 class BulletPool {
-  constructor(max, geometry, material) {
+  // glowMaterial opsional: halo additive lebih besar yang berbagi matriks dengan inti peluru
+  constructor(max, geometry, material, glowMaterial = null, glowScale = 2.4) {
     this.max = max;
     this.mesh = new THREE.InstancedMesh(geometry, material, max);
     this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
+    this.glow = null;
+    if (glowMaterial) {
+      this.glow = new THREE.InstancedMesh(geometry, glowMaterial, max);
+      this.glow.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      this.glow.count = 0;
+      this.glow.frustumCulled = false;
+      this.glow.renderOrder = 4;
+      this.glowScale = new THREE.Vector3(glowScale, glowScale, 1.25);
+      scene.add(this.glow);
+    }
     this.p = new Float32Array(max * 3);
     this.prev = new Float32Array(max * 3);
     this.v = new Float32Array(max * 3);
@@ -1811,12 +1839,18 @@ class BulletPool {
       _va.set(this.p[i3], this.p[i3 + 1], this.p[i3 + 2]);
       _qa.set(this.q[i4], this.q[i4 + 1], this.q[i4 + 2], this.q[i4 + 3]);
       _m4.compose(_va, _qa, _one);
-      this.mesh.setMatrixAt(n++, _m4);
+      this.mesh.setMatrixAt(n, _m4);
+      if (this.glow) { _m4.compose(_va, _qa, this.glowScale); this.glow.setMatrixAt(n, _m4); }
+      n++;
     }
     this.mesh.count = n;
     this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.glow) { this.glow.count = n; this.glow.instanceMatrix.needsUpdate = true; }
   }
-  reset() { this.active.fill(0); this.alive = 0; this.cursor = 0; this.mesh.count = 0; }
+  reset() {
+    this.active.fill(0); this.alive = 0; this.cursor = 0; this.mesh.count = 0;
+    if (this.glow) this.glow.count = 0;
+  }
 }
 
 /* =====================================================================
@@ -1825,8 +1859,10 @@ class BulletPool {
 const Weapons = {
   pool: new BulletPool(
     CONFIG.weapons.maxPlayerBullets,
-    new THREE.BoxGeometry(0.34, 0.34, 5.5),
-    new THREE.MeshBasicMaterial({ color: 0xb4f8ff })
+    capsuleGeometry(0.22, 4.2),
+    new THREE.MeshBasicMaterial({ color: 0xeaffff, fog: false }),
+    new THREE.MeshBasicMaterial({ color: 0x38d8ff, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }),
+    2.6
   ),
   cooldown: 0,
   side: 0,
@@ -3099,7 +3135,7 @@ FX.setViewport(renderer.domElement.height);
 // Efek berbasis event
 Events.on('shot', (pos, dir) => {
   const v = Player.vel;
-  FX.fire.emit(pos.x, pos.y, pos.z, v.x + dir.x * 20, v.y + dir.y * 20, v.z + dir.z * 20, 0.06, 1.6, 0, 1, 0.92, 0.65, 1, 0, 0);
+  FX.fire.emit(pos.x, pos.y, pos.z, v.x + dir.x * 20, v.y + dir.y * 20, v.z + dir.z * 20, 0.08, 2.6, 4, 0.55, 0.95, 1, 1, 0, 0);
 });
 Events.on('enemyShot', (pos) => FX.fire.emit(pos.x, pos.y, pos.z, 0, 0, 0, 0.08, 2.2, 0, 1, 0.4, 0.2, 1, 0, 0));
 Events.on('enemyHit', (x, y, z) => FX.sparks(x, y, z, 9));
@@ -4031,14 +4067,29 @@ function menuKeyHandler(code) {
 }
 window.addEventListener('pointerdown', () => { UI.usingKeyboard = false; }, { passive: true });
 
+// Sebagian keyboard virtual, IME atau remote desktop mengirim e.code kosong:
+// pakai e.key sebagai cadangan agar Enter, Spasi dan tombol huruf tetap terbaca
+const KEY_TO_CODE = {
+  Enter: 'Enter', ' ': 'Space', Spacebar: 'Space', Escape: 'Escape', Esc: 'Escape',
+  ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown', ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight',
+};
+function keyCode(e) {
+  if (e.code) return e.code;
+  const k = e.key || '';
+  if (KEY_TO_CODE[k]) return KEY_TO_CODE[k];
+  if (k.length === 1) { const up = k.toUpperCase(); if (up >= 'A' ? up <= 'Z' : false) return 'Key' + up; }
+  return '';
+}
+
 function onKeyDown(e) {
-  if (!GAME_CODES.has(e.code)) return;
-  if (PREVENT_CODES.has(e.code)) e.preventDefault();
-  Keyboard.down[e.code] = true;
+  const code = keyCode(e);
+  if (!GAME_CODES.has(code)) return;
+  if (PREVENT_CODES.has(code)) e.preventDefault();
+  Keyboard.down[code] = true;
   if (e.repeat) return;
   onAudioGesture();
-  if (menuKeyHandler(e.code)) return;
-  switch (e.code) {
+  if (menuKeyHandler(code)) return;
+  switch (code) {
     case 'KeyP':
     case 'Escape':
       togglePause();
@@ -4053,9 +4104,10 @@ function onKeyDown(e) {
 }
 
 function onKeyUp(e) {
-  if (!GAME_CODES.has(e.code)) return;
-  if (PREVENT_CODES.has(e.code)) e.preventDefault();
-  Keyboard.down[e.code] = false;
+  const code = keyCode(e);
+  if (!GAME_CODES.has(code)) return;
+  if (PREVENT_CODES.has(code)) e.preventDefault();
+  Keyboard.down[code] = false;
 }
 
 // Reset semua tombol saat jendela kehilangan fokus agar tidak ada tombol "nyangkut"
@@ -4267,6 +4319,38 @@ window.__game = {
       const e = Enemies.spawnAhead(type, dist, lateral);
       if (e) { if (dy !== undefined) e.pos.y = Player.pos.y + dy; }
       return !!e;
+    },
+    // Posisi dunia dan layar peluru pemain yang aktif (untuk uji: bergerak dan terlihat)
+    bullets() {
+      const pb = Weapons.pool, out = [];
+      for (let i = 0; i < pb.max; i++) {
+        if (!pb.active[i]) continue;
+        _vc.set(pb.p[i * 3], pb.p[i * 3 + 1], pb.p[i * 3 + 2]);
+        const world = { x: round2(_vc.x), y: round2(_vc.y), z: round2(_vc.z) };
+        _vc.project(camera);
+        out.push({ id: i, world, screen: { x: round2((_vc.x + 1) * 0.5 * window.innerWidth), y: round2((1 - _vc.y) * 0.5 * window.innerHeight) }, onScreen: _vc.z < 1 ? Math.max(Math.abs(_vc.x), Math.abs(_vc.y)) <= 1 : false });
+      }
+      return { instances: pb.mesh.count, visible: pb.mesh.visible, list: out };
+    },
+    // Bukti visual: render dua kali (dengan dan tanpa peluru) lalu bandingkan piksel di posisi layar
+    // peluru pertama yang terlihat. Mengembalikan selisih warna maksimum (0..255).
+    bulletPixelContrast() {
+      const info = this.bullets().list.find((b) => b.onScreen);
+      if (!info) return 0;
+      const gl = renderer.getContext(), pr = renderer.getPixelRatio();
+      const cx = Math.round(info.screen.x * pr), cy = Math.round(renderer.domElement.height - info.screen.y * pr);
+      const W = 9, x0 = Math.max(0, cx - 4), y0 = Math.max(0, cy - 4);
+      const read = () => { const buf = new Uint8Array(W * W * 4); renderer.render(scene, camera); gl.readPixels(x0, y0, W, W, gl.RGBA, gl.UNSIGNED_BYTE, buf); return buf; };
+      const pb = Weapons.pool;
+      const on = read();
+      pb.mesh.visible = false; if (pb.glow) pb.glow.visible = false;
+      const off = read();
+      pb.mesh.visible = true; if (pb.glow) pb.glow.visible = true;
+      let max = 0;
+      for (let i = 0; i < on.length; i += 4) {
+        max = Math.max(max, Math.abs(on[i] - off[i]), Math.abs(on[i + 1] - off[i + 1]), Math.abs(on[i + 2] - off[i + 2]));
+      }
+      return max;
     },
     spawnAsteroid(size = 'large', dist = 200, lateral = 0, dy = 0) { return !!Asteroids.spawnAhead(size, dist, lateral, dy); },
     // Daftar asteroid aktif terurut dari yang terdekat
