@@ -929,6 +929,54 @@ const JET_STAB = { rootX: 0.5, rootLE: 3.05, rootTE: 4.75, tipXLE: 1.95, tipLE: 
 const JET_FIN = { rootX: 0, rootLE: 1.85, rootTE: 3.75, tipXLE: 1.5, tipLE: 3.2, tipXTE: 1.4, tipTE: 3.95, thickRoot: 0.08, thickTip: 0.03, ns: 6, nc: 10, bottomScale: 1 };
 const JET_FIN_CANT = 25;   // derajat, sirip miring keluar
 
+// Persegi panjang bersudut membulat (untuk mulut intake dan glow nozzle), berpusat di titik asal
+function roundedRectShape(w, h, r) {
+  const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y);
+  s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  return s;
+}
+
+// Kanopi: profil tetesan diputar setengah lingkaran (Lathe), lalu dijadikan elipsoid pipih memanjang
+function canopyGeometry(length, width, height) {
+  const pts = [];
+  const n = 14;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const r = Math.pow(Math.sin(Math.PI * Math.pow(t, 0.8)), 0.7);
+    pts.push(new THREE.Vector2(r, -length / 2 + t * length));
+  }
+  const g = new THREE.LatheGeometry(pts, 16, Math.PI / 2, Math.PI);   // hanya separuh atas
+  g.rotateX(Math.PI / 2);   // sumbu putar menjadi sumbu z (depan ke belakang)
+  g.scale(width / 2, height, 1);
+  g.computeVertexNormals();
+  return g;
+}
+
+// Api nitro: tetesan memanjang ke +z (Lathe), panjang 2,2 unit
+function flameGeometry() {
+  const prof = [[0.2, 0], [0.24, 0.12], [0.21, 0.5], [0.15, 1.0], [0.08, 1.6], [0.0, 2.2]];
+  const g = new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 10);
+  g.rotateX(Math.PI / 2);
+  return g;
+}
+
+// Saluran intake dan nozzle: tabung persegi bersudut membulat, ujung terbuka
+const JET_INTAKE = [
+  { z: -1.05, w: 0.2, ht: 0.26, hb: 0.26, n: 4.5, chine: 0 },
+  { z: -0.75, w: 0.22, ht: 0.27, hb: 0.27, n: 4.5, chine: 0 },
+  { z: 0.2, w: 0.2, ht: 0.24, hb: 0.24, n: 4, chine: 0 },
+  { z: 1.0, w: 0.1, ht: 0.16, hb: 0.16, n: 3, chine: 0 },
+];
+const JET_NOZZLE = [
+  { z: 3.95, w: 0.3, ht: 0.24, hb: 0.24, n: 4.5, chine: 0 },
+  { z: 4.4, w: 0.29, ht: 0.21, hb: 0.21, n: 5, chine: 0 },
+  { z: 4.72, w: 0.27, ht: 0.17, hb: 0.17, n: 5, chine: 0 },
+];
+
 // Penampang badan jet (z dari hidung ke ekor)
 const JET_FUSELAGE = [
   { z: -4.62, w: 0.02, ht: 0.012, hb: 0.01, y: -0.17, n: 2.4, chine: 1 },
@@ -964,8 +1012,13 @@ function createPlayerJet() {
   };
 
   const matSkin = new THREE.MeshStandardMaterial({ color: 0x5e6976, metalness: 0.45, roughness: 0.5 });
+  const matCanopy = new THREE.MeshStandardMaterial({ color: 0x16202b, metalness: 0.3, roughness: 0.12 });
+  const matDuct = new THREE.MeshStandardMaterial({ color: 0x2c3138, metalness: 0.5, roughness: 0.55, side: THREE.DoubleSide });
+  const matHole = new THREE.MeshBasicMaterial({ color: 0x07090c });
   const matGlow = new THREE.MeshBasicMaterial({ color: 0xff9a40 });
   const matFlame = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
+  const matNavL = new THREE.MeshBasicMaterial({ color: 0xff3030 });
+  const matNavR = new THREE.MeshBasicMaterial({ color: 0x30ff70 });
 
   add(loftFuselage(JET_FUSELAGE, 24, { tipLength: 0.12 }), matSkin);
 
@@ -983,7 +1036,37 @@ function createPlayerJet() {
     m.position.set(side * 0.56, 0.22, 0);
   }
 
+  // Kanopi gelembung oval memanjang, sekitar 0,22 sampai 0,44 L dari hidung
+  add(canopyGeometry(2.1, 0.66, 0.36), matCanopy).position.set(0, 0.33, -1.6);
+
+  // Intake di kiri dan kanan dekat pangkal sayap, bagian dalam gelap
+  const intakeGeo = loftFuselage(JET_INTAKE, 16, { openStart: true, openEnd: true });
+  const mouthGeo = new THREE.ShapeGeometry(roundedRectShape(0.38, 0.48, 0.1), 4);
+  mouthGeo.rotateY(Math.PI);   // menghadap ke depan (-z)
+  for (const side of [1, -1]) {
+    add(intakeGeo, matDuct).position.set(side * 0.8, -0.1, 0);
+    add(mouthGeo, matHole, false).position.set(side * 0.8, -0.1, -0.98);
+  }
+
+  // Dua nozzle 2D pipih dengan glow redup yang menyala terang saat nitro
+  const nozzleGeo = loftFuselage(JET_NOZZLE, 16, { openStart: true, openEnd: true });
+  const glowGeo = new THREE.ShapeGeometry(roundedRectShape(0.46, 0.28, 0.08), 4);
+  const flameGeo = flameGeometry();
   const flames = [];
+  for (const side of [1, -1]) {
+    add(nozzleGeo, matDuct).position.set(side * 0.48, -0.02, 0);
+    add(glowGeo, matGlow, false).position.set(side * 0.48, -0.02, 4.6);
+    const f = add(flameGeo, matFlame, false);
+    f.position.set(side * 0.48, -0.02, 4.66);
+    f.scale.set(1, 1, 0.45);
+    flames.push(f);
+  }
+
+  // Lampu navigasi merah (kiri) dan hijau (kanan) di ujung sayap
+  const navGeo = new THREE.SphereGeometry(0.07, 8, 6);
+  add(navGeo, matNavL, false).position.set(-2.84, 0.08, 1.75);
+  add(navGeo, matNavR, false).position.set(2.84, 0.08, 1.75);
+
   const light = new THREE.PointLight(0xff8a3a, 0, 28, 2);
   light.position.set(0, 0.2, 5.4);
   root.add(light);
@@ -992,7 +1075,7 @@ function createPlayerJet() {
     root, body, flames, light, matGlow, matFlame,
     nozzles: [new THREE.Vector3(-0.48, -0.02, 4.75), new THREE.Vector3(0.48, -0.02, 4.75)],
     guns: [new THREE.Vector3(-1.25, -0.12, -1.2), new THREE.Vector3(1.25, -0.12, -1.2)],
-    wingtips: [new THREE.Vector3(-2.9, 0.1, 1.9), new THREE.Vector3(2.9, 0.1, 1.9)],
+    wingtips: [new THREE.Vector3(-2.8, 0.08, 2.0), new THREE.Vector3(2.8, 0.08, 2.0)],
   };
 }
 
