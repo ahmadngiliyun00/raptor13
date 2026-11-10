@@ -151,6 +151,16 @@
     margin: -9px 0 0 -8px; filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.7));
   }
   .ind.gunship { border-left-color: #ffa040; }
+  .dmgnum {
+    position: absolute; left: 0; top: 0; display: none; white-space: nowrap;
+    font-weight: 900; font-size: 15px; color: #fff3b0; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  }
+  .dmgnum.kill { color: #ff9a5a; font-size: 18px; }
+  #critical {
+    position: absolute; left: 50%; top: 68%; transform: translateX(-50%);
+    padding: 4px 14px; color: #ffd6d6; font-weight: 900; letter-spacing: 0.3em; font-size: 13px;
+    border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.5s steps(2) infinite;
+  }
   .hpfloat {
     position: absolute; left: 0; top: 0; width: 46px; height: 5px; margin: -2px 0 0 -23px; display: none;
     background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: 2px; overflow: hidden;
@@ -203,6 +213,8 @@
   <div id="vignette"></div>
   <div id="indicators"></div>
   <div id="hpbars"></div>
+  <div id="dmgnums"></div>
+  <div id="critical" class="hidden">INTEGRITAS KRITIS</div>
   <div id="reticle"><i id="hitmark"></i></div>
   <div class="hud-block tl">
     <div class="row"><span class="label">INTEGRITAS</span><span id="hp-text" class="num">100</span></div>
@@ -479,6 +491,7 @@ const CONFIG = {
     respawnDelay: 2.0,         // detik sebelum respawn setelah meledak
     respawnInvuln: 3.0,        // kebal sementara setelah respawn (pesawat berkedip)
     startInvuln: 1.5,          // kebal di awal sesi
+    criticalHp: 0.25,          // di bawah fraksi HP ini muncul peringatan berkedip dan bunyi
   },
 };
 
@@ -3179,7 +3192,7 @@ Events.on('state', (next) => {
 const Sfx = {
   ctx: null, master: null, noise: null, ready: false,
   engine: null, nitro: null,
-  lastShot: 0, lastHit: 0, lastTick: 0, warnTimer: 0,
+  lastShot: 0, lastHit: 0, lastTick: 0, warnTimer: 0, critTimer: 0,
   cache: { ef: -1, e2: -1, sub: -1, flt: -1, eg: -1, ng: -1, nf: -1 },
 
   init() {
@@ -3260,6 +3273,11 @@ const Sfx = {
     this.setParam('ng', this.nitro.gain.gain, on ? nf * A.nitroVolume : 0, 0.004, 0.08);
     this.setParam('nf', this.nitro.filter.frequency, 600 + nf * 1100, 10);
 
+    // Bip peringatan HP kritis
+    if (on ? Player.health.ratio < CONFIG.player.criticalHp : false) {
+      this.critTimer -= dt;
+      if (this.critTimer <= 0) { this.critTimer = 0.6; this.tone('triangle', 660, 520, 0.16, 0.07); }
+    } else this.critTimer = 0;
     // Bip peringatan medan
     if (on ? Player.warning : false) {
       this.warnTimer -= dt;
@@ -3394,6 +3412,41 @@ for (let i = 0; i < 8; i++) {
   hud.indicators.push(el);
   hud.indicatorType.push('');
 }
+// Pool angka damage melayang (bisa dimatikan di Pengaturan)
+hud.showDamageNumbers = true;
+hud.dmgNums = [];
+for (let i = 0; i < 14; i++) {
+  const el = document.createElement('div');
+  el.className = 'dmgnum';
+  $('dmgnums').appendChild(el);
+  hud.dmgNums.push({ el, pos: new THREE.Vector3(), t: 0, ox: 0, shown: false });
+}
+hud.dmgNext = 0;
+Events.on('damage', (entity, dealt, source, pos) => {
+  if (!hud.showDamageNumbers || source !== 'pemain') return;
+  const d = hud.dmgNums[hud.dmgNext];
+  hud.dmgNext = (hud.dmgNext + 1) % hud.dmgNums.length;
+  d.pos.copy(pos);
+  d.ox = (frand() - 0.5) * 60;   // sebaran horizontal di layar agar angka tidak bertumpuk
+  d.t = 0.8;
+  d.el.textContent = Math.round(dealt);
+  d.el.className = entity.health.dead ? 'dmgnum kill' : 'dmgnum';
+});
+function updateDamageNumbers(dt) {
+  for (let i = 0; i < hud.dmgNums.length; i++) {
+    const d = hud.dmgNums[i];
+    if (d.t <= 0) { if (d.shown) { d.shown = false; d.el.style.display = 'none'; } continue; }
+    d.t -= dt;
+    _vc.copy(d.pos).project(camera);
+    if (_vc.z > 1 || d.t <= 0) { if (d.shown) { d.shown = false; d.el.style.display = 'none'; } continue; }
+    if (!d.shown) { d.shown = true; d.el.style.display = 'block'; }
+    const x = ((_vc.x + 1) * 0.5 * window.innerWidth + d.ox).toFixed(1);
+    const y = ((1 - _vc.y) * 0.5 * window.innerHeight - (0.8 - d.t) * 40 - 18).toFixed(1);
+    d.el.style.transform = 'translate(' + x + 'px, ' + y + 'px) translate(-50%, -50%)';
+    d.el.style.opacity = Math.min(1, d.t * 3).toFixed(2);
+  }
+}
+
 // Pool bar HP melayang di atas target yang baru terkena damage
 hud.hpBars = [];
 for (let i = 0; i < 10; i++) {
@@ -3511,12 +3564,15 @@ function updateHud(dt) {
 
   // Vignette merah: kilat saat kena, berdenyut saat kesehatan rendah
   hud.vignetteLevel = Math.max(0, hud.vignetteLevel - dt * 1.8);
-  const lowPulse = Player.alive ? (hp < 0.3 ? 0.25 + 0.2 * Math.sin(Game.time * 6) : 0) : 0;
+  const lowPulse = Player.alive ? (hp < CONFIG.player.criticalHp ? 0.25 + 0.2 * Math.sin(Game.time * 6) : 0) : 0;
   v = Math.round(Math.max(hud.vignetteLevel, lowPulse) * 50) / 50;
   if (changed('vig', v)) hud.vignette.style.opacity = v;
 
   updateIndicators();
   updateHpBars();
+  updateDamageNumbers(dt);
+  v = Game.state === 'playing' ? (Player.alive ? hp < CONFIG.player.criticalHp : false) : false;
+  if (changed('critical', v)) $('critical').classList.toggle('hidden', !v);
 
   hud.hitTimer = Math.max(0, hud.hitTimer - dt);
   v = hud.hitTimer > 0 ? (hud.hitKill ? 'on kill' : 'on') : '';
