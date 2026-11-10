@@ -109,6 +109,22 @@
   .credits { display: grid; grid-template-columns: auto auto; gap: 6px 18px; margin: 0; text-align: left; }
   .credits dt { color: var(--ui-dim); }
   .credits dd { margin: 0; font-weight: 700; }
+  /* Jeda: adegan tetap terlihat tetapi diburamkan dan digelapkan */
+  .screen.pause { background: rgba(6, 10, 18, 0.35); -webkit-backdrop-filter: blur(6px) brightness(0.75); backdrop-filter: blur(6px) brightness(0.75); }
+  @supports not ((backdrop-filter: blur(6px)) or (-webkit-backdrop-filter: blur(6px))) {
+    .screen.pause { background: rgba(6, 10, 18, 0.72); }
+  }
+  .screen.pause .card { max-width: 380px; }
+  .screen.pause .menu-list .btn { text-align: center; }
+  .row-btns { display: flex; gap: 12px; }
+  #countdown {
+    position: fixed; inset: 0; z-index: 25; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    pointer-events: none; background: rgba(6, 10, 18, 0.2);
+  }
+  #countdown-num { font-size: clamp(90px, 20vw, 180px); font-weight: 900; font-style: italic; color: #fff;
+    text-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 0 40px rgba(255, 154, 60, 0.7); }
+  #countdown small { color: var(--ui-dim); letter-spacing: 0.2em; }
+
   /* Toolbar pojok kanan atas */
   #toolbar {
     position: fixed; z-index: 40; display: flex; gap: 8px;
@@ -120,6 +136,7 @@
   }
   .tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
   .tool svg path:first-child { fill: currentColor; }
+  #btn-pause svg path { stroke: none; }
   .tool .cross { display: none; }
   .tool[aria-pressed="true"] .wave { display: none; }
   .tool[aria-pressed="true"] .cross { display: inline; stroke: var(--ui-bad); }
@@ -291,6 +308,9 @@
 </div>
 <!-- Toolbar pojok kanan atas: tersedia di menu dan saat bermain -->
 <div id="toolbar" class="hidden">
+  <button id="btn-pause" class="tool hidden" type="button" aria-label="Jeda" title="Jeda (P)">
+    <svg viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg>
+  </button>
   <button id="btn-mute" class="tool" type="button" aria-label="Suara" aria-pressed="false" title="Suara (M)">
     <svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path class="wave" d="M16 8.5c1.4 1 1.4 6 0 7M18.5 6c2.8 2.2 2.8 9.8 0 12"/><path class="cross" d="M16 9l5 6M21 9l-5 6"/></svg>
   </button>
@@ -333,11 +353,32 @@
 </div>
 
 <!-- Layar jeda -->
-<div id="screen-pause" class="screen hidden">
-  <h2>JEDA</h2>
-  <button id="btn-resume" class="btn" type="button">LANJUTKAN</button>
-  <button id="btn-pause-restart" class="btn secondary" type="button">ULANG DARI AWAL</button>
-  <p class="hint"><kbd>P</kbd> atau <kbd>Esc</kbd> lanjut, <kbd>R</kbd> ulang, <kbd>M</kbd> suara</p>
+<div id="screen-pause" class="screen pause hidden">
+  <div class="card">
+    <h2>DIJEDA</h2>
+    <nav class="menu-list" aria-label="Menu jeda">
+      <button id="btn-resume" class="btn" type="button">LANJUTKAN</button>
+      <button id="btn-pause-restart" class="btn secondary" type="button">MULAI ULANG</button>
+      <button id="btn-pause-settings" class="btn secondary" type="button">PENGATURAN</button>
+      <button id="btn-pause-menu" class="btn secondary" type="button">MENU UTAMA</button>
+    </nav>
+    <p class="hint"><kbd>P</kbd> atau <kbd>Esc</kbd> lanjut, <kbd>M</kbd> suara</p>
+  </div>
+</div>
+
+<!-- Hitung mundur sebelum simulasi berjalan lagi -->
+<div id="countdown" class="hidden"><span id="countdown-num">3</span><small>Esc untuk batal</small></div>
+
+<!-- Dialog konfirmasi kustom (bukan window.confirm) -->
+<div id="screen-confirm" class="screen pause hidden" role="dialog" aria-modal="true">
+  <div class="card">
+    <h2 id="confirm-title">YAKIN?</h2>
+    <p id="confirm-text" class="hint"></p>
+    <div class="row-btns">
+      <button id="confirm-no" class="btn secondary" type="button">BATAL</button>
+      <button id="confirm-yes" class="btn" type="button">YA</button>
+    </div>
+  </div>
 </div>
 
 <!-- Layar game over -->
@@ -3352,6 +3393,9 @@ const Sfx = {
   resume() {
     if (this.ctx?.state === 'suspended') this.ctx.resume().catch(() => {});
   },
+  suspend() {
+    if (this.ctx?.state === 'running') this.ctx.suspend().catch(() => {});
+  },
 
   setMuted(m) {
     if (!this.ready) return;
@@ -3471,10 +3515,13 @@ const Sfx = {
   },
 };
 
+// Audio ikut dijeda bersama simulasi
+Events.on('state', (next) => { if (next === 'paused') Sfx.suspend(); else Sfx.resume(); });
+
 // Dipanggil pada setiap interaksi pengguna (klik dan tombol)
 function onAudioGesture() {
   Sfx.init();
-  Sfx.resume();
+  if (Game.state !== 'paused') Sfx.resume();   // saat jeda audio tetap ditahan
 }
 
 const distToPlayer = (p) => Math.sqrt(p.distanceToSquared(Player.pos));
@@ -3798,6 +3845,14 @@ const ui = {
   btnPauseRestart: document.getElementById('btn-pause-restart'),
   btnRestart: document.getElementById('btn-restart'),
   btnOverMenu: document.getElementById('btn-over-menu'),
+  btnPauseSettings: document.getElementById('btn-pause-settings'),
+  btnPauseMenu: document.getElementById('btn-pause-menu'),
+  btnPause: document.getElementById('btn-pause'),
+  confirm: document.getElementById('screen-confirm'),
+  confirmYes: document.getElementById('confirm-yes'),
+  confirmNo: document.getElementById('confirm-no'),
+  countdown: document.getElementById('countdown'),
+  countdownNum: document.getElementById('countdown-num'),
   btnMute: document.getElementById('btn-mute'),
 };
 
@@ -3836,14 +3891,39 @@ function setState(next) {
   const hudOn = next === 'playing' || next === 'paused' || next === 'countdown' || next === 'starting';
   document.getElementById('hud').classList.toggle('hidden', !hudOn);
   ui.toolbar.classList.toggle('hidden', next === 'boot' || next === 'preview');
+  ui.btnPause.classList.toggle('hidden', !(next === 'playing' || next === 'countdown'));
+  ui.countdown.classList.toggle('hidden', next !== 'countdown');
+  countdownShown = -1;
   if (next === 'menu') document.getElementById('title-best').textContent = fmtInt(HighScore.value);
   Events.emit('state', next, prev);
   UI.focusFirst();
 }
 
+let countdownShown = -1;
+// Angka hitung mundur besar dengan animasi dan bip
+function updateCountdown() {
+  if (Game.state !== 'countdown') return;
+  const n = Math.max(1, Math.ceil(CONFIG.countdownTime - Game.stateTime));
+  if (n === countdownShown) return;
+  countdownShown = n;
+  ui.countdownNum.textContent = n;
+  ui.countdownNum.animate([{ transform: 'scale(1.6)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: 0.25 }, { transform: 'scale(0.9)', opacity: 0.85 }],
+    { duration: 1000, easing: 'ease-out' });
+  Sfx.tone('square', 660, 660, 0.09, 0.06);
+}
+
 /* Overlay (Tentang, Pengaturan, dialog) di atas layar dasar (menu atau jeda) */
 const UI = {
   overlay: null,
+  confirmAction: null,
+  // Dialog konfirmasi kustom; fokus awal pada BATAL agar Enter tidak langsung menyetujui
+  confirm(title, text, onYes) {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-text').textContent = text;
+    this.confirmAction = onYes;
+    this.openOverlay(ui.confirm);
+    if (this.usingKeyboard) ui.confirmNo.focus();
+  },
   base() { return Game.state === 'menu' ? ui.title : Game.state === 'paused' ? ui.pause : null; },
   openOverlay(el) {
     if (this.overlay) this.overlay.classList.add('hidden');
@@ -3983,9 +4063,13 @@ onButton(ui.btnAbout, () => UI.openOverlay(ui.about));
 onButton(ui.btnAboutBack, () => UI.closeOverlay());
 onButton(ui.btnResume, togglePause);
 onButton(ui.btnRestart, restartGame);
-onButton(ui.btnPauseRestart, restartGame);
 onButton(ui.btnOverMenu, goToMenu);
 onButton(ui.btnMute, toggleMute);
+onButton(ui.btnPause, () => { if (Game.state === 'playing') togglePause(); });
+onButton(ui.btnPauseRestart, () => UI.confirm('MULAI ULANG?', 'Progres sesi ini akan hilang dan dunia baru dibuat.', restartGame));
+onButton(ui.btnPauseMenu, () => UI.confirm('KE MENU UTAMA?', 'Sesi ini tetap tersimpan selama halaman terbuka dan bisa dilanjutkan dari menu.', goToMenu));
+onButton(ui.confirmNo, () => UI.closeOverlay());
+onButton(ui.confirmYes, () => { const fn = UI.confirmAction; UI.confirmAction = null; UI.closeOverlay(true); if (fn) fn(); });
 document.getElementById('about-version').textContent = CONFIG.version;
 document.getElementById('title-best').textContent = fmtInt(HighScore.value);
 
@@ -4092,10 +4176,11 @@ function onKeyDown(e) {
   switch (code) {
     case 'KeyP':
     case 'Escape':
-      togglePause();
+      if (!UI.overlay) togglePause();
       break;
     case 'KeyR':
-      restartGame();
+      if (Game.state === 'paused') ui.btnPauseRestart.click();
+      else restartGame();
       break;
     case 'KeyM':
       toggleMute();
@@ -4175,6 +4260,7 @@ function update(dt) {
   Game.stateTime += dt;
   if (Game.state === 'countdown') {
     // Hitung mundur sebelum simulasi berjalan lagi
+    updateCountdown();
     if (Game.stateTime >= CONFIG.countdownTime) setState('playing');
   } else if (Game.state === 'playing') {
     Game.time += dt;
