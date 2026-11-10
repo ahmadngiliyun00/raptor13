@@ -790,6 +790,8 @@ function buildPlayerModel() {
   };
 }
 
+// Pembuat jet untuk pratinjau (diganti model baru mulai J2)
+const createPlayerJet = buildPlayerModel;
 const PlayerModel = buildPlayerModel();
 scene.add(PlayerModel.root);
 
@@ -3355,7 +3357,7 @@ function setState(next) {
   ui.title.classList.toggle('hidden', next !== 'menu');
   ui.pause.classList.toggle('hidden', next !== 'paused');
   ui.over.classList.toggle('hidden', next !== 'gameover');
-  document.getElementById('hud').classList.toggle('hidden', next === 'menu' || next === 'gameover' || next === 'boot');
+  document.getElementById('hud').classList.toggle('hidden', next === 'menu' || next === 'gameover' || next === 'boot' || next === 'preview');
   Events.emit('state', next, prev);
 }
 
@@ -3565,6 +3567,7 @@ const AutoInput = {
 let lastDt = 0;
 function update(dt) {
   lastDt = dt;
+  if (Game.state === 'preview') { JetPreview.update(dt); return; }
   Controls.update();
   Game.stateTime += dt;
   if (Game.state === 'countdown') {
@@ -3617,7 +3620,7 @@ function update(dt) {
 function render() {
   Weapons.pool.sync();
   Enemies.bullets.sync();
-  if (Game.state !== 'menu') { if (Game.state !== 'boot') updateHud(lastDt); }
+  if (Game.state === 'playing' || Game.state === 'paused' || Game.state === 'countdown' || Game.state === 'starting') updateHud(lastDt);
   renderer.render(scene, camera);
 }
 
@@ -3747,6 +3750,61 @@ window.__game = {
 };
 
 /* =====================================================================
+   PRATINJAU JET - alat kerja, aktif hanya dengan ?jetpreview=1
+   Menampilkan jet saja di latar polos dengan cahaya netral dan kamera orbit.
+   ===================================================================== */
+const JET_PREVIEW = (() => { try { return new URLSearchParams(location.search).get('jetpreview') === '1'; } catch (err) { return false; } })();
+const JetPreview = {
+  group: null, jet: null, view: 'orbit', angle: 0.6, hidden: [],
+  // Posisi kamera per sudut pandang (pesawat di titik asal, hidung ke -Z)
+  views: {
+    side: [17, 0.6, 0], top: [0, 19, 0.01], front: [0, 1.2, -17], rear: [0, 1.2, 17],
+    three_quarter_front: [11, 5, -12], three_quarter_rear: [11, 5, 12], chase: [0, 4.2, 14],
+  },
+  start() {
+    setState('preview');
+    for (const o of scene.children) { if (o.visible) { this.hidden.push(o); o.visible = false; } }
+    scene.fog = null;
+    scene.background = new THREE.Color(0x9aa5b1);
+    this.group = new THREE.Group();
+    const hemi = new THREE.HemisphereLight(0xdfe8f2, 0x5a5f66, 1.6);
+    const key = new THREE.DirectionalLight(0xffffff, 2.2);
+    key.position.set(8, 12, 6);
+    const rim = new THREE.DirectionalLight(0xcfe0ff, 0.9);
+    rim.position.set(-8, 4, -10);
+    this.jet = createPlayerJet();
+    this.group.add(hemi, key, rim, this.jet.root);
+    scene.add(this.group);
+    camera.fov = 35;
+    camera.near = 0.1;
+    camera.updateProjectionMatrix();
+    let tris = 0;
+    this.jet.root.traverse((o) => {
+      if (o.isMesh) tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3;
+    });
+    this.triangles = Math.round(tris);
+    window.__jetPreview = {
+      views: Object.keys(this.views),
+      triangles: this.triangles,
+      setView: (name) => { this.view = this.views[name] ? name : 'orbit'; return this.view; },
+      orbit: () => { this.view = 'orbit'; },
+      setNitro: (v) => { this.jet.flames.forEach((f) => f.scale.set(1 + v * 0.5, 1 + v * 0.5, 0.45 + v * 2)); this.jet.matFlame.opacity = 0.3 + 0.6 * v; },
+    };
+  },
+  update(dt) {
+    if (this.view === 'orbit') {
+      this.angle += dt * 0.35;
+      camera.position.set(Math.sin(this.angle) * 17, 5 + Math.sin(this.angle * 0.7) * 3, Math.cos(this.angle) * 17);
+      camera.lookAt(0, 0, 0);
+      return;
+    }
+    const v = this.views[this.view];
+    camera.position.set(v[0], v[1], v[2]);
+    if (this.view === 'chase') camera.lookAt(0, 2, -30); else camera.lookAt(0, 0, 0);
+  },
+};
+
+/* =====================================================================
    MAIN LOOP - requestAnimationFrame dengan delta time yang di-clamp
    ===================================================================== */
 const Perf = { frameMs: 16.7, workMs: 0 };   // rata-rata bergerak (EMA), tanpa alokasi
@@ -3766,7 +3824,10 @@ function frame(now) {
 }
 rafId = requestAnimationFrame(frame);
 // Boot selesai setelah frame pertama dirender: dunia sudah dibangun dan shader dikompilasi
-requestAnimationFrame(() => requestAnimationFrame(() => { if (Game.state === 'boot') setState('menu'); }));
+requestAnimationFrame(() => requestAnimationFrame(() => {
+  if (Game.state !== 'boot') return;
+  if (JET_PREVIEW) JetPreview.start(); else setState('menu');
+}));
 
 // Teardown penuh (misalnya saat game disematkan lalu dilepas). Restart biasa TIDAK memakai ini:
 // restart hanya me-reset pool yang sama sehingga tidak ada objek, listener atau timer yang menumpuk.
