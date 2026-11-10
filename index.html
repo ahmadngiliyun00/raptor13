@@ -945,11 +945,11 @@ const JetTextures = {
 // Penampang badan jet (z dari hidung ke ekor)
 const JET_FUSELAGE = [
   { z: -4.62, w: 0.02, ht: 0.012, hb: 0.01, y: -0.17, n: 2.4, chine: 1 },
-  { z: -4.40, w: 0.11, ht: 0.06, hb: 0.045, y: -0.15, n: 2.4, chine: 1 },
-  { z: -4.02, w: 0.22, ht: 0.13, hb: 0.09, y: -0.12, n: 2.5, chine: 1 },
-  { z: -3.58, w: 0.32, ht: 0.2, hb: 0.13, y: -0.09, n: 2.5, chine: 1 },
-  { z: -3.08, w: 0.41, ht: 0.27, hb: 0.17, y: -0.06, n: 2.6, chine: 1 },
-  { z: -2.55, w: 0.48, ht: 0.33, hb: 0.21, y: -0.03, n: 2.6, chine: 1 },
+  { z: -4.40, w: 0.13, ht: 0.045, hb: 0.035, y: -0.15, n: 2.4, chine: 1.2 },
+  { z: -4.02, w: 0.26, ht: 0.1, hb: 0.07, y: -0.12, n: 2.5, chine: 1.2 },
+  { z: -3.58, w: 0.36, ht: 0.16, hb: 0.11, y: -0.09, n: 2.5, chine: 1.15 },
+  { z: -3.08, w: 0.44, ht: 0.23, hb: 0.15, y: -0.06, n: 2.6, chine: 1.1 },
+  { z: -2.55, w: 0.5, ht: 0.3, hb: 0.2, y: -0.03, n: 2.6, chine: 1.05 },
   { z: -2.07, w: 0.54, ht: 0.38, hb: 0.25, y: -0.01, n: 2.6, chine: 1 },
   { z: -1.50, w: 0.61, ht: 0.44, hb: 0.29, y: 0, n: 2.6, chine: 0.95 },
   { z: -0.90, w: 0.68, ht: 0.49, hb: 0.33, y: 0, n: 2.7, chine: 0.9 },
@@ -957,10 +957,10 @@ const JET_FUSELAGE = [
   { z: 0.60, w: 0.76, ht: 0.54, hb: 0.4, y: 0, n: 2.9, chine: 0.8 },
   { z: 1.50, w: 0.76, ht: 0.5, hb: 0.39, y: 0, n: 3.0, chine: 0.75 },
   { z: 2.40, w: 0.74, ht: 0.45, hb: 0.36, y: 0, n: 3.1, chine: 0.7 },
-  { z: 3.20, w: 0.71, ht: 0.39, hb: 0.32, y: 0, n: 3.2, chine: 0.6 },
-  { z: 3.85, w: 0.67, ht: 0.33, hb: 0.28, y: 0, n: 3.4, chine: 0.5 },
-  { z: 4.30, w: 0.63, ht: 0.28, hb: 0.25, y: 0, n: 3.6, chine: 0.4 },
-  { z: 4.50, w: 0.6, ht: 0.25, hb: 0.23, y: 0, n: 3.6, chine: 0.4 },
+  { z: 3.20, w: 0.74, ht: 0.38, hb: 0.31, y: 0, n: 3.3, chine: 0.6 },
+  { z: 3.85, w: 0.75, ht: 0.32, hb: 0.27, y: 0, n: 3.8, chine: 0.45 },
+  { z: 4.30, w: 0.74, ht: 0.27, hb: 0.24, y: 0, n: 4.2, chine: 0.35 },
+  { z: 4.50, w: 0.72, ht: 0.24, hb: 0.22, y: 0, n: 4.2, chine: 0.3 },
 ];
 
 function createPlayerJet() {
@@ -987,7 +987,7 @@ function createPlayerJet() {
   const matDuct = new THREE.MeshStandardMaterial({ color: 0x3a3f46, metalness: 0.7, roughness: 0.4, envMap: T.env, envMapIntensity: 0.5, side: THREE.DoubleSide });
   const matHole = new THREE.MeshBasicMaterial({ color: 0x07090c });
   const matGlow = new THREE.MeshBasicMaterial({ color: 0xff9a40 });
-  const matFlame = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
+  const matFlame = new THREE.MeshBasicMaterial({ color: 0xff8a2a, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false });
   const matNavL = new THREE.MeshBasicMaterial({ color: 0xff3030 });
   const matNavR = new THREE.MeshBasicMaterial({ color: 0x30ff70 });
 
@@ -1217,7 +1217,7 @@ const Player = {
     const m = this.model, nf = this.nitroFx;
     const flicker = 0.9 + 0.1 * Math.sin(t * 61) + 0.06 * Math.sin(t * 97);
     for (const f of m.flames) f.scale.set(1 + nf * 0.5, 1 + nf * 0.5, (0.45 + nf * 2.0) * flicker);
-    m.matFlame.opacity = 0.3 + 0.6 * nf;
+    m.matFlame.opacity = 0.1 + 0.8 * nf;
     m.light.intensity = nf * CONFIG.light.nitroLightIntensity * flicker;
     m.matGlow.color.lerpColors(this._glowBase, this._glowHot, nf);
   },
@@ -4053,7 +4053,7 @@ const JetPreview = {
       triangles: this.triangles,
       setView: (name) => { this.view = this.views[name] ? name : 'orbit'; return this.view; },
       orbit: () => { this.view = 'orbit'; },
-      setNitro: (v) => { this.jet.flames.forEach((f) => f.scale.set(1 + v * 0.5, 1 + v * 0.5, 0.45 + v * 2)); this.jet.matFlame.opacity = 0.3 + 0.6 * v; },
+      setNitro: (v) => { this.jet.flames.forEach((f) => f.scale.set(1 + v * 0.5, 1 + v * 0.5, 0.45 + v * 2)); this.jet.matFlame.opacity = 0.1 + 0.8 * v; },
     };
   },
   update(dt) {
