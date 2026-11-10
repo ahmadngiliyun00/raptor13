@@ -843,7 +843,8 @@ const Save = {
   sanitize(raw) {
     const d = this.defaults();
     if (!raw || typeof raw !== 'object') return d;
-    const rs = raw.settings && typeof raw.settings === 'object' ? raw.settings : {};
+    const isObj = (v) => (v ? typeof v === 'object' : false);
+    const rs = isObj(raw.settings) ? raw.settings : {};
     for (const k of Object.keys(SETTING_DEFAULTS)) {
       const v = rs[k], def = SETTING_DEFAULTS[k];
       if (typeof v !== typeof def) continue;
@@ -856,11 +857,11 @@ const Save = {
       }
       d.settings[k] = v;
     }
-    const hs = raw.highScores && typeof raw.highScores === 'object' ? raw.highScores : {};
+    const hs = isObj(raw.highScores) ? raw.highScores : {};
     for (const k of Object.keys(d.highScores)) if (Number.isFinite(hs[k])) d.highScores[k] = Math.max(0, Math.floor(hs[k]));
     // Migrasi v1: satu skor tertinggi dari era medan Bumi saja
     if (Number.isFinite(raw.highScore)) d.highScores.earth = Math.max(d.highScores.earth, Math.floor(raw.highScore));
-    const st = raw.stats && typeof raw.stats === 'object' ? raw.stats : {};
+    const st = isObj(raw.stats) ? raw.stats : {};
     for (const k of Object.keys(d.stats)) if (Number.isFinite(st[k])) d.stats[k] = Math.max(0, st[k]);
     return d;
   },
