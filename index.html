@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RAPTOR13</title>
 <meta name="description" content="RAPTOR13 - game pesawat 3D arcade di browser. Superioritas udara dimulai dari sini.">
 <link rel="icon" href="data:,">
@@ -146,6 +146,65 @@
     text-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 0 40px rgba(255, 154, 60, 0.7); }
   #countdown small { color: var(--ui-dim); letter-spacing: 0.2em; }
 
+  /* Mode HP: kontrol sentuh */
+  html { touch-action: manipulation; }
+  #touch { position: fixed; inset: 0; z-index: 15; pointer-events: none; }
+  #touch .tbtn {
+    position: absolute; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none; display: flex; align-items: center; justify-content: center;
+    color: rgba(255, 255, 255, 0.9); background: rgba(20, 30, 44, 0.38); border: 2px solid rgba(255, 255, 255, 0.35);
+    border-radius: 50%; font: 800 13px/1 system-ui, sans-serif; letter-spacing: 0.08em;
+  }
+  #touch .tbtn svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  #touch .tbtn.on { background: rgba(255, 154, 60, 0.55); border-color: #ffd08a; transform: scale(0.94); }
+  .dpad { position: absolute; left: calc(18px + env(safe-area-inset-left)); bottom: calc(18px + env(safe-area-inset-bottom)); width: 196px; height: 196px; }
+  .dpad .tbtn { width: 64px; height: 64px; }
+  .t-up { left: 66px; top: 0; } .t-down { left: 66px; bottom: 0; } .t-left { left: 0; top: 66px; } .t-right { right: 0; top: 66px; }
+  .actions { position: absolute; right: calc(18px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); width: 200px; height: 170px; }
+  .t-fire { right: 0; bottom: 0; width: 100px; height: 100px; background: rgba(255, 90, 60, 0.35) !important; }
+  .t-fire.on { background: rgba(255, 90, 60, 0.7) !important; }
+  .t-nitro { left: 0; bottom: 8px; width: 76px; height: 76px; }
+  body.mode-hp .hud-block.bl, body.mode-hp .hud-block.br { bottom: auto; top: calc(150px + env(safe-area-inset-top)); }
+  body.mode-hp .hud-block.br { top: calc(150px + env(safe-area-inset-top)); }
+  .tool .ic-hp { display: none; }
+  body.mode-hp .tool .ic-hp { display: block; }
+  body.mode-hp .tool .ic-kb { display: none; }
+  .tool svg rect { fill: none !important; }
+  #rotate-hint { z-index: 60; }
+  #touch-prompt {
+    position: fixed; z-index: 45; right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom)); max-width: 360px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+    padding: 10px 14px; background: rgba(10, 18, 28, 0.9); border: 1px solid var(--ui-line); border-radius: 8px; font-size: 14px;
+  }
+  #touch-prompt .btn { padding: 10px 18px; font-size: 14px; }
+
+  /* Layar pendek (HP landscape): menu dan HUD dipadatkan */
+  @media (max-height: 520px) {
+    .screen.menu { padding: 12px 5vw; }
+    .menu-panel { gap: 10px; }
+    .logo { font-size: clamp(40px, 9vh + 2vw, 72px); }
+    .logo-mark { width: 80px; height: 30px; }
+    .tagline { font-size: 11px; margin-top: 2px; }
+    .menu-list { gap: 6px; min-width: 220px; }
+    .menu-list .btn, .btn-big { padding: 10px 22px; font-size: 15px; }
+    .keys-hint, .menu-panel .hint:last-child { display: none; }
+    .hud-block { padding: 6px 10px; }
+    .hud-block.tl { width: 200px; }
+    .big { font-size: 18px; }
+    .label { font-size: 10px; }
+    .stat .num { font-size: 14px; min-width: 44px; }
+    body.mode-hp .hud-block.bl { top: calc(132px + env(safe-area-inset-top)); left: 16px; }
+    body.mode-hp .hud-block.br { top: calc(150px + env(safe-area-inset-top)); }
+    .dpad { width: 168px; height: 168px; }
+    .dpad .tbtn { width: 56px; height: 56px; }
+    .t-up, .t-down { left: 56px; } .t-left, .t-right { top: 56px; }
+    .actions { height: 150px; }
+    .t-fire { width: 88px; height: 88px; }
+    .t-nitro { width: 64px; height: 64px; }
+    .card { padding: 16px 18px; gap: 10px; }
+    .screen h2 { font-size: 30px; }
+  }
+
   /* Toolbar pojok kanan atas */
   #toolbar {
     position: fixed; z-index: 40; display: flex; gap: 8px;
@@ -156,8 +215,8 @@
     color: var(--ui-fg); background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 6px; cursor: pointer;
   }
   .tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .tool svg path:first-child { fill: currentColor; }
-  #btn-pause svg path { stroke: none; }
+  #btn-mute svg path:first-child { fill: currentColor; }
+  #btn-pause svg path { stroke: none; fill: currentColor; }
   .tool .cross { display: none; }
   .tool[aria-pressed="true"] .wave { display: none; }
   .tool[aria-pressed="true"] .cross { display: inline; stroke: var(--ui-bad); }
@@ -328,8 +387,32 @@
   <div id="banner"></div>
   <div id="toasts"></div>
 </div>
+<!-- Kontrol sentuh (mode HP): D-pad kiri bawah, TEMBAK dan NITRO kanan bawah -->
+<div id="touch" class="hidden" aria-hidden="true">
+  <div class="dpad">
+    <button class="tbtn t-up" data-act="up" type="button" aria-label="Naik"><svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7"/></svg></button>
+    <button class="tbtn t-left" data-act="left" type="button" aria-label="Kiri"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="tbtn t-right" data-act="right" type="button" aria-label="Kanan"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="tbtn t-down" data-act="down" type="button" aria-label="Turun"><svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg></button>
+  </div>
+  <div class="actions">
+    <button class="tbtn t-nitro" data-act="nitro" type="button">NITRO</button>
+    <button class="tbtn t-fire" data-act="fire" type="button">TEMBAK</button>
+  </div>
+</div>
+<div id="rotate-hint" class="screen hidden"><div class="card"><h2>PUTAR LAYAR</h2><p class="hint">Mode HP dimainkan mendatar (landscape). Putar perangkatmu untuk melanjutkan.</p></div></div>
+<div id="touch-prompt" class="hidden">
+  <span>Perangkat sentuh terdeteksi. Pakai mode HP?</span>
+  <button id="prompt-yes" class="btn" type="button">YA</button>
+  <button id="prompt-no" class="btn secondary" type="button">TIDAK</button>
+</div>
+
 <!-- Toolbar pojok kanan atas: tersedia di menu dan saat bermain -->
 <div id="toolbar" class="hidden">
+  <button id="btn-mode" class="tool" type="button" aria-label="Mode kontrol" title="Mode kontrol: keyboard atau HP">
+    <svg class="ic-kb" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h1M7 14h10"/></svg>
+    <svg class="ic-hp" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/></svg>
+  </button>
   <button id="btn-pause" class="tool hidden" type="button" aria-label="Jeda" title="Jeda (P)">
     <svg viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg>
   </button>
@@ -4461,6 +4544,112 @@ document.addEventListener('visibilitychange', onVisibility);
 function toggleMute() {
   Settings.set('muted', !Game.muted);
 }
+
+// Sumber sentuh (mode HP): tiap pointerId dilacak terpisah sehingga multi-touch bekerja,
+// dan jari yang digeser di atas D-pad berpindah aksi mengikuti tombol di bawahnya
+const Touch = {
+  root: document.getElementById('touch'),
+  pointers: new Map(),     // pointerId -> aksi
+  counts: { up: 0, down: 0, left: 0, right: 0, fire: 0, nitro: 0 },
+  buttons: {},
+  enabled: false,
+  fill(c) {
+    if (!this.enabled) return;
+    const n = this.counts;
+    if (n.up > 0) c.up = true;
+    if (n.down > 0) c.down = true;
+    if (n.left > 0) c.left = true;
+    if (n.right > 0) c.right = true;
+    if (n.nitro > 0) c.nitro = true;
+    if (n.fire > 0) c.fire = true;
+    // Tembak otomatis: menembak bila ada musuh di kerucut bidik
+    if (Save.settings.autoFire) { if (Game.state === 'playing') { if (Weapons.findAssistTarget()) c.fire = true; } }
+  },
+  reset() {
+    this.pointers.clear();
+    for (const k in this.counts) this.counts[k] = 0;
+    for (const k in this.buttons) this.buttons[k].classList.remove('on');
+  },
+  setAction(id, act) {
+    const prev = this.pointers.get(id);
+    if (prev === act) return;
+    if (prev) { this.counts[prev]--; if (this.counts[prev] <= 0) this.buttons[prev].classList.remove('on'); }
+    if (act) { this.pointers.set(id, act); this.counts[act]++; this.buttons[act].classList.add('on'); }
+    else this.pointers.delete(id);
+  },
+  actAt(x, y) {
+    const el = document.elementFromPoint(x, y);
+    const b = el ? el.closest('[data-act]') : null;
+    return b ? b.dataset.act : null;
+  },
+  init() {
+    for (const b of this.root.querySelectorAll('[data-act]')) this.buttons[b.dataset.act] = b;
+    const down = (e) => {
+      const b = e.target.closest('[data-act]');
+      if (!b) return;
+      e.preventDefault();
+      onAudioGesture();
+      try { b.setPointerCapture(e.pointerId); } catch (err) { /* pointer sintetis tidak bisa di-capture */ }
+      this.setAction(e.pointerId, b.dataset.act);
+    };
+    const move = (e) => {
+      if (!this.pointers.has(e.pointerId)) return;
+      const cur = this.pointers.get(e.pointerId);
+      if (cur === 'fire' || cur === 'nitro') return;     // tombol aksi tidak berpindah saat jari bergeser
+      const act = this.actAt(e.clientX, e.clientY);
+      if (act ? act !== 'fire' ? act !== 'nitro' : false : false) this.setAction(e.pointerId, act);
+    };
+    const up = (e) => { if (this.pointers.has(e.pointerId)) this.setAction(e.pointerId, null); };
+    this.root.addEventListener('pointerdown', down);
+    this.root.addEventListener('pointermove', move);
+    this.root.addEventListener('pointerup', up);
+    this.root.addEventListener('pointercancel', up);
+    this.root.addEventListener('lostpointercapture', up);
+    this.root.addEventListener('contextmenu', (e) => e.preventDefault());
+  },
+  // Kontrol sentuh hanya tampil di mode HP saat bermain
+  updateVisibility() {
+    const hp = Save.settings.controlMode === 'hp';
+    this.enabled = hp;
+    document.body.classList.toggle('mode-hp', hp);
+    const show = hp ? (Game.state === 'playing' || Game.state === 'countdown' || Game.state === 'starting') : false;
+    this.root.classList.toggle('hidden', !show);
+    if (!show) this.reset();
+    checkOrientation();
+  },
+};
+Touch.init();
+Controls.addSource(Touch);
+
+// Mode HP dimainkan mendatar: tampilkan saran putar layar dan jeda bila sedang bermain
+function checkOrientation() {
+  const portrait = window.innerHeight > window.innerWidth;
+  const need = Save.settings.controlMode === 'hp' ? portrait : false;
+  document.getElementById('rotate-hint').classList.toggle('hidden', !need);
+  if (need) { if (Game.state === 'playing') setState('paused'); }
+}
+window.addEventListener('resize', checkOrientation);
+
+function setControlMode(mode) { Settings.set('controlMode', mode); }
+onButton(document.getElementById('btn-mode'), () => setControlMode(Save.settings.controlMode === 'hp' ? 'keyboard' : 'hp'));
+Events.on('state', () => Touch.updateVisibility());
+Events.on('settings', () => Touch.updateVisibility());
+
+// Saran mode HP sekali saja bila perangkat sentuh terdeteksi
+(() => {
+  const coarse = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false;
+  const touchDevice = coarse || (navigator.maxTouchPoints || 0) > 0;
+  if (!touchDevice || Save.settings.touchPromptShown || Save.settings.controlMode === 'hp') return;
+  const box = document.getElementById('touch-prompt');
+  box.classList.remove('hidden');
+  const done = (useHp) => {
+    box.classList.add('hidden');
+    Save.settings.touchPromptShown = true;
+    if (useHp) setControlMode('hp'); else Save.save();
+  };
+  onButton(document.getElementById('prompt-yes'), () => done(true));
+  onButton(document.getElementById('prompt-no'), () => done(false));
+})();
 
 Settings.init();   // setelah INPUT karena pengaturan diterapkan ke Controls
 
