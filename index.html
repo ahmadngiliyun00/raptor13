@@ -531,6 +531,8 @@
       <div class="tog-list">
         <label class="tog"><input type="checkbox" data-key="invertPitch"> Balik arah naik turun</label>
         <label class="tog"><input type="checkbox" data-key="cameraShake"> Getar kamera</label>
+        <label class="tog"><input type="checkbox" data-key="autoLevel"> Penstabil otomatis</label>
+        <label class="tog"><input type="checkbox" data-key="cameraRoll"> Kamera ikut berguling</label>
         <label class="tog"><input type="checkbox" data-key="damageNumbers"> Angka damage</label>
         <label class="tog"><input type="checkbox" data-key="showFps"> Tampilkan FPS</label>
         <label class="tog"><input type="checkbox" data-key="autoFire"> Tembak otomatis (mode HP)</label>
@@ -637,6 +639,12 @@ const CONFIG = {
   },
   seed: 1337,                  // seed dunia di layar judul
   randomSeedPerRun: true,      // tiap sesi main memakai seed baru (kecuali dikunci lewat __game.setSeed)
+  flight: {
+    pitchRate: 1.7,            // radian per detik saat W atau S ditahan (looping penuh sekitar 3,7 detik)
+    rollRate: 2.6,             // laju roll saat A atau D ditekan sambil pitch
+    autoLevelRate: 1.1,        // laju penstabil otomatis mengembalikan hidung ke horizon
+    climbSpeedFactor: 0.15,    // kecepatan naik 15 persen saat menukik, turun 15 persen saat menanjak
+  },
   camera: {
     fov: 68,                   // FOV normal
     nitroFov: 84,              // FOV melebar saat nitro
@@ -647,9 +655,9 @@ const CONFIG = {
     nitroPullBack: 3.5,        // tambahan jarak saat nitro
     lookAhead: 30,
     lookHeight: 2,
-    rotLag: 4.5,               // makin kecil makin besar lag rotasi kamera
+    rotLag: 5.0,               // makin kecil makin besar lag rotasi kamera
     pitchFollow: 0.55,         // seberapa besar kamera ikut pitch pesawat
-    rollFollow: 0.2,           // seberapa besar kamera ikut miring
+    rollFollow: 0.15,          // seberapa besar kamera ikut miring saat bank (diredam)
     shakeDecay: 1.8,           // trauma berkurang per detik
     shakeHit: 0.9,             // amplitudo getar saat kena hit (unit)
     shakeNitro: 0.08,          // getar halus konstan saat nitro
@@ -816,6 +824,8 @@ const SETTING_DEFAULTS = {
   controlMode: 'keyboard',     // keyboard | hp
   invertPitch: false,
   cameraShake: true,
+  autoLevel: true,             // penstabil otomatis
+  cameraRoll: false,           // kamera ikut berguling
   damageNumbers: true,
   showFps: false,
   autoFire: false,             // tembak otomatis di mode HP
@@ -1484,6 +1494,8 @@ function buildJetRaptor() {
 }
 
 const createPlayerJet = buildJetRaptor;
+const _AX_X = new THREE.Vector3(1, 0, 0), _AX_Y = new THREE.Vector3(0, 1, 0), _AX_Z = new THREE.Vector3(0, 0, 1);
+const _qb = new THREE.Quaternion();
 
 /* =====================================================================
    REGISTRI KAPAL - tiap kapal adalah data: dunia yang didukung, pembuat model,
@@ -1560,6 +1572,10 @@ const Player = {
   },
   vel: new THREE.Vector3(),
   forward: new THREE.Vector3(0, 0, -1),
+  quat: new THREE.Quaternion(),       // orientasi bebas penuh
+  _up: new THREE.Vector3(0, 1, 0),
+  _right: new THREE.Vector3(1, 0, 0),
+  autoLevel: true,
   yaw: 0, pitch: 0, roll: 0,
   speed: 0,
   health: null,        // komponen Health, dibuat setelah definisi objek
@@ -1579,6 +1595,7 @@ const Player = {
     const C = CONFIG.player;
     this.pos.set(0, Worlds.active.safeStartAltitude(), 0);
     this.yaw = 0; this.pitch = 0; this.roll = 0;
+    this.quat.identity();
     this.speed = C.baseSpeed * this.ship.stats.speed;
     this.health.reset(this.ship.stats.hp);
     this.alive = true;
@@ -1594,44 +1611,98 @@ const Player = {
     this.forward.set(0, 0, -1);
     this.vel.set(0, 0, -this.speed);
     this.rig.visible = true;
-    this.rig.rotation.set(0, 0, 0);
+    this.rig.quaternion.identity();
+    this.basis();
   },
 
-  // Fisika arcade: pesawat selalu maju, kontrol mengatur target sudut yang di-damping
+  // Fisika arcade dengan orientasi bebas (quaternion): W dan S memutar hidung pada laju tetap
+  // sehingga menahan tombol menghasilkan looping penuh; A dan D mengatur bank relatif horizon
+  // dan belok sebanding bank. Pesawat selalu maju; menukik sedikit lebih cepat, menanjak lebih lambat.
   update(dt, pitchIn, yawIn) {
-    const C = CONFIG.player;
-    let targetPitch = pitchIn * C.maxPitch;
+    const C = CONFIG.player, F = CONFIG.flight, W = Worlds.active, q = this.quat;
+    const agility = this.ship.stats.agility;
+    this.basis();
+    const f = this.forward, up = this._up, right = this._right;
+    const vertical = Math.abs(f.y) > 0.94;                // dekat tegak lurus: bank tidak terdefinisi
+    const bank = Math.atan2(right.y, up.y);               // positif = miring kiri; sekitar pi = terbalik
 
-    // Plafon: hidung dipaksa turun saat mendekati ketinggian maksimum
-    const W = Worlds.active;
-    const ceilRoom = W.maxY - this.pos.y;
-    if (targetPitch > 0) targetPitch *= clamp(ceilRoom / 25, 0, 1);
-    if (ceilRoom <= 0) targetPitch = Math.min(targetPitch, -0.12);
-    // Lantai: tidak bisa menukik di bawah ketinggian minimum di atas air
-    const floorY = W.minY;
-    if (targetPitch < 0) targetPitch *= clamp((this.pos.y - floorY) / 10, 0, 1);
+    // Pitch: rotasi di sumbu kanan lokal (positif = hidung naik)
+    if (pitchIn !== 0) this.rotateLocal(_AX_X, pitchIn * F.pitchRate * agility * dt);
+    if (pitchIn !== 0) {
+      // Tarik sambil belok dalam posisi tegak: bank menuju target (belokan tajam).
+      // Saat terbalik atau vertikal, A dan D menjadi laju roll. W saja tidak dikoreksi agar looping bersih.
+      if (yawIn !== 0) {
+        if (vertical ? false : Math.abs(bank) < Math.PI / 2) {
+          this.rotateLocal(_AX_Z, wrapAngle(yawIn * C.maxRoll - bank) * (1 - Math.exp(-C.rollResponse * dt)));
+        } else this.rotateLocal(_AX_Z, yawIn * F.rollRate * dt);
+      }
+    } else if (vertical) {
+      // Vertikal tanpa input: hidung ditarik ke arah atas pesawat sampai keluar dari zona vertikal
+      if (this.autoLevel) this.rotateLocal(_AX_X, F.pitchRate * 0.6 * dt);
+    } else {
+      // Bank menuju target relatif horizon (selisih terpendek, termasuk kembali tegak dari posisi terbalik)
+      const target = yawIn * C.maxRoll;
+      const autoLevel = yawIn !== 0 ? true : this.autoLevel;
+      if (autoLevel) {
+        const diff = wrapAngle(target - bank);
+        this.rotateLocal(_AX_Z, diff * (1 - Math.exp(-C.rollResponse * dt)));
+      }
+      // Penstabil otomatis: hidung kembali pelan ke horizon saat tidak ada input pitch
+      if (this.autoLevel ? Math.abs(bank) < 1.2 : false) {
+        const pitchAng = Math.asin(clamp(f.y, -1, 1));
+        this.rotateLocal(_AX_X, -pitchAng * (1 - Math.exp(-F.autoLevelRate * dt)));
+      }
+    }
+    // Belok: yaw di sumbu tegak dunia sebanding bank (hanya saat tidak terbalik), diperkecil saat menanjak tajam
+    this.basis();
+    const bank2 = Math.atan2(this._right.y, this._up.y);
+    if (Math.abs(bank2) < Math.PI / 2) {
+      const horiz = Math.sqrt(Math.max(0, 1 - this.forward.y * this.forward.y));
+      const turn = C.turnRate * agility * clamp(Math.sin(bank2) / Math.sin(C.maxRoll), -1.2, 1.2) * horiz;
+      _qb.setFromAxisAngle(_AX_Y, turn * dt);
+      q.premultiply(_qb);
+    }
+    q.normalize();
+    this.basis();
 
-    this.pitch = damp(this.pitch, targetPitch, C.pitchResponse, dt);
-    this.roll = damp(this.roll, yawIn * C.maxRoll, C.rollResponse, dt);
-    // Laju belok sebanding dengan kemiringan sayap, sehingga bank dan belok selalu selaras
-    this.yaw += C.turnRate * this.ship.stats.agility * (this.roll / C.maxRoll) * dt;
-
+    // Kecepatan: nitro, kapal, dan plus minus 15 persen saat menukik atau menanjak (tanpa stall)
     this.nitroFx = damp(this.nitroFx, this.nitroActive ? 1 : 0, 5, dt);
     const sp = this.ship.stats.speed;
-    const targetSpeed = (this.nitroActive ? C.nitroSpeed : C.baseSpeed) * sp;
+    const slope = 1 - F.climbSpeedFactor * this.forward.y;
+    const targetSpeed = (this.nitroActive ? C.nitroSpeed : C.baseSpeed) * sp * slope;
     this.speed = damp(this.speed, targetSpeed, this.nitroActive ? C.accel * 1.6 : C.accel, dt);
 
-    const cp = Math.cos(this.pitch);
-    this.forward.set(-Math.sin(this.yaw) * cp, Math.sin(this.pitch), -Math.cos(this.yaw) * cp);
     this.vel.copy(this.forward).multiplyScalar(this.speed);
     this.pos.addScaledVector(this.vel, dt);
-
     if (this.pos.y > W.maxY) this.pos.y = W.maxY;
-    if (this.pos.y < floorY) {
-      this.pos.y = floorY;
-      if (this.pitch < 0) this.pitch = damp(this.pitch, 0, 8, dt);
-    }
-    this.rig.rotation.set(this.pitch, this.yaw, this.roll);
+    if (this.pos.y < W.minY) this.pos.y = W.minY;
+    this.rig.quaternion.copy(q);
+    this.syncEuler();
+  },
+
+  // Vektor arah dari quaternion (tanpa alokasi)
+  basis() {
+    this.forward.set(0, 0, -1).applyQuaternion(this.quat);
+    this._up.set(0, 1, 0).applyQuaternion(this.quat);
+    this._right.set(1, 0, 0).applyQuaternion(this.quat);
+  },
+  rotateLocal(axis, angle) {
+    _qb.setFromAxisAngle(axis, angle);
+    this.quat.multiply(_qb);
+  },
+  // Sudut turunan untuk sistem lain (heading, pitch, bank)
+  syncEuler() {
+    const f = this.forward;
+    this.yaw = Math.atan2(-f.x, -f.z);
+    this.pitch = Math.asin(clamp(f.y, -1, 1));
+    this.roll = Math.atan2(this._right.y, this._up.y);
+  },
+  // Atur orientasi datar menghadap heading tertentu
+  setHeading(yaw) {
+    this.quat.setFromAxisAngle(_AX_Y, yaw);
+    this.rig.quaternion.copy(this.quat);
+    this.basis();
+    this.syncEuler();
   },
 
   // Meter nitro: terkuras saat dipakai, pulih pelan setelah jeda, terkunci sebentar bila habis
@@ -1685,7 +1756,7 @@ const Player = {
       ground = Math.max(ground, groundHeightAt(this.pos.x - Math.sin(this.yaw) * d, this.pos.z - Math.cos(this.yaw) * d));
     }
     this.pos.y = clamp(Math.max(this.pos.y, ground + 50), Worlds.active.minY, Worlds.active.maxY - 10);
-    this.pitch = 0; this.roll = 0;
+    this.setHeading(this.yaw);
     this.speed = C.baseSpeed * this.ship.stats.speed;
     this.health.reset(this.ship.stats.hp);
     this.alive = true;
@@ -1732,7 +1803,7 @@ const Player = {
   autopilot(dt, t) {
     // Ketinggian jelajah dari dunia aktif (Bumi: di atas lereng di depan, angkasa: gelombang pelan)
     const targetY = Worlds.active.autopilotTargetY(this.pos.x, this.pos.z, this.yaw, t);
-    const pitchIn = clamp((targetY - this.pos.y) * 0.05, -0.5, 1);
+    const pitchIn = clamp((targetY - this.pos.y) * 0.02 - this.pitch * 1.6, -0.6, 0.6);
     const yawIn = Math.sin(t * 0.23) * 0.45;
     this.update(dt, pitchIn, yawIn);
     const ground = groundHeightAt(this.pos.x, this.pos.z);
@@ -3689,11 +3760,16 @@ Player.reset();
    KAMERA CHASE - lag pada rotasi (bukan posisi) agar jarak ke pesawat stabil
    di kecepatan berapa pun, FOV melebar saat nitro, dan getaran berbasis trauma
    ===================================================================== */
+const _cu = new THREE.Vector3(), _cx = new THREE.Vector3(), _cy = new THREE.Vector3(), _cz = new THREE.Vector3();
+const _cm = new THREE.Matrix4(), _cq = new THREE.Quaternion();
 const CamRig = {
   yaw: 0, pitch: 0, roll: 0, trauma: 0, t: 0,
   blend: 1,             // 0 = kamera sinematik (menu), 1 = kamera chase (bermain)
   blendFrom: 1, blendTo: 1, blendTime: 0, blendDur: 0,
   shakeEnabled: true,
+  cameraRoll: false,     // opsi "Kamera ikut berguling"
+  lookBack: 0,
+  snapChase: true,
   offset: new THREE.Vector3(),
   look: new THREE.Vector3(),
   q: new THREE.Quaternion(),
@@ -3705,6 +3781,7 @@ const CamRig = {
 
   reset() {
     this.yaw = Player.yaw; this.pitch = 0; this.roll = 0; this.trauma = 0;
+    this.snapChase = true; this.lookBack = 0;
     camera.fov = CONFIG.camera.fov;
     camera.updateProjectionMatrix();
   },
@@ -3717,21 +3794,38 @@ const CamRig = {
   },
   get transitioning() { return this.blendDur > 0; },
 
-  // Pose kamera chase: lag pada rotasi, bukan posisi
+  // Pose kamera chase: mengikuti orientasi pesawat dengan smoothing. Vektor up kamera adalah up
+  // "tanpa roll" (komponen tegak dunia yang tegak lurus arah terbang) yang tandanya diselaraskan dengan
+  // up pesawat: saat looping kamera ikut berputar tanpa lompatan, saat bank kamera hanya ikut sedikit.
   computeChase(dt) {
-    const C = CONFIG.camera;
-    this.yaw = dampAngle(this.yaw, Player.yaw, C.rotLag, dt);
-    this.pitch = damp(this.pitch, Player.pitch * C.pitchFollow, C.rotLag, dt);
-    this.roll = damp(this.roll, Player.roll * C.rollFollow, C.rotLag, dt);
-    this.e.set(this.pitch, this.yaw, 0);
-    this.q.setFromEuler(this.e);
-    this.offset.set(0, C.height, C.distance + Player.nitroFx * C.nitroPullBack).applyQuaternion(this.q);
+    const C = CONFIG.camera, f = Player.forward, pu = Player._up;
+    const rollFollow = this.cameraRoll ? 0.85 : C.rollFollow;
+    // Up tanpa roll
+    _cu.set(0, 1, 0).addScaledVector(f, -f.y);
+    if (_cu.lengthSq() < 0.02) _cu.copy(pu); else _cu.normalize();
+    if (_cu.dot(pu) < 0) _cu.negate();
+    _cu.lerp(pu, rollFollow).normalize();
+    // Basis kamera target: z = -arah terbang
+    _cz.copy(f).negate();
+    _cx.crossVectors(_cu, _cz).normalize();
+    _cy.crossVectors(_cz, _cx);
+    _cm.makeBasis(_cx, _cy, _cz);
+    _cq.setFromRotationMatrix(_cm);
+    if (this.snapChase) { this.q.copy(_cq); this.snapChase = false; }
+    else this.q.slerp(_cq, 1 - Math.exp(-C.rotLag * dt));
+
+    // Lihat belakang (Shift): kamera di depan pesawat menghadap ke belakang
+    this.lookBack = damp(this.lookBack, Controls.lookBack ? 1 : 0, 10, dt);
+    const back = this.lookBack;
+    const dist = C.distance + Player.nitroFx * C.nitroPullBack;
+    this.offset.set(0, C.height, lerp(dist, -dist * 0.9, back)).applyQuaternion(this.q);
     camera.position.copy(Player.pos).add(this.offset);
     const minY = groundHeightAt(camera.position.x, camera.position.z) + 2.5;
     if (camera.position.y < minY) camera.position.y = minY;
-    this.look.set(0, C.lookHeight, -C.lookAhead).applyQuaternion(this.q).add(Player.pos);
+    this.look.set(0, C.lookHeight, lerp(-C.lookAhead, C.lookAhead, back)).applyQuaternion(this.q).add(Player.pos);
+    camera.up.set(0, 1, 0).applyQuaternion(this.q);
     camera.lookAt(this.look);
-    camera.rotateZ(this.roll);
+    camera.up.set(0, 1, 0);
     this.chasePos.copy(camera.position);
     this.chaseQuat.copy(camera.quaternion);
   },
@@ -4615,6 +4709,8 @@ const Settings = {
     Asteroids.densityLevel = s.asteroidDensity;
     Controls.invertPitch = s.invertPitch;
     CamRig.shakeEnabled = s.cameraShake;
+    CamRig.cameraRoll = s.cameraRoll;
+    Player.autoLevel = s.autoLevel;
     hud.showDamageNumbers = s.damageNumbers;
     document.getElementById('fps').classList.toggle('hidden', !s.showFps);
     if (Game.muted !== s.muted) { Game.muted = s.muted; ui.btnMute.setAttribute('aria-pressed', String(Game.muted)); }
@@ -4694,13 +4790,14 @@ Events.on('gameover', () => {
    Controls, sehingga tidak peduli dari mana input berasal.
    ===================================================================== */
 const Controls = {
-  up: false, down: false, left: false, right: false, fire: false, nitro: false,
+  up: false, down: false, left: false, right: false, fire: false, nitro: false, lookBack: false,
   invertPitch: false,
   sources: [],
   addSource(src) { this.sources.push(src); },
   // Dipanggil sekali per frame: gabungkan (OR) semua sumber
   update() {
     this.up = false; this.down = false; this.left = false; this.right = false; this.fire = false; this.nitro = false;
+    this.lookBack = false;
     for (let i = 0; i < this.sources.length; i++) this.sources[i].fill(this);
   },
   reset() { for (let i = 0; i < this.sources.length; i++) this.sources[i].reset(); this.update(); },
@@ -4720,6 +4817,7 @@ const Keyboard = {
     if (d.KeyD) c.right = true;
     if (d.Space) c.nitro = true;
     if (d.Enter || d.NumpadEnter) c.fire = true;
+    if (d.ShiftLeft || d.ShiftRight) c.lookBack = true;
   },
   reset() { for (const k in this.down) this.down[k] = false; },
 };
@@ -4728,6 +4826,7 @@ Controls.addSource(Keyboard);
 // Tombol yang aksi bawaan browsernya harus dicegah (scroll, klik tombol yang sedang fokus)
 const PREVENT_CODES = new Set(['Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM',
+  'ShiftLeft', 'ShiftRight',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 // Navigasi menu dengan keyboard: panah atas dan bawah memilih, Enter menekan, Esc menutup overlay.
 // Mengembalikan true bila tombol sudah ditangani.
@@ -4956,10 +5055,10 @@ const AutoInput = {
     if (target) {
       const want = Math.atan2(-(target.pos.x - P.x), -(target.pos.z - P.z));
       this.yaw = clamp(wrapAngle(want - Player.yaw) * 2.5, -1, 1);
-      this.pitch = clamp((Math.max(target.pos.y, ground + 40) - P.y) * 0.05, -1, 1);
+      this.pitch = clamp((Math.max(target.pos.y, ground + 40) - P.y) * 0.02 - Player.pitch * 1.6, -1, 1);
     } else {
       this.yaw = Math.sin(t * 0.37) * 0.8;
-      this.pitch = clamp((ground + 55 - P.y) * 0.06, -1, 1);
+      this.pitch = clamp((ground + 55 - P.y) * 0.02 - Player.pitch * 1.6, -1, 1);
     }
     if (P.y < ground + 30) this.pitch = 1;   // keselamatan medan selalu menang
     this.nitro = (t % 9) < 2.5;
@@ -5062,6 +5161,8 @@ window.__game = {
       nitroLocked: Player.nitroLock > 0,
       speed: round2(Player.speed),
       yaw: round2(Player.yaw), pitch: round2(Player.pitch), roll: round2(Player.roll),
+      forward: { x: round2(Player.forward.x), y: round2(Player.forward.y), z: round2(Player.forward.z) },
+      up: { x: round2(Player._up.x), y: round2(Player._up.y), z: round2(Player._up.z) },
       position: { x: round2(Player.pos.x), y: round2(Player.pos.y), z: round2(Player.pos.z) },
       wave: Waves.wave,
       enemies: Enemies.alive,
@@ -5169,6 +5270,8 @@ window.__game = {
     },
     clearAsteroids() { for (const a of Asteroids.list) Asteroids.remove(a); },
     setAsteroidDensity(level) { Asteroids.densityLevel = clamp(level | 0, 0, 2); },
+    // Hasil kali titik arah pandang kamera dengan arah terbang pesawat (1 depan, -1 belakang)
+    cameraForwardDot() { camera.getWorldDirection(_vc); return round2(_vc.dot(Player.forward)); },
     killAllEnemies() { for (const e of Enemies.list) if (e.active) Enemies.destroy(e, true); },
     // Taruh cincin tepat di jalur terbang pemain (jarak dalam unit)
     placeRingAhead(dist = 120) {

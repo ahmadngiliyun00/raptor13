@@ -173,6 +173,33 @@ test('S2: medan Bumi tetap berfungsi dan data save v1 lama termigrasi', async ({
   expect((await snap(page)).state).toBe('playing');
 });
 
+test('B1: menahan S menghasilkan looping penuh melewati posisi terbalik lalu kembali datar', async ({ page }) => {
+  await start(page, { world: 'space' });
+  let inverted = false;
+  await page.keyboard.down('KeyS');
+  for (let i = 0; i < 16; i++) {
+    await page.waitForTimeout(250);
+    if ((await snap(page)).up.y < -0.5) inverted = true;
+  }
+  await page.keyboard.up('KeyS');
+  expect(inverted).toBe(true);                       // melewati posisi terbalik
+  await page.waitForTimeout(4500);
+  const s = await snap(page);
+  expect(s.up.y).toBeGreaterThan(0.9);               // penstabil otomatis mengembalikan ke datar
+  expect(Math.abs(s.forward.y)).toBeLessThan(0.2);
+});
+
+test('B1: Shift menahan pandangan ke belakang', async ({ page }) => {
+  await start(page, { world: 'space' });
+  const camDir = () => page.evaluate(() => window.__game.debug.cameraForwardDot());
+  await page.waitForTimeout(400);
+  expect(await camDir()).toBeGreaterThan(0.5);       // kamera menghadap arah terbang
+  await page.keyboard.down('ShiftLeft');
+  await page.waitForTimeout(700);
+  expect(await camDir()).toBeLessThan(-0.5);         // kamera menghadap ke belakang
+  await page.keyboard.up('ShiftLeft');
+});
+
 test('W dan S mengubah pitch dan ketinggian', async ({ page }) => {
   await start(page);
   const s0 = await snap(page);
@@ -258,12 +285,13 @@ test('Enter menembak dengan cooldown: jumlah peluru bertambah', async ({ page })
 test('kombinasi W, D, Spasi dan Enter bersamaan semuanya bekerja', async ({ page }) => {
   await start(page);
   const s0 = await snap(page);
-  await hold(page, ['KeyW', 'KeyD', 'Space', 'Enter'], 1200);
+  // 0,6 detik: cukup untuk semua efek tanpa melewati vertikal (W yang ditahan lama menghasilkan looping)
+  await hold(page, ['KeyW', 'KeyD', 'Space', 'Enter'], 600);
   const s1 = await snap(page);
   expect(s1.pitch).toBeGreaterThan(0.2);          // W
   expect(s1.roll).toBeLessThan(-0.4);             // D
-  expect(s1.yaw).toBeLessThan(s0.yaw - 0.1);      // D
-  expect(s1.nitro).toBeLessThan(s0.nitro - 0.2);  // Spasi
+  expect(s1.yaw).toBeLessThan(s0.yaw - 0.05);     // D
+  expect(s1.nitro).toBeLessThan(s0.nitro - 0.1);  // Spasi
   expect(s1.speed).toBeGreaterThan(s0.speed + 15);
   expect(s1.shotsFired).toBeGreaterThan(4);       // Enter
 });
@@ -291,7 +319,11 @@ test('blur mereset tombol yang tertahan dan menjeda game', async ({ page }) => {
   await page.waitForTimeout(3600);
   const s = await snap(page);
   expect(s.state).toBe('playing');
-  expect(Math.abs(s.pitch)).toBeLessThan(0.1);   // W tidak "nyangkut"
+  await page.waitForTimeout(1200);
+  const s2 = await snap(page);
+  // W tidak "nyangkut": penstabil otomatis terus mengembalikan hidung ke horizon
+  expect(Math.abs(s2.pitch)).toBeLessThan(Math.abs(s.pitch));
+  expect(Math.abs(s2.pitch)).toBeLessThan(0.35);
   await page.keyboard.up('KeyW');
 });
 
