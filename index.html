@@ -726,7 +726,9 @@ function loftFuselage(sections, M = 24, opts = {}) {
       const ex = 2 / s.n, ey = ex * (1 + (s.chine || 0) * 1.6);
       const x = s.w * Math.sign(c) * Math.pow(Math.abs(c), ex);
       const y = (sn >= 0 ? s.ht : s.hb) * Math.sign(sn) * Math.pow(Math.abs(sn), ey);
-      ring.push(mb.v(x, (s.y || 0) + y, s.z, (s.z - z0) / (z1 - z0), i / M));
+      // tiltY dan tiltX menggeser z sebanding dengan y dan x (mulut intake miring)
+      const zz = s.z + y * (s.tiltY || 0) + x * (s.tiltX || 0);
+      ring.push(mb.v(x, (s.y || 0) + y, zz, (s.z - z0) / (z1 - z0), i / M));
     }
     rings.push(ring);
   }
@@ -814,7 +816,7 @@ function mirrorX(geo) {
 
 // Planform permukaan jet (sisi kanan), satuan dunia
 const JET_WING = { rootX: 0.55, rootLE: -0.95, rootTE: 2.8, tipXLE: 2.92, tipLE: 1.2, tipXTE: 2.74, tipTE: 2.45, thickRoot: 0.13, thickTip: 0.035, dihedral: 3, ns: 7, nc: 12 };
-const JET_STRAKE = { rootX: 0.42, rootLE: -2.75, rootTE: -0.45, tipXLE: 0.9, tipLE: -0.95, tipXTE: 0.9, tipTE: -0.45, thickRoot: 0.06, thickTip: 0.05, ns: 3, nc: 8 };
+const JET_STRAKE = { rootX: 0.4, rootLE: -3.1, rootTE: -0.2, tipXLE: 1.15, tipLE: -0.75, tipXTE: 1.15, tipTE: -0.2, thickRoot: 0.07, thickTip: 0.05, ns: 4, nc: 8 };
 const JET_STAB = { rootX: 0.5, rootLE: 3.05, rootTE: 4.75, tipXLE: 1.95, tipLE: 4.5, tipXTE: 1.85, tipTE: 4.95, thickRoot: 0.07, thickTip: 0.022, ns: 5, nc: 10 };
 const JET_FIN = { rootX: 0, rootLE: 1.85, rootTE: 3.75, tipXLE: 1.5, tipLE: 3.2, tipXTE: 1.4, tipTE: 3.95, thickRoot: 0.08, thickTip: 0.03, ns: 6, nc: 10, bottomScale: 1 };
 const JET_FIN_CANT = 25;   // derajat, sirip miring keluar
@@ -855,11 +857,12 @@ function flameGeometry() {
 }
 
 // Saluran intake dan nozzle: tabung persegi bersudut membulat, ujung terbuka
+const JET_INTAKE_TILT = { y: -0.55, x: 0.5 };   // bibir atas maju, sisi luar mundur
 const JET_INTAKE = [
-  { z: -1.05, w: 0.2, ht: 0.26, hb: 0.26, n: 4.5, chine: 0 },
-  { z: -0.75, w: 0.22, ht: 0.27, hb: 0.27, n: 4.5, chine: 0 },
-  { z: 0.2, w: 0.2, ht: 0.24, hb: 0.24, n: 4, chine: 0 },
-  { z: 1.0, w: 0.1, ht: 0.16, hb: 0.16, n: 3, chine: 0 },
+  { z: -1.0, w: 0.17, ht: 0.22, hb: 0.22, n: 4, chine: 0, tiltY: JET_INTAKE_TILT.y, tiltX: JET_INTAKE_TILT.x },
+  { z: -0.8, w: 0.18, ht: 0.23, hb: 0.23, n: 4, chine: 0, tiltY: JET_INTAKE_TILT.y * 0.6, tiltX: JET_INTAKE_TILT.x * 0.6 },
+  { z: -0.2, w: 0.17, ht: 0.22, hb: 0.22, n: 3.6, chine: 0 },
+  { z: 0.7, w: 0.1, ht: 0.16, hb: 0.16, n: 3, chine: 0 },
 ];
 const JET_NOZZLE = [
   { z: 3.95, w: 0.3, ht: 0.24, hb: 0.24, n: 4.5, chine: 0 },
@@ -1009,13 +1012,18 @@ function createPlayerJet() {
   // Kanopi gelembung oval memanjang, sekitar 0,22 sampai 0,44 L dari hidung
   add(canopyGeometry(2.1, 0.66, 0.36), matCanopy).position.set(0, 0.33, -1.6);
 
-  // Intake di kiri dan kanan dekat pangkal sayap, bagian dalam gelap
-  const intakeGeo = loftFuselage(JET_INTAKE, 16, { openStart: true, openEnd: true });
-  const mouthGeo = new THREE.ShapeGeometry(roundedRectShape(0.38, 0.48, 0.1), 4);
-  mouthGeo.rotateY(Math.PI);   // menghadap ke depan (-z)
-  for (const side of [1, -1]) {
-    add(intakeGeo, matDuct).position.set(side * 0.8, -0.1, 0);
-    add(mouthGeo, matHole, false).position.set(side * 0.8, -0.1, -0.98);
+  // Intake di kiri dan kanan dekat pangkal sayap: kulit luar sewarna badan, mulut miring,
+  // bagian dalam gelap (tutup datar yang di-shear mengikuti kemiringan mulut)
+  const intakeR = loftFuselage(JET_INTAKE, 16, { openStart: true, openEnd: true });
+  const mouthR = new THREE.ShapeGeometry(roundedRectShape(0.32, 0.42, 0.09), 4);
+  mouthR.rotateY(Math.PI);   // menghadap ke depan (-z)
+  const mp = mouthR.attributes.position;
+  for (let i = 0; i < mp.count; i++) mp.setZ(i, -0.93 + mp.getY(i) * JET_INTAKE_TILT.y + mp.getX(i) * JET_INTAKE_TILT.x);
+  mouthR.computeVertexNormals();
+  const intakeL = mirrorX(intakeR), mouthL = mirrorX(mouthR);
+  for (const [side, geo, mouth] of [[1, intakeR, mouthR], [-1, intakeL, mouthL]]) {
+    add(geo, matSkin).position.set(side * 0.68, -0.12, 0);
+    add(mouth, matHole, false).position.set(side * 0.68, -0.12, 0);
   }
 
   // Dua nozzle 2D pipih dengan glow redup yang menyala terang saat nitro
