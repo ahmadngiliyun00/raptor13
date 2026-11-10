@@ -239,6 +239,70 @@ test('B2: gulung tong kebal peluru, looping kembali ke arah semula', async ({ pa
   expect(s.maneuver).toBe(null);
 });
 
+// Terbangkan pemain menukik ke titik permukaan, lalu tunggu game over dan periksa penyebabnya
+async function crashInto(page, kind, cause) {
+  await start(page, { god: false, seed: 5 });
+  await page.waitForTimeout(300);
+  const s = await dbg(page, 'findSurface', kind);
+  expect(s, `titik ${kind} ditemukan`).not.toBe(null);
+  // Menukik hampir tegak tepat di atas titik agar benturan terjadi di titik itu
+  await dbg(page, 'setPlayerState', { x: s.x, y: s.h + 6, z: s.z, yaw: 0, pitch: -1.45 });
+  await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).toBe('gameover');
+  const r = await snap(page);
+  expect(r.deathCause).toBe(cause);
+  expect(r.lives).toBe(0);
+  await expect(page.locator('#go-cause')).toHaveText(cause);
+}
+
+test('B3: menabrak tanah langsung game over tanpa bantuan naik', async ({ page }) => { await crashInto(page, 'land', 'Menabrak tanah'); });
+test('B3: menabrak laut langsung game over', async ({ page }) => { await crashInto(page, 'water', 'Menabrak laut'); });
+test('B3: menabrak gunung langsung game over', async ({ page }) => { await crashInto(page, 'mountain', 'Menabrak gunung'); });
+
+test('B3: menabrak pohon (pilar) langsung game over', async ({ page }) => {
+  await start(page, { god: false, seed: 5 });
+  await page.waitForTimeout(300);
+  const pillars = await dbg(page, 'pillars');
+  const p = pillars.sort((a, b) => b.height - a.height)[0];
+  const x = p.x + p.radius + 25, z = p.z, y = p.base + p.height * 0.4;
+  const yaw = Math.atan2(-(p.x - x), -(p.z - z));
+  await dbg(page, 'setPlayerState', { x, y, z, yaw });
+  await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).toBe('gameover');
+  expect((await snap(page)).deathCause).toBe('Menabrak pohon');
+});
+
+test('B3: asteroid raksasa fatal, asteroid kecil hanya damage', async ({ page }) => {
+  await start(page, { god: false, world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.clearAsteroids(); d.setAsteroidDensity(0); });
+  await page.waitForTimeout(1700);
+  await dbg(page, 'spawnAsteroid', 'small', 40, 0, 0);
+  await page.waitForTimeout(1200);
+  const s1 = await snap(page);
+  expect(s1.state).toBe('playing');
+  expect(s1.health).toBeLessThan(100);               // ringan: hanya damage
+  await dbg(page, 'spawnAsteroid', 'giant', 60, 0, 0);
+  await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).toBe('gameover');
+  expect((await snap(page)).deathCause).toBe('Menabrak asteroid raksasa');
+});
+
+test('B3: opsi Tabrakan fatal mati memberi damage besar dan pantulan', async ({ page }) => {
+  await open(page);
+  await page.click('#btn-settings');
+  await page.click('input[data-key="fatalCrash"]');
+  await page.click('#btn-settings-back');
+  await page.evaluate(() => { window.__game.setSeed(5); window.__game.debug.setGod(false); window.__game.debug.setEnemiesEnabled(false); });
+  await page.click('#btn-start');
+  await page.click('.tcard[data-world="earth"]');
+  await page.evaluate(() => window.__game.skipTransition());
+  await page.waitForTimeout(1700);   // lewati kebal awal agar damage tercatat
+  const s = await dbg(page, 'findSurface', 'land');
+  await dbg(page, 'setPlayerState', { x: s.x, y: s.h + 12, z: s.z, yaw: 0, pitch: -1.0 });
+  await page.waitForTimeout(1200);
+  const r = await snap(page);
+  expect(r.state).toBe('playing');
+  expect(r.health).toBeLessThan(100);
+  expect(r.position.y).toBeGreaterThan(s.h);         // memantul, tidak menembus
+});
+
 test('W dan S mengubah pitch dan ketinggian', async ({ page }) => {
   await start(page);
   const s0 = await snap(page);

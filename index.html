@@ -269,6 +269,7 @@
 
   /* Game over */
   .over-title { color: #ffb0a0; }
+  .cause { margin: -6px 0 0; color: #ffd0c4; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700; }
   .record { color: #ffd24a; font-weight: 800; letter-spacing: 0.3em; animation: pulse 0.9s ease-in-out infinite alternate; }
   @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.08); } }
   .stats {
@@ -554,6 +555,7 @@
         <label class="tog"><input type="checkbox" data-key="invertPitch"> Balik arah naik turun</label>
         <label class="tog"><input type="checkbox" data-key="cameraShake"> Getar kamera</label>
         <label class="tog"><input type="checkbox" data-key="autoLevel"> Penstabil otomatis</label>
+        <label class="tog"><input type="checkbox" data-key="fatalCrash"> Tabrakan fatal (matikan untuk latihan)</label>
         <label class="tog"><input type="checkbox" data-key="cameraRoll"> Kamera ikut berguling</label>
         <label class="tog"><input type="checkbox" data-key="damageNumbers"> Angka damage</label>
         <label class="tog"><input type="checkbox" data-key="showFps"> Tampilkan FPS</label>
@@ -615,6 +617,7 @@
 <!-- Layar game over -->
 <div id="screen-over" class="screen hidden">
   <h2 class="over-title">PESAWAT JATUH</h2>
+  <p id="go-cause" class="cause"></p>
   <div id="new-record" class="record hidden">REKOR BARU!</div>
   <div class="stats">
     <span>Skor</span><b id="go-score">0</b>
@@ -741,6 +744,7 @@ const CONFIG = {
       small:  { radius: 3,  hp: 20,  damage: 10, score: 50,  splitInto: null,     pool: 36, color: 0x8f8376 },
       medium: { radius: 6,  hp: 50,  damage: 20, score: 100, splitInto: 'small',  pool: 18, color: 0x7d736a },
       large:  { radius: 11, hp: 100, damage: 35, score: 200, splitInto: 'medium', pool: 8,  color: 0x6f665e },
+      giant:  { radius: 24, hp: 300, damage: 0,  score: 500, splitInto: 'large',  pool: 3,  color: 0x625a53 },   // fatal bila ditabrak
     },
     split: [2, 3],             // jumlah pecahan saat hancur
     variants: 3,               // varian bentuk per ukuran
@@ -748,7 +752,7 @@ const CONFIG = {
     densityLevels: [0.55, 1, 1.7],   // Sedikit, Normal, Banyak
     waveDensityStep: 0.08,     // kepadatan naik pelan per gelombang
     maxWaveDensity: 1.8,
-    mix: [0.45, 0.35, 0.2],    // proporsi spawn kecil, sedang, besar
+    mix: [0.43, 0.33, 0.19, 0.05],   // proporsi spawn kecil, sedang, besar, raksasa
     spawnDistance: [380, 650],
     recycleBehind: 200,        // di-recycle bila sejauh ini di belakang pemain
     recycleDistance: 950,
@@ -782,6 +786,14 @@ const CONFIG = {
     repairAmount: 30,
     nitroAmount: 0.5,
     heartChance: 0.14,         // peluang pickup berupa hati (+1 nyawa) bila nyawa belum penuh
+  },
+  // Klasifikasi tabrakan: fatal (langsung game over) atau ringan (hanya damage)
+  collision: {
+    mountainHeight: 70,        // di atas ketinggian ini benturan disebut "Menabrak gunung"
+    giantAsteroidRadius: 18,   // asteroid sebesar ini atau lebih fatal bila ditabrak
+    lowAltitudeWarning: 22,    // peringatan TERLALU RENDAH di bawah ketinggian ini dari permukaan
+    slowMotion: 0.8,           // detik gerak lambat saat hancur
+    slowMotionScale: 0.25,
   },
   obstacles: {
     pillarsPerChunk: 2,
@@ -854,6 +866,7 @@ const SETTING_DEFAULTS = {
   invertPitch: false,
   cameraShake: true,
   autoLevel: true,             // penstabil otomatis
+  fatalCrash: true,            // tabrakan keras langsung game over
   cameraRoll: false,           // kamera ikut berguling
   damageNumbers: true,
   showFps: false,
@@ -1578,6 +1591,15 @@ PlayerRig.add(PlayerModel.root);
 // Ketinggian permukaan padat di titik x, z menurut dunia aktif (angkasa: tidak ada permukaan)
 const groundHeightAt = (x, z) => Worlds.active.groundHeightAt(x, z);
 
+// Teks penyebab kematian untuk layar game over
+function causeText(src) {
+  if (src === 'peluru') return 'Tertembak musuh';
+  if (src === 'asteroid') return 'Dihantam asteroid';
+  if (src === 'tabrakan') return 'Bertabrakan dengan musuh';
+  if (typeof src === 'string' ? src.startsWith('Menabrak') : false) return src;
+  return 'Kapal hancur';
+}
+
 const Player = {
   model: PlayerModel,
   rig: PlayerRig,
@@ -1621,7 +1643,7 @@ const Player = {
   spawnInvuln: 0,      // sisa waktu kebal setelah mulai atau respawn
   lives: 3,
   respawnTimer: 0,
-  warning: false,      // peringatan medan di depan
+  warning: '',         // teks peringatan medan ('' bila aman)
 
   reset() {
     const C = CONFIG.player;
@@ -1641,7 +1663,7 @@ const Player = {
     this.invuln = 0;
     this.spawnInvuln = 0;
     this.respawnTimer = 0;
-    this.warning = false;
+    this.warning = '';
     this.forward.set(0, 0, -1);
     this.vel.set(0, 0, -this.speed);
     this.rig.visible = true;
@@ -1716,7 +1738,6 @@ const Player = {
     this.vel.copy(this.forward).multiplyScalar(this.speed);
     this.pos.addScaledVector(this.vel, dt);
     if (this.pos.y > W.maxY) this.pos.y = W.maxY;
-    if (this.pos.y < W.minY) this.pos.y = W.minY;
     this.rig.quaternion.copy(q);
     this.syncEuler();
   },
@@ -1813,7 +1834,10 @@ const Player = {
   get hp() { return this.health.hp; },
 
   // Damage ke pemain selalu lewat sistem damage generik
-  damage(amount, source) { return applyDamage(this, amount, source, this.pos.x, this.pos.y, this.pos.z); },
+  damage(amount, source) {
+    this.lastDamageSource = source;
+    return applyDamage(this, amount, source, this.pos.x, this.pos.y, this.pos.z);
+  },
   isInvulnerable() { return !this.alive || Debug.god || Game.state !== 'playing' || this.spawnInvuln > 0; },
   onDamaged(amount, source) {
     CamRig.addTrauma(clamp(amount / 30, 0.3, 0.9));
@@ -1822,6 +1846,7 @@ const Player = {
 
   // HP habis: meledak, nyawa berkurang; respawn bila nyawa masih ada, selain itu game over
   die() {
+    if (this.lives <= 1) { Game.deathCause = causeText(this.lastDamageSource); Game.fatal = false; }
     this.alive = false;
     this.nitroActive = false;
     this.rig.visible = false;
@@ -1859,6 +1884,31 @@ const Player = {
     this.nitro = 1; this.nitroLock = 0; this.nitroRegenWait = 0; this.nitroActive = false;
     this.invuln = 0; this.spawnInvuln = 0; this.respawnTimer = 0; this.warning = false;
     this.rig.visible = true;
+  },
+
+  // Hancur seketika: semua nyawa hilang, ledakan besar, gerak lambat, lalu game over dengan penyebab
+  fatalCrash(cause) {
+    if (!this.alive) return;
+    Game.deathCause = cause;
+    Game.fatal = true;
+    this.lives = 0;
+    this.health.hp = 0;
+    this.alive = false;
+    this.nitroActive = false;
+    this.maneuver = null;
+    this.rig.visible = false;
+    this.speed = 0;
+    CamRig.addTrauma(1);
+    Game.slowMo = CONFIG.collision.slowMotion;
+    Events.emit('playerDeath', this.pos);
+    Events.emit('fatalCrash', this.pos, cause);
+    Game.deathTimer = 0;
+  },
+  // Mode latihan: setelah memantul, hidung diarahkan sedikit naik
+  pitchUpAfterBounce() {
+    if (this.pitch < 0.4) this.rotateLocal(_AX_X, 0.4 - this.pitch);
+    this.basis();
+    this.syncEuler();
   },
 
   addLife() { this.lives = Math.min(CONFIG.difficulty.maxLives, this.lives + 1); },
@@ -2876,7 +2926,7 @@ const Asteroids = {
   init() {
     const A = CONFIG.asteroids;
     let seed = 900;
-    for (const size of ['small', 'medium', 'large']) {
+    for (const size of ['small', 'medium', 'large', 'giant']) {
       const geos = [];
       for (let v = 0; v < A.variants; v++) geos.push(buildAsteroidGeometry(seed++));
       for (let i = 0; i < A.sizes[size].pool; i++) this.list.push(new Asteroid(size, geos[i % geos.length]));
@@ -2926,7 +2976,7 @@ const Asteroids = {
 
   pickSize() {
     const m = CONFIG.asteroids.mix, r = rand();
-    return r < m[0] ? 'small' : r < m[0] + m[1] ? 'medium' : 'large';
+    return r < m[0] ? 'small' : r < m[0] + m[1] ? 'medium' : r < m[0] + m[1] + m[2] ? 'large' : 'giant';
   },
 
   remove(a) {
@@ -3075,6 +3125,15 @@ function updateCombat() {
     if (!a.active) continue;
     const r = a.radius * 0.85 + pr;
     if (a.pos.distanceToSquared(P) < r * r) {
+      // Asteroid raksasa adalah tabrakan keras (fatal); yang lain ringan (damage)
+      if (a.radius >= CONFIG.collision.giantAsteroidRadius) {
+        hardImpact('Menabrak asteroid raksasa', () => {
+          _vb.subVectors(P, a.pos).normalize();
+          P.copy(a.pos).addScaledVector(_vb, r + 3);
+        });
+        if (!Player.alive) return;
+        continue;
+      }
       if (Player.invuln <= 0) {
         Player.damage(a.cfg.damage, 'asteroid');
         Player.invuln = CONFIG.obstacles.invulnTime;
@@ -3184,40 +3243,47 @@ function updateTerrainCollision(dt) {
   const O = CONFIG.obstacles, P = Player.pos, pr = Player.radius;
   Player.invuln = Math.max(0, Player.invuln - dt);
 
-  const ground = Terrain.heightAt(P.x, P.z);
-  let crashed = false;
-  if (P.y - pr * 0.6 < ground) {
-    P.y = ground + pr * 0.6 + 4;
-    crashed = true;
-    if (Player.invuln <= 0) Player.damage(O.terrainDamage, 'terrain');
+  // Tabrakan keras: tanah, laut, gunung dan pilar. Fatal bila opsi Tabrakan fatal hidup.
+  const land = Terrain.heightAt(P.x, P.z), water = CONFIG.world.waterLevel;
+  const ground = Math.max(land, water);
+  if (P.y - pr * 0.5 < ground) {
+    const cause = land < water ? 'Menabrak laut' : land > CONFIG.collision.mountainHeight ? 'Menabrak gunung' : 'Menabrak tanah';
+    hardImpact(cause, () => { P.y = ground + pr * 0.6 + 4; Player.pitchUpAfterBounce(); });
   } else {
     const d = Obstacles.collide(P.x, P.y, P.z, pr * 0.8);
     if (d >= 0) {
-      // Dorong keluar dari pilar secara horizontal
-      const D = Obstacles.data, dx = P.x - D[d], dz = P.z - D[d + 1];
-      const len = Math.hypot(dx, dz) || 1;
-      const push = D[d + 4] + pr + 3;
-      P.x = D[d] + (dx / len) * push;
-      P.z = D[d + 1] + (dz / len) * push;
-      crashed = true;
-      if (Player.invuln <= 0) Player.damage(O.pillarDamage, 'pilar');
+      const D = Obstacles.data;
+      hardImpact('Menabrak pohon', () => {
+        // Mode latihan: dorong keluar dari pilar secara horizontal
+        const dx = P.x - D[d], dz = P.z - D[d + 1], len = Math.hypot(dx, dz) || 1, push = D[d + 4] + pr + 3;
+        P.x = D[d] + (dx / len) * push;
+        P.z = D[d + 1] + (dz / len) * push;
+      });
     }
   }
-  if (crashed) {
-    if (Player.invuln <= 0) Player.invuln = O.invulnTime;
-    Player.pitch = Math.max(Player.pitch, 0.45);   // memantul dengan hidung naik
-    Events.emit('crash', P);
-  }
 
-  // Prediksi jalur di depan untuk peringatan "TARIK NAIK"
-  let warn = false;
+  // Peringatan (tanpa mengambil alih kendali): jalur di depan menabrak medan, atau terlalu rendah
+  let warn = '';
   for (let k = 1; k <= 3; k++) {
     const dist = (O.warnAhead / 3) * k;
     const x = P.x + Player.forward.x * dist, y = P.y + Player.forward.y * dist, z = P.z + Player.forward.z * dist;
-    if (y - Terrain.heightAt(x, z) < 6) { warn = true; break; }
+    if (y - EarthWorld.groundHeightAt(x, z) < 6) { warn = 'TARIK NAIK!'; break; }
   }
-  const lowOverLand = ground > CONFIG.world.waterLevel + 1 ? P.y - ground < 12 : false;
-  Player.warning = warn || lowOverLand;
+  if (!warn) { if (P.y - ground < CONFIG.collision.lowAltitudeWarning) warn = 'TERLALU RENDAH'; }
+  Player.warning = warn;
+}
+
+// Benturan keras: fatal (game over seketika, mengabaikan nyawa) atau mode latihan (damage besar dan pantulan)
+function hardImpact(cause, bounce) {
+  if (!Player.alive) return;
+  if (Debug.god) { bounce(); return; }
+  if (Save.settings.fatalCrash) { Player.fatalCrash(cause); return; }
+  bounce();
+  if (Player.invuln <= 0) {
+    Player.damage(CONFIG.obstacles.terrainDamage, cause);
+    Player.invuln = CONFIG.obstacles.invulnTime;
+  }
+  Events.emit('crash', Player.pos);
 }
 
 /* =====================================================================
@@ -3229,7 +3295,7 @@ function updateTerrainCollision(dt) {
 const EarthWorld = {
   id: 'earth',
   label: 'Atmosfer Bumi',
-  minY: CONFIG.world.waterLevel + CONFIG.player.minAltitude,
+  minY: -1e9,   // tanpa lantai pengangkat: menyentuh air atau tanah adalah tabrakan
   maxY: CONFIG.player.maxAltitude,
   features: { rings: true, clouds: true },
   objects() {
@@ -3278,7 +3344,7 @@ const SpaceWorld = {
     camera.updateProjectionMatrix();
     Env.setLighting('space');
     FX.setFog(this.viewDistance * 0.5, this.viewDistance);
-    Player.warning = false;
+    Player.warning = '';
   },
   deactivate() { for (const o of this.objects()) o.visible = false; },
   reset() {},
@@ -3816,6 +3882,11 @@ Events.on('bulletImpact', (x, y, z) => {
 });
 Events.on('enemyDestroyed', (e) => FX.explosion(e.pos.x, e.pos.y, e.pos.z, e.type === 'drone' ? 1 : 1.5));
 Events.on('asteroidDestroyed', (a) => FX.rockBurst(a.pos.x, a.pos.y, a.pos.z, a.radius));
+Events.on('fatalCrash', (p) => {
+  FX.explosion(p.x, p.y, p.z, 3.2);
+  FX.explosion(p.x - 3, p.y + 2, p.z + 2, 1.6);
+  FX.rockBurst(p.x, p.y, p.z, 9);
+});
 Events.on('playerDeath', (p) => {
   FX.explosion(p.x, p.y, p.z, 1.8);
   FX.explosion(p.x + 2, p.y + 1, p.z - 2, 1.0);
@@ -3953,6 +4024,16 @@ const CamRig = {
     }
     // Pose chase selalu dihitung agar lag-nya siap saat transisi dimulai
     this.computeChase(dt);
+    if (Game.fatal ? !Player.alive : false) {
+      // Setelah hancur: kamera mengorbit pelan di sekitar titik ledakan
+      this.deathAngle = (this.deathAngle || 0) + dt * 0.45;
+      const P = Player.pos, a = this.deathAngle + Player.yaw + Math.PI;
+      camera.position.set(P.x + Math.sin(a) * 34, P.y + 12, P.z + Math.cos(a) * 34);
+      const minY = groundHeightAt(camera.position.x, camera.position.z) + 4;
+      if (camera.position.y < minY) camera.position.y = minY;
+      camera.up.set(0, 1, 0);
+      camera.lookAt(P);
+    } else this.deathAngle = 0;
     if (this.blend < 1) {
       this.computeCinematic(dt);
       const b = this.blend;
@@ -4401,8 +4482,8 @@ function updateHud(dt) {
   if (changed('kills', v)) hud.kills.textContent = v;
   v = Enemies.alive;
   if (changed('enemies', v)) hud.enemies.textContent = v;
-  v = Game.state === 'playing' ? Player.warning : false;
-  if (changed('warning', v)) hud.warning.classList.toggle('hidden', !v);
+  v = Game.state === 'playing' ? (Player.alive ? Player.warning : '') : '';
+  if (changed('warning', v)) { hud.warning.classList.toggle('hidden', !v); if (v) hud.warning.textContent = v; }
 
   // Vignette merah: kilat saat kena, berdenyut saat kesehatan rendah
   hud.vignetteLevel = Math.max(0, hud.vignetteLevel - dt * 1.8);
@@ -4555,6 +4636,9 @@ const Game = {
     return this.state === 'starting' || this.state === 'playing';
   },
   deathTimer: 0,    // hitungan setelah pesawat terakhir meledak sebelum layar game over
+  deathCause: '',
+  fatal: false,
+  slowMo: 0,        // sisa detik nyata gerak lambat
   time: 0,          // waktu bermain sesi ini (detik)
   stateTime: 0,     // lama berada di state sekarang
   frame: 0,
@@ -4683,6 +4767,7 @@ function resetSession(keepWorld = false) {
   Game.score = 0;
   Game.kills = 0;
   Game.deathTimer = 0;
+  Game.deathCause = ''; Game.fatal = false; Game.slowMo = 0;
   if (keepWorld) Player.resetForSession(); else resetWorld(chooseSeed());
   Player.lives = Game.diff.lives;
   Player.spawnInvuln = CONFIG.player.startInvuln;
@@ -4785,6 +4870,7 @@ Events.on('gameover', () => {
   const isRecord = HighScore.submit(Game.score);
   document.getElementById('new-record').classList.toggle('hidden', !isRecord);
   document.getElementById('go-score').textContent = fmtInt(Game.score);
+  document.getElementById('go-cause').textContent = Game.deathCause || 'Kapal hancur';
   document.getElementById('go-best').textContent = fmtInt(HighScore.value);
   document.getElementById('go-time').textContent = fmtTime(Game.time);
   document.getElementById('go-kills').textContent = Game.kills;
@@ -5320,6 +5406,7 @@ window.__game = {
       warning: Player.warning,
       invulnerable: Player.invuln > 0,
       maneuver: Player.maneuver ? Player.maneuver.type : null,
+      deathCause: Game.deathCause,
       cooldowns: { ...Player.cooldowns },
       highScore: HighScore.value,
       difficulty: Game.difficultyKey,
@@ -5410,6 +5497,36 @@ window.__game = {
     setAsteroidDensity(level) { Asteroids.densityLevel = clamp(level | 0, 0, 2); },
     // Hasil kali titik arah pandang kamera dengan arah terbang pesawat (1 depan, -1 belakang)
     cameraForwardDot() { camera.getWorldDirection(_vc); return round2(_vc.dot(Player.forward)); },
+    // Atur posisi dan orientasi pemain (heading dalam radian, pitch opsional) untuk uji
+    setPlayerState({ x, y, z, yaw = null, pitch = 0 } = {}) {
+      if (x !== undefined) Player.pos.x = x;
+      if (y !== undefined) Player.pos.y = y;
+      if (z !== undefined) Player.pos.z = z;
+      if (yaw !== null) { Player.setHeading(yaw); if (pitch) { Player.rotateLocal(_AX_X, pitch); Player.basis(); Player.syncEuler(); Player.rig.quaternion.copy(Player.quat); } }
+      return true;
+    },
+    terrainHeight(x, z) { return round2(EarthWorld.groundHeightAt(x, z)); },
+    // Cari titik permukaan di sekitar pemain: 'water' (laut), 'mountain' (puncak), 'land' (tanah biasa)
+    findSurface(kind) {
+      const P = Player.pos, M = CONFIG.collision.mountainHeight;
+      for (let r = 40; r <= 500; r += 20) {
+        for (let a = 0; a < 24; a++) {
+          const x = P.x + Math.cos((a / 24) * Math.PI * 2) * r, z = P.z + Math.sin((a / 24) * Math.PI * 2) * r;
+          const h = Terrain.heightAt(x, z);
+          const ok = kind === 'water' ? h < -2 : kind === 'mountain' ? h > M + 10 : (h > 5 ? h < 40 : false);
+          if (ok) {
+            const near = Obstacles.collide(x, h + 10, z, 25) >= 0;   // hindari pilar
+            if (!near) return { x: round2(x), z: round2(z), h: round2(h) };
+          }
+        }
+      }
+      return null;
+    },
+    pillars() {
+      const D = Obstacles.data, out = [];
+      for (let d = 0; d < D.length; d += 5) if (D[d + 4] > 0) out.push({ x: D[d], z: D[d + 1], base: D[d + 2], height: D[d + 3], radius: D[d + 4] });
+      return out;
+    },
     forceManeuver(type, dir = 1) { return Player.startManeuver(type, dir, true); },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
     shootPlayer(dist = 60) {
@@ -5533,7 +5650,8 @@ let lastTime = performance.now();
 let rafId = 0;
 function frame(now) {
   const raw = Math.max((now - lastTime) / 1000, 0);
-  const dt = Math.min(raw, CONFIG.maxDelta);
+  let dt = Math.min(raw, CONFIG.maxDelta);
+  if (Game.slowMo > 0) { Game.slowMo -= dt; dt *= CONFIG.collision.slowMotionScale; }   // gerak lambat saat hancur
   lastTime = now;
   Game.frame++;
   const t0 = performance.now();
