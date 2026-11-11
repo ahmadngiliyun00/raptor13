@@ -208,6 +208,22 @@
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #ffd0d0; border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.6s steps(2) infinite; }
   #comet-warn { position: absolute; left: 50%; top: calc(110px + env(safe-area-inset-top)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #d8f6ff; border: 1px solid #6fdcff; background: rgba(0, 70, 110, 0.4); animation: blink 0.5s steps(2) infinite; }
+  #data-panel {
+    position: absolute; right: 16px; top: 46%; transform: translateY(-50%); width: min(300px, 40vw); padding: 10px 14px;
+    background: rgba(8, 14, 24, 0.8); border: 1px solid var(--ui-line); border-left: 3px solid #6fdcff; border-radius: 6px;
+  }
+  #data-panel h3 { margin: 0; font-size: 18px; letter-spacing: 0.08em; }
+  .dcls { margin: 2px 0 6px; font-size: 11px; color: var(--ui-dim); letter-spacing: 0.12em; text-transform: uppercase; }
+  #data-facts { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.4; }
+  #data-facts li + li { margin-top: 3px; }
+  #data-tag { display: inline-block; margin-bottom: 4px; padding: 2px 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; color: #0a1420; background: #ffd24a; border-radius: 3px; }
+  #data-tag.hidden { display: none; }
+  .atlas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; width: 100%; max-height: 58vh; overflow: auto; text-align: left; }
+  .acard { padding: 10px 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--ui-line); border-radius: 6px; }
+  .acard h3 { margin: 0; font-size: 15px; letter-spacing: 0.06em; }
+  .acard .acls { margin: 2px 0 6px; font-size: 11px; color: var(--ui-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+  .acard ul { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.4; }
+  .acard.locked { opacity: 0.45; }
   #maneuvers { position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 8px; }
   .man {
     position: relative; overflow: hidden; display: flex; align-items: center; gap: 6px; padding: 5px 10px;
@@ -471,6 +487,12 @@
   </div>
   <div id="rear-warn" class="hidden">MUSUH DI BELAKANG</div>
   <div id="comet-warn" class="hidden">KOMET MENDEKAT</div>
+  <div id="data-panel" class="hidden" aria-live="polite">
+    <span id="data-tag" class="hidden">PENEMUAN BARU</span>
+    <h3 id="data-title"></h3>
+    <p id="data-class" class="dcls"></p>
+    <ul id="data-facts"></ul>
+  </div>
   <div class="hud-block tl">
     <div class="row"><span class="label">NYAWA</span><span id="hearts"></span></div>
     <div class="row"><span class="label">INTEGRITAS</span><span id="hp-text" class="num">100</span></div>
@@ -563,6 +585,7 @@
       <button id="btn-start" class="btn btn-big" type="button">MULAI</button>
       <button id="btn-continue" class="btn hidden" type="button">LANJUTKAN</button>
       <button id="btn-hangar" class="btn secondary" type="button">HANGAR</button>
+      <button id="btn-atlas" class="btn secondary" type="button">PENEMUAN</button>
       <button id="btn-settings" class="btn secondary" type="button">PENGATURAN</button>
       <button id="btn-about" class="btn secondary" type="button">TENTANG</button>
     </nav>
@@ -696,6 +719,17 @@
     <p class="hint">Seluruh visual dan suara dibuat secara prosedural: geometri, tekstur, langit dan suara
       disusun oleh kode saat game berjalan, tanpa file model, gambar, atau audio.</p>
     <button id="btn-about-back" class="btn" type="button">KEMBALI</button>
+  </div>
+</div>
+
+<!-- Atlas Penemuan: benda angkasa yang pernah didekati -->
+<div id="screen-atlas" class="screen hidden">
+  <div class="card wide">
+    <h2>PENEMUAN</h2>
+    <p id="atlas-count" class="version"></p>
+    <div id="atlas-grid" class="atlas-grid"></div>
+    <p class="hint">Fakta adalah fakta dunia nyata. Jarak di dalam game dipadatkan agar bisa diterbangi.</p>
+    <button id="btn-atlas-back" class="btn" type="button">KEMBALI</button>
   </div>
 </div>
 
@@ -950,6 +984,13 @@ const CONFIG = {
     cameraFar: 10000,
     startArea: 'bumi',
     warnDistance: 45,          // peringatan bila permukaan sedekat ini
+    boundary: 45000,           // radius batas jelajah dari Matahari (di luar Sabuk Kuiper)
+    boundaryWarn: 1500,        // zona peringatan KELUAR BATAS MISI sebelum dinding
+    boundaryTurn: 1.1,         // laju putar balik otomatis di zona tepi (rad per detik)
+    boundaryPush: 40,          // dorongan balik saat menyentuh dinding
+    blackHoleFrom: [17000, 25000],   // black hole mulai terlihat dari jarak ini ke Matahari
+    discoverMin: 220,          // panel data muncul bila permukaan sedekat ini (atau 1,6 kali radius)
+    panelHold: 2.5,
     bodies: [
       { id: 'matahari', name: 'Matahari', kind: 'sun', orbit: 0, angle: 0, radius: 900, spin: 0.01 },
       { id: 'merkurius', name: 'Merkurius', cls: 'planet', orbit: 3200, angle: 0.5, y: 220, radius: 48, spin: 0.01, tex: 'mercury', bump: 1.6 },
@@ -1097,6 +1138,87 @@ const CONFIG = {
    SAVE LOKAL - satu kunci berversi di localStorage, load dan save terpusat,
    selalu dibungkus try/catch, dengan nilai default aman bila data rusak atau kosong
    ===================================================================== */
+// Fakta singkat benda angkasa (fakta dunia nyata; jarak di dalam game dipadatkan)
+const BODY_FACTS = {
+  matahari: { name: 'Matahari', cls: 'Bintang katai kuning (tipe G)', facts: [
+    'Memuat sekitar 99,8 persen seluruh massa Tata Surya.',
+    'Umurnya sekitar 4,6 miliar tahun.',
+    'Cahayanya butuh sekitar 8 menit 20 detik untuk sampai ke Bumi.'] },
+  merkurius: { name: 'Merkurius', cls: 'Planet', facts: [
+    'Planet terkecil dan paling dekat dengan Matahari.',
+    'Satu tahun di Merkurius hanya 88 hari Bumi.',
+    'Hampir tanpa atmosfer, suhunya sekitar minus 170 sampai 430 derajat Celsius.'] },
+  venus: { name: 'Venus', cls: 'Planet', facts: [
+    'Planet terpanas, sekitar 465 derajat Celsius, akibat efek rumah kaca atmosfer karbon dioksida yang tebal.',
+    'Berotasi berlawanan arah dengan kebanyakan planet.',
+    'Satu hari Venus (243 hari Bumi) lebih lama dari satu tahunnya (225 hari Bumi).'] },
+  bumi: { name: 'Bumi', cls: 'Planet', facts: [
+    'Satu-satunya planet yang diketahui memiliki kehidupan.',
+    'Sekitar 71 persen permukaannya tertutup air.',
+    'Sumbunya miring sekitar 23,4 derajat, penyebab adanya musim.'] },
+  bulan: { name: 'Bulan', cls: 'Satelit alami Bumi', facts: [
+    'Jarak rata-ratanya sekitar 384.400 km dari Bumi.',
+    'Selalu menampakkan sisi yang sama ke Bumi karena terkunci pasang surut.',
+    'Manusia pertama kali mendarat di Bulan pada tahun 1969.'] },
+  mars: { name: 'Mars', cls: 'Planet', facts: [
+    'Warna merahnya berasal dari besi oksida (karat) di permukaan.',
+    'Memiliki Olympus Mons, gunung berapi tertinggi yang diketahui di Tata Surya, sekitar 22 km.',
+    'Punya dua bulan kecil, Phobos dan Deimos.'] },
+  phobos: { name: 'Phobos', cls: 'Bulan Mars', facts: [
+    'Bulan terbesar Mars, diameternya sekitar 22 km.',
+    'Mengelilingi Mars kurang dari 8 jam.',
+    'Orbitnya perlahan menyempit; dalam puluhan juta tahun ia diperkirakan hancur atau jatuh ke Mars.'] },
+  deimos: { name: 'Deimos', cls: 'Bulan Mars', facts: [
+    'Bulan Mars yang lebih kecil, diameternya sekitar 12 km.',
+    'Mengelilingi Mars sekitar 30 jam sekali.'] },
+  sabuk: { name: 'Sabuk Asteroid', cls: 'Wilayah antara Mars dan Jupiter', facts: [
+    'Objek terbesarnya adalah planet katai Ceres, berdiameter sekitar 940 km.',
+    'Total massanya hanya sekitar 3 persen massa Bulan.',
+    'Aslinya jarak antar asteroid sangat jauh; di game ini sabuk dibuat jauh lebih padat.'] },
+  jupiter: { name: 'Jupiter', cls: 'Planet raksasa gas', facts: [
+    'Planet terbesar; massanya lebih dari dua kali gabungan semua planet lain.',
+    'Bintik Merah Besar adalah badai raksasa yang sudah teramati lebih dari 150 tahun.',
+    'Satu harinya hanya sekitar 10 jam, tercepat di antara planet.'] },
+  io: { name: 'Io', cls: 'Bulan Jupiter', facts: [
+    'Benda dengan aktivitas gunung berapi paling tinggi di Tata Surya.',
+    'Ditemukan Galileo Galilei pada tahun 1610.'] },
+  europa: { name: 'Europa', cls: 'Bulan Jupiter', facts: [
+    'Kerak esnya diduga menutupi lautan air asin di bawahnya.',
+    'Termasuk tempat paling menjanjikan untuk mencari kehidupan di luar Bumi.'] },
+  ganymede: { name: 'Ganymede', cls: 'Bulan Jupiter', facts: [
+    'Bulan terbesar di Tata Surya, diameternya lebih besar dari planet Merkurius.',
+    'Satu-satunya bulan yang diketahui memiliki medan magnet sendiri.'] },
+  callisto: { name: 'Callisto', cls: 'Bulan Jupiter', facts: [
+    'Permukaannya termasuk yang paling banyak kawah di Tata Surya.',
+    'Bulan terbesar ketiga di Tata Surya.'] },
+  saturnus: { name: 'Saturnus', cls: 'Planet raksasa gas', facts: [
+    'Cincinnya terutama tersusun dari bongkahan es air dan sedikit batuan.',
+    'Massa jenis rata-ratanya lebih rendah dari air.',
+    'Celah terbesar di cincinnya disebut Celah Cassini.'] },
+  titan: { name: 'Titan', cls: 'Bulan Saturnus', facts: [
+    'Bulan terbesar Saturnus dan satu-satunya bulan dengan atmosfer tebal.',
+    'Memiliki danau dan sungai metana serta etana cair.'] },
+  uranus: { name: 'Uranus', cls: 'Planet raksasa es', facts: [
+    'Sumbu rotasinya miring sekitar 98 derajat, seolah berguling di orbitnya.',
+    'Warna biru kehijauannya berasal dari metana di atmosfer.',
+    'Ditemukan William Herschel pada tahun 1781.'] },
+  neptunus: { name: 'Neptunus', cls: 'Planet raksasa es', facts: [
+    'Planet terjauh dari Matahari.',
+    'Anginnya tercepat yang pernah diukur di Tata Surya, lebih dari 2.000 km per jam.',
+    'Ditemukan pada tahun 1846 berkat perhitungan matematika.'] },
+  pluto: { name: 'Pluto', cls: 'Planet katai', facts: [
+    'Digolongkan ulang sebagai planet katai pada tahun 2006.',
+    'Dataran terang berbentuk hati di permukaannya bernama Tombaugh Regio.',
+    'Wahana New Horizons melintasinya pada tahun 2015.'] },
+  charon: { name: 'Charon', cls: 'Bulan Pluto', facts: [
+    'Diameternya sekitar separuh diameter Pluto.',
+    'Pluto dan Charon saling terkunci pasang surut, selalu menampakkan sisi yang sama satu sama lain.'] },
+  kuiper: { name: 'Sabuk Kuiper', cls: 'Wilayah benda es di luar Neptunus', facts: [
+    'Terletak sekitar 30 sampai 50 satuan astronomi dari Matahari.',
+    'Asal banyak komet berperiode pendek.',
+    'Pluto adalah salah satu anggotanya yang terbesar.'] },
+};
+const DISCOVERY_IDS = Object.keys(BODY_FACTS);
 const SAVE_KEY = 'raptor13.v3';
 const SAVE_KEYS_OLD = ['raptor13.v2', 'raptor13.v1'];   // dibaca sekali untuk migrasi (terbaru dulu)
 const SHIP_IDS = ['raptor-j', 'starfighter', 'interceptor', 'gunship'];
@@ -1140,6 +1262,7 @@ const Save = {
       highScores: { space: 0, earth: 0 },   // skor tertinggi terpisah per medan
       ships: { selected: { earth: 'raptor-j', space: 'starfighter' }, unlocked: ['raptor-j', 'starfighter'], credits: 0 },
       stats: { playTime: 0, enemiesDestroyed: 0, asteroidsDestroyed: 0, gamesPlayed: 0 },
+      discoveries: [],   // id benda angkasa yang pernah didekati (atlas Penemuan)
     };
   },
   // Terima hanya field yang dikenal dengan tipe dan rentang yang benar
@@ -1172,6 +1295,7 @@ const Save = {
     if (Number.isFinite(raw.highScore)) d.highScores.earth = Math.max(d.highScores.earth, Math.floor(raw.highScore));
     const st = isObj(raw.stats) ? raw.stats : {};
     for (const k of Object.keys(d.stats)) if (Number.isFinite(st[k])) d.stats[k] = Math.max(0, st[k]);
+    if (Array.isArray(raw.discoveries)) for (const id of raw.discoveries) { if (DISCOVERY_IDS.includes(id) ? !d.discoveries.includes(id) : false) d.discoveries.push(id); }
     return d;
   },
   load() {
@@ -4512,6 +4636,7 @@ const SpaceSky = {
       this.streakPos.needsUpdate = true;
     }
     this.updateFlare();
+    DeepSky.update(dt);
   },
   // Lens flare halus: titik silau dan beberapa lingkaran sepanjang garis matahari ke tengah layar
   updateFlare() {
@@ -5603,6 +5728,288 @@ const RockFields = {
   },
 };
 
+/* =====================================================================
+   LATAR TAK TERJANGKAU - pita Bima Sakti dengan jalur debu, galaksi spiral jauh, dan
+   black hole dengan piringan akresi serta cincin cahaya terbelokkan (efek palsu di
+   shader). Semua ditempel di grup langit yang mengikuti kamera: hanya pemandangan.
+   ===================================================================== */
+const SKY_NOISE = /* glsl */`
+  float bh3(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float bn3(vec3 x) {
+    vec3 i = floor(x), f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(bh3(i), bh3(i + vec3(1,0,0)), f.x), mix(bh3(i + vec3(0,1,0)), bh3(i + vec3(1,1,0)), f.x), f.y),
+               mix(mix(bh3(i + vec3(0,0,1)), bh3(i + vec3(1,0,1)), f.x), mix(bh3(i + vec3(0,1,1)), bh3(i + vec3(1,1,1)), f.x), f.y), f.z);
+  }
+  float bfbm(vec3 p) { float s = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { s += bn3(p) * a; p *= 2.03; a *= 0.5; } return s; }`;
+const SKY_VERT = /* glsl */`
+  varying vec3 vDir; varying vec2 vUv;
+  void main() { vDir = position; vUv = uv; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww * vec4(1.0, 1.0, 0.99998, 1.0); }`;
+const MILKY_FRAG = /* glsl */`
+  uniform vec3 uNormal; uniform vec3 uCore; uniform float uStrength;
+  varying vec3 vDir;
+  ${SKY_NOISE}
+  void main() {
+    vec3 d = normalize(vDir);
+    float b = dot(d, uNormal);
+    float n = bfbm(d * 5.0 + 2.0);
+    float band = exp(-b * b / (0.005 + n * 0.006));
+    float core = pow(max(dot(d, uCore), 0.0), 20.0) * exp(-b * b / 0.02);
+    // Jalur debu gelap memotong pita di tengah
+    float lane = smoothstep(0.035, 0.0, abs(b + (bfbm(d * 9.0) - 0.5) * 0.06)) * smoothstep(0.35, 0.65, bfbm(d * 4.0 + 7.0));
+    float grain = smoothstep(0.82, 0.98, bn3(d * 420.0)) * 0.6;
+    vec3 col = mix(vec3(0.55, 0.62, 0.8), vec3(1.0, 0.82, 0.6), clamp(core * 2.0, 0.0, 1.0));
+    float I = (band * (0.35 + n * 0.8) * (0.55 + grain * 0.9) + core * 1.2) * (1.0 - lane * 0.85);
+    gl_FragColor = vec4(col * I * uStrength, 1.0);
+    #include <colorspace_fragment>
+  }`;
+const GALAXY_FRAG = /* glsl */`
+  uniform float uTilt; uniform float uRot; uniform float uArms; uniform vec3 uTint; uniform float uStrength;
+  varying vec2 vUv;
+  ${SKY_NOISE}
+  void main() {
+    vec2 p = (vUv - 0.5) * 2.0;
+    float cr = cos(uRot), sr = sin(uRot);
+    p = vec2(cr * p.x - sr * p.y, sr * p.x + cr * p.y);
+    p.y /= uTilt;
+    float r = length(p);
+    if (r > 1.0) discard;
+    float th = atan(p.y, p.x);
+    float arm = pow(0.5 + 0.5 * cos(uArms * (th - log(r + 0.02) * 2.4)), 3.0);
+    float n = bn3(vec3(p * 6.0, uRot * 3.0));
+    float I = exp(-r * 9.0) * 2.2 + arm * exp(-r * 3.2) * (0.5 + n * 0.6);
+    I *= smoothstep(1.0, 0.7, r);
+    vec3 col = mix(uTint, vec3(1.0, 0.86, 0.65), exp(-r * 5.0));
+    gl_FragColor = vec4(col * I * uStrength, 1.0);
+    #include <colorspace_fragment>
+  }`;
+// Black hole: bayangan gelap, cincin foton, piringan akresi miring dengan Doppler,
+// citra piringan belakang yang terbelokkan melingkupi bayangan atas dan bawah
+const BLACKHOLE_FRAG = /* glsl */`
+  uniform float uTime; uniform float uVis;
+  varying vec2 vUv;
+  ${SKY_NOISE}
+  void main() {
+    vec2 p = (vUv - 0.5) * 2.0;
+    float r = length(p);
+    float rs = 0.17;
+    // Piringan dilihat hampir dari samping
+    vec2 dp = vec2(p.x, p.y / 0.22);
+    float rd = length(dp);
+    float ang = atan(dp.y, dp.x);
+    float swirl = bn3(vec3(rd * 14.0 - uTime * 0.6, ang * 3.0, 1.0));
+    float disk = smoothstep(0.28, 0.34, rd) * smoothstep(0.95, 0.5, rd) * (0.55 + swirl * 0.7);
+    float doppler = 1.0 + 0.75 * clamp(-p.x / max(rd, 0.001), -1.0, 1.0);
+    // Bagian belakang piringan tertutup bayangan
+    float behind = p.y > 0.0 ? smoothstep(rs * 1.05, rs * 0.95, r) : 0.0;
+    disk *= 1.0 - behind;
+    // Citra terbelokkan: busur terang mengelilingi bayangan
+    float lens = exp(-pow((r - 0.25) / 0.035, 2.0)) * (0.55 + 0.45 * abs(p.y) / max(r, 0.001));
+    float photon = exp(-pow((r - rs * 1.12) / 0.01, 2.0)) * 1.6;
+    float einstein = exp(-pow((r - 0.62) / 0.05, 2.0)) * 0.12;
+    vec3 hot = vec3(1.0, 0.72, 0.38);
+    vec3 col = hot * disk * doppler * 0.75 + hot * lens * 0.8 + vec3(1.0, 0.9, 0.75) * photon * 0.8 + vec3(0.6, 0.7, 1.0) * einstein;
+    // Bayangan menelan semua cahaya di depan pusat kecuali piringan depan
+    float shadow = smoothstep(rs * 1.02, rs * 0.96, r);
+    float frontDisk = p.y < 0.0 ? disk : 0.0;
+    col = mix(col, hot * frontDisk * doppler * 0.75, shadow);
+    float a = clamp(max(max(col.r, col.g), col.b), 0.0, 1.0);
+    a = max(a, shadow * 0.96);
+    gl_FragColor = vec4(col * uVis, a * uVis * smoothstep(1.0, 0.85, r));
+    #include <colorspace_fragment>
+  }`;
+
+const DeepSky = {
+  galaxies: [],
+  bhDir: new THREE.Vector3(-0.42, 0.3, 0.86).normalize(),
+  init() {
+    const sky = SpaceSky.sky;
+    this.milky = new THREE.Mesh(new THREE.SphereGeometry(38, 64, 32), new THREE.ShaderMaterial({
+      uniforms: { uNormal: { value: new THREE.Vector3(0.22, 0.93, -0.3).normalize() }, uCore: { value: new THREE.Vector3(-0.55, -0.12, -0.83).normalize() }, uStrength: { value: 0.16 } },
+      vertexShader: SKY_VERT, fragmentShader: MILKY_FRAG, side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    }));
+    this.milky.renderOrder = -19.5;
+    this.milky.frustumCulled = false;
+    sky.add(this.milky);
+    // Galaksi spiral jauh di beberapa arah
+    const G = [
+      { dir: [0.7, 0.35, 0.62], size: 2.4, tilt: 0.42, rot: 0.6, arms: 2, tint: 0x9fb8ff },
+      { dir: [-0.8, -0.25, 0.2], size: 1.5, tilt: 0.85, rot: 2.1, arms: 2, tint: 0xc2b0ff },
+      { dir: [0.1, -0.6, -0.78], size: 1.9, tilt: 0.3, rot: 1.2, arms: 3, tint: 0xa8d4ff },
+      { dir: [-0.3, 0.82, 0.4], size: 1.2, tilt: 0.6, rot: 4.0, arms: 2, tint: 0xffc8a8 },
+    ];
+    for (const g of G) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+        uniforms: { uTilt: { value: g.tilt }, uRot: { value: g.rot }, uArms: { value: g.arms }, uTint: { value: new THREE.Color(g.tint) }, uStrength: { value: 0.55 } },
+        vertexShader: SKY_VERT, fragmentShader: GALAXY_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      }));
+      m.position.set(...g.dir).normalize().multiplyScalar(33);
+      m.scale.setScalar(g.size);
+      m.lookAt(0, 0, 0);
+      m.renderOrder = -18.5;
+      m.frustumCulled = false;
+      sky.add(m);
+      this.galaxies.push(m);
+    }
+    // Black hole: hanya terlihat dari Tata Surya bagian luar
+    this.blackHole = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uVis: { value: 0 } },
+      vertexShader: SKY_VERT, fragmentShader: BLACKHOLE_FRAG, transparent: true, depthWrite: false,
+    }));
+    this.blackHole.position.copy(this.bhDir).multiplyScalar(32);
+    this.blackHole.scale.setScalar(15);
+    this.blackHole.lookAt(0, 0, 0);
+    this.blackHole.renderOrder = -18;
+    this.blackHole.frustumCulled = false;
+    sky.add(this.blackHole);
+  },
+  update(dt) {
+    const u = this.blackHole.material.uniforms;
+    u.uTime.value += dt;
+    const r = camera.position.length();
+    u.uVis.value = smoothstep(CONFIG.solar.blackHoleFrom[0], CONFIG.solar.blackHoleFrom[1], r);
+    this.blackHole.visible = u.uVis.value > 0.01;
+  },
+};
+
+/* Dinding energi di batas jelajah: tambalan besar yang selalu diletakkan di titik batas
+   terdekat dengan pemain, garis grid di koordinat dunia sehingga tampak diam */
+const BOUNDARY_FRAG = /* glsl */`
+  uniform float uTime; uniform float uVis; uniform vec3 uU; uniform vec3 uV;
+  varying vec3 vW;
+  void main() {
+    // Grid di bidang dinding (sumbu tangen), heksagonal semu: dua keluarga garis miring dan satu lurus
+    vec2 q = vec2(dot(vW, uU), dot(vW, uV)) / 160.0;
+    vec3 k = vec3(q.x, q.x * 0.5 + q.y * 0.866, q.x * 0.5 - q.y * 0.866);
+    vec3 g = abs(fract(k + 0.5) - 0.5);
+    float line = 0.0;
+    line = max(line, smoothstep(0.035, 0.0, g.x));
+    line = max(line, smoothstep(0.035, 0.0, g.y));
+    line = max(line, smoothstep(0.035, 0.0, g.z));
+    float pulse = 0.6 + 0.4 * sin(uTime * 2.0 + (vW.x + vW.y + vW.z) * 0.004);
+    float d = distance(cameraPosition, vW);
+    float fade = smoothstep(4400.0, 1200.0, d);
+    vec3 col = mix(vec3(0.2, 0.9, 1.0), vec3(0.9, 0.35, 1.0), 0.5 + 0.5 * sin(uTime * 0.7));
+    float a = (line * pulse + 0.025) * fade * uVis;
+    gl_FragColor = vec4(col * a, 1.0);
+    #include <colorspace_fragment>
+  }`;
+const Boundary = {
+  vis: 0, time: 0, outside: false,
+  init() {
+    this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000, 1, 1), new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uVis: { value: 0 }, uU: { value: new THREE.Vector3(1, 0, 0) }, uV: { value: new THREE.Vector3(0, 1, 0) } },
+      vertexShader: RING_VERT, fragmentShader: BOUNDARY_FRAG, side: THREE.DoubleSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    }));
+    this.mesh.frustumCulled = false;
+    this.mesh.visible = false;
+    SolarSystem.root.add(this.mesh);
+  },
+  update(dt) {
+    const B = CONFIG.solar.boundary, P = Player.pos, r = P.length();
+    this.time += dt;
+    this.vis = smoothstep(B - 5000, B - 800, r);
+    const u = this.mesh.material.uniforms;
+    u.uTime.value = this.time; u.uVis.value = this.vis;
+    this.mesh.visible = this.vis > 0.01;
+    if (this.mesh.visible) {
+      this.mesh.position.copy(P).setLength(B);
+      this.mesh.lookAt(0, 0, 0);
+      const n = _vb.copy(P).normalize();
+      u.uU.value.crossVectors(_AX_Y, n).normalize();
+      u.uV.value.crossVectors(n, u.uU.value).normalize();
+    }
+  },
+  // Peringatan di zona tepi, dinding mendorong balik dan memutar kapal ke dalam (tanpa game over)
+  enforce(dt) {
+    const S = CONFIG.solar, P = Player.pos, r = P.length();
+    if (r < S.boundary - S.boundaryWarn) { this.outside = false; return ''; }
+    this.outside = true;
+    if (r > S.boundary) P.setLength(S.boundary);
+    // Arah ke dalam (horizontal) dan putar pelan bila kapal masih menghadap ke luar
+    _va.copy(P).negate().setY(0).normalize();
+    const f = Player.forward;
+    if (f.x * _va.x + f.z * _va.z < 0.3) {
+      const cross = f.z * _va.x - f.x * _va.z;   // tanda: arah putar di sumbu Y dunia
+      const turn = (cross > 0 ? 1 : -1) * S.boundaryTurn * dt * smoothstep(S.boundary - S.boundaryWarn, S.boundary, r);
+      _qa.setFromAxisAngle(_AX_Y, turn);
+      Player.quat.premultiply(_qa);
+      Player.basis(); Player.syncEuler(); Player.rig.quaternion.copy(Player.quat);
+    }
+    if (r > S.boundary - 10) P.addScaledVector(_va, S.boundaryPush * dt);
+    return 'KELUAR BATAS MISI';
+  },
+};
+
+/* Panel data dan Penemuan: mendekati benda memunculkan nama dan fakta singkat (fakta asli,
+   jarak di game dipadatkan). Benda yang pernah didekati disimpan sebagai Penemuan. */
+const Discovery = {
+  current: null, hold: 0, lastNew: '',
+  el: document.getElementById('data-panel'),
+  title: document.getElementById('data-title'), cls: document.getElementById('data-class'),
+  list: document.getElementById('data-facts'), tag: document.getElementById('data-tag'),
+  // Benda yang sedang didekati: planet, bulan, Matahari, atau sabuk
+  target() {
+    const P = Player.pos;
+    const belt = RockFields.built ? RockFields.beltAt(P.x, P.y, P.z) : null;
+    const n = SolarSystem.nearest(P);
+    if (n.body) {
+      const R = n.body.radius, near = n.body.def.kind === 'sun' ? 1800 : Math.max(CONFIG.solar.discoverMin, R * 1.6);
+      if (n.dist < near) return n.body.id;
+    }
+    return belt ? belt.id : null;
+  },
+  show(id) {
+    const F = BODY_FACTS[id];
+    if (!F) return;
+    this.title.textContent = F.name;
+    this.cls.textContent = F.cls;
+    this.list.replaceChildren(...F.facts.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
+    const isNew = !Save.data.discoveries.includes(id);
+    this.tag.classList.toggle('hidden', !isNew);
+    if (isNew) {
+      Save.data.discoveries.push(id);
+      Save.save();
+      this.lastNew = id;
+      Sfx.star('gold');
+      Piko.say('discovery');
+      Events.emit('discovery', id);
+    }
+    this.el.classList.remove('hidden');
+  },
+  update(dt) {
+    if (Worlds.active !== SpaceWorld ? true : Game.state !== 'playing') { if (this.current) { this.current = null; this.el.classList.add('hidden'); } return; }
+    const id = this.target();
+    if (id ? id !== this.current : false) { this.current = id; this.hold = CONFIG.solar.panelHold; this.show(id); }
+    else if (id) this.hold = CONFIG.solar.panelHold;
+    else if (this.current) {
+      this.hold -= dt;
+      if (this.hold <= 0) { this.current = null; this.el.classList.add('hidden'); }
+    }
+  },
+};
+
+// Atlas Penemuan di menu utama
+const Atlas = {
+  open() {
+    const grid = document.getElementById('atlas-grid'), found = Save.data.discoveries;
+    const items = DISCOVERY_IDS.map((id) => {
+      const F = BODY_FACTS[id], ok = found.includes(id);
+      const card = document.createElement('div');
+      card.className = 'acard' + (ok ? '' : ' locked');
+      card.dataset.id = id;
+      const h = document.createElement('h3'); h.textContent = ok ? F.name : '???';
+      const c = document.createElement('p'); c.className = 'acls'; c.textContent = ok ? F.cls : 'Belum ditemukan';
+      card.append(h, c);
+      if (ok) { const ul = document.createElement('ul'); for (const t of F.facts) { const li = document.createElement('li'); li.textContent = t; ul.append(li); } card.append(ul); }
+      return card;
+    });
+    grid.replaceChildren(...items);
+    document.getElementById('atlas-count').textContent = found.length + ' dari ' + DISCOVERY_IDS.length + ' ditemukan';
+    UI.openOverlay(document.getElementById('screen-atlas'));
+  },
+};
+
 const EarthWorld = {
   id: 'earth',
   label: 'Atmosfer Bumi',
@@ -5653,6 +6060,7 @@ const SpaceWorld = {
   activate() {
     SolarSystem.build();
     RockFields.build();
+    if (!Boundary.mesh) Boundary.init();
     for (const o of this.objects()) o.visible = true;
     scene.background = new THREE.Color(0x02030a);
     scene.fog = null;
@@ -5685,6 +6093,7 @@ const SpaceWorld = {
   follow() {
     SolarSystem.update(lastDt || 0.016);
     RockFields.update(lastDt || 0.016);
+    Boundary.update(lastDt || 0.016);
     // Cahaya kapal dari arah Matahari yang sebenarnya; redup saat berada di bayangan planet
     this.lightDir.copy(SolarSystem.sunPos).sub(Player.pos).normalize();
     this.eclipse = damp(this.eclipse, SolarSystem.sunBlocked(Player.pos) ? 0.12 : 1, 4, lastDt || 0.016);
@@ -5721,6 +6130,8 @@ const SpaceWorld = {
       }
       if (!warn) { if (n.dist < CONFIG.solar.warnDistance) warn = 'TERLALU DEKAT'; }
     }
+    const bw = Boundary.enforce(dt);
+    if (bw) warn = bw;
     Player.warning = warn;
   },
   safeStartAltitude() { return 0; },
@@ -6506,6 +6917,7 @@ Events.on('pickup', (type, pos) => {
 });
 
 SpaceSky.init();
+DeepSky.init();
 Stars.init();
 Ultimate.init();
 // Dunia awal mengikuti pengaturan Medan default (angkasa bila belum pernah diubah)
@@ -7612,6 +8024,8 @@ onButton(document.getElementById('btn-terrain-back'), () => UI.closeOverlay());
 onButton(ui.btnStart, openTerrainSelect);
 onButton(ui.btnContinue, continueGame);
 onButton(ui.btnAbout, () => UI.openOverlay(ui.about));
+onButton(document.getElementById('btn-atlas'), () => Atlas.open());
+onButton(document.getElementById('btn-atlas-back'), () => UI.closeOverlay());
 onButton(ui.btnAboutBack, () => UI.closeOverlay());
 onButton(ui.btnResume, togglePause);
 onButton(ui.btnRestart, restartGame);
@@ -7745,6 +8159,8 @@ const PIKO_LINES = {
   mine: { text: 'Ranjau di dekat sini. Jangan terlalu rapat.', mood: 'danger', prio: 3 },
   gate: { text: 'Gerbang loncat terbuka. Ayo kita pergi!', mood: 'happy', prio: 2 },
   terrain: { text: 'Terlalu dekat dengan permukaan! Tarik naik!', mood: 'danger', prio: 4 },
+  boundary: { text: 'Kita di tepi wilayah misi. Putar balik, Raptor 13!', mood: 'alert', prio: 3 },
+  discovery: { text: 'Penemuan baru! Datanya kusimpan di atlas.', mood: 'happy', prio: 2 },
 };
 const Piko = {
   panel: document.getElementById('piko-panel'), face: document.getElementById('piko-face'), textEl: document.getElementById('piko-text'),
@@ -7797,6 +8213,7 @@ const Piko = {
     if (this.behindT > 1.0) this.say('enemyBehind');
     if (Player.health.ratio < CONFIG.player.criticalHp) this.say('hpLow');
     if (Player.warning === 'TARIK NAIK!') this.say('terrain');
+    if (Player.warning === 'KELUAR BATAS MISI') this.say('boundary');
   },
 };
 Piko.drawFace();
@@ -8295,6 +8712,7 @@ function update(dt) {
     Piko.update(dt);
     Stars.update(dt);
     Ultimate.update(dt);
+    Discovery.update(dt);
     if (Player.alive) Game.score += CONFIG.score.perSecond * dt;
     else if (Player.lives > 0) {
       Player.respawnTimer -= dt;
@@ -8589,6 +9007,12 @@ window.__game = {
       CamRig.reset();
       return true;
     },
+    sky() { return { milky: !!DeepSky.milky, galaxies: DeepSky.galaxies.length, blackHole: round2(DeepSky.blackHole.material.uniforms.uVis.value) }; },
+    boundary() { return { r: Math.round(Player.pos.length()), limit: CONFIG.solar.boundary, outside: Boundary.outside, wall: round2(Boundary.vis), warning: Player.warning, fwdIn: round2(-(Player.forward.x * Player.pos.x + Player.forward.z * Player.pos.z) / Math.max(1, Math.hypot(Player.pos.x, Player.pos.z))) }; },
+    discoveries() { return [...Save.data.discoveries]; },
+    dataPanel() { return { visible: !Discovery.el.classList.contains('hidden'), title: Discovery.title.textContent, facts: Discovery.list.children.length, isNew: !Discovery.tag.classList.contains('hidden') }; },
+    // Arahkan kamera ke black hole (untuk screenshot)
+    lookBlackHole() { const d = DeepSky.bhDir; Player.setHeading(Math.atan2(-d.x, -d.z)); Player.rotateLocal(_AX_X, Math.asin(d.y)); Player.basis(); Player.syncEuler(); Player.rig.quaternion.copy(Player.quat); CamRig.reset(); return true; },
     // Pindah ke pose awal sebuah area (planet atau sabuk)
     viewArea(id) {
       const pose = SpaceWorld.startPose.call({ area: id });

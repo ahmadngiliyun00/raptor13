@@ -1053,3 +1053,63 @@ test('B9: Sabuk Asteroid dan Sabuk Kuiper padat dengan LOD dan awal yang aman', 
   expect(after.f.beltHere).toBe('sabuk');
   expect(after.s.deathCause).toBe('');
 });
+
+test('B10: latar Bima Sakti, galaksi, dan black hole yang hanya terlihat dari Tata Surya luar', async ({ page }) => {
+  await page.setViewportSize({ width: 960, height: 540 });
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.setEnemiesEnabled(false); d.clearAsteroids(); d.setAsteroidDensity(0); });
+  await dbg(page, 'viewBody', 'bumi', 3);
+  await page.waitForTimeout(300);
+  const inner = await dbg(page, 'sky');
+  expect(inner.milky).toBe(true);
+  expect(inner.galaxies).toBeGreaterThanOrEqual(3);
+  expect(inner.blackHole).toBe(0);
+  await dbg(page, 'viewBody', 'neptunus', 3);
+  await dbg(page, 'lookBlackHole');
+  await page.waitForTimeout(400);
+  expect((await dbg(page, 'sky')).blackHole).toBeGreaterThan(0.9);
+  await page.screenshot({ path: 'docs/screenshots/black-hole.jpg', type: 'jpeg', quality: 82 });
+});
+
+test('B10: dinding batas jelajah memberi peringatan dan mendorong balik tanpa game over', async ({ page }) => {
+  await page.setViewportSize({ width: 960, height: 540 });
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.setEnemiesEnabled(false); d.setGod(false); });
+  const limit = (await dbg(page, 'boundary')).limit;
+  await dbg(page, 'setPlayerState', { x: limit + 300, y: 0, z: 0, yaw: -Math.PI / 2 });   // menghadap keluar
+  await expect.poll(async () => (await dbg(page, 'boundary')).warning, { timeout: 3000 }).toBe('KELUAR BATAS MISI');
+  await expect(page.locator('#warning')).toHaveText('KELUAR BATAS MISI');
+  await page.screenshot({ path: 'docs/screenshots/batas-jelajah.jpg', type: 'jpeg', quality: 82 });
+  const b = await dbg(page, 'boundary');
+  expect(b.r).toBeLessThanOrEqual(limit);
+  expect(b.wall).toBeGreaterThan(0.9);
+  // Kapal diputar ke dalam dan permainan tetap berjalan
+  await expect.poll(async () => (await dbg(page, 'boundary')).fwdIn, { timeout: 8000 }).toBeGreaterThan(0.2);
+  const s = await snap(page);
+  expect(s.state).toBe('playing');
+  expect(s.deathCause).toBe('');
+});
+
+test('B10: panel data fakta muncul saat mendekat dan Penemuan tersimpan setelah reload', async ({ page }) => {
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.setEnemiesEnabled(false); d.clearAsteroids(); d.setAsteroidDensity(0); });
+  expect(await dbg(page, 'discoveries')).not.toContain('mars');
+  await dbg(page, 'viewBody', 'mars', 2.2);
+  await expect.poll(async () => (await dbg(page, 'dataPanel')).title, { timeout: 3000 }).toBe('Mars');
+  const p = await dbg(page, 'dataPanel');
+  expect(p.visible).toBe(true);
+  expect(p.facts).toBeGreaterThanOrEqual(2);
+  expect(p.isNew).toBe(true);
+  await expect(page.locator('#data-panel')).toContainText('Olympus Mons');
+  expect(await dbg(page, 'discoveries')).toContain('mars');
+  // Muat ulang: atlas Penemuan di menu masih mencatat Mars
+  await open(page);
+  expect(await dbg(page, 'discoveries')).toContain('mars');
+  await page.click('#btn-atlas');
+  await expect(page.locator('#screen-atlas')).toBeVisible();
+  await expect(page.locator('.acard[data-id="mars"]')).toContainText('Mars');
+  await expect(page.locator('.acard[data-id="mars"]')).not.toHaveClass(/locked/);
+  await expect(page.locator('.acard[data-id="neptunus"]')).toHaveClass(/locked/);
+  await page.click('#btn-atlas-back');
+  await expect(page.locator('#screen-atlas')).toBeHidden();
+});

@@ -36,6 +36,7 @@ Berkas ini adalah catatan kerja agar pengerjaan bisa dilanjutkan otomatis setela
 - S6 asteroid angkasa ukuran kontinu (spaceRadius per kelas) dan empat jenis (batu, es, logam, kristal; kristal lebih sering menjatuhkan pickup), komet (Comets) dengan koma, ekor menjauhi matahari, peringatan KOMET MENDEKAT dan Piko, bisa dihancurkan. Asteroid Bumi tidak berubah.
 - B8 Tata Surya (SolarSystem): Matahari bergranulasi, 8 planet, Pluto, 9 bulan (Bulan, Phobos, Deimos, Io, Europa, Ganymede, Callisto, Titan, Charon), tekstur kanvas noise 3D tanpa sambungan, bump kawah, lampu kota sisi malam Bumi, awan berputar, atmosfer, cincin Saturnus dengan celah Cassini dan bayangan planet, cincin tipis Jupiter dan Uranus, cahaya dari posisi Matahari (termasuk gerhana pada kapal), proksi berskala untuk benda jauh (camera.far 10000), tabrakan fatal planet, bulan, Matahari, peringatan TARIK NAIK, ketinggian HUD = jarak ke permukaan terdekat, pose awal per area (`SpaceWorld.area`), hook `solar`, `setArea`, `viewBody`. Jarak dipadatkan, bukan skala asli.
 - B9 RockFields: cincin Saturnus (6000 batu es pada kualitas tinggi), Jupiter dan Uranus berisi batu InstancedMesh di ruang lokal cincin; Sabuk Asteroid (10200 sampai 12600) dan Sabuk Kuiper (35500 sampai 42000) dibangkitkan per sel di sekitar kamera secara deterministik ditambah pita titik jauh berjarak dipadatkan; LOD: batu terdekat (radius 170, maksimal 14) diganti Asteroid ber-HP, yang hancur tetap hilang selama sesi; tekstur cincin memudar dari dekat; area awal 'sabuk' dan 'kuiper' dengan gelembung aman; hook `fields`, `enterRing`, `viewArea`.
+- B10 DeepSky (pita Bima Sakti dengan jalur debu, 4 galaksi spiral, black hole dengan piringan akresi, Doppler, cincin foton dan busur terbelokkan, terlihat mulai 17000 dari Matahari), Boundary (dinding grid berpendar di radius 45000, peringatan KELUAR BATAS MISI 1500 sebelum dinding, putar balik otomatis dan dorongan, tanpa game over, Piko memperingatkan), Discovery (panel data nama, golongan dan 2 sampai 3 fakta dunia nyata dalam BODY_FACTS untuk 21 benda termasuk dua sabuk), atlas PENEMUAN di menu, disimpan di Save.data.discoveries.
 - S8 pickup bintang lima warna (merah ultimate, hijau HP, biru nitro, emas XP dan skor, ungu nyawa) dengan magnet, jatuh dari musuh, asteroid kristal, komet dan kluster angkasa; ultimate laser E (meter dari bintang merah dan kill, sinar 2,5 detik), tombol ULTIMATE di mode HP, bar HUD. Game.xp disiapkan untuk S11.
 
 ## Urutan task berikutnya (blok terakhir menang bila bertentangan)
@@ -58,14 +59,14 @@ Fase berikutnya:
 13. (SELESAI) S8 Pickup bintang warna (merah ultimate, hijau HP, biru nitro, emas XP dan skor, ungu nyawa) dan ultimate laser E.
 14. (SELESAI) B8 Tata Surya (Matahari, 8 planet, Pluto, bulan, tekstur prosedural, cahaya dari Matahari). Menggantikan S5 dan S7.
 15. (SELESAI) B9 Cincin berisi asteroid instanced dengan LOD ke objek ber-HP, Sabuk Asteroid, Sabuk Kuiper.
-16. B10 Latar Bima Sakti, galaksi, black hole; batas jelajah dan dinding energi; panel data fakta akurat dan daftar Penemuan.
+16. (SELESAI) B10 Latar Bima Sakti, galaksi, black hole; batas jelajah dan dinding energi; panel data fakta akurat dan daftar Penemuan.
 17. B11 Mode Kampanye 10 stage dan Jelajah Bebas, peta Tab dan warp. Menggantikan S12.
 18. S9 dan A5 Roster musuh (8 jenis ditambah 6 kapal Sindikat Vanta), tembakan adil, `?gallery=1`.
 19. B12 Sistem cutscene.
 20. S10 dan B13 Mini-boss (stage 5 Penambang Raksasa, stage 8 Pemburu Agung) dan final boss Sang Naga Vanta 4 fase. Medan Bumi: bos tiap 5 gelombang.
 21. S11 XP, level, kartu upgrade (kelangkaan), drone pendamping.
 22. A6 Sistem stage (kartu pembuka, kontrak Buru Target, Kawal Konvoi, Bersihkan Sektor, layar Stage Clear dan rating, kredit).
-23. S13 HUD baru (radar, XP, ultimate, bar bos, misi, angka besar).
+23. S13 HUD baru (radar, XP, ultimate, bar bos, misi, angka besar). Tambahan permintaan pemain 11 Nov: MINIMAP di sisi kiri atau kanan yang menampilkan musuh (dan pickup, asteroid besar, planet terdekat) relatif terhadap arah kapal, ikut berputar sesuai heading; ditambah instrumen terbang: heading atau kompas dalam derajat, sudut pitch (naik turun) dan bank atau kemiringan (kanan kiri) dalam derajat dengan titik 0 saat datar seperti posisi awal, serta ketinggian atau jarak dari titik 0 (di Bumi ketinggian, di Angkasa jarak ke permukaan dan posisi relatif titik mulai). Bisa berupa indikator horizon buatan kecil. Harus tetap rapi di mode HP (lihat task 27a).
 24. S14 Menu attract angkasa, Pengaturan dan Tentang diperbarui, tombol ULTIMATE di mode HP, pemetaan tombol final di layar judul dan Pengaturan.
 25. S15 Audio angkasa dan musik ambient generatif (opsi Musik).
 26. A7 Dialog pilot (Raptor 13) dan Piko per stage.
