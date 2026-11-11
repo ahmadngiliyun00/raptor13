@@ -1300,3 +1300,82 @@ test('B12: pembuka stage kampanye diputar sekali per stage', async ({ page }) =>
   expect(c.active).toBe(null);
   expect((await snap(page)).state).toBe('playing');
 });
+
+// Pembantu bos: lewati cutscene yang sedang berjalan
+const skipCs = (page) => page.evaluate(() => window.__game.debug.skipCutscene());
+async function bossPhase(page, n) {
+  await expect.poll(async () => { await skipCs(page); return (await dbg(page, 'bossState'))?.phase; }, { timeout: 6000 }).toBe(n);
+}
+
+test('B13: mini-boss stage 5 dan 8 muncul setelah gelombang, bar HP, dua fase, stage selesai setelah kalah', async ({ page }) => {
+  test.setTimeout(90000);
+  await start(page, { world: 'space', mode: 'campaign' });
+  for (const [stage, kind] of [[5, 'miner'], [8, 'hunter']]) {
+    await dbg(page, 'setStage', stage);
+    await expect.poll(async () => { await skipCs(page); return (await dbg(page, 'campaign')).warp; }, { timeout: 6000 }).toBe(false);
+    await skipCs(page);
+    await dbg(page, 'finishStage');
+    await expect.poll(async () => (await dbg(page, 'bossState'))?.kind, { timeout: 4000 }).toBe(kind);
+    await expect(page.locator('#boss-bar')).toBeVisible();
+    expect((await dbg(page, 'campaign')).gate).toBe(false);          // gerbang belum terbuka selama bos hidup
+    const hp = (await dbg(page, 'damageBoss', 0)).max;
+    await dbg(page, 'damageBoss', hp * 0.6);
+    await bossPhase(page, 2);
+    if (kind === 'hunter') await expect.poll(async () => (await dbg(page, 'bossState')).parts, { timeout: 4000 }).toBeGreaterThan(1);   // umpan tiruan
+    if (kind === 'miner') await page.screenshot({ path: 'docs/screenshots/bos-penambang.jpg', type: 'jpeg', quality: 82 });
+    await dbg(page, 'damageBoss', hp);
+    await expect.poll(async () => dbg(page, 'bossState'), { timeout: 3000 }).toBe(null);
+    await expect.poll(async () => (await dbg(page, 'campaign')).gate, { timeout: 4000 }).toBe(true);
+  }
+});
+
+test('B13: Sang Naga Vanta empat fase dengan cutscene bisa diselesaikan, layar akhir, lanjut ke Jelajah Bebas', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.setViewportSize({ width: 960, height: 540 });
+  await start(page, { world: 'space', mode: 'campaign' });
+  await dbg(page, 'setStage', 10);
+  await expect.poll(async () => { await skipCs(page); return (await dbg(page, 'campaign')).area; }, { timeout: 6000 }).toBe('pluto');
+  await expect.poll(async () => { await skipCs(page); return (await dbg(page, 'campaign')).warp; }, { timeout: 6000 }).toBe(false);
+  await dbg(page, 'finishStage');
+  await expect.poll(async () => (await dbg(page, 'cutscene')).active, { timeout: 4000 }).toBe('naga-intro');
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: 'docs/screenshots/naga-vanta.jpg', type: 'jpeg', quality: 82 });
+  await page.keyboard.press('Enter');                                       // cutscene bisa dilewati
+  let b = await dbg(page, 'bossState');
+  expect(b.kind).toBe('naga');
+  expect(b.phase).toBe(1);
+  expect(b.parts).toBe(3);                                                  // tiga generator perisai
+  // Fase 1: hancurkan generator satu per satu
+  for (let i = 0; i < 3; i++) await dbg(page, 'damageBoss', 99999);
+  await bossPhase(page, 2);
+  // Fase 2: laser kepala diawali garis peringatan
+  await expect.poll(async () => (await dbg(page, 'bossState')).laser, { timeout: 9000 }).toBe('warn');
+  await dbg(page, 'damageBoss', 99999);
+  await bossPhase(page, 3);
+  b = await dbg(page, 'bossState');
+  expect(b.label).toContain('KEJAR');
+  for (let i = 0; i < 3; i++) await dbg(page, 'damageBoss', 99999);
+  await bossPhase(page, 4);
+  // Fase 4: peluru biasa hanya mengikis sampai batas, inti perlu ultimate
+  const chip = await dbg(page, 'damageBoss', 99999, false);
+  expect(chip.hp).toBeGreaterThan(0);
+  await dbg(page, 'damageBoss', 99999, true);
+  await expect.poll(async () => (await dbg(page, 'cutscene')).active, { timeout: 4000 }).toBe('naga-akhir');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await dbg(page, 'finalState')).visible, { timeout: 4000 }).toBe(true);
+  expect((await dbg(page, 'finalState')).completed).toBe(true);
+  await page.screenshot({ path: 'docs/screenshots/layar-akhir.jpg', type: 'jpeg', quality: 82 });
+  await page.click('#btn-final-free');
+  await expect.poll(async () => (await snap(page)).state).toBe('playing');
+  expect((await dbg(page, 'campaign')).mode).toBe('free');
+});
+
+test('B13: medan Bumi memunculkan bos Penjaga Raksasa setiap 5 gelombang', async ({ page }) => {
+  await start(page, { world: 'earth', enemies: true });
+  await dbg(page, 'startWave', 4);
+  expect(await dbg(page, 'bossState')).toBe(null);
+  await dbg(page, 'startWave', 5);
+  const b = await dbg(page, 'bossState');
+  expect(b.kind).toBe('raksasa');
+  await expect(page.locator('#boss-bar')).toBeVisible();
+});
