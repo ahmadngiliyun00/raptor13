@@ -280,6 +280,14 @@
     .screen h2 { font-size: 30px; }
   }
 
+  /* Lens flare */
+  #flare { position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0; mix-blend-mode: screen; }
+  #flare i { position: absolute; left: 0; top: 0; border-radius: 50%; }
+  #flare .f0 { width: 90px; height: 90px; margin: -45px 0 0 -45px; background: radial-gradient(circle, rgba(255, 245, 225, 0.95) 0 6%, rgba(255, 210, 150, 0.35) 22%, rgba(255, 190, 120, 0) 70%); }
+  #flare .f1 { width: 46px; height: 46px; margin: -23px 0 0 -23px; background: radial-gradient(circle, rgba(140, 200, 255, 0.18), rgba(140, 200, 255, 0) 70%); }
+  #flare .f2 { width: 26px; height: 26px; margin: -13px 0 0 -13px; background: radial-gradient(circle, rgba(255, 160, 220, 0.22), rgba(255, 160, 220, 0) 70%); }
+  #flare .f3 { width: 70px; height: 70px; margin: -35px 0 0 -35px; border: 1px solid rgba(255, 220, 170, 0.12); background: radial-gradient(circle, rgba(255, 220, 170, 0.06), rgba(255, 220, 170, 0) 70%); }
+
   /* Toolbar pojok kanan atas */
   #toolbar {
     position: fixed; z-index: 40; display: flex; gap: 8px;
@@ -414,7 +422,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"
   }
 }
 </script>
@@ -499,6 +508,9 @@
   <button id="prompt-yes" class="btn" type="button">YA</button>
   <button id="prompt-no" class="btn secondary" type="button">TIDAK</button>
 </div>
+
+<!-- Lens flare halus matahari angkasa -->
+<div id="flare"><i class="f0"></i><i class="f1"></i><i class="f2"></i><i class="f3"></i></div>
 
 <!-- Toolbar pojok kanan atas: tersedia di menu dan saat bermain -->
 <div id="toolbar" class="hidden">
@@ -631,6 +643,7 @@
         <label class="tog"><input type="checkbox" data-key="cameraRoll"> Kamera ikut berguling</label>
         <label class="tog"><input type="checkbox" data-key="damageNumbers"> Angka damage</label>
         <label class="tog"><input type="checkbox" data-key="showFps"> Tampilkan FPS</label>
+        <label class="tog"><input type="checkbox" data-key="bloom"> Bloom (angkasa, mati di kualitas Rendah)</label>
         <label class="tog"><input type="checkbox" data-key="autoFire"> Tembak otomatis (mode HP)</label>
       </div>
     </div>
@@ -708,14 +721,18 @@
 
 <script type="module">
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 /* =====================================================================
    CONFIG - semua konstanta gameplay dan kualitas ada di sini
    ===================================================================== */
 const QUALITY_PRESETS = {
-  rendah: { shadows: false, shadowMapSize: 1024, maxParticles: 900,  particleDensity: 0.5,  chunkRadius: 2, pixelRatioMax: 1,   antialias: false, clouds: 18 },
-  sedang: { shadows: true,  shadowMapSize: 1024, maxParticles: 1800, particleDensity: 0.8,  chunkRadius: 3, pixelRatioMax: 1.5, antialias: true,  clouds: 32 },
-  tinggi: { shadows: true,  shadowMapSize: 2048, maxParticles: 3200, particleDensity: 1.0,  chunkRadius: 4, pixelRatioMax: 2,   antialias: true,  clouds: 48 },
+  rendah: { shadows: false, shadowMapSize: 1024, maxParticles: 900,  particleDensity: 0.5,  chunkRadius: 2, pixelRatioMax: 1,   antialias: false, clouds: 18, bloom: 0, stars: 0.5 },
+  sedang: { shadows: true,  shadowMapSize: 1024, maxParticles: 1800, particleDensity: 0.8,  chunkRadius: 3, pixelRatioMax: 1.5, antialias: true,  clouds: 32, bloom: 0.5, stars: 0.8 },
+  tinggi: { shadows: true,  shadowMapSize: 2048, maxParticles: 3200, particleDensity: 1.0,  chunkRadius: 4, pixelRatioMax: 2,   antialias: true,  clouds: 48, bloom: 1, stars: 1 },
 };
 
 const CONFIG = {
@@ -978,6 +995,7 @@ const SETTING_DEFAULTS = {
   damageNumbers: true,
   showFps: false,
   autoFire: false,             // tembak otomatis di mode HP
+  bloom: true,                 // efek bloom di medan angkasa (dimatikan oleh kualitas Rendah)
   touchPromptShown: false,
 };
 const SETTING_ENUMS = {
@@ -1057,6 +1075,13 @@ const Save = {
   get settings() { return this.data.settings; },
 };
 Save.load();
+// Pertama kali di perangkat sentuh (belum ada save): kualitas Rendah sebagai bawaan
+(() => {
+  let fresh = true;
+  try { fresh = !window.localStorage.getItem(SAVE_KEY); } catch (err) { fresh = true; }
+  const touch = (window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false) || (navigator.maxTouchPoints || 0) > 0;
+  if (fresh ? touch : false) Save.settings.quality = 'rendah';
+})();
 CONFIG.qualityPreset = Save.settings.quality;
 
 // Pilih preset kualitas dari URL bila ada (menimpa pengaturan), misalnya index.html?kualitas=rendah
@@ -1178,6 +1203,32 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, window.innerWidth / window.innerHeight, CONFIG.camera.near, 2000);
 camera.position.set(0, 3, 10);
 
+/* Post-processing: bloom hanya di medan angkasa (glow mesin, laser, bintang), mengikuti preset kualitas */
+const Post = {
+  composer: null, bloom: null,
+  get wanted() { return Q.bloom > 0 ? (Save.settings.bloom ? Worlds.active === SpaceWorld : false) : false; },
+  setup() {
+    if (this.composer) return;
+    this.composer = new EffectComposer(renderer);
+    this.composer.addPass(new RenderPass(scene, camera));
+    const w = window.innerWidth, h = window.innerHeight, scale = Q.bloom >= 1 ? 1 : 0.5;
+    // Threshold tinggi: hanya sumber cahaya (mesin, laser, bintang, matahari) yang berpendar
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(w * scale, h * scale), 0.55, 0.35, 0.86);
+    this.composer.addPass(this.bloom);
+    this.composer.addPass(new OutputPass());
+    this.resize();
+  },
+  resize() {
+    if (!this.composer) return;
+    this.composer.setPixelRatio(renderer.getPixelRatio());
+    this.composer.setSize(window.innerWidth, window.innerHeight);
+  },
+  render() {
+    if (this.wanted) { this.setup(); this.composer.render(); }
+    else renderer.render(scene, camera);
+  },
+};
+
 function onResize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pixelRatioMax, 2));
@@ -1185,6 +1236,8 @@ function onResize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   if (typeof FX !== 'undefined') FX.setViewport(renderer.domElement.height);
+  Post.resize();
+  if (typeof SpaceSky !== 'undefined') SpaceSky.setPixelRatio(renderer.getPixelRatio());
 }
 window.addEventListener('resize', onResize);
 
@@ -2393,6 +2446,9 @@ const Env = {
       this.sun.shadow.normalBias = L.shadowNormalBias;
     }
     scene.add(this.sun, this.sun.target);
+    // Rim light: jumlah lampu tetap; intensitas 0 di Bumi agar shader tidak dikompilasi ulang
+    this.rim = new THREE.DirectionalLight(0x6f8fd8, 0);
+    scene.add(this.rim, this.rim.target);
 
     // Laut: satu bidang besar yang mengikuti pemain
     const size = (Terrain.N + 2) * Terrain.C;
@@ -2410,18 +2466,23 @@ const Env = {
   setLighting(kind) {
     const L = CONFIG.light;
     if (kind === 'space') {
-      this.sun.color.setHex(0xfff1dc); this.sun.intensity = 3.0;
-      this.hemi.color.setHex(0x223355); this.hemi.groundColor.setHex(0x05060a); this.hemi.intensity = 0.55;
+      this.sun.color.setHex(0xffe6c4); this.sun.intensity = 2.5;
+      this.hemi.color.setHex(0x1c2c4c); this.hemi.groundColor.setHex(0x05060a); this.hemi.intensity = 0.5;
+      this.rim.intensity = 0.7;
     } else {
+      this.rim.intensity = 0;
       this.sun.color.setHex(L.sunColor); this.sun.intensity = L.sunIntensity;
       this.hemi.color.setHex(L.hemiSky); this.hemi.groundColor.setHex(L.hemiGround); this.hemi.intensity = L.hemiIntensity;
     }
   },
   // Shadow camera berpusat pada pemain: frustum kecil sehingga tajam dan murah
-  followLight() {
+  followLight(dir = this.sunDir) {
     const p = Player.pos;
-    this.sun.position.copy(p).addScaledVector(this.sunDir, 300);
+    this.sun.position.copy(p).addScaledVector(dir, 300);
     this.sun.target.position.copy(p);
+    // Rim light tipis dari arah berlawanan matahari (hanya terang di angkasa)
+    this.rim.position.copy(p).addScaledVector(dir, -300);
+    this.rim.target.position.copy(p);
   },
   update() {
     const p = Player.pos;
@@ -3682,6 +3743,242 @@ function hardImpact(cause, bounce) {
    safeStartAltitude, autopilotTargetY, minY, maxY dan features. Sistem HP, damage,
    peluru, pickup, HUD dan input tidak bergantung pada jenis dunia.
    ===================================================================== */
+/* =====================================================================
+   LANGIT ANGKASA - nebula fbm, bintang tiga lapis, debu dekat kamera, garis warp
+   saat nitro, matahari jauh dengan pendar dan lens flare. Semua shader menulis warna
+   linear lalu colorspace_fragment, sehingga sama di jalur bloom maupun tanpa bloom.
+   ===================================================================== */
+const STAR_VERT = /* glsl */`
+  attribute float aSize; attribute vec3 aColor; attribute float aPhase;
+  uniform float uTime; uniform float uPR; uniform float uAtten; uniform float uFar;
+  varying vec3 vColor; varying float vTw;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    if (uFar > 0.5) gl_Position.z = gl_Position.w * 0.99998;   // lapis langit: selalu di belakang
+    float sz = aSize * uPR;
+    if (uAtten > 0.0) sz = clamp(aSize * uAtten / max(-mv.z, 1.0), 0.0, 5.0) * uPR;
+    gl_PointSize = sz;
+    vTw = 0.78 + 0.22 * sin(uTime * (1.3 + aPhase * 2.0) + aPhase * 37.0);
+    vColor = aColor;
+  }`;
+const STAR_FRAG = /* glsl */`
+  uniform float uOpacity;
+  varying vec3 vColor; varying float vTw;
+  void main() {
+    vec2 c = gl_PointCoord - 0.5;
+    float d = dot(c, c) * 4.0;
+    if (d > 1.0) discard;
+    float a = pow(1.0 - d, 2.2) * uOpacity;
+    gl_FragColor = vec4(vColor * vTw, a);
+    #include <colorspace_fragment>
+  }`;
+const NEBULA_FRAG = /* glsl */`
+  uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3; uniform float uSeed; uniform float uStrength;
+  varying vec3 vDir;
+  float hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float noise(vec3 x) {
+    vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x), mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
+               mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x), mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+  }
+  float fbm(vec3 p) { float a = 0.5, s = 0.0; for (int i = 0; i < 5; i++) { s += a * noise(p); p *= 2.03; a *= 0.5; } return s; }
+  void main() {
+    vec3 d = normalize(vDir);
+    float n = fbm(d * 2.2 + uSeed);
+    float n2 = fbm(d * 4.5 - uSeed * 1.7);
+    float n3 = fbm(d * 9.0 + uSeed * 0.6);
+    float cloud = smoothstep(0.42, 0.82, n) * (0.55 + 0.45 * n3);
+    vec3 col = mix(uC1, uC2, smoothstep(0.3, 0.75, n2)) * cloud;
+    col += uC3 * pow(smoothstep(0.58, 0.92, n2), 2.0) * 0.6 * cloud;
+    // Pita debu gelap memotong nebula
+    col *= 1.0 - 0.6 * smoothstep(0.55, 0.7, fbm(d * 3.1 + 11.0));
+    gl_FragColor = vec4(col * uStrength, 1.0);
+    #include <colorspace_fragment>
+  }`;
+const SUN_FRAG = /* glsl */`
+  uniform vec3 uColor; varying vec2 vUv;
+  void main() {
+    float r = length(vUv - 0.5) * 2.0;
+    float core = smoothstep(0.16, 0.1, r);
+    float glow = pow(max(1.0 - r, 0.0), 3.0) * 0.6 + pow(max(1.0 - r, 0.0), 10.0) * 1.2;
+    vec3 col = uColor * glow + vec3(1.0, 0.98, 0.92) * core * 3.0;
+    gl_FragColor = vec4(col, 1.0);
+    #include <colorspace_fragment>
+  }`;
+
+const SpaceSky = {
+  sky: new THREE.Group(),     // mengikuti kamera: nebula, bintang jauh dan tengah, matahari
+  sunDir: new THREE.Vector3(0.55, 0.22, -0.8).normalize(),
+  materials: [],
+  time: 0,
+  linear(hex) { return new THREE.Color(hex); },   // Color menyimpan nilai linear
+
+  starMaterial(atten, far, opacity = 1) {
+    const m = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uPR: { value: renderer.getPixelRatio() }, uAtten: { value: atten }, uFar: { value: far ? 1 : 0 }, uOpacity: { value: opacity } },
+      vertexShader: STAR_VERT, fragmentShader: STAR_FRAG,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    this.materials.push(m);
+    return m;
+  },
+  // Warna bintang menurut suhu: biru putih, putih, kuning, oranye
+  starColor(rnd) {
+    const r = rnd();
+    const c = r < 0.15 ? [0.62, 0.74, 1.0] : r < 0.65 ? [1.0, 1.0, 1.0] : r < 0.88 ? [1.0, 0.9, 0.68] : [1.0, 0.68, 0.45];
+    const b = 0.45 + rnd() * 0.75;
+    return [c[0] * b, c[1] * b, c[2] * b];
+  },
+  makeStars(count, radius, sizeMin, sizeMax, seed, atten, far) {
+    const rnd = makeRng(seed);
+    const pos = new Float32Array(count * 3), col = new Float32Array(count * 3), size = new Float32Array(count), ph = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      // Lebih rapat di sekitar pita galaksi (bidang miring)
+      let x = rnd() * 2 - 1, y = rnd() * 2 - 1, z = rnd() * 2 - 1;
+      if (rnd() < 0.45) y *= 0.18;
+      const l = Math.hypot(x, y, z) || 1;
+      const rr = atten > 0 ? radius * Math.cbrt(rnd()) : radius;
+      pos[i * 3] = x / l * rr; pos[i * 3 + 1] = (y / l) * rr; pos[i * 3 + 2] = z / l * rr;
+      const c = this.starColor(rnd);
+      col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2];
+      size[i] = sizeMin + Math.pow(rnd(), 3) * (sizeMax - sizeMin);
+      ph[i] = rnd();
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+    g.setAttribute('aPhase', new THREE.BufferAttribute(ph, 1));
+    const pts = new THREE.Points(g, this.starMaterial(atten, far));
+    pts.frustumCulled = false;
+    return pts;
+  },
+
+  init() {
+    const dens = Q.stars;
+    // Nebula
+    this.nebula = new THREE.Mesh(new THREE.SphereGeometry(40, 32, 20), new THREE.ShaderMaterial({
+      uniforms: { uC1: { value: this.linear(0x1a8fb8) }, uC2: { value: this.linear(0xb0287a) }, uC3: { value: this.linear(0xff8a3a) }, uSeed: { value: 3.1 }, uStrength: { value: 0.32 } },
+      vertexShader: `varying vec3 vDir; void main() { vDir = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww * vec4(1.0, 1.0, 0.99999, 1.0); }`,
+      fragmentShader: NEBULA_FRAG, side: THREE.BackSide, depthWrite: false,
+    }));
+    this.nebula.renderOrder = -20;
+    this.nebula.frustumCulled = false;
+    this.sky.add(this.nebula);
+    // Bintang jauh (rapat, kecil) dan tengah (lebih besar)
+    this.far = this.makeStars(Math.round(7000 * dens), 30, 0.8, 2.2, 101, 0, true);
+    this.mid = this.makeStars(Math.round(1600 * dens), 30, 1.6, 3.6, 202, 0, true);
+    this.far.renderOrder = -19; this.mid.renderOrder = -18;
+    this.sky.add(this.far, this.mid);
+    // Matahari jauh: cakram kecil berpendar
+    this.sun = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
+      uniforms: { uColor: { value: new THREE.Color(1.0, 0.82, 0.55) } },
+      vertexShader: `varying vec2 vUv; void main() { vUv = uv; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww * vec4(1.0, 1.0, 0.99997, 1.0); }`,
+      fragmentShader: SUN_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    }));
+    this.sun.renderOrder = -17;
+    this.sun.frustumCulled = false;
+    this.sky.add(this.sun);
+    scene.add(this.sky);
+    // Bintang dekat di ruang dunia: paralaks nyata saat terbang
+    this.near = this.makeStars(Math.round(900 * dens), 1400, 1.2, 3.0, 303, 900, false);
+    this.near.renderOrder = -16;
+    scene.add(this.near);
+    // Debu dekat kamera
+    this.dust = this.makeStars(Math.round(420 * dens), 90, 0.6, 1.6, 404, 160, false);
+    this.dust.material.uniforms.uOpacity.value = 0.55;
+    scene.add(this.dust);
+    // Garis warp saat nitro
+    const n = 140;
+    this.streakSeeds = new Float32Array(n * 3);
+    const rnd = makeRng(505);
+    for (let i = 0; i < n; i++) {
+      const a = rnd() * Math.PI * 2, r = 8 + rnd() * 40;
+      this.streakSeeds[i * 3] = Math.cos(a) * r; this.streakSeeds[i * 3 + 1] = Math.sin(a) * r; this.streakSeeds[i * 3 + 2] = -rnd() * 260;
+    }
+    const sg = new THREE.BufferGeometry();
+    this.streakPos = new THREE.BufferAttribute(new Float32Array(n * 6), 3).setUsage(THREE.DynamicDrawUsage);
+    sg.setAttribute('position', this.streakPos);
+    this.streaks = new THREE.LineSegments(sg, new THREE.LineBasicMaterial({ color: 0xbfe3ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.streaks.frustumCulled = false;
+    scene.add(this.streaks);
+    this.flare = document.getElementById('flare');
+  },
+  objects() { return [this.sky, this.near, this.dust, this.streaks]; },
+  setPixelRatio(pr) { for (const m of this.materials) m.uniforms.uPR.value = pr; },
+  // Warna nebula per sektor (dipakai sistem sektor)
+  setPalette(c1, c2, c3, seed) {
+    const u = this.nebula.material.uniforms;
+    u.uC1.value.setHex(c1); u.uC2.value.setHex(c2); u.uC3.value.setHex(c3); u.uSeed.value = seed;
+  },
+  // Bungkus titik ruang dunia di sekitar pusat agar tetap mengelilingi pemain
+  wrapPoints(pts, cx, cy, cz, half) {
+    const a = pts.geometry.attributes.position, arr = a.array, size = half * 2;
+    let moved = false;
+    for (let i = 0; i < arr.length; i += 3) {
+      for (let k = 0; k < 3; k++) {
+        const c = k === 0 ? cx : k === 1 ? cy : cz;
+        const d = arr[i + k] - c;
+        if (d > half) { arr[i + k] -= size; moved = true; } else if (d < -half) { arr[i + k] += size; moved = true; }
+      }
+    }
+    if (moved) a.needsUpdate = true;
+  },
+  update(dt) {
+    this.time += dt;
+    for (const m of this.materials) m.uniforms.uTime.value = this.time;
+    const cam = camera.position;
+    this.sky.position.copy(cam);
+    this.mid.position.set(0, 0, 0);
+    // Matahari: jauh dan kecil, menghadap kamera
+    this.sun.position.copy(this.sunDir).multiplyScalar(30);
+    this.sun.scale.setScalar(2.4);
+    this.sun.lookAt(cam);
+    this.wrapPoints(this.near, cam.x, cam.y, cam.z, 1400);
+    this.wrapPoints(this.dust, cam.x, cam.y, cam.z, 90);
+    // Garis warp: memanjang searah gerak, terlihat sesuai intensitas nitro
+    const nf = Player.nitroFx, mat = this.streaks.material;
+    mat.opacity = Math.max(0, nf - 0.05) * 0.38;
+    if (mat.opacity > 0.01) {
+      const f = Player.forward, up = Player._up, right = Player._right, arr = this.streakPos.array;
+      const len = 4 + nf * 16, adv = Player.speed * dt * 2.2;
+      const S = this.streakSeeds;
+      for (let i = 0; i < S.length / 3; i++) {
+        S[i * 3 + 2] += adv;
+        if (S[i * 3 + 2] > 30) S[i * 3 + 2] -= 290;
+        const sx = S[i * 3], sy = S[i * 3 + 1], sz = S[i * 3 + 2];
+        const px = cam.x + right.x * sx + up.x * sy - f.x * sz, py = cam.y + right.y * sx + up.y * sy - f.y * sz, pz = cam.z + right.z * sx + up.z * sy - f.z * sz;
+        arr[i * 6] = px; arr[i * 6 + 1] = py; arr[i * 6 + 2] = pz;
+        arr[i * 6 + 3] = px - f.x * len; arr[i * 6 + 4] = py - f.y * len; arr[i * 6 + 5] = pz - f.z * len;
+      }
+      this.streakPos.needsUpdate = true;
+    }
+    this.updateFlare();
+  },
+  // Lens flare halus: titik silau dan beberapa lingkaran sepanjang garis matahari ke tengah layar
+  updateFlare() {
+    camera.getWorldDirection(_vc);
+    const facing = _vc.dot(this.sunDir);
+    let vis = 0;
+    if (facing > 0.55) {
+      _vc.copy(camera.position).addScaledVector(this.sunDir, 500).project(camera);
+      if (Math.max(Math.abs(_vc.x), Math.abs(_vc.y)) < 1.1) vis = smoothstep(0.55, 0.92, facing);
+    }
+    if (!this.flare) return;
+    if (vis <= 0.01) { if (this.flareOn) { this.flare.style.opacity = 0; this.flareOn = false; } return; }
+    this.flareOn = true;
+    const w = window.innerWidth, h = window.innerHeight;
+    const sx = (_vc.x + 1) * 0.5 * w, sy = (1 - _vc.y) * 0.5 * h, cx = w / 2, cy = h / 2;
+    this.flare.style.opacity = (vis * 0.85).toFixed(2);
+    const kids = this.flare.children, ts = [0, 0.45, 0.8, 1.35];
+    for (let i = 0; i < kids.length; i++) {
+      const t = ts[i];
+      kids[i].style.transform = 'translate(' + (sx + (cx - sx) * t * 2).toFixed(1) + 'px, ' + (sy + (cy - sy) * t * 2).toFixed(1) + 'px)';
+    }
+  },
+};
+
 const EarthWorld = {
   id: 'earth',
   label: 'Atmosfer Bumi',
@@ -3725,7 +4022,7 @@ const SpaceWorld = {
   maxY: 3000,
   features: { rings: false, clouds: false },
   viewDistance: 6000,
-  objects() { return []; },
+  objects() { return SpaceSky.objects(); },
   activate() {
     for (const o of this.objects()) o.visible = true;
     scene.background = new THREE.Color(0x02030a);
@@ -3736,10 +4033,13 @@ const SpaceWorld = {
     FX.setFog(this.viewDistance * 0.5, this.viewDistance);
     Player.warning = '';
   },
-  deactivate() { for (const o of this.objects()) o.visible = false; },
+  deactivate() {
+    for (const o of this.objects()) o.visible = false;
+    if (SpaceSky.flare) SpaceSky.flare.style.opacity = 0;
+  },
   reset() {},
   update() {},
-  follow() { Env.followLight(); },
+  follow() { Env.followLight(SpaceSky.sunDir); SpaceSky.update(lastDt || 0.016); },
   groundHeightAt() { return -1e9; },
   solidAt() { return false; },
   collide(dt) { Player.invuln = Math.max(0, Player.invuln - dt); },
@@ -4040,7 +4340,7 @@ const PARTICLE_VERT = /* glsl */`
     gl_Position = projectionMatrix * mv;
     float dist = max(-mv.z, 0.1);
     gl_PointSize = aSize > 0.0 ? min(aSize * projectionMatrix[1][1] * uViewportH * 0.5 / dist, 256.0) : 0.0;
-    vColor = aColor;
+    vColor = pow(aColor, vec3(2.2));   // warna masukan sRGB ke linear
     vAlpha = aAlpha * (1.0 - smoothstep(uFogNear, uFogFar, dist)) * smoothstep(3.0, 12.0, dist);
   }`;
 const PARTICLE_FRAG = /* glsl */`
@@ -4053,6 +4353,7 @@ const PARTICLE_FRAG = /* glsl */`
     if (d > 1.0 || vAlpha <= 0.0) discard;
     float a = pow(1.0 - d, uSoft);
     gl_FragColor = vec4(vColor, a * vAlpha);
+    #include <colorspace_fragment>
   }`;
 
 class ParticleSystem {
@@ -4331,6 +4632,7 @@ Events.on('pickup', (type, pos) => {
   else ringBurst(pos, 30, 1, 0.6, 0.15);
 });
 
+SpaceSky.init();
 // Dunia awal mengikuti pengaturan Medan default (angkasa bila belum pernah diubah)
 setActiveWorld(Save.settings.terrain, CONFIG.seed);
 Player.reset();
@@ -6000,7 +6302,7 @@ function render() {
   Weapons.pool.sync();
   Enemies.bullets.sync();
   if (Game.state === 'playing' || Game.state === 'paused' || Game.state === 'countdown' || Game.state === 'starting') updateHud(lastDt);
-  renderer.render(scene, camera);
+  Post.render();
 }
 
 

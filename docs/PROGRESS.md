@@ -29,6 +29,7 @@ Berkas ini adalah catatan kerja agar pengerjaan bisa dilanjutkan otomatis setela
 - B7 audio mesin brown noise ditambah dua osilator 52 sampai 90 Hz, whoosh dan sub-bass saat nitro mulai lalu desis stabil, compressor ringan, uji sanity.
 - Fase 0 (B1 sampai B7) selesai.
 - A2 hangar (alur MULAI, Pilih Medan, Pilih Kapal, dan tombol HANGAR di menu), kredit dari loot dan 50 persen dibawa pulang saat game over, save v3 dengan migrasi. Interceptor dan Gunship terdaftar dengan statistik akhir tetapi model masih jet sementara sampai A3.
+- S3 langit angkasa (nebula fbm, bintang tiga lapis, debu, garis warp, matahari jauh, lens flare DOM, rim light) dan bloom UnrealBloomPass hanya di angkasa sesuai preset, opsi Bloom, kualitas Rendah bawaan di perangkat sentuh.
 
 ## Urutan task berikutnya (blok terakhir menang bila bertentangan)
 
@@ -43,7 +44,7 @@ Fase 0, rasa main (paling awal):
 
 Fase berikutnya:
 8. (SELESAI) A2 Hangar Pilih Kapal (alur MULAI, Pilih Medan, Pilih Kapal), kredit, buka kapal, save v3 dengan migrasi.
-9. S3 Skybox angkasa (bintang paralaks 3 lapis, nebula, debu dekat kamera, warp streak saat nitro), matahari dan lens flare, EffectComposer dan UnrealBloomPass sesuai preset kualitas.
+9. (SELESAI) S3 Skybox angkasa (bintang paralaks 3 lapis, nebula, debu dekat kamera, warp streak saat nitro), matahari dan lens flare, EffectComposer dan UnrealBloomPass sesuai preset kualitas.
 10. A3 Starfighter bersayap empat konfigurasi X dengan sayap dinamis dan thruster manuver, varian Interceptor (500 kredit) dan Gunship (1200 kredit), `?shippreview=` (starfighter, jet, interceptor, gunship, piko), minimal 3 putaran iterasi visual.
 11. A4 Robot Piko (model loft, ekspresi mata, bip, panel HUD bersubtitle, batas frekuensi, opsi Bantuan robot, 3 kartu upgrade).
 12. S6 Asteroid angkasa ukuran kontinu dan 4 jenis (batu, es, logam, kristal) serta komet berekor.
