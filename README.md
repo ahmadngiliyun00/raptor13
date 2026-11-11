@@ -2,323 +2,309 @@
 
 > Superioritas udara dimulai dari sini.
 
-RAPTOR13 adalah game pesawat tempur 3D bergaya arcade yang berjalan langsung di browser.
+RAPTOR13 adalah game tempur udara dan angkasa 3D bergaya arcade yang berjalan langsung di browser.
 Seluruh game ada di satu berkas `index.html` (HTML, CSS, dan JavaScript inline), tanpa build step
-dan tanpa aset eksternal. Three.js dimuat dari CDN lewat importmap, semua visual dibuat dari
-geometri prosedural, dan semua suara disintesis dengan WebAudio.
+dan tanpa aset eksternal. Three.js 0.187.0 dimuat dari CDN lewat importmap, semua model, tekstur,
+langit, dan planet dibuat prosedural oleh kode, dan semua suara serta musik disintesis dengan WebAudio.
 
-Nama dan desain pesawat terinspirasi dari konsep jet tempur siluman generasi kelima, tetapi
-model pesawatnya orisinal dan bukan replika pesawat nyata mana pun.
+Ada dua medan: **Luar Angkasa** (Tata Surya lengkap dengan Kampanye 10 stage dan Jelajah Bebas)
+dan **Atmosfer Bumi** (gelombang tanpa akhir di atas pegunungan, laut, dan pilar batu).
 
-| Layar judul | Bermain | Game over |
-|---|---|---|
-| ![Layar judul](docs/screenshots/menu.png) | ![Bermain](docs/screenshots/gameplay.png) | ![Game over](docs/screenshots/gameover.png) |
+Repo: <https://github.com/ahmadngiliyun00/raptor13>
 
-## Model jet
+| Menu | Cincin Saturnus | Galeri musuh |
+| --- | --- | --- |
+| ![Menu](docs/screenshots/menu.png) | ![Cincin Saturnus](docs/screenshots/cincin-saturnus.jpg) | ![Galeri musuh](docs/screenshots/galeri-musuh.png) |
+| **Sang Naga Vanta** | **Peta Tata Surya** | **Medan Bumi** |
+| ![Naga](docs/screenshots/naga-vanta.jpg) | ![Peta](docs/screenshots/peta-tata-surya.jpg) | ![Bumi](docs/screenshots/gameplay.png) |
+| **Black hole dari Tata Surya luar** | **Pilih kontrak** | **Kontrol HP** |
+| ![Black hole](docs/screenshots/black-hole.jpg) | ![Kontrak](docs/screenshots/pilih-kontrak.png) | ![Kontrol HP](docs/screenshots/kontrol-hp.png) |
 
-Jet pemain dibangun sepenuhnya secara prosedural di `createPlayerJet()` (bagian PESAWAT PEMAIN
-di `index.html`), tanpa Box, Cylinder, atau Cone sebagai bentuk utama. Total **4.520 segitiga**.
-Panjang badan L = 9,4 unit dengan hidung menghadap -Z; hitbox, titik tembak, dan titik api
-mesin sama dengan model sebelumnya.
-
-| Samping | Atas | Depan |
-|---|---|---|
-| ![Samping](docs/screenshots/jet-side.png) | ![Atas](docs/screenshots/jet-top.png) | ![Depan](docs/screenshots/jet-front.png) |
-| **Tiga perempat depan** | **Tiga perempat belakang** | **Kamera chase** |
-| ![Tiga perempat depan](docs/screenshots/jet-three-quarter-front.png) | ![Tiga perempat belakang](docs/screenshots/jet-three-quarter-rear.png) | ![Chase](docs/screenshots/jet-chase.png) |
-
-![Bank penuh saat nitro](docs/screenshots/jet-gameplay-bank.png)
-
-Teknik yang dipakai:
-
-- **Badan** dari `loftFuselage(sections)`: 17 penampang superellipse dengan 24 titik per ring.
-  Parameter `chine` memperbesar eksponen vertikal sehingga sisi badan menyempit menjadi bibir
-  tajam horizontal. Hidung pipih dan melengkung turun lewat offset y negatif. Normal halus.
-- **Sayap, strake, stabilizer, dan sirip** dari `liftingSurface(planform)`: grid atas dan bawah
-  dengan chord berspasi kosinus dan ketebalan profil airfoil simetris (NACA 4 digit) yang menipis
-  dari pangkal ke ujung. Tepi depan membulat, tepi belakang tajam, ujung terpotong miring,
-  sayap utama sedikit dihedral. Sisi kiri adalah cerminan sisi kanan (indeks dibalik).
-- **Kanopi** dari `LatheGeometry` setengah putaran dengan profil tetesan, diskalakan menjadi
-  elipsoid pipih, plus rangka tipis.
-- **Intake dan nozzle 2D** dari loft penampang persegi panjang bersudut membulat; mulut intake
-  miring (caret) lewat shear per penampang, bagian dalam gelap. Glow nozzle menyala saat nitro.
-- **Material** `MeshStandardMaterial` abu-abu gelap kebiruan dengan env map dari kanvas kecil
-  (gradasi langit dan tanah), serta tekstur kanvas prosedural untuk garis panel halus, aksen
-  oranye tipis di tepi depan sayap dan sirip, dan angka **13** di kedua sirip tegak.
-  Semua geometri, material, dan tekstur dibuat sekali.
-
-### Mode pratinjau jet
-
-Buka `index.html?jetpreview=1` untuk melihat jet saja di latar polos dengan cahaya netral dan
-kamera orbit otomatis. Dari console browser:
-
-```js
-__jetPreview.setView('side')   // side, top, front, rear, three_quarter_front, three_quarter_rear, chase
-__jetPreview.orbit()           // kembali ke orbit otomatis
-__jetPreview.triangles         // jumlah segitiga jet
-__jetPreview.setNitro(1)       // pratinjau api nitro (0 sampai 1)
-```
-
-Screenshot di atas dibuat ulang oleh uji `pratinjau jet` di `tests/game.spec.mjs`.
-
-## Tata Surya (medan Angkasa)
-
-Medan Angkasa berisi Matahari, delapan planet, Pluto, dan bulan-bulan utama (Bulan, Phobos,
-Deimos, Io, Europa, Ganymede, Callisto, Titan, Charon). **Jarak antar benda dipadatkan dan
-bukan skala asli**: Merkurius berada 3.200 unit dari pusat Matahari dan Pluto 37.000 unit, agar
-jarak antar planet tetap bisa ditempuh dengan terbang manual. Ukuran juga dipadatkan tetapi
-urutannya tetap masuk akal (Matahari paling besar, lalu Jupiter, Saturnus, Uranus, Neptunus,
-Bumi, Venus, Mars, Merkurius, Pluto).
-
-Semua tekstur dibuat prosedural di kanvas dari noise 3D yang disampel di permukaan bola (tanpa
-sambungan) dan diterangi dari posisi Matahari yang sebenarnya, jadi sisi terang setiap planet
-selalu menghadap Matahari. Benda yang jauh digambar sebagai proksi berskala (didekatkan ke kamera
-dan diperkecil sebanding), sehingga ukurannya di layar tetap benar tanpa logarithmic depth buffer.
-
-![Saturnus](docs/screenshots/tata-surya-saturnus.jpg)
-
-## Cara main
-
-Mode permainan adalah bertahan tanpa akhir (endless survival). Pesawat selalu maju sendiri;
-tugasmu mengarahkan, menembak, dan bertahan selama mungkin.
-
-- **Musuh datang bergelombang.** Ada dua tipe: *drone* kecil yang mengejar pelan dan meledak
-  saat menabrak, serta *pesawat penembak* bersayap delta yang menyerang, melintas, menjauh,
-  lalu berbalik dan menembak lagi. Tiap gelombang membawa lebih banyak musuh yang lebih cepat
-  dan lebih agresif.
-- **Combo.** Hancurkan musuh beruntun dalam 3 detik untuk menaikkan multiplier skor (x1,5, x2,
-  sampai x5). Bilah tipis di bawah angka gelombang menunjukkan sisa waktu combo.
-- **Gerbang emas** muncul berantai di depan. Terbang melewati tengahnya memberi bonus skor
-  dan sedikit isi nitro.
-- **Pickup** sesekali muncul dengan sorot cahaya vertikal: hijau untuk perbaikan (+30 integritas),
-  oranye untuk nitro (+50 persen meter).
-- **Rintangan.** Gunung dan pilar batu di daratan memberi damage besar bila ditabrak. Peringatan
-  "TARIK NAIK!" dan bunyi bip muncul saat jalur terbangmu mengarah ke medan.
-- Integritas (health) mulai dari 100. Saat mencapai 0 pesawat meledak dan layar ringkasan
-  menampilkan skor, skor tertinggi, waktu bertahan, musuh yang dihancurkan, dan statistik lain.
-  Skor tertinggi disimpan di `localStorage` browser.
-- Panah merah (drone) dan oranye (penembak) di tepi layar menunjukkan arah musuh di luar layar.
-
-## Kontrol
-
-| Tombol | Aksi |
-|---|---|
-| `W` / `S` | Hidung naik / turun |
-| `A` / `D` | Belok kiri / kanan sambil miring |
-| `Spasi` (tahan) | Nitro: lebih cepat, FOV melebar, api lebih panjang, menguras meter |
-| `Enter` (tahan) | Menembak (dua sayap bergantian) |
-| `P` atau `Esc` | Jeda / lanjut |
-| `R` | Ulang dari awal |
-| `M` | Suara hidup / mati |
-
-Meter nitro pulih pelan setelah dilepas. Bila benar-benar habis, nitro terkunci 2 detik
-(bilah berkedip merah) sebelum bisa dipakai lagi. Semua tombol bisa ditekan bersamaan,
-misalnya `W` + `D` + `Spasi` + `Enter`.
-
-## Menjalankan secara lokal
+## Menjalankan
 
 Game harus dibuka lewat server statis (bukan `file://`) karena memakai ES module dan importmap.
 Tidak perlu `npm install` untuk bermain.
 
 ```bash
-# pilihan 1: Python bawaan
-python3 -m http.server 8080
-
-# pilihan 2: Node (server kecil tanpa dependensi yang ada di repo ini)
-npm run serve          # sama dengan: node tests/static-server.mjs 8080
+python3 -m http.server 8080      # atau: npm run serve
 ```
 
-Lalu buka `http://localhost:8080/`. Koneksi internet dibutuhkan saat pertama kali memuat
-Three.js dari jsDelivr.
+Lalu buka `http://localhost:8080/`. Koneksi internet dibutuhkan untuk memuat Three.js dari jsDelivr.
 
-### Kualitas grafis
+### Deploy ke GitHub Pages
 
-Ada tiga preset di `QUALITY_PRESETS` (bagian atas skrip): `rendah`, `sedang` (bawaan), dan `tinggi`.
-Preset mengatur shadow, resolusi shadow map, jumlah partikel, jarak render (jumlah potong
-terrain), batas pixel ratio, dan antialiasing. Pilih lewat menu di layar judul atau lewat URL:
+Repo sudah publik dan tidak butuh build. Di GitHub buka **Settings**, **Pages**, pilih
+**Deploy from a branch**, cabang `main`, folder `/ (root)`, lalu simpan. Setelah satu sampai dua
+menit game tersedia di `https://ahmadngiliyun00.github.io/raptor13/`.
 
-```
-http://localhost:8080/?kualitas=rendah
-```
+## Kontrol
 
-| Preset | Shadow | Shadow map | Partikel | Jarak pandang | Pixel ratio maks |
-|---|---|---|---|---|---|
-| rendah | mati | 1024 | 900 | 400 unit | 1 |
-| sedang | hidup | 1024 | 1800 | 600 unit | 1,5 |
-| tinggi | hidup | 2048 | 3200 | 800 unit | 2 |
+| Tombol | Aksi |
+| --- | --- |
+| `W` `S` | naik dan turun (menahan terus menghasilkan looping penuh) |
+| `A` `D` | belok dan miring |
+| `Spasi` | nitro |
+| `Enter` | tembak |
+| `E` | ultimate laser |
+| `Z` | Gulung Tong (kebal peluru selama gulungan; juga ketuk ganda `A` atau `D`) |
+| `X` | Balik Arah (setengah looping lalu setengah gulungan) |
+| `C` | Looping |
+| `Shift` (tahan) | lihat belakang |
+| `Tab` | peta Tata Surya (medan Angkasa) |
+| `P` atau `Esc` | jeda |
+| `M` | suara |
+| `R` | mulai ulang |
+| `1` `2` `3` | pilih kartu level atau kontrak |
 
-## Deploy ke GitHub Pages
+Pemetaan yang sama tampil di layar judul dan di Pengaturan. **Mode HP** (tombol kanan atas, atau
+otomatis ditawarkan di perangkat sentuh) memakai D-pad dan tombol ikon besar berjarak untuk tembak,
+nitro, tiga manuver, dan ultimate; dimainkan mendatar.
 
-Repo ini sudah siap disajikan apa adanya karena tidak ada build step.
+## Cara main
 
-1. Buat repo baru bernama `raptor13` di GitHub, lalu dorong isi repo ini:
-   ```bash
-   git remote add origin https://github.com/<akun-kamu>/raptor13.git
-   git push -u origin main
-   ```
-2. Di GitHub buka **Settings**, lalu **Pages**.
-3. Pada **Build and deployment**, pilih **Source: Deploy from a branch**, branch `main`,
-   folder `/ (root)`, lalu **Save**.
-4. Tunggu satu sampai dua menit. Game tersedia di `https://<akun-kamu>.github.io/raptor13/`.
+**Kampanye Tata Surya** (bawaan medan Angkasa) berisi 10 stage berurutan: Merkurius, Venus,
+Bumi dan Bulan, Mars, Sabuk Asteroid, Jupiter, Saturnus, Uranus, Neptunus, serta Pluto dan
+Sabuk Kuiper. Setiap stage:
 
-Folder `node_modules/` tidak ikut ter-commit (ada di `.gitignore`), dan game tidak
-membutuhkannya.
+1. Pembuka singkat (sekali per stage): kamera menyapu planet sambil pilot berkode panggil
+   **Raptor 13** dan robot pendamping **Piko** bercakap.
+2. Kartu stage lalu **pilih kontrak**: *Buru Target* (hancurkan Komandan bertanda),
+   *Kawal Konvoi* (lindungi kapal kargo kawan sampai suar tujuan; kargo hancur berarti game over),
+   atau *Bersihkan Sektor* (hancurkan sejumlah musuh).
+3. Gelombang musuh berjalan sampai kontrak selesai. Stage 5 dan 8 punya mini-boss, stage 10
+   punya final boss.
+4. Layar **Stage Clear**: skor, waktu, musuh, HP hilang, bonus, dan rating 1 sampai 3 bintang
+   (disimpan). LANJUT membuka **gerbang loncat**; terbang menembusnya untuk warp ke stage berikutnya.
+
+**Jelajah Bebas**: seluruh Tata Surya terbuka dengan gelombang tanpa akhir. Buka peta dengan `Tab`
+lalu pilih tujuan untuk lompatan warp sinematik.
+
+**Medan Bumi**: gelombang tanpa akhir, cincin untuk diterbangi, asteroid melayang yang pecah,
+pilar batu tinggi, dan bos Penjaga Raksasa setiap 5 gelombang.
+
+Sistem lain:
+
+- **Nyawa dan integritas**: hati di HUD, kebal sebentar setelah respawn. Menabrak tanah, laut,
+  gunung, pilar, planet, bulan, Matahari, stasiun, bos, atau asteroid raksasa langsung game over
+  (bisa dimatikan lewat opsi *Tabrakan fatal* untuk latihan).
+- **Bintang** berwarna: merah mengisi ultimate, hijau HP, biru nitro, emas XP dan skor, ungu nyawa.
+  Bintang tertarik magnet ke kapal.
+- **Ultimate laser** (`E`): sinar 2,5 detik yang merusak semua yang dilewati.
+- **XP dan level**: naik level menjeda permainan dan menawarkan 3 kartu upgrade berkelangkaan
+  (biasa, langka, epik): damage, laju tembak, HP maksimum, nitro, magnet, ultimate, perisai energi,
+  drone pendamping (maksimal dua), kartu Piko, nyawa, dan Inti Overdrive.
+- **Kredit** dari musuh dan asteroid; 50 persen dibawa pulang saat game over, penuh saat keluar
+  dari Stage Clear atau menamatkan kampanye. Kredit membuka kapal di **Hangar**.
+- **Penemuan**: mendekati planet, bulan, atau sabuk memunculkan panel data berisi fakta dunia
+  nyata; semua yang pernah didekati tersimpan di atlas **PENEMUAN** di menu.
+
+## Kapal
+
+| Kapal | Medan | Segitiga | Keterangan |
+| --- | --- | --- | --- |
+| Raptor-J | Bumi | 4.520 | jet loft superellipse dengan sayap airfoil NACA, kanopi lathe, angka 13 di sirip |
+| Starfighter | Angkasa | 3.724 | empat bilah sayap konfigurasi X yang bergerak dinamis, thruster manuver, soket Piko |
+| Interceptor | Angkasa | sekitar 3.700 | varian lebih cepat dan lincah, 500 kredit |
+| Gunship | Angkasa | 4.036 | varian berat ber-HP tebal, 1200 kredit |
+| Piko | robot | 852 | ekspresi mata di kanvas, bip sintesis, panel subtitle berbatas frekuensi |
+
+Pratinjau: `?jetpreview=1`, `?shippreview=starfighter` (juga `jet`, `interceptor`, `gunship`, `piko`),
+dan `?gallery=1` untuk galeri seluruh musuh.
+
+## Tata Surya
+
+Matahari bergranulasi, delapan planet, Pluto, dan bulan utama (Bulan, Phobos, Deimos, Io, Europa,
+Ganymede, Callisto, Titan, Charon). **Jarak dan ukuran dipadatkan, bukan skala asli**: Merkurius
+berada 3.200 unit dari pusat Matahari dan Pluto 37.000 unit agar antar planet tetap bisa diterbangi.
+Urutan ukuran tetap masuk akal (Matahari, Jupiter, Saturnus, Uranus, Neptunus, Bumi, Venus, Mars,
+Merkurius, Pluto). Fakta di panel data adalah fakta dunia nyata.
+
+- Tekstur kanvas dari noise 3D yang disampel di permukaan bola (tanpa sambungan): kawah dengan peta
+  tinggi untuk bump, pita awan dan Bintik Merah Besar Jupiter, dataran berbentuk hati di Pluto,
+  lampu kota di sisi malam Bumi, awan yang berputar, atmosfer di tepi siluet.
+- Satu shader planet menghitung cahaya dari posisi Matahari yang sebenarnya, jadi sisi terang
+  selalu menghadap Matahari; kapal juga meredup saat berada di bayangan planet.
+- Cincin Saturnus dengan Celah Cassini, bayangan planet di cincin, dan ribuan batu es instanced;
+  cincin tipis Jupiter dan Uranus. Sabuk Asteroid dan Sabuk Kuiper dibangkitkan per sel di sekitar
+  kamera. Batu terdekat diganti asteroid sungguhan yang punya HP dan bisa pecah (LOD).
+- Latar pita Bima Sakti dengan jalur debu, galaksi spiral jauh, dan black hole dengan piringan
+  akresi dan cincin cahaya terbelokkan yang hanya terlihat dari Tata Surya luar.
+- Benda jauh digambar sebagai **proksi berskala** (didekatkan ke kamera dan diperkecil sebanding)
+  sehingga ukuran sudutnya benar tanpa logarithmic depth buffer.
+- Dinding energi bergrid di radius 45.000 dengan peringatan KELUAR BATAS MISI dan dorongan balik.
+
+## Musuh dan bos
+
+Faksi fiktif **Sindikat Vanta**: lambung gelap dengan aksen emissive merah, magenta, atau ungu.
+Semua model dari loft, lathe, dan pelat.
+
+| Musuh | Perilaku |
+| --- | --- |
+| Drone Pengintai | kecil, menabrak; membelok menjauh setelah lewat |
+| Pengintai | cepat, tembakan tunggal lemah, datang berformasi V |
+| Penyerbu | rentetan 3 peluru, mengejar lalu menyamping |
+| Pemburu | rudal lambat yang mengejar dan bisa ditembak jatuh |
+| Penjaga | berat, tembakan menyebar 5 peluru |
+| Penyergap | menyamar saat mendekat, menyergap dari belakang |
+| Komandan | berperisai pulih, dikawal dua Penyerbu, target kontrak buruan |
+| Penembak Jitu | menjaga jarak, garis bidik merah 1 detik sebelum menembak |
+| Penabur Ranjau | menyilang di depan dan menjatuhkan ranjau yang berkedip lalu meledak |
+| Kapal Pelindung | perisai yang pulih setelah jeda |
+| Makhluk Angkasa | ubur-ubur bertentakel yang menyengat dari dekat |
+| Kapal Induk Kecil | meluncurkan drone berkala |
+| Menara Pos | stasiun diam dengan tiga turret bertanda lampu |
+
+Semua tembakan musuh bertanda (kilat moncong, lampu, atau garis bidik sekitar setengah detik),
+berwarna magenta yang berbeda dari peluru pemain, dan cukup lambat untuk dihindari.
+
+Bos: **Penjaga Raksasa** (Bumi, tiap 5 gelombang), **Penambang Raksasa** (stage 5: bor yang
+berputar sebagai tanda lalu menyerbu, lengan pelempar batu), **Pemburu Agung** (stage 8: cepat,
+fase kedua memanggil tiga umpan tiruan), dan **Sang Naga Vanta** (stage 10): naga mekanik
+bersegmen dengan empat fase (generator perisai, kepala terbuka dengan laser bergaris peringatan,
+kejar-kejaran 50 detik melewati puing es, dan inti dada yang hanya bisa dihabisi ultimate), dengan
+cutscene pembuka, peralihan, dan penutup, lalu layar akhir.
+
+## HUD
+
+Status di kiri atas (nyawa, integritas, nitro, ultimate, level dan XP), misi dan gelombang di
+tengah atas, skor dan kredit di kanan atas, **radar minimap** yang berputar mengikuti arah kapal
+(musuh, bos, pickup, planet, gerbang, kargo, target kontrak, panah tujuan misi), **instrumen terbang**
+(horizon buatan, arah kompas dalam derajat, pitch, dan bank yang bernilai 0 saat datar), bar HP bos,
+angka skor emas dan angka damage merah yang besar, serta panel Piko bersubtitle.
+
+## Kualitas grafis
+
+Pilih di Pengaturan atau lewat URL `?kualitas=rendah|sedang|tinggi` (`QUALITY_PRESETS`).
+
+| Preset | Shadow | Partikel | Bloom | Tekstur planet | Kepadatan batu | Jarak muat |
+| --- | --- | --- | --- | --- | --- | --- |
+| rendah | mati | 900 | mati | 512 | 0,45 | 0,75 |
+| sedang | hidup | 1800 | sebagian | 512 | 0,8 | 0,9 |
+| tinggi | hidup | 3200 | penuh | 1024 | 1 | 1 |
+
+Hasil ukur di Mac dengan GPU asli: semua skenario berat (orbit Bumi, di dalam cincin Saturnus,
+Sabuk Asteroid dengan roster gelombang 8, pertarungan naga) berjalan 60 FPS dengan kerja CPU
+sekitar 2 sampai 3 ms per frame di ketiga preset. Membangun tekstur Tata Surya sekali saat memuat
+butuh sekitar 0,4 detik (Rendah, Sedang) dan 1,3 detik (Tinggi).
 
 ## Pengujian otomatis
-
-Uji memakai Playwright (Chromium headless). npm hanya dipakai untuk tooling uji ini.
 
 ```bash
 npm install
 npm test
 ```
 
-`npm test` otomatis memasang Chromium untuk Playwright (lewat skrip `pretest`), menyalakan
-server statis di port 4173, lalu menjalankan seluruh uji di `tests/game.spec.mjs`. Uji
-membutuhkan internet untuk memuat Three.js dari CDN.
+`npm test` memasang Chromium untuk Playwright, menyalakan server statis di port 4173, lalu
+menjalankan 92 uji di `tests/game.spec.mjs`. Setiap uji gagal bila ada console error atau warning,
+error halaman, atau request ke luar localhost dan Three.js. Cakupan utama: kontrol dan kombinasi
+tombol, manuver dan looping, tabrakan fatal dengan penyebab yang benar, simulasi bot yang mengukur
+keadilan musuh (waktu membuntuti, tabrakan, serudukan, batas kecepatan), senjata dan buff, audio
+tanpa NaN, hangar dan migrasi save, setiap planet dan bulan, LOD cincin dan sabuk, batas jelajah,
+fakta dan Penemuan setelah reload, kampanye, warp, peta, cutscene, semua fase bos, roster musuh,
+XP dan kartu, kontrak, radar dan instrumen, musik, preset kualitas, tata letak mode HP tanpa
+tumpang tindih di empat ukuran layar, kebocoran sumber daya setelah 10 restart dan 5 menit simulasi,
+dan screenshot di `docs/screenshots/`.
 
-Setiap uji otomatis gagal bila muncul console error atau warning, error halaman, atau request
-ke aset di luar localhost dan Three.js. Cakupannya:
+Di macOS uji memakai GPU asli lewat ANGLE Metal; di platform lain SwiftShader dan uji FPS dilewati.
+Kegagalan sesekali bertuliskan `ERR_NETWORK_CHANGED` berasal dari jaringan saat memuat Three.js.
 
-- halaman termuat tanpa error, layar judul dan logo tampil, AudioContext belum dibuat
-- klik MULAI memulai game dan membuka audio
-- `W`/`S` mengubah pitch dan ketinggian, `A`/`D` membuat belok sambil miring
-- `Spasi` menaikkan kecepatan dan menguras nitro, nitro habis memicu kunci
-- `Enter` menembak dengan cooldown, kombinasi `W` + `D` + `Spasi` + `Enter` bersamaan
-- `Spasi` dan `Enter` memanggil `preventDefault`, blur jendela mereset tombol yang tertahan
-- jeda dengan `P` dan `Esc`, ulang dengan `R`, mute dengan `M`
-- health 0 memunculkan layar game over, skor tertinggi tersimpan, main lagi bekerja
-- skor tertinggi tetap aman saat `localStorage` diblokir
-- gerbang, pickup perbaikan, pickup nitro, gelombang musuh, tembakan musuh, combo
-- tidak ada kebocoran objek setelah 10 kali restart (objek scene, geometri, shader, listener)
-- simulasi 5 menit bermain: sumber daya dan biaya per langkah tetap stabil
-- frame rate render nyata (di macOS dengan GPU asli)
-- preset kualitas `rendah` dan `tinggi`
-- tiga screenshot di `docs/screenshots/` (menu, bermain, game over)
+## Mengatur gameplay
 
-Di macOS Playwright memakai GPU asli lewat ANGLE Metal. Di platform lain memakai SwiftShader
-(render perangkat lunak); pesan performa driver GL dari SwiftShader saat mengambil screenshot
-diabaikan karena bukan berasal dari game, dan uji frame rate dilewati.
+Semua angka penting ada di objek `CONFIG` di bagian atas skrip. Beberapa nilai kunci:
+
+| Nilai | Isi |
+| --- | --- |
+| `player.baseSpeed`, `nitroSpeed` | 70 dan 128 unit per detik |
+| `weapons.fireInterval`, `bulletSpeed` | 0,10 detik, 750 unit per detik ditambah kecepatan kapal |
+| `maneuvers` cooldown | Gulung 4 detik, Balik Arah 6 detik, Looping 5 detik |
+| `enemies.cruiseFactor` | drone 0,75, Penyerbu 0,82, Pengintai 0,86, Penjaga 0,66 dari kecepatan dasar pemain |
+| `enemies.maxSpeedFactor` | tidak ada musuh (selain rudal) lebih cepat dari 80 persen nitro pemain |
+| `enemies.maxTailTime` | penembak dipaksa menjauh setelah 1,2 detik membuntuti |
+| `balance` | ambang uji: rasio membuntuti di bawah 0,25, tabrakan di bawah 2 per menit, serudukan di bawah 6 per menit |
+| `solar`, `fields` | tata letak Tata Surya, proksi, batas jelajah, kepadatan cincin dan sabuk, LOD |
+| `campaign`, `contracts`, `bosses`, `xp` | stage, kontrak, HP dan fase bos, kurva level |
+
+## Hook debug
+
+`window.__game` tersedia untuk uji otomatis dan eksperimen di console browser, misalnya:
+
+```js
+__game.snapshot()                          // ringkasan state, skor, posisi, nitro, fps
+__game.startIn('space', 'campaign')        // mulai langsung dari menu
+__game.debug.setGod(true)
+__game.debug.viewBody('saturnus', 3)       // pindah ke dekat benda angkasa
+__game.debug.setStage(10)                  // lompat ke stage kampanye
+__game.debug.startBoss('naga'); __game.debug.skipToPhase(3)
+__game.debug.playCutscene('demo'); __game.debug.skipCutscene()
+__game.debug.spawnEnemy('sniper', 300); __game.debug.spawnGroup('scout', 3, 'v')
+__game.debug.levelUp(); __game.debug.fillUltimate()
+__game.debug.layoutOverlaps()              // periksa tumpang tindih HUD dan tombol sentuh
+__game.debug.simulate(300)                 // simulasi cepat dengan bot
+```
 
 ## Struktur proyek
 
-```
+```text
 raptor13/
-├── index.html               # seluruh game: HTML, CSS, dan JavaScript (module)
+├── index.html               # seluruh game
 ├── README.md
 ├── package.json             # hanya untuk tooling uji (Playwright)
 ├── playwright.config.mjs
 ├── tests/
-│   ├── game.spec.mjs        # suite uji Playwright
+│   ├── game.spec.mjs        # 92 uji Playwright
 │   └── static-server.mjs    # server statis kecil tanpa dependensi
-└── docs/screenshots/        # screenshot hasil uji
-```
-
-Bagian di dalam skrip `index.html`, berurutan:
-
-| Bagian | Isi |
-|---|---|
-| CONFIG | semua konstanta gameplay, kualitas, dunia, cahaya, audio |
-| UTIL | damping, RNG ber-seed (mulberry32), event bus, uji tabrakan segmen ke bola |
-| RENDERER | renderer, scene, kamera, resize |
-| GEOMETRI PROSEDURAL | pembangun segitiga flat-shaded, loft badan pesawat, pelat sayap |
-| PESAWAT PEMAIN | model prosedural, fisika arcade, nitro, damage |
-| NOISE dan DUNIA | simplex noise 2D, terrain ber-potong yang di-recycle, laut, langit, matahari, fog, cahaya |
-| PELURU dan SENJATA | pool `InstancedMesh`, cooldown, konvergensi, aim assist |
-| MUSUH dan GELOMBANG | dua tipe musuh, AI, spawn bergelombang, tembakan musuh |
-| TABRAKAN | peluru, badan musuh, terrain, pilar |
-| RINTANGAN, CINCIN, PICKUP, COMBO | objek dunia dan sistem skor |
-| PARTIKEL | dua sistem `Points` dengan shader sendiri |
-| KAMERA CHASE | lag rotasi, FOV nitro, camera shake |
-| AUDIO | sintesis WebAudio |
-| HUD | elemen DOM, skor tertinggi, indikator musuh |
-| GAME STATE dan INPUT | state machine, keyboard |
-| HOOK DEBUG dan MAIN LOOP | `window.__game`, `requestAnimationFrame`, dispose |
-
-## Mengatur gameplay (tuning)
-
-Semua angka yang memengaruhi permainan ada di objek `CONFIG` di bagian atas skrip, misalnya:
-
-- `CONFIG.player`: kecepatan dasar dan nitro, batas pitch dan roll, laju belok, batas ketinggian
-- `CONFIG.nitro`: laju kuras, laju pulih, jeda pulih, lama kunci
-- `CONFIG.weapons`: cooldown, kecepatan peluru, damage, sudut aim assist (0 untuk mematikan)
-- `CONFIG.enemies`: ukuran pool, HP, kecepatan, damage, jangkauan dan laju tembak
-- `CONFIG.waves`: jeda antar gelombang, laju spawn, kenaikan kesulitan
-- `CONFIG.combo`, `CONFIG.rings`, `CONFIG.pickups`, `CONFIG.obstacles`
-- `CONFIG.camera`, `CONFIG.sky`, `CONFIG.light`, `CONFIG.audio`, `CONFIG.world`
-
-## Hook debug
-
-`window.__game` tersedia untuk uji otomatis dan eksperimen di console browser:
-
-```js
-__game.snapshot()                   // state ringkas: skor, health, posisi, nitro, jumlah musuh, fps
-__game.setSeed(42)                  // kunci seed dunia dan gameplay untuk sesi berikutnya
-__game.start(); __game.restart(); __game.pause(); __game.resume()
-__game.quality()                    // preset kualitas yang aktif
-__game.debug.setGod(true)           // kebal damage
-__game.debug.setEnemiesEnabled(false)
-__game.debug.spawnEnemy('drone', 200, 0)
-__game.debug.placeRingAhead(120)
-__game.debug.placePickupAhead('repair', 120)
-__game.debug.simulate(300)          // simulasi cepat 5 menit dengan pengendali otomatis
-__game.debug.resources()            // jumlah objek scene, geometri, shader, listener
+└── docs/
+    ├── PROGRESS.md          # urutan task dan catatan kerja
+    ├── SELF-REVIEW.md       # tinjauan Definition of Done
+    └── screenshots/
 ```
 
 ## Keputusan desain
 
-- **Fisika arcade berbasis target sudut.** Input mengatur target pitch dan roll yang didekati
-  dengan damping eksponensial (tidak bergantung frame rate). Laju belok sebanding dengan
-  kemiringan sayap sehingga bank dan belok selalu selaras. Pitch dan roll dibatasi sehingga
-  pesawat tidak bisa terbalik.
-- **Kamera dengan lag rotasi, bukan lag posisi.** Jarak kamera ke pesawat tetap stabil pada
-  kecepatan berapa pun, sementara arah kamera menyusul dengan halus. Getar kamera memakai
-  kombinasi sinus agar lebih halus daripada jitter acak.
-- **Terrain toroidal.** Dunia terdiri dari N x N potong terrain. Slot (i, j) selalu memegang
-  potong yang koordinatnya modulo N sama dengan (i, j), sehingga saat pemain bergerak hanya
-  baris di tepi yang dibangun ulang, dengan batas beberapa potong per frame. Geometri dibuat
-  sekali dan hanya isi buffer-nya yang ditulis ulang. Ketinggian untuk tabrakan dihitung dari
-  segitiga yang sama persis dengan mesh.
-- **Tanpa alokasi di jalur panas.** Peluru, partikel, musuh, cincin, dan pickup memakai pool
-  berukuran tetap. Vektor sementara dipakai ulang, HUD hanya menulis ke DOM saat nilainya
-  berubah, dan restart hanya me-reset pool yang sama.
-- **Event bus.** Efek partikel, suara, dan HUD mendaftar ke event sekali saat inisialisasi,
-  sehingga restart tidak pernah menumpuk listener.
-- **Warna fog sama dengan horizon langit.** Shader langit menulis nilai sRGB mentah yang sama
-  dengan warna fog yang dikirim three.js ke shader, sehingga terrain menyatu mulus ke langit.
-- **Shadow murah.** Hanya pesawat (pemain dan musuh) yang cast shadow, ke frustum kecil
-  (120 unit) yang mengikuti pemain. Terrain dan laut hanya menerima shadow. Jumlah lampu
-  tidak pernah berubah (lampu nitro hanya diatur intensitasnya) agar shader tidak dikompilasi ulang.
-- **Random ber-seed untuk gameplay, `Math.random` untuk kosmetik.** Jumlah partikel bergantung
-  frame rate, jadi partikel tidak memakai RNG gameplay agar urutan random permainan tetap konsisten.
-- **AudioContext hanya dibuat saat ada aktivasi pengguna yang sah** (dicek lewat
-  `navigator.userActivation`), sehingga browser tidak mencetak peringatan autoplay.
+- **Terbang quaternion bebas** dengan penstabil otomatis opsional: looping penuh mungkin, kamera
+  meredam roll, dan kecepatan sedikit naik saat menukik.
+- **Satu antarmuka dunia** (`EarthWorld`, `SpaceWorld`) sehingga HP, senjata, musuh, HUD, dan input
+  tidak bergantung pada medan.
+- **Proksi berskala** untuk benda jauh dan **LOD** batu instanced ke asteroid sungguhan menjaga
+  Tata Surya besar tetap ringan.
+- **Pool berukuran tetap dan tanpa alokasi di jalur panas**; restart hanya me-reset pool.
+  Uji memastikan jumlah objek, geometri, shader, dan listener tetap sama setelah 10 restart.
+- **RNG ber-seed untuk gameplay**, `Math.random` hanya untuk kosmetik dan musik agar urutan
+  permainan bisa diulang dalam uji.
+- **Metrik keadilan musuh diukur bot**: musuh dianggap membuntuti bila berada di kerucut belakang
+  dan terbang searah pemain; drone yang sudah lewat membelok menjauh.
 
 ## Keterbatasan yang diketahui
 
-- Hanya kontrol keyboard; belum ada dukungan mouse, gamepad, atau layar sentuh.
-- Three.js dimuat dari CDN, jadi permainan pertama kali butuh internet.
-- Musuh tidak menghindari pilar batu; mereka hanya menjaga jarak dari permukaan terrain.
-- Tabrakan memakai bola dan jarak kuadrat, jadi bentuk sayap tidak dihitung secara presisi.
-- Uji frame rate hanya berjalan di macOS dengan GPU asli; di platform lain uji memakai
-  render perangkat lunak yang jauh lebih lambat.
-- Layout HUD dirancang untuk layar desktop dan laptop; layar sangat sempit akan terasa padat.
+- Three.js dimuat dari CDN, jadi butuh internet; belum ada service worker untuk luring.
+- Belum ada dukungan mouse dan gamepad. Mode HP hanya mendatar.
+- Kinerja hanya diukur di Mac dengan GPU asli; perangkat HP sungguhan belum diuji (tata letak HP
+  diuji lewat emulasi di empat ukuran layar).
+- Kontrak Kawal Konvoi: hanya drone dan peluru nyasar yang merusak kargo; musuh penembak belum
+  sengaja membidik kargo.
+- Konten Angkasa muncul di sekitar pemain (gelombang, medan asteroid, komet, kluster bintang),
+  bukan dari generator sektor berbasis sel yang menempatkan bangkai kapal, kapal kargo netral,
+  atau pos musuh secara tetap.
+- Bos Bumi memakai model Penjaga yang diperbesar; kepala Sang Naga Vanta masih sederhana dibanding
+  tubuhnya.
+- Tabrakan memakai bola, sehingga bentuk sayap tidak dihitung presisi.
 
 ## Ide lanjutan
 
-Fitur berikut **sudah ditambahkan** di luar spesifikasi awal, dicatat di sini sesuai aturan proyek:
+Ditambahkan di luar spesifikasi (dicatat sesuai aturan proyek): bantuan bidik dengan tiga tingkat,
+pemilih kualitas, peringatan TARIK NAIK dan TERLALU DEKAT, gerhana pada kapal saat di bayangan
+planet, rating bintang per stage, hujan bintang merah di fase akhir naga, umpan tiruan Pemburu Agung,
+dan pemeriksa tumpang tindih tata letak (`layoutOverlaps`).
 
-- Aim assist kecil (kerucut 5 derajat, bisa dimatikan lewat `CONFIG.weapons.aimAssistAngle`).
-- Pemilih kualitas di layar judul (memuat ulang dengan `?kualitas=`).
-- Peringatan medan "TARIK NAIK!" dengan bunyi bip.
-- Musuh yang tertinggal lama di belakang pemain dipindah lagi ke depan.
-- Asap hitam dari pesawat saat integritas rendah, vignette merah saat terkena tembakan.
-- Seed dunia acak di setiap sesi, latar layar judul berupa pesawat yang terbang otomatis.
+Belum dikerjakan:
 
-Ide yang **belum** dikerjakan:
+- Generator sektor berbasis sel dengan bangkai kapal berisi loot, kapal kargo netral, dan pos musuh
+  tetap yang marah bila diserang.
+- Musuh yang sengaja menyerang kargo konvoi, dan kontrak dengan parameter acak yang lebih beragam.
+- Dukungan gamepad, mode HP tegak, dan service worker untuk bermain luring.
+- Papan skor lokal berisi beberapa skor terbaik dan statistik per stage di atlas.
+- Model kepala naga yang lebih detail dan bos Bumi dengan desain sendiri.
 
-- Dukungan gamepad dan layar sentuh.
-- Tipe musuh ketiga (misalnya bomber besar dengan beberapa titik lemah).
-- Misil pengunci target dengan cooldown panjang.
-- Siklus waktu (senja, malam) dan cuaca.
-- Papan skor lokal berisi beberapa skor terbaik.
+## Kredit
+
+Raptor13 dibuat dengan Three.js oleh Ahmad Ngiliyun, bantuan Claude Code.
