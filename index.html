@@ -218,11 +218,23 @@
   #data-facts li + li { margin-top: 3px; }
   #data-tag { display: inline-block; margin-bottom: 4px; padding: 2px 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; color: #0a1420; background: #ffd24a; border-radius: 3px; }
   #data-tag.hidden { display: none; }
-  #boss-bar { position: absolute; left: 50%; top: calc(136px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(560px, 70vw); }
+  #boss-bar { position: absolute; left: 50%; top: calc(152px + env(safe-area-inset-top)); transform: translateX(-50%); width: min(560px, 70vw); }
   .bb-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 4px; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: #ffd0e0; text-shadow: 0 1px 2px #000; }
   .bb-track { height: 10px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 80, 140, 0.7); border-radius: 2px; overflow: hidden; }
   #boss-fill { display: block; height: 100%; background: linear-gradient(90deg, #ff2d6a, #ff9a3c); transform-origin: left center; }
-  #screen-levelup .card { max-width: 760px; }
+  #screen-levelup .card, #screen-contract .card { max-width: 760px; }
+  .mission { color: #9fe8ff; margin-top: 2px; }
+  .mission:empty { display: none; }
+  .ct-head { text-align: center; }
+  .ct-head h2 { font-size: clamp(22px, 4vw, 34px); margin: 4px 0 0; }
+  .ctcard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px 22px; min-height: 160px; text-align: left; cursor: pointer;
+    font: inherit; color: var(--ui-fg); background: rgba(255, 255, 255, 0.05); border: 2px solid #6fdcff; border-radius: 8px; }
+  .ctcard svg { width: 28px; height: 28px; fill: none; stroke: #6fdcff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .ctcard b { font-size: 17px; }
+  .ctcard span { font-size: 13px; line-height: 1.4; color: #cfd8e3; }
+  .ctcard small { font-size: 11px; color: #ffd24a; letter-spacing: 0.06em; }
+  .ctcard kbd { position: absolute; right: 8px; bottom: 6px; }
+  .ctcard:hover, .ctcard:focus-visible { background: rgba(255, 255, 255, 0.1); }
   .bar.thin { height: 4px; }
   #xp-fill { background: linear-gradient(90deg, #8a5cff, #d08cff); }
   .lv-row .label b { color: #d08cff; margin-left: 4px; }
@@ -556,6 +568,7 @@
   </div>
   <div class="hud-block tc">
     <div id="stage-label" class="label stage-label"></div>
+    <div id="mission" class="label mission"></div>
     <div class="label">GELOMBANG</div>
     <div id="wave" class="num big">-</div>
     <div id="mult" class="off">x1</div>
@@ -778,6 +791,34 @@
   </div>
 </div>
 
+<!-- Kartu pembuka stage dan pilihan kontrak -->
+<div id="screen-contract" class="screen pause hidden">
+  <div class="card wide">
+    <div class="ct-head"><p class="version">KAMPANYE TATA SURYA</p><h2 id="ct-stage">STAGE 1</h2></div>
+    <p class="hint">Pilih kontrak: tekan 1, 2, atau 3, atau panah lalu Enter.</p>
+    <div id="ct-cards" class="lv-cards"></div>
+  </div>
+</div>
+
+<!-- Stage selesai: ringkasan dan rating -->
+<div id="screen-stageclear" class="screen pause hidden">
+  <div class="card">
+    <h2 id="sc-title">STAGE SELESAI</h2>
+    <div id="sc-rating" class="final-rating"></div>
+    <dl class="credits">
+      <dt>Skor stage</dt><dd id="sc-score">0</dd>
+      <dt>Waktu</dt><dd id="sc-time">0</dd>
+      <dt>Musuh hancur</dt><dd id="sc-kills">0</dd>
+      <dt>HP hilang</dt><dd id="sc-hp">0</dd>
+      <dt>Bonus</dt><dd id="sc-bonus">0</dd>
+    </dl>
+    <nav class="menu-list">
+      <button id="btn-sc-next" class="btn" type="button">LANJUT</button>
+      <button id="btn-sc-exit" class="btn secondary" type="button">KELUAR KE MENU</button>
+    </nav>
+  </div>
+</div>
+
 <!-- Naik level: pilih satu dari tiga kartu upgrade -->
 <div id="screen-levelup" class="screen pause hidden">
   <div class="card wide">
@@ -883,6 +924,7 @@
 <div id="screen-over" class="screen hidden">
   <h2 class="over-title">PESAWAT JATUH</h2>
   <p id="go-cause" class="cause"></p>
+  <p id="go-stage" class="hint hidden"></p>
   <div id="new-record" class="record hidden">REKOR BARU!</div>
   <div class="stats">
     <span>Skor</span><b id="go-score">0</b>
@@ -1220,6 +1262,8 @@ const CONFIG = {
       laserWarn: 1.0, laserTime: 1.6, laserLength: 420, laserWidth: 5, laserHit: 22, laserCooldown: 5,
     },
   },
+  // Kontrak stage kampanye (A6)
+  contracts: { clearBase: 10, clearPerStage: 2, convoyDistance: 2600, convoySpeed: 42, convoyHp: 300, huntDelay: 6, starCredits: 20 },
   // XP dan level (S11): kebutuhan XP level n = base x growth^(n-1)
   xp: { base: 100, growth: 1.35, asteroidPerRadius: 0.4, comet: 20, boss: 150, enemyScoreDiv: 12, enemyMax: 60 },
   // Drone pendamping dari kartu upgrade
@@ -1458,7 +1502,7 @@ const Save = {
       ships: { selected: { earth: 'raptor-j', space: 'starfighter' }, unlocked: ['raptor-j', 'starfighter'], credits: 0 },
       stats: { playTime: 0, enemiesDestroyed: 0, asteroidsDestroyed: 0, gamesPlayed: 0 },
       discoveries: [],   // id benda angkasa yang pernah didekati (atlas Penemuan)
-      campaign: { stage: 1, completed: false, freeArea: 'bumi', intros: [] },   // stage tertinggi yang terbuka
+      campaign: { stage: 1, completed: false, freeArea: 'bumi', intros: [], ratings: {} },   // ratings: bintang terbaik per stage   // stage tertinggi yang terbuka
     };
   },
   // Terima hanya field yang dikenal dengan tipe dan rentang yang benar
@@ -1495,6 +1539,7 @@ const Save = {
     if (Number.isFinite(cp.stage)) d.campaign.stage = Math.min(10, Math.max(1, Math.floor(cp.stage)));
     if (cp.completed === true) d.campaign.completed = true;
     if (DISCOVERY_IDS.includes(cp.freeArea)) d.campaign.freeArea = cp.freeArea;
+    if (isObj(cp.ratings)) for (let n = 1; n <= 10; n++) { const v = cp.ratings[n]; if (Number.isInteger(v) ? v >= 1 ? v <= 3 : false : false) d.campaign.ratings[n] = v; }
     if (Array.isArray(cp.intros)) for (const n of cp.intros) { if (Number.isInteger(n) ? n >= 1 ? n <= 10 ? !d.campaign.intros.includes(n) : false : false : false) d.campaign.intros.push(n); }
     if (Array.isArray(raw.discoveries)) for (const id of raw.discoveries) { if (DISCOVERY_IDS.includes(id) ? !d.discoveries.includes(id) : false) d.discoveries.push(id); }
     return d;
@@ -3754,7 +3799,7 @@ const Enemies = {
     e.timer = 0;
     e.tail = 0;
     e.telegraph = 0;
-    e.leader = null; e.owner = null; e.escort = false; e.launched = false; e.retreated = false;
+    e.leader = null; e.owner = null; e.escort = false; e.launched = false; e.retreated = false; e.contractTarget = false;
     e.aim = 0; e.life = 0; e.armed = 0; e.pulse = rand() * 6; e.meleeCd = 0;
     e.shield = e.cfg.shield || 0; e.shieldWait = 0; e.shieldFlash = 0;
     e.cloak = e.cfg.ambush ? e.cfg.cloakAlpha : 1;
@@ -6840,6 +6885,8 @@ const Campaign = {
   beginSession() {
     this.cleared = false;
     this.bossDone = false;
+    Contracts.clear();
+    Contracts.stats = null;
     WarpGate.hide();
     Warp.cancel();
   },
@@ -6850,7 +6897,8 @@ const Campaign = {
   bossDone: false,
   blockNextWave() {
     if (!this.active) return false;
-    if (Waves.wave < this.stage.waves) return false;
+    // Gelombang terus berjalan sampai kontrak selesai (paling sedikit jumlah gelombang stage)
+    if (Waves.wave < this.stage.waves ? true : !Contracts.complete) return false;
     // Stage berbos: bos muncul setelah gelombang terakhir, stage selesai setelah bos hancur
     if (this.stage.boss ? !this.bossDone : false) { if (!Bosses.active) Bosses.start(this.bossKinds[this.stage.boss]); return true; }
     if (this.stageIdx === this.count - 1 ? this.bossDone : false) return true;   // stage akhir: layar akhir menggantikan gerbang
@@ -6863,11 +6911,9 @@ const Campaign = {
     C.stage = Math.max(C.stage, Math.min(this.count, n + 1));
     if (n === this.count) C.completed = true;
     Save.save();
-    showBanner('STAGE ' + n + ' SELESAI', 1800);
     Game.credits += CONFIG.campaign.stageCredits;
-    WarpGate.spawnAhead();
-    Piko.say('gate');
     Events.emit('stageClear', n);
+    Contracts.showClear();
   },
   // Melewati gerbang: warp ke stage berikutnya, atau ke Jelajah Bebas setelah stage terakhir
   gatePassed() {
@@ -6886,7 +6932,7 @@ const Campaign = {
       this.bossDone = false;
       Waves.reset();
       Waves.timer = CONFIG.campaign.arrivalDelay;
-    }, () => maybeStageIntro());
+    }, () => stageBegin());
   },
   label() { return this.active ? 'STAGE ' + (this.stageIdx + 1) + '/' + this.count + ' ' + this.stage.name.toUpperCase() : Worlds.active === SpaceWorld ? 'JELAJAH BEBAS' : ''; },
 };
@@ -6964,6 +7010,7 @@ const Warp = {
   },
   cancel() { this.active = false; this.fx = 0; if (this.flash) this.flash.style.opacity = 0; },
   teleport() {
+    Contracts.clear();
     SpaceWorld.area = this.target;
     if (Campaign.mode === 'free') { Save.data.campaign.freeArea = this.target; Save.save(); }
     RockFields.reset();
@@ -7171,14 +7218,14 @@ const Cutscene = {
 
 document.getElementById('cutscene').addEventListener('pointerdown', (ev) => { ev.preventDefault(); Cutscene.skip(); });
 // Pembuka stage kampanye diputar sekali per stage (disimpan)
-function maybeStageIntro() {
+function maybeStageIntro(onEnd) {
   if (!Campaign.active) return false;
   const n = Campaign.stageIdx + 1, seen = Save.data.campaign.intros;
   if (seen.includes(n)) return false;
   seen.push(n); Save.save();
-  return Cutscene.play(Cutscene.stageIntro(Campaign.stageIdx));
+  return Cutscene.play(Cutscene.stageIntro(Campaign.stageIdx), onEnd);
 }
-Events.on('state', (next, prev) => { if (next === 'playing' ? prev === 'starting' : false) maybeStageIntro(); });
+Events.on('state', (next, prev) => { if (next === 'playing' ? prev === 'starting' : false) stageBegin(); });
 
 /* =====================================================================
    BOS - kerangka umum (bar HP besar, bagian yang bisa ditembak, fase) dan empat bos:
@@ -7924,6 +7971,231 @@ const Companions = {
     }
   },
 };
+
+/* =====================================================================
+   KONTRAK STAGE (A6) - tiap stage kampanye dibuka dengan kartu stage dan pilihan
+   3 kontrak: Buru Target (hancurkan Komandan bertanda), Kawal Konvoi (lindungi
+   kapal kargo kawan sampai titik tujuan, boleh gagal), Bersihkan Sektor (hancurkan
+   sejumlah musuh). Selesai kontrak (dan bos bila ada) memunculkan layar STAGE CLEAR.
+   ===================================================================== */
+const CONTRACT_TYPES = {
+  buru: { name: 'Buru Target', icon: 'M12 2v4M12 18v4M2 12h4M18 12h4M12 7a5 5 0 1 0 0 10a5 5 0 1 0 0-10',
+    desc: (k) => 'Hancurkan Komandan Sindikat Vanta yang bertanda.', reward: (i) => ({ credits: 90 + i * 12, xp: 120 }) },
+  kawal: { name: 'Kawal Konvoi', icon: 'M3 15l3-6h9l3 6zM6 15v3M15 15v3',
+    desc: (k) => 'Lindungi kapal kargo kawan sampai titik tujuan ' + k.distance + ' m.', reward: (i) => ({ credits: 120 + i * 12, xp: 150 }) },
+  bersihkan: { name: 'Bersihkan Sektor', icon: 'M4 4l16 16M20 4L4 20',
+    desc: (k) => 'Hancurkan ' + k.target + ' musuh di sektor ini.', reward: (i) => ({ credits: 60 + i * 10, xp: 80 }) },
+};
+
+// Kapal kargo kawan: lambung lebar berwarna terang dengan lampu hijau
+function buildCargoShip() {
+  const g = new THREE.Group();
+  const white = new THREE.MeshPhongMaterial({ color: 0xd8dde4, specular: 0x444444, shininess: 30, flatShading: true });
+  const teal = new THREE.MeshPhongMaterial({ color: 0x2f8a7a, shininess: 20, flatShading: true });
+  const lamp = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.3, 1.8, 0.6) });
+  const add = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return m; };
+  add(loftGeometry([{ z: -9, w: 1.2, ht: 1.0, hb: 0.8 }, { z: -6, w: 3.0, ht: 2.4, hb: 2.0 }, { z: 6, w: 3.2, ht: 2.6, hb: 2.2 }, { z: 9, w: 2.2, ht: 1.8, hb: 1.6 }]), white);
+  for (const z of [-3, 1, 5]) add(loftGeometry([{ z: z - 1.2, w: 3.3, ht: 2.7, hb: 2.3 }, { z: z + 1.2, w: 3.3, ht: 2.7, hb: 2.3 }]), teal);
+  for (const s of [-1, 1]) {
+    add(loftGeometry([{ z: 2, w: 0.7, ht: 0.7, hb: 0.7 }, { z: 9.5, w: 0.8, ht: 0.8, hb: 0.8 }]), white, s * 3.8, -0.5, 0);
+    add(new THREE.CircleGeometry(0.6, 10), lamp, s * 3.8, -0.5, 9.55).rotation.y = Math.PI;
+    add(new THREE.IcosahedronGeometry(0.3, 0), lamp, s * 3.2, 1.6, -5);
+  }
+  return g;
+}
+
+const Contracts = {
+  current: null, offerList: [],
+  el: document.getElementById('screen-contract'), cards: document.getElementById('ct-cards'),
+  stats: null,
+  // Kartu pembuka stage dan tiga pilihan kontrak (jenis sama bisa muncul dengan parameter berbeda)
+  offer() {
+    if (!Campaign.active) return false;
+    const i = Campaign.stageIdx, types = ['buru', 'kawal', 'bersihkan'];
+    this.offerList = types.map((type) => {
+      const k = { type, stage: i + 1 };
+      if (type === 'bersihkan') k.target = CONFIG.contracts.clearBase + i * CONFIG.contracts.clearPerStage;
+      if (type === 'kawal') k.distance = CONFIG.contracts.convoyDistance;
+      k.reward = CONTRACT_TYPES[type].reward(i);
+      return k;
+    });
+    document.getElementById('ct-stage').textContent = 'STAGE ' + (i + 1) + ': ' + Campaign.stage.name.toUpperCase();
+    const btns = this.offerList.map((k, n) => {
+      const T = CONTRACT_TYPES[k.type], b = document.createElement('button');
+      b.type = 'button'; b.className = 'ctcard'; b.dataset.contract = k.type;
+      b.innerHTML = '<svg viewBox="0 0 24 24"><path d="' + T.icon + '"/></svg>';
+      const h = document.createElement('b'); h.textContent = T.name;
+      const p = document.createElement('span'); p.textContent = T.desc(k);
+      const r = document.createElement('small'); r.textContent = 'Hadiah ' + k.reward.credits + ' kredit, ' + k.reward.xp + ' XP';
+      const kb = document.createElement('kbd'); kb.textContent = String(n + 1);
+      b.append(h, p, r, kb);
+      b.addEventListener('click', () => this.choose(k.type));
+      return b;
+    });
+    this.cards.replaceChildren(...btns);
+    setState('contract');
+    this.el.querySelector('.ct-head').animate([{ transform: 'scale(1.25)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }], { duration: 450, easing: 'ease-out' });
+    return true;
+  },
+  choose(type) {
+    const k = this.offerList.find((x) => x.type === type);
+    if (!k ? true : Game.state !== 'contract') return false;
+    this.current = { ...k, progress: 0, done: false, failed: false, t: 0 };
+    this.beginStats();
+    if (type === 'kawal') Convoy.start(this.current);
+    if (type === 'buru') this.current.spawnIn = CONFIG.contracts.huntDelay;
+    setState('playing');
+    showBanner(CONTRACT_TYPES[type].name.toUpperCase(), 1400);
+    Events.emit('contract', type);
+    return true;
+  },
+  // Statistik stage untuk layar Stage Clear
+  beginStats() { this.stats = { score: Game.score, time: Game.time, kills: Game.kills, hpLost: 0, livesLost: 0 }; },
+  clear() { this.current = null; Convoy.stop(); },
+  get complete() { return this.current ? this.current.done : false; },
+  update(dt) {
+    const k = this.current;
+    if (!k ? true : k.done) return;
+    k.t += dt;
+    if (k.type === 'bersihkan') { if (k.progress >= k.target) this.finish(); }
+    else if (k.type === 'buru') {
+      if (k.spawnIn > 0) {
+        k.spawnIn -= dt;
+        if (k.spawnIn <= 0) this.spawnTarget(k);
+      } else if (k.target ? !k.target.active : true) {
+        // Target lepas karena terlalu jauh: dimunculkan lagi di depan
+        if (k.killed) this.finish(); else this.spawnTarget(k);
+      }
+    } else if (k.type === 'kawal') {
+      Convoy.update(dt);
+      if (Convoy.arrived) this.finish();
+    }
+  },
+  spawnTarget(k) {
+    Enemies.spawnGroup('commander', 1);
+    k.target = Enemies.list.find((e) => e.active ? e.type === 'commander' : false) || null;
+    if (k.target) { k.target.contractTarget = true; Piko.say('target'); }
+  },
+  finish() {
+    const k = this.current;
+    k.done = true;
+    showBanner('KONTRAK SELESAI', 1500);
+    Events.emit('contractDone', k.type);
+  },
+  // Teks misi di HUD
+  label() {
+    const k = this.current;
+    if (!k) return '';
+    if (k.done) return 'KONTRAK SELESAI';
+    if (k.type === 'bersihkan') return 'BERSIHKAN SEKTOR ' + Math.min(k.progress, k.target) + '/' + k.target;
+    if (k.type === 'buru') return k.spawnIn > 0 ? 'BURU TARGET: menunggu sinyal' : k.target ? 'BURU TARGET: Komandan ' + Math.round(k.target.pos.distanceTo(Player.pos)) + ' m' : 'BURU TARGET';
+    return 'KAWAL KONVOI: kargo ' + Math.ceil(Convoy.health.hp) + '/' + Convoy.health.maxHp + ', ' + Math.round(Convoy.remaining()) + ' m';
+  },
+  // Rating: 3 bintang tanpa kehilangan nyawa dan HP hilang di bawah 60, 2 bila kehilangan paling banyak satu nyawa
+  rating() { const s = this.stats; return s.livesLost === 0 ? (s.hpLost < 60 ? 3 : 2) : s.livesLost <= 1 ? 2 : 1; },
+  // Layar STAGE CLEAR: ringkasan, rating, bonus, LANJUT atau KELUAR
+  showClear() {
+    const s = this.stats || { score: 0, time: 0, kills: 0, hpLost: 0, livesLost: 0 }, k = this.current, n = Campaign.stageIdx + 1;
+    const stars = this.rating();
+    const reward = k ? k.reward : { credits: 0, xp: 0 };
+    const bonus = reward.credits + stars * CONFIG.contracts.starCredits;
+    Game.credits += bonus;
+    Levels.add(reward.xp);
+    const R = Save.data.campaign.ratings;
+    R[n] = Math.max(R[n] || 0, stars);
+    Save.save();
+    const set = (id, v) => { document.getElementById(id).textContent = v; };
+    set('sc-title', 'STAGE ' + n + ' SELESAI');
+    set('sc-score', fmtInt(Math.floor(Game.score - s.score)));
+    set('sc-time', Math.floor((Game.time - s.time) / 60) + ' menit ' + Math.floor((Game.time - s.time) % 60) + ' detik');
+    set('sc-kills', Game.kills - s.kills);
+    set('sc-hp', Math.round(s.hpLost));
+    set('sc-bonus', '+' + bonus + ' kredit, +' + reward.xp + ' XP');
+    set('sc-rating', '★'.repeat(stars) + '☆'.repeat(3 - stars));
+    this.lastRating = stars;
+    setState('stageclear');
+  },
+};
+
+// Kapal kargo yang dikawal: bergerak lurus ke titik tujuan, punya HP, bisa diserang
+const Convoy = {
+  active: false, arrived: false, group: null, beacon: null,
+  dest: new THREE.Vector3(), dir: new THREE.Vector3(),
+  health: new Health(300, () => Convoy.destroyed()),
+  init() {
+    this.group = buildCargoShip();
+    this.group.visible = false;
+    scene.add(this.group);
+    this.beacon = new THREE.Mesh(new THREE.TorusGeometry(40, 2, 6, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.3, 1.8, 0.7), transparent: true, opacity: 0.8 }));
+    this.beacon.visible = false;
+    scene.add(this.beacon);
+    this.pos = this.group.position;
+    this.radius = 9;
+  },
+  start(k) {
+    if (!this.group) this.init();
+    const P = Player.pos, f = Player.forward;
+    this.dir.set(f.x, 0, f.z).normalize();
+    this.pos.copy(P).addScaledVector(this.dir, 90).add(_va.set(-this.dir.z * 30, -10, this.dir.x * 30));
+    this.dest.copy(this.pos).addScaledVector(this.dir, k.distance);
+    this.health.reset(CONFIG.contracts.convoyHp);
+    this.active = true; this.arrived = false;
+    this.group.visible = true; this.beacon.visible = true;
+    this.beacon.position.copy(this.dest);
+    this.beacon.lookAt(this.pos);
+    this.group.lookAt(_vb.copy(this.pos).sub(this.dir));
+  },
+  stop() { this.active = false; if (this.group) { this.group.visible = false; this.beacon.visible = false; } },
+  remaining() { return this.active ? this.pos.distanceTo(this.dest) : 0; },
+  update(dt) {
+    if (!this.active ? true : this.arrived) return;
+    _va.subVectors(this.dest, this.pos);
+    const d = _va.length();
+    if (d < 30) { this.arrived = true; showToast('KARGO TIBA DI TUJUAN'); return; }
+    this.pos.addScaledVector(_va.normalize(), CONFIG.contracts.convoySpeed * dt);
+    this.beacon.rotation.z += dt;
+    // Peluru musuh mengenai kargo
+    const eb = Enemies.bullets, r2 = (this.radius + 1) * (this.radius + 1);
+    for (let i = 0; i < eb.max; i++) {
+      if (!eb.active[i]) continue;
+      const i3 = i * 3, dx = eb.p[i3] - this.pos.x, dy = eb.p[i3 + 1] - this.pos.y, dz = eb.p[i3 + 2] - this.pos.z;
+      if (dx * dx + dy * dy + dz * dz < r2) { applyDamage(this, eb.dmg[i], 'musuh', eb.p[i3], eb.p[i3 + 1], eb.p[i3 + 2]); eb.kill(i); FX.sparks(eb.p[i3], eb.p[i3 + 1], eb.p[i3 + 2], 6); }
+    }
+    // Drone kamikaze juga menyerang kargo
+    for (const e of Enemies.list) {
+      if (!e.active ? true : e.type !== 'drone') continue;
+      if (e.pos.distanceToSquared(this.pos) < (this.radius + e.radius) * (this.radius + e.radius)) { applyDamage(this, e.cfg.contactDamage, 'musuh', e.pos.x, e.pos.y, e.pos.z); Enemies.destroy(e, false); }
+    }
+  },
+  destroyed() {
+    FX.explosion(this.pos.x, this.pos.y, this.pos.z, 3);
+    this.stop();
+    if (Contracts.current) Contracts.current.failed = true;
+    // Kontrak kawal gagal: GAME OVER
+    Game.deathCause = 'Kapal kargo hancur';
+    Player.lives = 0;
+    Player.alive = false;
+    Game.deathTimer = 0;
+    Events.emit('contractFailed', 'kawal');
+  },
+};
+
+// Awal stage kampanye: pembuka (sekali per stage) lalu pilih kontrak
+function stageBegin() {
+  if (!Campaign.active) return false;
+  Contracts.clear();
+  const go = () => Contracts.offer();
+  if (!maybeStageIntro(go)) go();
+  return true;
+}
+Events.on('enemyDestroyed', (e, byPlayer) => {
+  const k = Contracts.current;
+  if (!k ? true : k.done) return;
+  if (k.type === 'bersihkan' ? (byPlayer ? !e.cfg.minor : false) : false) k.progress++;
+  if (e.contractTarget) k.killed = true;
+});
+Events.on('damage', (entity, dealt) => { if (entity === Player ? Contracts.stats : false) Contracts.stats.hpLost += dealt; });
+Events.on('playerDeath', () => { if (Contracts.stats) Contracts.stats.livesLost++; });
 
 const EarthWorld = {
   id: 'earth',
@@ -9483,6 +9755,8 @@ function updateHud(dt) {
   if (changed('wave', v)) hud.wave.textContent = v;
   v = Campaign.label();
   if (changed('stage', v)) $('stage-label').textContent = v;
+  v = Campaign.active ? Contracts.label() : '';
+  if (changed('mission', v)) $('mission').textContent = v;
   v = Levels.level + Levels.pending;
   if (changed('lv', v)) $('lv-num').textContent = v;
   v = Math.round(Levels.xp / Levels.need(Levels.level + Levels.pending) * 50) / 50;
@@ -9755,6 +10029,8 @@ function setState(next) {
   SolarMap.screen.classList.toggle('hidden', next !== 'map');
   FinalScreen.el.classList.toggle('hidden', next !== 'final');
   Levels.el.classList.toggle('hidden', next !== 'levelup');
+  Contracts.el.classList.toggle('hidden', next !== 'contract');
+  document.getElementById('screen-stageclear').classList.toggle('hidden', next !== 'stageclear');
   document.getElementById('btn-map').classList.toggle('hidden', !(next === 'playing' ? Worlds.active === SpaceWorld : false));
   const hudOn = next === 'playing' || next === 'paused' || next === 'countdown' || next === 'starting';
   document.getElementById('hud').classList.toggle('hidden', !hudOn);
@@ -9792,7 +10068,7 @@ const UI = {
     this.openOverlay(ui.confirm);
     if (this.usingKeyboard) ui.confirmNo.focus();
   },
-  base() { return Game.state === 'menu' ? ui.title : Game.state === 'paused' ? ui.pause : Game.state === 'map' ? SolarMap.screen : Game.state === 'final' ? FinalScreen.el : Game.state === 'levelup' ? Levels.el : null; },
+  base() { return Game.state === 'menu' ? ui.title : Game.state === 'paused' ? ui.pause : Game.state === 'map' ? SolarMap.screen : Game.state === 'final' ? FinalScreen.el : Game.state === 'levelup' ? Levels.el : Game.state === 'contract' ? Contracts.el : Game.state === 'stageclear' ? document.getElementById('screen-stageclear') : null; },
   openOverlay(el) {
     if (this.overlay) this.overlay.classList.add('hidden');
     this.overlay = el;
@@ -9818,6 +10094,8 @@ const UI = {
     if (Game.state === 'map') return SolarMap.screen;
     if (Game.state === 'final') return FinalScreen.el;
     if (Game.state === 'levelup') return Levels.el;
+    if (Game.state === 'contract') return Contracts.el;
+    if (Game.state === 'stageclear') return document.getElementById('screen-stageclear');
     if (Game.state === 'gameover') return ui.over;
     return null;
   },
@@ -9990,6 +10268,24 @@ onButton(document.getElementById('btn-mode-back'), () => { UI.closeOverlay(true)
 onButton(document.getElementById('btn-map-close'), () => SolarMap.close());
 onButton(document.getElementById('btn-map'), () => SolarMap.toggle());
 document.getElementById('cs-skip').addEventListener('click', () => Cutscene.skip());
+// Stage clear: LANJUT membuka gerbang loncat di depan; KELUAR membawa pulang kredit penuh
+onButton(document.getElementById('btn-sc-next'), () => {
+  Contracts.clear();
+  setState('playing');
+  CamRig.reset();
+  WarpGate.spawnAhead();
+  Piko.say('gate');
+  showBanner('TERBANG MELEWATI GERBANG', 1600);
+});
+onButton(document.getElementById('btn-sc-exit'), () => {
+  Save.data.ships.credits += Game.credits;
+  Game.credits = 0;
+  Save.save();
+  Game.hasSession = false;
+  resetWorld(chooseSeed());
+  CamRig.setMode('cinematic');
+  setState('menu');
+});
 // Layar akhir: lanjut ke Jelajah Bebas (dunia tetap, mode berganti) atau kembali ke menu
 onButton(document.getElementById('btn-final-free'), () => {
   Campaign.mode = 'free';
@@ -10034,6 +10330,9 @@ Events.on('gameover', () => {
   document.getElementById('new-record').classList.toggle('hidden', !isRecord);
   document.getElementById('go-score').textContent = fmtInt(Game.score);
   document.getElementById('go-cause').textContent = Game.deathCause || 'Kapal hancur';
+  const gs = document.getElementById('go-stage');
+  gs.classList.toggle('hidden', !Campaign.active);
+  if (Campaign.active) gs.textContent = 'Stage terakhir: ' + (Campaign.stageIdx + 1) + ' (' + Campaign.stage.name + ')';
   document.getElementById('go-best').textContent = fmtInt(HighScore.value);
   document.getElementById('go-time').textContent = fmtTime(Game.time);
   document.getElementById('go-kills').textContent = Game.kills;
@@ -10152,6 +10451,7 @@ const PIKO_LINES = {
   discovery: { text: 'Penemuan baru! Datanya kusimpan di atlas.', mood: 'happy', prio: 2 },
   boss: { text: 'Kapal besar mendekat! Cari titik lemahnya.', mood: 'alert', prio: 4 },
   bossPhase: { text: 'Polanya berubah! Tetap bergerak.', mood: 'alert', prio: 3 },
+  target: { text: 'Komandan bertanda terdeteksi. Itu target kontrak kita!', mood: 'alert', prio: 3 },
 };
 const Piko = {
   panel: document.getElementById('piko-panel'), face: document.getElementById('piko-face'), textEl: document.getElementById('piko-text'),
@@ -10317,6 +10617,7 @@ function onKeyDown(e) {
   if (Game.state === 'cutscene') { if (code === 'Enter' || code === 'NumpadEnter' || code === 'Escape') Cutscene.skip(); return; }
   // Kartu level: angka 1 sampai 3 memilih langsung
   if (Game.state === 'levelup') { const k = { Digit1: 0, Digit2: 1, Digit3: 2 }[code]; if (k !== undefined) { if (Levels.offer[k]) Levels.choose(Levels.offer[k].id); return; } }
+  if (Game.state === 'contract') { const k = { Digit1: 0, Digit2: 1, Digit3: 2 }[code]; if (k !== undefined) { if (Contracts.offerList[k]) Contracts.choose(Contracts.offerList[k].type); return; } }
   if (menuKeyHandler(code)) return;
   switch (code) {
     case 'KeyP':
@@ -10716,6 +11017,7 @@ function update(dt) {
     // Perisai energi pemain: pulih setelah jeda tanpa terkena
     if (Player.upgrades.shieldMax > 0) { if (Player.shieldWait > 0) Player.shieldWait -= dt; else Player.shield = Math.min(Player.upgrades.shieldMax, Player.shield + CONFIG.player.shieldRegen * dt); }
     Levels.update();
+    Contracts.update(dt);
     updateCombat();
     Combo.update(dt);
     Buffs.update(dt);
@@ -11074,6 +11376,8 @@ window.__game = {
     // Pindah ke stage n (1..10) di sesi kampanye berjalan
     setStage(n) {
       Cutscene.skip();
+      Warp.cancel();
+      Warp.onDone = null;
       Campaign.mode = 'campaign';
       Campaign.stageIdx = clamp(n - 1, 0, Campaign.count - 1);
       Campaign.cleared = false;
@@ -11081,11 +11385,23 @@ window.__game = {
       WarpGate.hide();
       Bosses.clear();
       Waves.reset();
-      Warp.start(Campaign.stage.area);
+      Warp.start(Campaign.stage.area, null, () => stageBegin());
       return true;
     },
     // Selesaikan gelombang stage saat ini (musuh dibersihkan)
-    finishStage() { Enemies.reset(); Waves.wave = Campaign.stage.waves; Waves.phase = 'break'; Waves.timer = 0; return true; },
+    // Selesaikan stage saat ini: gelombang habis dan kontrak dianggap selesai
+    finishStage() {
+      if (!Contracts.stats) Contracts.beginStats();
+      if (!Contracts.current) Contracts.current = { type: 'bersihkan', target: 0, progress: 0, reward: { credits: 0, xp: 0 }, done: true };
+      Contracts.current.done = true;
+      Enemies.reset(); Waves.wave = Campaign.stage.waves; Waves.phase = 'break'; Waves.timer = 0;
+      return true;
+    },
+    contract() { const k = Contracts.current; return { state: Game.state, offer: Contracts.offerList.map((x) => x.type), type: k ? k.type : null, done: k ? k.done : false, progress: k ? k.progress : 0, target: k ? (typeof k.target === 'number' ? k.target : !!k.target) : null, label: Contracts.label(), convoy: Convoy.active ? { hp: Math.round(Convoy.health.hp), remaining: Math.round(Convoy.remaining()) } : null, rating: Contracts.lastRating || null, ratings: { ...Save.data.campaign.ratings } }; },
+    pickContract(type) { return Contracts.choose(type); },
+    damageConvoy(n) { if (!Convoy.active) return null; return applyDamage(Convoy, n, 'musuh', Convoy.pos.x, Convoy.pos.y, Convoy.pos.z); },
+    autoContract() { if (Game.state === 'contract') Contracts.choose(Contracts.offerList[0].type); return Game.state; },
+    gateInfo() { if (!WarpGate.group) return null; const G = WarpGate.group.position, P = Player.pos; const rel = P.clone().sub(G); const side = rel.dot(WarpGate.normal); return { active: WarpGate.active, side: round2(side), lateral: round2(rel.addScaledVector(WarpGate.normal, -side).length()), dist: round2(P.distanceTo(G)), state: Game.state }; },
     passGate() { if (!WarpGate.active) return false; Campaign.gatePassed(); return true; },
     warpTo(id) { return Warp.start(id); },
     openMap() { return SolarMap.open(); },

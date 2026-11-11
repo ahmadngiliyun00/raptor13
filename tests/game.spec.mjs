@@ -59,9 +59,19 @@ async function start(page, { seed = 1234, enemies = false, god = true, world = '
   await page.click(`.tcard[data-world="${world}"]`);
   if (world === 'space') await page.click(`.mcard[data-mode="${mode}"]`);   // PILIH MODE
   await page.click('#hangar-pick');                     // PILIH KAPAL
-  await page.evaluate(() => { window.__game.skipTransition(); window.__game.debug.skipCutscene(); });   // lewati pembuka stage
+  await page.evaluate(() => { window.__game.skipTransition(); window.__game.debug.skipCutscene(); window.__game.debug.autoContract(); });   // lewati pembuka stage dan pilih kontrak pertama
   await expect.poll(async () => (await snap(page)).state).toBe('playing');
 }
+
+// Lewati layar sela kampanye: cutscene, pilihan kontrak, dan kartu level
+const settle = (page) => page.evaluate(() => {
+  const d = window.__game.debug;
+  d.skipCutscene();
+  d.autoContract();
+  const lv = d.levelState();
+  if (lv.state === 'levelup') d.pickCard(lv.offer[0].split(':')[0]);
+  return window.__game.snapshot().state;
+});
 
 async function hold(page, keys, ms) {
   for (const k of keys) await page.keyboard.down(k);
@@ -104,9 +114,9 @@ test('S1: Enter menembak lewat alur nyata, peluru bertambah, bergerak dan terlih
   await page.keyboard.press('Enter');                   // kartu Luar Angkasa sudah tersorot
   await page.keyboard.press('Enter');                   // PILIH MODE: mode tersimpan sudah tersorot
   await page.keyboard.press('Enter');                   // PILIH KAPAL: kapal terpilih sudah tersorot
-  // Kampanye pertama kali memutar pembuka stage: pemain melewatinya dengan Enter
-  await expect.poll(async () => ['playing', 'cutscene'].includes((await snap(page)).state), { timeout: 4000 }).toBe(true);
-  if ((await snap(page)).state === 'cutscene') await page.keyboard.press('Enter');
+  // Kampanye pertama kali memutar pembuka stage lalu pilihan kontrak: pemain melewati dan memilih dengan Enter
+  await expect.poll(async () => ['playing', 'cutscene', 'contract'].includes((await snap(page)).state), { timeout: 4000 }).toBe(true);
+  for (let i = 0; i < 3; i++) { if (['cutscene', 'contract'].includes((await snap(page)).state)) { await page.keyboard.press('Enter'); await page.waitForTimeout(150); } }
   await expect.poll(async () => (await snap(page)).state, { timeout: 4000 }).toBe('playing');
   expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);   // tombol tidak lagi fokus
   const before = await snap(page);
@@ -1129,8 +1139,11 @@ test('B11: Kampanye 10 stage, gerbang loncat setelah gelombang bersih, warp ke s
   expect(c.stage).toBe(1);
   expect(c.area).toBe('merkurius');
   await expect(page.locator('#stage-label')).toHaveText('STAGE 1/10 MERKURIUS');
-  // Gelombang stage selesai: gerbang loncat muncul, peta tidak bisa dipakai untuk warp bebas
+  // Kontrak dan gelombang selesai: layar STAGE CLEAR, LANJUT membuka gerbang loncat
   await dbg(page, 'finishStage');
+  await expect.poll(async () => (await snap(page)).state, { timeout: 3000 }).toBe('stageclear');
+  await expect(page.locator('#screen-stageclear')).toBeVisible();
+  await page.click('#btn-sc-next');
   await expect.poll(async () => (await dbg(page, 'campaign')).gate, { timeout: 3000 }).toBe(true);
   c = await dbg(page, 'campaign');
   expect(c.cleared).toBe(true);
@@ -1142,8 +1155,9 @@ test('B11: Kampanye 10 stage, gerbang loncat setelah gelombang bersih, warp ke s
   await expect(page.locator('#screen-map')).toBeHidden();
   // Kapal terbang lurus melewati gerbang di depannya: warp ke Venus
   await page.screenshot({ path: 'docs/screenshots/gerbang-loncat.jpg', type: 'jpeg', quality: 82 });
-  await expect.poll(async () => (await dbg(page, 'campaign')).area, { timeout: 15000 }).toBe('venus');
+  await expect.poll(async () => { await settle(page); return (await dbg(page, 'campaign')).area; }, { timeout: 15000 }).toBe('venus');
   await expect.poll(async () => (await dbg(page, 'campaign')).warp, { timeout: 5000 }).toBe(false);
+  await page.evaluate(() => { window.__game.debug.skipCutscene(); window.__game.debug.autoContract(); });
   c = await dbg(page, 'campaign');
   expect(c.stage).toBe(2);
   await expect(page.locator('#stage-label')).toHaveText('STAGE 2/10 VENUS');
@@ -1292,22 +1306,19 @@ test('B12: pembuka stage kampanye diputar sekali per stage', async ({ page }) =>
   expect(c.active).toBe('stage-1');
   expect(c.who).toBe('PIKO');
   await page.keyboard.press('Enter');
+  await expect.poll(async () => (await snap(page)).state).toBe('contract');   // setelah pembuka: pilih kontrak
+  await page.keyboard.press('Digit3');
   await expect.poll(async () => (await snap(page)).state).toBe('playing');
   // Sesi berikutnya: stage 1 sudah pernah dilihat
   await open(page);
   await page.evaluate(() => { const g = window.__game; g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); });
   c = await dbg(page, 'cutscene');
   expect(c.active).toBe(null);
-  expect((await snap(page)).state).toBe('playing');
+  expect((await snap(page)).state).toBe('contract');                  // tanpa pembuka, langsung pilih kontrak
 });
 
 // Pembantu bos: lewati cutscene yang sedang berjalan
-const skipCs = (page) => page.evaluate(() => {
-  const d = window.__game.debug;
-  d.skipCutscene();
-  const lv = d.levelState();                                          // XP bos bisa membuka layar kartu
-  if (lv.state === 'levelup') d.pickCard(lv.offer[0].split(':')[0]);
-});
+const skipCs = settle;
 async function bossPhase(page, n) {
   await expect.poll(async () => { await skipCs(page); return (await dbg(page, 'bossState'))?.phase; }, { timeout: 6000 }).toBe(n);
 }
@@ -1321,6 +1332,7 @@ test('B13: mini-boss stage 5 dan 8 muncul setelah gelombang, bar HP, dua fase, s
     await skipCs(page);
     await dbg(page, 'finishStage');
     await expect.poll(async () => (await dbg(page, 'bossState'))?.kind, { timeout: 4000 }).toBe(kind);
+    await expect.poll(() => settle(page)).toBe('playing');
     await expect(page.locator('#boss-bar')).toBeVisible();
     expect((await dbg(page, 'campaign')).gate).toBe(false);          // gerbang belum terbuka selama bos hidup
     const hp = (await dbg(page, 'damageBoss', 0)).max;
@@ -1330,7 +1342,9 @@ test('B13: mini-boss stage 5 dan 8 muncul setelah gelombang, bar HP, dua fase, s
     if (kind === 'miner') await page.screenshot({ path: 'docs/screenshots/bos-penambang.jpg', type: 'jpeg', quality: 82 });
     await dbg(page, 'damageBoss', hp);
     await expect.poll(async () => dbg(page, 'bossState'), { timeout: 3000 }).toBe(null);
-    await expect.poll(async () => (await dbg(page, 'campaign')).gate, { timeout: 4000 }).toBe(true);
+    await expect.poll(async () => { const lv = await dbg(page, 'levelState'); if (lv.state === 'levelup') await dbg(page, 'pickCard', lv.offer[0].split(':')[0]); return (await snap(page)).state; }, { timeout: 4000 }).toBe('stageclear');
+    await page.click('#btn-sc-next');
+    await expect.poll(async () => { await settle(page); return (await dbg(page, 'campaign')).gate; }, { timeout: 4000 }).toBe(true);
   }
 });
 
@@ -1430,4 +1444,58 @@ test('S11: perisai energi menyerap damage dan drone pendamping maksimal dua mene
   const shots0 = (await snap(page)).shotsFired;
   await expect.poll(async () => (await dbg(page, 'enemyInfo')).find((e) => e.type === 'creature')?.hp ?? 0, { timeout: 4000 }).toBeLessThan(90);
   expect((await snap(page)).shotsFired).toBe(shots0);                 // yang menembak drone, bukan pemain
+});
+
+test('A6: kartu stage dan tiga kontrak, Bersihkan Sektor dihitung, Stage Clear dengan rating tersimpan', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); g.debug.skipCutscene(); });
+  await expect.poll(async () => (await snap(page)).state).toBe('contract');
+  await expect(page.locator('#ct-stage')).toHaveText('STAGE 1: MERKURIUS');
+  await expect(page.locator('.ctcard')).toHaveCount(3);
+  expect((await dbg(page, 'contract')).offer).toEqual(['buru', 'kawal', 'bersihkan']);
+  await page.waitForTimeout(600);                                          // animasi kartu stage selesai
+  await page.screenshot({ path: `${SHOT_DIR}pilih-kontrak.png` });
+  await page.click('.ctcard[data-contract="bersihkan"]');
+  let k = await dbg(page, 'contract');
+  expect(k.type).toBe('bersihkan');
+  expect(k.target).toBeGreaterThanOrEqual(10);
+  await expect(page.locator('#mission')).toContainText('BERSIHKAN SEKTOR 0/');
+  // Musuh yang dihancurkan pemain menambah progres
+  await dbg(page, 'spawnEnemy', 'scout', 200);
+  await dbg(page, 'damageEnemy', 'scout', 999);
+  k = await dbg(page, 'contract');
+  expect(k.progress).toBe(1);
+  await dbg(page, 'finishStage');
+  await expect.poll(async () => (await snap(page)).state, { timeout: 3000 }).toBe('stageclear');
+  await expect(page.locator('#sc-rating')).toHaveText(/★/);
+  await page.screenshot({ path: `${SHOT_DIR}stage-clear.png` });
+  expect((await dbg(page, 'contract')).ratings['1']).toBe(3);
+  await open(page);
+  expect((await dbg(page, 'contract')).ratings['1']).toBe(3);              // rating tersimpan
+});
+
+test('A6: Buru Target memunculkan Komandan bertanda, Kawal Konvoi gagal bila kargo hancur (game over menampilkan stage)', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); g.debug.skipCutscene(); });
+  await expect.poll(async () => (await snap(page)).state).toBe('contract');
+  await page.keyboard.press('Digit1');                                     // Buru Target
+  await expect.poll(async () => (await dbg(page, 'contract')).target, { timeout: 9000 }).toBe(true);
+  await expect(page.locator('#mission')).toContainText('Komandan');
+  await dbg(page, 'damageEnemy', 'commander', 99999);
+  await dbg(page, 'damageEnemy', 'commander', 99999);                      // perisai lalu HP
+  await expect.poll(async () => (await dbg(page, 'contract')).done, { timeout: 3000 }).toBe(true);
+  // Kawal Konvoi di sesi baru
+  await open(page);
+  await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); g.debug.skipCutscene(); });
+  await expect.poll(async () => (await snap(page)).state).toBe('contract');
+  await dbg(page, 'pickContract', 'kawal');
+  let k = await dbg(page, 'contract');
+  expect(k.convoy.hp).toBe(300);
+  expect(k.convoy.remaining).toBeGreaterThan(2000);
+  await page.waitForTimeout(1000);
+  expect((await dbg(page, 'contract')).convoy.remaining).toBeLessThan(k.convoy.remaining);   // kargo bergerak ke tujuan
+  await page.evaluate(() => window.__game.debug.damageConvoy(999));
+  await expect.poll(async () => (await snap(page)).state, { timeout: 5000 }).toBe('gameover');
+  await expect(page.locator('#go-cause')).toHaveText('Kapal kargo hancur');
+  await expect(page.locator('#go-stage')).toHaveText(/Stage terakhir: 1/);
 });
