@@ -1625,3 +1625,58 @@ test('S16: preset kualitas menskalakan tekstur planet, kepadatan batu, dan jarak
   test.info().annotations.push({ type: 'bangun-tata-surya', description: ['rendah', 'sedang', 'tinggi'].map((q) => q + ' ' + r[q].buildMs + ' ms').join(', ') });
   for (const q of ['rendah', 'sedang']) expect(r[q].buildMs).toBeLessThan(1500);
 });
+
+// ---------- 27a: kontrol HP (masukan pemain): ikon, ukuran, jarak, tanpa tumpang tindih ----------
+test.describe('27a: kontrol sentuh mode HP', () => {
+  test.use({ hasTouch: true, isMobile: true });
+  async function startHp(page, w, h, state = 'playing') {
+    await page.setViewportSize({ width: w, height: h });
+    await page.addInitScript(() => { const k = 'raptor13.v3'; const d = JSON.parse(localStorage.getItem(k) || '{}'); d.settings = Object.assign(d.settings || {}, { controlMode: 'hp' }); localStorage.setItem(k, JSON.stringify(d)); });
+    await open(page);
+    await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); g.debug.skipCutscene(); g.debug.autoContract(); });
+    await expect.poll(async () => (await snap(page)).state).toBe(state);
+  }
+  for (const [w, h] of [[852, 393], [667, 375], [740, 360], [932, 430]]) {
+    test(`tata letak ${w}x${h}: tombol ikon besar berjarak, tidak ada elemen yang bertumpuk`, async ({ page }) => {
+      await startHp(page, w, h);
+      // Kasus terberat: bos, panel data, Piko, dan semua peringatan tampil bersamaan
+      await page.evaluate(() => { const d = window.__game.debug; d.pikoSay('boss'); d.fillUltimate(); d.startBoss('hunter'); d.viewBody('merkurius', 2.2); });
+      await page.waitForTimeout(2600);
+      await page.evaluate(() => { for (const id of ['warning', 'rear-warn', 'comet-warn', 'critical']) document.getElementById(id).classList.remove('hidden'); document.getElementById('warning').textContent = 'KELUAR BATAS MISI'; });
+      const r = await dbg(page, 'layoutOverlaps');
+      expect(r.touch).toBe(10);
+      expect(r.hits).toEqual([]);
+      expect(r.small).toEqual([]);
+      // Semua tombol berupa ikon (SVG) tanpa teks, dengan label aksesibilitas
+      for (const b of await page.locator('#touch .tbtn').all()) {
+        expect(await b.locator('svg').count()).toBeGreaterThan(0);
+        expect((await b.textContent()).trim()).toBe('');
+        expect(await b.getAttribute('aria-label')).toBeTruthy();
+      }
+      if (w === 852) await page.screenshot({ path: `${SHOT_DIR}kontrol-hp.png` });
+    });
+  }
+  test('tombol ikon berfungsi: tembak, manuver, ultimate', async ({ page }) => {
+    await startHp(page, 852, 393);
+    const press = (sel, ms) => page.evaluate(async ([sel, ms]) => {
+      const el = document.querySelector(sel), r = el.getBoundingClientRect();
+      const o = { bubbles: true, pointerId: 7, pointerType: 'touch', clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
+      el.dispatchEvent(new PointerEvent('pointerdown', o));
+      await new Promise((res) => setTimeout(res, ms));
+      el.dispatchEvent(new PointerEvent('pointerup', o));
+    }, [sel, ms]);
+    const s0 = (await snap(page)).shotsFired;
+    await press('#touch .t-fire', 400);
+    expect((await snap(page)).shotsFired).toBeGreaterThan(s0);
+    await press('#touch .t-roll', 30);
+    await expect.poll(async () => (await snap(page)).maneuver, { timeout: 2000 }).toBe('roll');
+    await dbg(page, 'fillUltimate');
+    await expect(page.locator('#touch .t-ult')).toHaveClass(/ready/);
+    await press('#touch .t-ult', 30);
+    await expect.poll(async () => (await dbg(page, 'ultimate')).active, { timeout: 2000 }).toBeGreaterThan(0);
+  });
+  test('layar tegak meminta pemain memutar perangkat', async ({ page }) => {
+    await startHp(page, 390, 844, 'paused');                     // posisi tegak menjeda permainan
+    await expect(page.locator('#rotate-hint')).toBeVisible();
+  });
+});

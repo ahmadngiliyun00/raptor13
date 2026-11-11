@@ -202,7 +202,6 @@
   .buff b { min-width: 18px; text-align: right; font-variant-numeric: tabular-nums; }
   .buff[data-buff="overdrive"] { color: #ffc84a; border-color: rgba(255, 190, 60, 0.6); }
   .buff[data-buff="destroyer"] { color: #d58bff; border-color: rgba(200, 100, 255, 0.6); }
-  body.mode-hp #buffs { top: calc(200px + env(safe-area-inset-top)); }
   #piko-panel {
     position: absolute; left: 16px; bottom: calc(184px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px;
     max-width: min(380px, 42vw); padding: 6px 12px 6px 6px; background: rgba(8, 14, 24, 0.72); border: 1px solid var(--ui-line); border-radius: 8px;
@@ -210,7 +209,6 @@
   #piko-face { width: 40px; height: 40px; flex: none; }
   #piko-text { margin: 0; font-size: 13px; line-height: 1.35; }
   #piko-text b { color: var(--ui-accent); margin-right: 4px; }
-  body.mode-hp #piko-panel { left: 50%; transform: translateX(-50%); bottom: auto; top: calc(96px + env(safe-area-inset-top)); }
   .ind.pickup { border-left-color: #5dff7a; }
   #lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #ffd24a; transform-origin: center; }
   #rear-warn { position: absolute; left: 50%; bottom: calc(56px + env(safe-area-inset-bottom)); transform: translateX(-50%);
@@ -328,20 +326,54 @@
   }
   #touch .tbtn svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
   #touch .tbtn.on { background: rgba(255, 154, 60, 0.55); border-color: #ffd08a; transform: scale(0.94); }
-  .dpad { position: absolute; left: calc(18px + env(safe-area-inset-left)); bottom: calc(18px + env(safe-area-inset-bottom)); width: 196px; height: 196px; }
-  .dpad .tbtn { width: 64px; height: 64px; }
-  .t-up { left: 66px; top: 0; } .t-down { left: 66px; bottom: 0; } .t-left { left: 0; top: 66px; } .t-right { right: 0; top: 66px; }
-  .actions { position: absolute; right: calc(18px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); width: 200px; height: 170px; }
-  .t-fire { right: 0; bottom: 0; width: 100px; height: 100px; background: rgba(255, 90, 60, 0.35) !important; }
-  .t-fire.on { background: rgba(255, 90, 60, 0.7) !important; }
-  .t-nitro { left: 0; bottom: 8px; width: 76px; height: 76px; }
-  #touch .t-man { width: 58px; height: 40px; border-radius: 10px; font-size: 10px; top: 0; }
-  .t-roll { left: 0; } .t-imm { left: 66px; } .t-loop { left: 132px; }
-  #touch .t-man.cool { opacity: 0.45; }
-  #touch .t-ult { right: 108px; bottom: 96px; width: 74px; height: 44px; border-radius: 10px; font-size: 10px; background: rgba(200, 60, 160, 0.35); }
-  #touch .t-ult.ready { background: rgba(255, 80, 200, 0.75); border-color: #ffc0f0; }
-  body.mode-hp .hud-block.bl, body.mode-hp .hud-block.br { bottom: auto; top: calc(150px + env(safe-area-inset-top)); }
-  body.mode-hp .hud-block.br { top: calc(150px + env(safe-area-inset-top)); }
+  /* Tata letak grid: tombol tidak bisa bertumpuk, jarak 12 px, area sentuh minimal 56 px */
+  .dpad { position: absolute; left: calc(16px + env(safe-area-inset-left)); bottom: calc(16px + env(safe-area-inset-bottom));
+    display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 8px; }
+  #touch .dpad .tbtn, #touch .actions .tbtn { position: relative; inset: auto; width: 100%; height: 100%; }
+  .t-up { grid-area: 1 / 2; } .t-left { grid-area: 2 / 1; } .t-right { grid-area: 2 / 3; } .t-down { grid-area: 3 / 2; }
+  .actions { position: absolute; right: calc(16px + env(safe-area-inset-right)); bottom: calc(16px + env(safe-area-inset-bottom));
+    display: grid; grid-template-columns: repeat(4, 56px); grid-template-rows: 56px 84px; gap: 12px; align-items: center; justify-items: center; }
+  .t-roll { grid-area: 1 / 1; } .t-imm { grid-area: 1 / 2; } .t-loop { grid-area: 1 / 3; } .t-ult { grid-area: 1 / 4; }
+  #touch .actions .t-nitro { grid-area: 2 / 1 / 3 / 3; width: 68px; height: 68px; }
+  #touch .actions .t-fire { grid-area: 2 / 3 / 3 / 5; width: 84px; height: 84px; background: rgba(255, 90, 60, 0.38); border-color: rgba(255, 170, 150, 0.7); }
+  #touch .t-fire.on { background: rgba(255, 90, 60, 0.75); }
+  #touch .t-fire svg { width: 40px; height: 40px; }
+  #touch .t-nitro { background: rgba(255, 150, 40, 0.3); border-color: rgba(255, 200, 120, 0.6); }
+  #touch .t-man { border-radius: 16px; }
+  #touch .t-man svg, #touch .t-ult svg { width: 28px; height: 28px; }
+  #touch .t-man.cool { opacity: 0.4; }
+  #touch .t-ult { border-radius: 16px; background: rgba(200, 60, 160, 0.32); }
+  #touch .t-ult.ready { background: rgba(255, 80, 200, 0.72); border-color: #ffc0f0; box-shadow: 0 0 16px rgba(255, 90, 210, 0.6); }
+  /* HUD mode HP: blok bawah disembunyikan agar tidak bertabrakan dengan tombol */
+  body.mode-hp .hud-block.bl, body.mode-hp .hud-block.br { display: none; }
+  /* Baris atas mode HP: kiri (status ringkas), tengah (misi), kanan (skor), lalu bar bos dan panel data di tengah */
+  body.mode-hp .hud-block { padding: 5px 9px; }
+  body.mode-hp .hud-block.tl { width: 184px; }
+  body.mode-hp .hud-block.tl .lv-row, body.mode-hp #xp-bar { display: none; }
+  body.mode-hp .hud-block.tl .row { margin-top: 1px; }
+  body.mode-hp .hud-block.tl .bar { height: 5px; margin: 2px 0 3px; }
+  body.mode-hp .hud-block.tc { max-width: min(240px, 30vw); padding: 4px 8px; top: calc(12px + env(safe-area-inset-top)) !important; }
+  body.mode-hp .hud-block.tc > .label:not(.mission) { display: none; }
+  body.mode-hp .hud-block.tc .big { font-size: 15px; }
+  body.mode-hp .mission { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px; }
+  body.mode-hp .hud-block.tr { top: calc(54px + env(safe-area-inset-top)) !important; }
+  body.mode-hp .hud-block.tr .label:not(:first-child) { display: none; }
+  body.mode-hp #radar { width: 72px; height: 72px; top: calc(118px + env(safe-area-inset-top)); }
+  body.mode-hp #boss-bar { top: calc(70px + env(safe-area-inset-top)); width: min(320px, 34vw); }
+  body.mode-hp #data-panel { right: auto; left: 50%; transform: translateX(-50%); top: calc(102px + env(safe-area-inset-top)); bottom: auto; width: min(240px, 30vw); padding: 4px 9px; }
+  body.mode-hp #data-panel h3 { font-size: 14px; }
+  body.mode-hp #data-facts, body.mode-hp #data-panel .dcls { display: none; }
+  body.mode-hp #piko-panel { left: calc(50% - 33px); transform: translateX(-50%); top: auto; bottom: calc(14px + env(safe-area-inset-bottom)); width: max-content; max-width: max(150px, calc(100vw - 530px)); }
+  body.mode-hp #piko-text { font-size: 12px; }
+  body.mode-hp #buffs { top: auto !important; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom)); flex-direction: row; }
+  /* Peringatan mode HP: bertumpuk di celah tengah bawah di antara dua kelompok tombol */
+  /* Celah tengah bawah tidak simetris (kelompok kanan lebih lebar), jadi pusatnya digeser 33 px ke kiri */
+  body.mode-hp #warning, body.mode-hp #rear-warn, body.mode-hp #comet-warn, body.mode-hp #critical {
+    top: auto; left: calc(50% - 33px); padding: 3px 7px; font-size: 10px; letter-spacing: 0.06em; white-space: nowrap; max-width: max(140px, calc(100vw - 520px)); overflow: hidden; text-overflow: ellipsis; }
+  body.mode-hp #warning { bottom: calc(112px + env(safe-area-inset-bottom)); border-width: 1px; }
+  body.mode-hp #rear-warn { bottom: calc(136px + env(safe-area-inset-bottom)); }
+  body.mode-hp #comet-warn { bottom: calc(160px + env(safe-area-inset-bottom)); }
+  body.mode-hp #critical { bottom: calc(184px + env(safe-area-inset-bottom)); }
   .tool .ic-hp { display: none; }
   body.mode-hp .tool .ic-hp { display: block; }
   body.mode-hp .tool .ic-kb { display: none; }
@@ -369,14 +401,11 @@
     .big { font-size: 18px; }
     .label { font-size: 10px; }
     .stat .num { font-size: 14px; min-width: 44px; }
-    body.mode-hp .hud-block.bl { top: calc(132px + env(safe-area-inset-top)); left: 16px; }
-    body.mode-hp .hud-block.br { top: calc(150px + env(safe-area-inset-top)); }
-    .dpad { width: 168px; height: 168px; }
-    .dpad .tbtn { width: 56px; height: 56px; }
-    .t-up, .t-down { left: 56px; } .t-left, .t-right { top: 56px; }
-    .actions { height: 150px; }
-    .t-fire { width: 88px; height: 88px; }
-    .t-nitro { width: 64px; height: 64px; }
+    .dpad { grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); }
+    .actions { grid-template-columns: repeat(4, 54px); grid-template-rows: 54px 78px; }
+    #touch .actions .t-fire { width: 78px; height: 78px; }
+    #touch .actions .t-nitro { width: 62px; height: 62px; }
+    body.mode-hp #radar { width: 68px; height: 68px; top: calc(112px + env(safe-area-inset-top)); }
     .card { padding: 16px 18px; gap: 10px; }
     .screen h2 { font-size: 30px; }
   }
@@ -633,12 +662,12 @@
     <button class="tbtn t-down" data-act="down" type="button" aria-label="Turun"><svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg></button>
   </div>
   <div class="actions">
-    <button class="tbtn t-nitro" data-act="nitro" type="button">NITRO</button>
-    <button class="tbtn t-fire" data-act="fire" type="button">TEMBAK</button>
-    <button class="tbtn t-man t-roll" data-man="roll" type="button">GULUNG</button>
-    <button class="tbtn t-man t-imm" data-man="immelmann" type="button">BALIK</button>
-    <button class="tbtn t-man t-loop" data-man="loop" type="button">LOOP</button>
-    <button class="tbtn t-ult" data-ult="1" type="button">ULTIMATE</button>
+    <button class="tbtn t-man t-roll" data-man="roll" type="button" aria-label="Gulung Tong" title="Gulung Tong"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20.5 3.5v4.5H16"/></svg></button>
+    <button class="tbtn t-man t-imm" data-man="immelmann" type="button" aria-label="Balik Arah" title="Balik Arah"><svg viewBox="0 0 24 24"><path d="M7 21V10a5 5 0 0 1 10 0v5"/><path d="M13.5 12.5l3.5 3.5 3.5-3.5"/></svg></button>
+    <button class="tbtn t-man t-loop" data-man="loop" type="button" aria-label="Looping" title="Looping"><svg viewBox="0 0 24 24"><path d="M3 19h9"/><path d="M12 19a6 6 0 1 0-6-6v2"/><path d="M3.5 12.5L6 15l2.5-2.5"/></svg></button>
+    <button class="tbtn t-ult" data-ult="1" type="button" aria-label="Ultimate" title="Ultimate"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L12 16.8l-5.8 3.5 1.6-6.6-5.2-4.4 6.8-.5z"/></svg></button>
+    <button class="tbtn t-nitro" data-act="nitro" type="button" aria-label="Nitro" title="Nitro"><svg viewBox="0 0 24 24"><path d="M12 2.5c1 3.5 5.5 6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.3 1-3.8 2.2-5 0 2 .9 3.3 2.3 3.3 0-3.4.8-6.2 1-9.3z"/></svg></button>
+    <button class="tbtn t-fire" data-act="fire" type="button" aria-label="Tembak" title="Tembak"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg></button>
   </div>
 </div>
 <div id="rotate-hint" class="screen hidden"><div class="card"><h2>PUTAR LAYAR</h2><p class="hint">Mode HP dimainkan mendatar (landscape). Putar perangkatmu untuk melanjutkan.</p></div></div>
@@ -11692,6 +11721,29 @@ window.__game = {
     offerCards(ids) { Levels.open(ids); return Levels.offer.map((c) => c.id); },
     pickCard(id) { return Levels.choose(id); },
     companions() { return Companions.list.map((c) => ({ active: c.active, visible: c.group.visible, inScene: !!c.group.parent, d: round2(c.pos.distanceTo(Player.pos)) })); },
+    // Periksa tumpang tindih tata letak HUD dan tombol sentuh (kotak batas elemen yang tampil)
+    layoutOverlaps() {
+      const sel = ['#touch .tbtn', '.hud-block', '#radar', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical'];
+      const items = [];
+      for (const q of sel) for (const el of document.querySelectorAll(q)) {
+        if (el.offsetParent === null ? getComputedStyle(el).position !== 'fixed' : false) continue;
+        const r = el.getBoundingClientRect();
+        if (r.width < 2 ? true : r.height < 2) continue;
+        const cs = getComputedStyle(el);
+        if (cs.visibility === 'hidden' ? true : cs.display === 'none') continue;
+        items.push({ name: q + (el.dataset.act || el.dataset.man || el.id || el.className.split(' ').slice(-1)[0] || ''), r, touch: q.startsWith('#touch') });
+      }
+      const hits = [], small = [];
+      for (let i = 0; i < items.length; i++) {
+        const a = items[i];
+        if (a.touch ? Math.min(a.r.width, a.r.height) < 52 : false) small.push(a.name + ' ' + Math.round(a.r.width));
+        for (let j = i + 1; j < items.length; j++) {
+          const b = items[j], pad = a.touch ? (b.touch ? 8 : 4) : (b.touch ? 4 : 0);
+          if (a.r.left < b.r.right + pad ? (b.r.left < a.r.right + pad ? (a.r.top < b.r.bottom + pad ? b.r.top < a.r.bottom + pad : false) : false) : false) hits.push(a.name + ' x ' + b.name);
+        }
+      }
+      return { count: items.length, touch: items.filter((x) => x.touch).length, hits, small };
+    },
     radar() { return { counts: { ...Radar.counts }, range: Radar.range(), instruments: Radar.values ? { ...Radar.values } : null, hdgText: $('hdg').textContent, pitchText: $('pitch').textContent, bankText: $('bank').textContent }; },
     startBoss(kind) { return Bosses.start(kind); },
     bossState() {
