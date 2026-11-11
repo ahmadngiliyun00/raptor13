@@ -59,7 +59,7 @@ async function start(page, { seed = 1234, enemies = false, god = true, world = '
   await page.click(`.tcard[data-world="${world}"]`);
   if (world === 'space') await page.click(`.mcard[data-mode="${mode}"]`);   // PILIH MODE
   await page.click('#hangar-pick');                     // PILIH KAPAL
-  await page.evaluate(() => window.__game.skipTransition());
+  await page.evaluate(() => { window.__game.skipTransition(); window.__game.debug.skipCutscene(); });   // lewati pembuka stage
   await expect.poll(async () => (await snap(page)).state).toBe('playing');
 }
 
@@ -104,6 +104,9 @@ test('S1: Enter menembak lewat alur nyata, peluru bertambah, bergerak dan terlih
   await page.keyboard.press('Enter');                   // kartu Luar Angkasa sudah tersorot
   await page.keyboard.press('Enter');                   // PILIH MODE: mode tersimpan sudah tersorot
   await page.keyboard.press('Enter');                   // PILIH KAPAL: kapal terpilih sudah tersorot
+  // Kampanye pertama kali memutar pembuka stage: pemain melewatinya dengan Enter
+  await expect.poll(async () => ['playing', 'cutscene'].includes((await snap(page)).state), { timeout: 4000 }).toBe(true);
+  if ((await snap(page)).state === 'cutscene') await page.keyboard.press('Enter');
   await expect.poll(async () => (await snap(page)).state, { timeout: 4000 }).toBe('playing');
   expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);   // tombol tidak lagi fokus
   const before = await snap(page);
@@ -1254,4 +1257,46 @@ test('S9 dan A5: gelombang Angkasa lanjutan berisi roster lengkap dan tetap adil
   expect(r.m.tailRatio).toBeLessThan(cfg.maxTailRatio);
   expect(r.m.collisionsPerMin).toBeLessThan(cfg.maxCollisionsPerMin);
   expect(r.m.ramsPerMin).toBeLessThan(cfg.maxRamsPerMin);
+});
+
+test('B12: cutscene berskrip dengan letterbox dan subtitle, dunia dijeda, bisa dilewati Enter, Esc, dan tap', async ({ page }) => {
+  await start(page, { world: 'space' });
+  const t0 = (await snap(page)).time;
+  expect(await dbg(page, 'playCutscene', 'demo')).toBe(true);
+  await page.waitForTimeout(700);
+  let c = await dbg(page, 'cutscene');
+  expect(c.state).toBe('cutscene');
+  expect(c.bars).toBe(true);
+  expect(c.text.length).toBeGreaterThan(3);
+  await expect(page.locator('#cutscene .cs-sub')).toBeVisible();
+  await expect(page.locator('#hud')).toBeHidden();
+  expect((await snap(page)).time).toBe(t0);                     // simulasi dijeda
+  await page.screenshot({ path: 'docs/screenshots/cutscene.jpg', type: 'jpeg', quality: 82 });
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await snap(page)).state).toBe('playing');
+  await dbg(page, 'playCutscene', 'demo');
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await snap(page)).state).toBe('playing');
+  await dbg(page, 'playCutscene', 'demo');
+  await page.mouse.click(400, 300);                              // tap atau klik di layar
+  await expect.poll(async () => (await snap(page)).state).toBe('playing');
+  // Tanpa dilewati, cutscene selesai sendiri dan kembali bermain
+  await dbg(page, 'playCutscene', 'demo');
+  await expect.poll(async () => (await snap(page)).state, { timeout: 7000 }).toBe('playing');
+});
+
+test('B12: pembuka stage kampanye diputar sekali per stage', async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); });
+  let c = await dbg(page, 'cutscene');
+  expect(c.active).toBe('stage-1');
+  expect(c.who).toBe('PIKO');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await snap(page)).state).toBe('playing');
+  // Sesi berikutnya: stage 1 sudah pernah dilihat
+  await open(page);
+  await page.evaluate(() => { const g = window.__game; g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); });
+  c = await dbg(page, 'cutscene');
+  expect(c.active).toBe(null);
+  expect((await snap(page)).state).toBe('playing');
 });

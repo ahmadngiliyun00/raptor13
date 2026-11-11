@@ -218,6 +218,16 @@
   #data-facts li + li { margin-top: 3px; }
   #data-tag { display: inline-block; margin-bottom: 4px; padding: 2px 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; color: #0a1420; background: #ffd24a; border-radius: 3px; }
   #data-tag.hidden { display: none; }
+  #cutscene { position: fixed; inset: 0; z-index: 40; pointer-events: auto; }
+  #cutscene .lb { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.45s ease-out; }
+  #cutscene .lb-top { top: 0; } #cutscene .lb-bot { bottom: 0; }
+  #cutscene.on .lb { height: 11vh; }
+  .cs-sub { position: absolute; left: 50%; bottom: calc(11vh + 18px); transform: translateX(-50%); max-width: min(720px, 86vw); padding: 6px 14px;
+    text-align: center; font-size: clamp(14px, 2.2vw, 18px); line-height: 1.4; color: #f4f7fb; background: rgba(0, 0, 0, 0.45); border-radius: 6px; text-shadow: 0 1px 2px #000; }
+  .cs-sub b { display: block; font-size: 11px; letter-spacing: 0.2em; color: #ffd24a; }
+  .cs-sub.hidden, .cs-sub b.hidden { display: none; }
+  .cs-skip { position: absolute; right: 16px; top: calc(11vh + 10px); padding: 6px 12px; font: 700 11px/1 system-ui, sans-serif; letter-spacing: 0.16em;
+    color: #dfe7f1; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 4px; cursor: pointer; }
   .stage-label { color: #ffd24a; margin-bottom: 2px; }
   .stage-label:empty { display: none; }
   .map-wrap { display: flex; gap: 18px; align-items: center; justify-content: center; max-width: 100%; }
@@ -483,6 +493,12 @@
 
 <!-- HUD (elemen DOM di atas canvas) -->
 <div id="flash"></div>
+<!-- Cutscene: garis hitam sinematik, subtitle, tombol lewati -->
+<div id="cutscene" class="hidden">
+  <div class="lb lb-top"></div><div class="lb lb-bot"></div>
+  <div class="cs-sub"><b id="cs-who"></b><span id="cs-text"></span></div>
+  <button id="cs-skip" class="cs-skip" type="button">LEWATI (Enter)</button>
+</div>
 <div id="hud" class="hidden">
   <div id="vignette"></div>
   <div id="cloud-veil"></div>
@@ -1367,7 +1383,7 @@ const Save = {
       ships: { selected: { earth: 'raptor-j', space: 'starfighter' }, unlocked: ['raptor-j', 'starfighter'], credits: 0 },
       stats: { playTime: 0, enemiesDestroyed: 0, asteroidsDestroyed: 0, gamesPlayed: 0 },
       discoveries: [],   // id benda angkasa yang pernah didekati (atlas Penemuan)
-      campaign: { stage: 1, completed: false, freeArea: 'bumi' },   // stage tertinggi yang terbuka
+      campaign: { stage: 1, completed: false, freeArea: 'bumi', intros: [] },   // stage tertinggi yang terbuka
     };
   },
   // Terima hanya field yang dikenal dengan tipe dan rentang yang benar
@@ -1404,6 +1420,7 @@ const Save = {
     if (Number.isFinite(cp.stage)) d.campaign.stage = Math.min(10, Math.max(1, Math.floor(cp.stage)));
     if (cp.completed === true) d.campaign.completed = true;
     if (DISCOVERY_IDS.includes(cp.freeArea)) d.campaign.freeArea = cp.freeArea;
+    if (Array.isArray(cp.intros)) for (const n of cp.intros) { if (Number.isInteger(n) ? n >= 1 ? n <= 10 ? !d.campaign.intros.includes(n) : false : false : false) d.campaign.intros.push(n); }
     if (Array.isArray(raw.discoveries)) for (const id of raw.discoveries) { if (DISCOVERY_IDS.includes(id) ? !d.discoveries.includes(id) : false) d.discoveries.push(id); }
     return d;
   },
@@ -6780,7 +6797,7 @@ const Campaign = {
       this.cleared = false;
       Waves.reset();
       Waves.timer = CONFIG.campaign.arrivalDelay;
-    });
+    }, () => maybeStageIntro());
   },
   label() { return this.active ? 'STAGE ' + (this.stageIdx + 1) + '/' + this.count + ' ' + this.stage.name.toUpperCase() : Worlds.active === SpaceWorld ? 'JELAJAH BEBAS' : ''; },
 };
@@ -6847,9 +6864,9 @@ const WarpGate = {
 const Warp = {
   active: false, t: 0, fx: 0, target: null, onArrive: null, jumped: false,
   flash: document.getElementById('flash'),
-  start(area, onArrive) {
+  start(area, onArrive, onDone) {
     if (this.active) return false;
-    this.active = true; this.t = 0; this.target = area; this.onArrive = onArrive || null; this.jumped = false;
+    this.active = true; this.t = 0; this.target = area; this.onArrive = onArrive || null; this.onDone = onDone || null; this.jumped = false;
     Player.spawnInvuln = Math.max(Player.spawnInvuln, CONFIG.warp.duration + 1.5);
     Player.maneuver = null;
     Sfx.nitroStart();
@@ -6881,7 +6898,7 @@ const Warp = {
     const fl = Math.exp(-Math.pow((this.t - W.flashAt) / 0.18, 2));
     if (this.flash) this.flash.style.opacity = fl.toFixed(2);
     if (this.jumped ? false : this.t >= W.flashAt) { this.jumped = true; this.teleport(); }
-    if (this.t >= W.duration) this.cancel();
+    if (this.t >= W.duration) { const done = this.onDone; this.onDone = null; this.cancel(); if (done) done(); }
   },
   idle: { pitch: 0, yaw: 0, fire: false, nitro: false },
 };
@@ -6962,6 +6979,116 @@ const SolarMap = {
     ctx.fillStyle = '#5dff9a'; ctx.fill(); ctx.restore();
   },
 };
+
+/* =====================================================================
+   CUTSCENE - kamera berskrip (jalur posisi dan titik pandang per shot), garis hitam
+   sinematik, subtitle Bahasa Indonesia. Simulasi dijeda (state 'cutscene'); objek
+   yang dianimasikan skrip memakai callback update per shot. Bisa dilewati dengan
+   Enter, Esc, atau tap.
+   ===================================================================== */
+const Cutscene = {
+  active: null, shot: 0, t: 0, onEnd: null, prevState: 'playing',
+  el: document.getElementById('cutscene'),
+  who: document.getElementById('cs-who'), text: document.getElementById('cs-text'),
+  _from: new THREE.Vector3(), _to: new THREE.Vector3(), _lf: new THREE.Vector3(), _lt: new THREE.Vector3(),
+  ease(t) { return t * t * (3 - 2 * t); },
+  // script: { id, shots: [{ dur, from(), to(), lookFrom(), lookTo(), who, text, update(dt, k) }] }
+  play(script, onEnd) {
+    if (this.active) this.finish(true);
+    if (!script ? true : !script.shots.length) return false;
+    this.active = script; this.shot = -1; this.onEnd = onEnd || null;
+    this.prevState = Game.state === 'cutscene' ? 'playing' : Game.state;
+    setState('cutscene');
+    this.el.classList.remove('hidden');
+    requestAnimationFrame(() => this.el.classList.add('on'));
+    this.next();
+    Events.emit('cutscene', script.id);
+    return true;
+  },
+  next() {
+    this.shot++;
+    const s = this.active.shots[this.shot];
+    if (!s) { this.finish(false); return; }
+    this.t = 0;
+    // Titik awal dan akhir dihitung saat shot dimulai (mengikuti posisi dunia saat itu)
+    this._from.copy(s.from()); this._to.copy(s.to ? s.to() : s.from());
+    this._lf.copy(s.lookFrom()); this._lt.copy(s.lookTo ? s.lookTo() : s.lookFrom());
+    this.who.textContent = s.who || '';
+    this.who.classList.toggle('hidden', !s.who);
+    this.text.textContent = s.text || '';
+    this.el.querySelector('.cs-sub').classList.toggle('hidden', !s.text);
+    if (s.start) s.start();
+  },
+  update(dt) {
+    if (!this.active) return;
+    const s = this.active.shots[this.shot];
+    this.t += dt;
+    const k = this.ease(clamp(this.t / s.dur, 0, 1));
+    camera.position.lerpVectors(this._from, this._to, k);
+    _vd.lerpVectors(this._lf, this._lt, k);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(_vd);
+    if (s.fov ? camera.fov !== s.fov : false) { camera.fov = s.fov; camera.updateProjectionMatrix(); }
+    if (s.update) s.update(dt, k);
+    if (this.t >= s.dur) this.next();
+  },
+  skip() { if (this.active) { Events.emit('cutsceneSkipped', this.active.id); this.finish(false); } },
+  finish(silent) {
+    const script = this.active, cb = this.onEnd;
+    if (!script) return;
+    this.active = null; this.onEnd = null;
+    this.el.classList.remove('on');
+    this.el.classList.add('hidden');
+    if (script.finish) script.finish();
+    if (!silent) {
+      setState(this.prevState === 'map' ? 'playing' : this.prevState);
+      CamRig.reset();
+      Player.spawnInvuln = Math.max(Player.spawnInvuln, 1.2);
+    }
+    if (cb) cb();
+  },
+  // Pembuka stage kampanye: menyapu planet area lalu kembali ke kapal, dengan dialog singkat
+  stageIntro(stageIdx) {
+    const st = CONFIG.campaign.stages[stageIdx], body = SolarSystem.byId[st.area];
+    const P = () => Player.pos.clone(), F = () => Player.forward.clone();
+    const shots = [];
+    if (body) {
+      const R = body.radius, c = body.pos.clone();
+      const side = new THREE.Vector3().subVectors(Player.pos, c).setY(0).normalize();
+      const a0 = Math.atan2(side.z, side.x);
+      const at = (a, d, h) => new THREE.Vector3(c.x + Math.cos(a) * d, c.y + h, c.z + Math.sin(a) * d);
+      shots.push({ dur: 3.2, from: () => at(a0 - 0.6, R * 3.4 + 120, R * 0.6), to: () => at(a0 + 0.15, R * 2.9 + 100, R * 0.3), lookFrom: () => c, lookTo: () => c,
+        who: 'PIKO', text: 'Tiba di ' + st.name + '. Sinyal Sindikat Vanta terdeteksi di sekitar sini.' });
+    } else {
+      shots.push({ dur: 3.0, from: () => P().addScaledVector(F(), 160).add(new THREE.Vector3(0, 60, 0)), to: () => P().addScaledVector(F(), 90).add(new THREE.Vector3(30, 20, 0)), lookFrom: P, lookTo: P,
+        who: 'PIKO', text: 'Tiba di ' + st.name + '. Banyak batu di sini, terbang hati-hati.' });
+    }
+    shots.push({ dur: 2.6,
+      from: () => P().addScaledVector(F(), 26).add(new THREE.Vector3(8, 3, 0)), to: () => P().addScaledVector(F(), -14).add(new THREE.Vector3(0, 4, 0)),
+      lookFrom: P, lookTo: () => P().addScaledVector(F(), 40),
+      who: 'RAPTOR 13', text: 'Raptor 13 siap. Stage ' + (stageIdx + 1) + ', mari kita mulai.' });
+    return { id: 'stage-' + (stageIdx + 1), shots };
+  },
+  // Cutscene contoh untuk uji dan hook debug
+  demo() {
+    const P = () => Player.pos.clone(), F = () => Player.forward.clone();
+    return { id: 'demo', shots: [
+      { dur: 2, from: () => P().addScaledVector(F(), 40).add(new THREE.Vector3(20, 10, 0)), to: () => P().addScaledVector(F(), 25).add(new THREE.Vector3(-20, 6, 0)), lookFrom: P, who: 'PIKO', text: 'Uji kamera berskrip.' },
+      { dur: 2, from: () => P().add(new THREE.Vector3(0, 30, 30)), lookFrom: P, who: 'RAPTOR 13', text: 'Diterima.' },
+    ] };
+  },
+};
+
+document.getElementById('cutscene').addEventListener('pointerdown', (ev) => { ev.preventDefault(); Cutscene.skip(); });
+// Pembuka stage kampanye diputar sekali per stage (disimpan)
+function maybeStageIntro() {
+  if (!Campaign.active) return false;
+  const n = Campaign.stageIdx + 1, seen = Save.data.campaign.intros;
+  if (seen.includes(n)) return false;
+  seen.push(n); Save.save();
+  return Cutscene.play(Cutscene.stageIntro(Campaign.stageIdx));
+}
+Events.on('state', (next, prev) => { if (next === 'playing' ? prev === 'starting' : false) maybeStageIntro(); });
 
 const EarthWorld = {
   id: 'earth',
@@ -9010,6 +9137,7 @@ for (const c of modeScreen.querySelectorAll('.mcard')) {
 onButton(document.getElementById('btn-mode-back'), () => { UI.closeOverlay(true); openTerrainSelect(); });
 onButton(document.getElementById('btn-map-close'), () => SolarMap.close());
 onButton(document.getElementById('btn-map'), () => SolarMap.toggle());
+document.getElementById('cs-skip').addEventListener('click', () => Cutscene.skip());
 for (const c of terrainScreen.querySelectorAll('.tcard')) {
   onButton(c, () => chooseTerrain(c.dataset.world));
   c.addEventListener('focus', () => { for (const o of terrainScreen.querySelectorAll('.tcard')) o.classList.toggle('selected', o === c); });
@@ -9315,6 +9443,8 @@ function onKeyDown(e) {
   Keyboard.down[code] = true;
   if (e.repeat) return;
   onAudioGesture();
+  // Cutscene: Enter atau Esc melewati, tombol lain diabaikan
+  if (Game.state === 'cutscene') { if (code === 'Enter' || code === 'NumpadEnter' || code === 'Escape') Cutscene.skip(); return; }
   if (menuKeyHandler(code)) return;
   switch (code) {
     case 'KeyP':
@@ -9747,8 +9877,9 @@ function update(dt) {
     Asteroids.update(dt);
     Comets.update(dt);
   }
+  if (Game.state === 'cutscene') Cutscene.update(dt);
   if (Game.state !== 'paused') {
-    CamRig.update(dt);
+    if (Game.state !== 'cutscene') CamRig.update(dt);
     Worlds.active.follow();   // langit, cahaya dan latar mengikuti kamera dan pemain
   }
   Sfx.update(dt);   // selalu dipanggil: saat jeda gain mesin turun ke 0
@@ -10024,9 +10155,13 @@ window.__game = {
     dataPanel() { return { visible: !Discovery.el.classList.contains('hidden'), title: Discovery.title.textContent, facts: Discovery.list.children.length, isNew: !Discovery.tag.classList.contains('hidden') }; },
     // Arahkan kamera ke black hole (untuk screenshot)
     lookBlackHole() { const d = DeepSky.bhDir; Player.setHeading(Math.atan2(-d.x, -d.z)); Player.rotateLocal(_AX_X, Math.asin(d.y)); Player.basis(); Player.syncEuler(); Player.rig.quaternion.copy(Player.quat); CamRig.reset(); return true; },
+    playCutscene(id = 'demo') { return Cutscene.play(id === 'stage' ? Cutscene.stageIntro(Campaign.stageIdx) : Cutscene.demo()); },
+    skipCutscene() { Cutscene.skip(); return Game.state; },
+    cutscene() { return { active: Cutscene.active ? Cutscene.active.id : null, shot: Cutscene.shot, state: Game.state, who: Cutscene.who.textContent, text: Cutscene.text.textContent, bars: Cutscene.el.classList.contains('on') }; },
     campaign() { return { mode: Campaign.mode, active: Campaign.active, stage: Campaign.stageIdx + 1, area: SpaceWorld.area, cleared: Campaign.cleared, gate: WarpGate.active, warp: Warp.active, wave: Waves.wave, saved: { ...Save.data.campaign }, label: Campaign.label() }; },
     // Pindah ke stage n (1..10) di sesi kampanye berjalan
     setStage(n) {
+      Cutscene.skip();
       Campaign.mode = 'campaign';
       Campaign.stageIdx = clamp(n - 1, 0, Campaign.count - 1);
       Campaign.cleared = false;
