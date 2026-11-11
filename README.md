@@ -61,6 +61,22 @@ __jetPreview.setNitro(1)       // pratinjau api nitro (0 sampai 1)
 
 Screenshot di atas dibuat ulang oleh uji `pratinjau jet` di `tests/game.spec.mjs`.
 
+## Tata Surya (medan Angkasa)
+
+Medan Angkasa berisi Matahari, delapan planet, Pluto, dan bulan-bulan utama (Bulan, Phobos,
+Deimos, Io, Europa, Ganymede, Callisto, Titan, Charon). **Jarak antar benda dipadatkan dan
+bukan skala asli**: Merkurius berada 3.200 unit dari pusat Matahari dan Pluto 37.000 unit, agar
+jarak antar planet tetap bisa ditempuh dengan terbang manual. Ukuran juga dipadatkan tetapi
+urutannya tetap masuk akal (Matahari paling besar, lalu Jupiter, Saturnus, Uranus, Neptunus,
+Bumi, Venus, Mars, Merkurius, Pluto).
+
+Semua tekstur dibuat prosedural di kanvas dari noise 3D yang disampel di permukaan bola (tanpa
+sambungan) dan diterangi dari posisi Matahari yang sebenarnya, jadi sisi terang setiap planet
+selalu menghadap Matahari. Benda yang jauh digambar sebagai proksi berskala (didekatkan ke kamera
+dan diperkecil sebanding), sehingga ukurannya di layar tetap benar tanpa logarithmic depth buffer.
+
+![Saturnus](docs/screenshots/tata-surya-saturnus.jpg)
+
 ## Cara main
 
 Mode permainan adalah bertahan tanpa akhir (endless survival). Pesawat selalu maju sendiri;

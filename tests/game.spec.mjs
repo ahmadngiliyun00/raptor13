@@ -952,3 +952,56 @@ test('S8: ultimate E mengosongkan meter dan menghancurkan sasaran di jalur laser
   expect(u.meter).toBeLessThan(0.5);
   await expect.poll(async () => (await dbg(page, 'ultimate')).active, { timeout: 5000 }).toBe(0);
 });
+
+test('B8: Tata Surya lengkap, ukuran dan urutan masuk akal, cahaya dari Matahari, semua tergambar', async ({ page }) => {
+  await start(page, { world: 'space' });
+  const s = await dbg(page, 'solar');
+  expect(s.built).toBe(true);
+  const by = Object.fromEntries(s.bodies.map((b) => [b.id, b]));
+  const planets = ['merkurius', 'venus', 'bumi', 'mars', 'jupiter', 'saturnus', 'uranus', 'neptunus', 'pluto'];
+  for (const id of ['matahari', ...planets, 'bulan', 'phobos', 'deimos', 'io', 'europa', 'ganymede', 'callisto', 'titan', 'charon']) expect(by[id], id).toBeTruthy();
+  expect(by.bulan.parent).toBe('bumi');
+  expect(by.charon.parent).toBe('pluto');
+  expect(by.saturnus.ring).toBe(true);
+  // Urutan orbit dari Matahari dan ukuran relatif
+  for (let i = 1; i < planets.length; i++) expect(by[planets[i]].orbit).toBeGreaterThan(by[planets[i - 1]].orbit);
+  const r = (id) => by[id].radius;
+  expect(r('matahari')).toBeGreaterThan(r('jupiter'));
+  expect(r('jupiter')).toBeGreaterThan(r('saturnus'));
+  expect(r('saturnus')).toBeGreaterThan(r('uranus'));
+  expect(r('bumi')).toBeGreaterThan(r('mars'));
+  expect(r('mars')).toBeGreaterThan(r('merkurius'));
+  expect(r('merkurius')).toBeGreaterThan(r('pluto'));
+  // Sisi terang setiap benda menghadap Matahari (di titik asal)
+  for (const b of s.bodies) {
+    if (!b.light) continue;
+    const len = Math.hypot(b.x, b.y, b.z);
+    const dot = -(b.x * b.light[0] + b.y * b.light[1] + b.z * b.light[2]) / len;
+    expect(dot, b.id).toBeGreaterThan(0.999);
+  }
+  // Benda jauh digambar sebagai proksi dan tetap di dalam camera.far
+  expect(by.neptunus.proxy).toBeLessThan(1);
+  for (const b of s.bodies) if (b.draw) expect(b.draw, b.id).toBeLessThan(s.far);
+});
+
+for (const [id, cause] of [['mars', 'Menabrak planet Mars'], ['bulan', 'Menabrak Bulan'], ['matahari', 'Terbakar Matahari']]) {
+  test(`B8: menabrak ${id} langsung game over dengan penyebab benar`, async ({ page }) => {
+    await start(page, { world: 'space' });
+    await page.evaluate(() => { const d = window.__game.debug; d.setEnemiesEnabled(false); d.setGod(false); });
+    await dbg(page, 'viewBody', id, 1.05, 0.4, 0);
+    await expect.poll(async () => (await page.evaluate(() => window.__game.snapshot())).deathCause, { timeout: 6000 }).toBe(cause);
+    await expect(page.locator('#go-cause')).toHaveText(cause, { timeout: 6000 });
+  });
+}
+
+test('B8: screenshot tiap area Tata Surya', async ({ page }) => {
+  test.setTimeout(90000);
+  await page.setViewportSize({ width: 960, height: 540 });
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.setGod(true); d.setEnemiesEnabled(false); d.clearAsteroids(); d.setAsteroidDensity(0); });
+  for (const id of ['matahari', 'merkurius', 'venus', 'bumi', 'mars', 'jupiter', 'saturnus', 'uranus', 'neptunus', 'pluto']) {
+    expect(await dbg(page, 'viewBody', id, id === 'saturnus' ? 3.2 : 2.6, 1.0, 0.18)).toBe(true);
+    await page.waitForTimeout(350);
+    await page.screenshot({ path: `docs/screenshots/tata-surya-${id}.jpg`, type: 'jpeg', quality: 82 });
+  }
+});

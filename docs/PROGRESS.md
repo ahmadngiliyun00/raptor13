@@ -34,6 +34,7 @@ Berkas ini adalah catatan kerja agar pengerjaan bisa dilanjutkan otomatis setela
 - A4 Piko (model loft 852 segitiga, ekspresi mata, bip per ekspresi, panel HUD bersubtitle, jeda 6 detik, cooldown 25 detik per pesan, prioritas, opsi Bantuan robot, upgrade autoRepair, scanner, damper di Player.upgrades). Pemicu komet, ranjau, gerbang sudah ada di PIKO_LINES dan tinggal dipanggil Piko.say saat fiturnya dibuat.
 - Penyetelan B4: maxTailTime 1,2 detik, droneMaxTailTime 0,6 detik; metrik dipisah collisionsPerMin (non-kamikaze, ambang 2) dan ramsPerMin (drone, ambang 6).
 - S6 asteroid angkasa ukuran kontinu (spaceRadius per kelas) dan empat jenis (batu, es, logam, kristal; kristal lebih sering menjatuhkan pickup), komet (Comets) dengan koma, ekor menjauhi matahari, peringatan KOMET MENDEKAT dan Piko, bisa dihancurkan. Asteroid Bumi tidak berubah.
+- B8 Tata Surya (SolarSystem): Matahari bergranulasi, 8 planet, Pluto, 9 bulan (Bulan, Phobos, Deimos, Io, Europa, Ganymede, Callisto, Titan, Charon), tekstur kanvas noise 3D tanpa sambungan, bump kawah, lampu kota sisi malam Bumi, awan berputar, atmosfer, cincin Saturnus dengan celah Cassini dan bayangan planet, cincin tipis Jupiter dan Uranus, cahaya dari posisi Matahari (termasuk gerhana pada kapal), proksi berskala untuk benda jauh (camera.far 10000), tabrakan fatal planet, bulan, Matahari, peringatan TARIK NAIK, ketinggian HUD = jarak ke permukaan terdekat, pose awal per area (`SpaceWorld.area`), hook `solar`, `setArea`, `viewBody`. Jarak dipadatkan, bukan skala asli.
 - S8 pickup bintang lima warna (merah ultimate, hijau HP, biru nitro, emas XP dan skor, ungu nyawa) dengan magnet, jatuh dari musuh, asteroid kristal, komet dan kluster angkasa; ultimate laser E (meter dari bintang merah dan kill, sinar 2,5 detik), tombol ULTIMATE di mode HP, bar HUD. Game.xp disiapkan untuk S11.
 
 ## Urutan task berikutnya (blok terakhir menang bila bertentangan)
@@ -54,7 +55,7 @@ Fase berikutnya:
 11. (SELESAI) A4 Robot Piko (model loft, ekspresi mata, bip, panel HUD bersubtitle, batas frekuensi, opsi Bantuan robot, 3 kartu upgrade).
 12. (SELESAI) S6 Asteroid angkasa ukuran kontinu dan 4 jenis (batu, es, logam, kristal) serta komet berekor.
 13. (SELESAI) S8 Pickup bintang warna (merah ultimate, hijau HP, biru nitro, emas XP dan skor, ungu nyawa) dan ultimate laser E.
-14. B8 Tata Surya (Matahari, 8 planet, Pluto, bulan, tekstur prosedural, cahaya dari Matahari). Menggantikan S5 dan S7.
+14. (SELESAI) B8 Tata Surya (Matahari, 8 planet, Pluto, bulan, tekstur prosedural, cahaya dari Matahari). Menggantikan S5 dan S7.
 15. B9 Cincin berisi asteroid instanced dengan LOD ke objek ber-HP, Sabuk Asteroid, Sabuk Kuiper.
 16. B10 Latar Bima Sakti, galaksi, black hole; batas jelajah dan dinding energi; panel data fakta akurat dan daftar Penemuan.
 17. B11 Mode Kampanye 10 stage dan Jelajah Bebas, peta Tab dan warp. Menggantikan S12.
@@ -68,6 +69,7 @@ Fase berikutnya:
 25. S15 Audio angkasa dan musik ambient generatif (opsi Musik).
 26. A7 Dialog pilot (Raptor 13) dan Piko per stage.
 27. S16 Optimasi dan preset kualitas (bloom, partikel, bintang, jarak muat).
+27a. KONTROL HP (permintaan pemain 11 Nov, kerjakan setelah fitur utama selesai, sebelum S17): tombol sentuh terlalu kecil dan berupa tulisan sehingga sulit dibaca dan mudah salah pencet. Ganti dengan ikon SVG buatan sendiri (inline, tanpa aset luar) bergaya bersih seperti ikon iOS, perbesar area sentuh (minimal 56 sampai 64 px, tombol tembak lebih besar), beri jarak antar tombol, jangan ada tumpang tindih. Masalah terlihat di screenshot pemain: tombol ULTIMATE menimpa GULUNG dan BALIK, panel KECEPATAN menimpa bar ULTIMATE di kiri atas, panel kanan berdesakan dengan tombol manuver pada layar HP lanskap 852x393. Uji dengan viewport HP (misalnya 852x393 dan 390x844) dan pastikan tidak ada elemen saling menimpa (tes bounding box).
 28. S17 dan B14 Pengujian menyeluruh dan perbaikan visual.
 29. S18 README, screenshot, Ide lanjutan, self-review semua DEFINITION OF DONE, ringkasan jujur.
 

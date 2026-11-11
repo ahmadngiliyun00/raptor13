@@ -942,6 +942,40 @@ const CONFIG = {
     asteroid: { small: 1, medium: 2, large: 4, giant: 10 },
     keepOnGameOver: 0.5,
   },
+  // Tata Surya (medan Angkasa): jarak dipadatkan, bukan skala asli. Unit dunia, radius dalam unit.
+  solar: {
+    proxyDistance: 4500,       // benda lebih jauh digambar sebagai proksi berskala
+    maxDraw: 8800,             // jarak gambar terjauh proksi (di bawah cameraFar)
+    proxyFalloff: 15000,
+    cameraFar: 10000,
+    startArea: 'bumi',
+    warnDistance: 45,          // peringatan bila permukaan sedekat ini
+    bodies: [
+      { id: 'matahari', name: 'Matahari', kind: 'sun', orbit: 0, angle: 0, radius: 900, spin: 0.01 },
+      { id: 'merkurius', name: 'Merkurius', cls: 'planet', orbit: 3200, angle: 0.5, y: 220, radius: 48, spin: 0.01, tex: 'mercury', bump: 1.6 },
+      { id: 'venus', name: 'Venus', cls: 'planet', orbit: 4800, angle: 2.2, y: -120, radius: 112, tilt: 3.096, spin: -0.004, tex: 'venus', atmo: [1.0, 0.82, 0.5, 0.9], atmoScale: 1.06 },
+      { id: 'bumi', name: 'Bumi', cls: 'planet', orbit: 6600, angle: 3.7, radius: 120, tilt: 0.409, spin: 0.02, tex: 'earth', atmo: [0.3, 0.55, 1.0, 1.1], atmoScale: 1.045,
+        moons: [{ id: 'bulan', name: 'Bulan', dist: 420, radius: 33, tex: 'moon', bump: 1.4, period: 240, phase: 2.2 }] },
+      { id: 'mars', name: 'Mars', cls: 'planet', orbit: 8600, angle: 5.2, y: 150, radius: 68, tilt: 0.44, spin: 0.02, tex: 'mars', bump: 1.0, atmo: [1.0, 0.55, 0.35, 0.35], atmoScale: 1.03,
+        moons: [
+          { id: 'phobos', name: 'Phobos', dist: 150, radius: 7, tex: 'rocky', bump: 1.5, lumpy: 0.35, period: 40 },
+          { id: 'deimos', name: 'Deimos', dist: 240, radius: 5, tex: 'rocky', bump: 1.5, lumpy: 0.3, period: 90, phase: 2 },
+        ] },
+      { id: 'jupiter', name: 'Jupiter', cls: 'planet', orbit: 16000, angle: 1.0, radius: 480, tilt: 0.054, spin: 0.035, tex: 'jupiter', atmo: [0.9, 0.82, 0.7, 0.35], ring: { inner: 1.4, outer: 1.8, tex: 'faint', opacity: 0.3 },
+        moons: [
+          { id: 'io', name: 'Io', dist: 900, radius: 26, tex: 'io', bump: 0.6, period: 160, phase: 0.3 },
+          { id: 'europa', name: 'Europa', dist: 1150, radius: 22, tex: 'europa', bump: 0.6, period: 260, phase: 1.9 },
+          { id: 'ganymede', name: 'Ganymede', dist: 1450, radius: 38, tex: 'ganymede', bump: 1.0, period: 380, phase: 3.6 },
+          { id: 'callisto', name: 'Callisto', dist: 1850, radius: 34, tex: 'callisto', bump: 1.0, period: 560, phase: 5.0 },
+        ] },
+      { id: 'saturnus', name: 'Saturnus', cls: 'planet', orbit: 22000, angle: 2.75, y: -300, radius: 400, tilt: 0.466, spin: 0.033, tex: 'saturn', atmo: [1.0, 0.9, 0.7, 0.3], ring: { inner: 1.24, outer: 2.27, tex: 'saturn' },
+        moons: [{ id: 'titan', name: 'Titan', dist: 1600, radius: 37, tex: 'titan', period: 420, phase: 0.8, atmo: [1.0, 0.65, 0.3, 0.9], atmoScale: 1.08 }] },
+      { id: 'uranus', name: 'Uranus', cls: 'planet', orbit: 27500, angle: 4.3, y: 200, radius: 220, tilt: 1.706, spin: -0.03, tex: 'uranus', atmo: [0.55, 0.9, 1.0, 0.7], ring: { inner: 1.64, outer: 2.0, tex: 'uranus' } },
+      { id: 'neptunus', name: 'Neptunus', cls: 'planet', orbit: 32500, angle: 0.05, y: -250, radius: 210, tilt: 0.494, spin: 0.032, tex: 'neptune', atmo: [0.3, 0.5, 1.0, 0.85] },
+      { id: 'pluto', name: 'Pluto', cls: 'planet katai', orbit: 37000, angle: 5.85, y: 2600, radius: 24, tilt: 2.138, spin: -0.01, tex: 'pluto', bump: 0.8,
+        moons: [{ id: 'charon', name: 'Charon', dist: 110, radius: 12, tex: 'charon', bump: 1.0, period: 70 }] },
+    ],
+  },
   // Pickup bintang bercahaya
   stars: {
     max: 48,
@@ -2163,7 +2197,9 @@ const Player = {
 
   reset() {
     const C = CONFIG.player;
+    const pose = Worlds.active.startPose ? Worlds.active.startPose() : null;
     this.pos.set(0, Worlds.active.safeStartAltitude(), 0);
+    if (pose) { this.pos.copy(pose.pos); Worlds.active.startY = pose.pos.y; }
     this.yaw = 0; this.pitch = 0; this.roll = 0;
     this.quat.identity();
     this.maneuver = null;
@@ -2185,6 +2221,7 @@ const Player = {
     this.rig.visible = true;
     this.rig.quaternion.identity();
     this.basis();
+    if (pose) this.setHeading(pose.yaw);
   },
 
   // Fisika arcade dengan orientasi bebas (quaternion): W dan S memutar hidung pada laju tetap
@@ -3739,6 +3776,7 @@ const Asteroids = {
     return 'rock';
   },
   spawn(size, x, y, z, kind) {
+    if (Worlds.active.blocked ? Worlds.active.blocked(x, y, z, 40) : false) return null;
     const a = findFree(this.list, size);
     if (!a) return null;
     a.active = true;
@@ -4430,7 +4468,8 @@ const SpaceSky = {
     this.mid.position.set(0, 0, 0);
     // Matahari: jauh dan kecil, menghadap kamera
     this.sun.position.copy(this.sunDir).multiplyScalar(30);
-    this.sun.scale.setScalar(2.4);
+    const angR = SolarSystem.built ? CONFIG.solar.bodies[0].radius / Math.max(1, cam.distanceTo(SolarSystem.sunPos)) : 0.02;
+    this.sun.scale.setScalar(Math.max(2.4, Math.min(angR, 0.4) * 30 * 3.4));
     this.sun.lookAt(cam);
     this.wrapPoints(this.near, cam.x, cam.y, cam.z, 1400);
     this.wrapPoints(this.dust, cam.x, cam.y, cam.z, 90);
@@ -4456,8 +4495,9 @@ const SpaceSky = {
   // Lens flare halus: titik silau dan beberapa lingkaran sepanjang garis matahari ke tengah layar
   updateFlare() {
     camera.getWorldDirection(_vc);
-    const facing = _vc.dot(this.sunDir);
+    let facing = _vc.dot(this.sunDir);
     let vis = 0;
+    if (SolarSystem.built ? SolarSystem.sunBlocked(camera.position) : false) facing = 0;
     if (facing > 0.55) {
       _vc.copy(camera.position).addScaledVector(this.sunDir, 500).project(camera);
       if (Math.max(Math.abs(_vc.x), Math.abs(_vc.y)) < 1.1) vis = smoothstep(0.55, 0.92, facing);
@@ -4473,6 +4513,740 @@ const SpaceSky = {
       const t = ts[i];
       kids[i].style.transform = 'translate(' + (sx + (cx - sx) * t * 2).toFixed(1) + 'px, ' + (sy + (cy - sy) * t * 2).toFixed(1) + 'px)';
     }
+  },
+};
+
+/* =====================================================================
+   TATA SURYA - Matahari, delapan planet, Pluto dan bulan-bulannya. Jarak dipadatkan
+   (bukan skala asli) dengan ukuran relatif yang masih masuk akal. Tekstur dibuat di
+   kanvas dari noise 3D yang disampel di permukaan bola (tanpa sambungan). Satu shader
+   planet: cahaya dari posisi Matahari, bump kawah, lampu kota di sisi malam, awan
+   berputar dan atmosfer. Benda jauh digambar sebagai proksi berskala: didekatkan ke
+   kamera dan diperkecil sebanding sehingga ukuran sudutnya tetap sama tetapi tetap di
+   dalam camera.far (tanpa logarithmic depth buffer, urutan kedalaman tetap monoton).
+   ===================================================================== */
+const PlanetTex = {
+  perm: null, vals: null,
+  init() {
+    if (this.perm) return;
+    const rnd = makeRng(9137);
+    const p = [];
+    for (let i = 0; i < 256; i++) p.push(i);
+    for (let i = 255; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); const t = p[i]; p[i] = p[j]; p[j] = t; }
+    this.perm = new Uint16Array(512);
+    for (let i = 0; i < 512; i++) this.perm[i] = p[i % 256];
+    this.vals = new Float32Array(256);
+    for (let i = 0; i < 256; i++) this.vals[i] = rnd();
+  },
+  // Value noise 3D halus, hasil 0..1
+  n3(x, y, z) {
+    const P = this.perm, V = this.vals;
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    const xf = x - xi, yf = y - yi, zf = z - zi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf);
+    const X = ((xi % 256) + 256) % 256, Y = ((yi % 256) + 256) % 256, Z = ((zi % 256) + 256) % 256;
+    const X1 = (X + 1) % 256, Y1 = (Y + 1) % 256, Z1 = (Z + 1) % 256;
+    const a = P[X] + Y, b = P[X1] + Y, a1 = P[X] + Y1, b1 = P[X1] + Y1;
+    const c000 = V[P[P[a] + Z]], c100 = V[P[P[b] + Z]], c010 = V[P[P[a1] + Z]], c110 = V[P[P[b1] + Z]];
+    const c001 = V[P[P[a] + Z1]], c101 = V[P[P[b] + Z1]], c011 = V[P[P[a1] + Z1]], c111 = V[P[P[b1] + Z1]];
+    const x00 = c000 + (c100 - c000) * u, x10 = c010 + (c110 - c010) * u;
+    const x01 = c001 + (c101 - c001) * u, x11 = c011 + (c111 - c011) * u;
+    const y0 = x00 + (x10 - x00) * v, y1 = x01 + (x11 - x01) * v;
+    return y0 + (y1 - y0) * w;
+  },
+  fbm(x, y, z, oct = 5) {
+    let s = 0, a = 0.5, f = 1, n = 0;
+    for (let i = 0; i < oct; i++) { s += this.n3(x * f, y * f, z * f) * a; n += a; a *= 0.5; f *= 2.03; }
+    return s / n;
+  },
+  // Kawah acak di bola: daftar pusat (arah), radius sudut (cos) dan kedalaman
+  craters(seed, count, rMin, rMax) {
+    const rnd = makeRng(seed), out = [];
+    for (let i = 0; i < count; i++) {
+      const z = rnd() * 2 - 1, t = rnd() * Math.PI * 2, s = Math.sqrt(1 - z * z);
+      const r = rMin + Math.pow(rnd(), 2.5) * (rMax - rMin);
+      out.push({ x: s * Math.cos(t), y: z, z: s * Math.sin(t), r, cos: Math.cos(r), b: rnd() });
+    }
+    return out;
+  },
+  // Profil kawah: lantai cekung, bibir menonjol, ejekta tipis. Mengembalikan [tinggi, terang]
+  craterAt(list, dx, dy, dz, out) {
+    let h = 0, br = 0;
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      const d = dx * c.x + dy * c.y + dz * c.z;
+      if (d < c.cos * 0.985 - 0.02) continue;
+      const t = Math.acos(Math.min(1, d)) / c.r;
+      if (t > 1.6) continue;
+      if (t < 1) { h += (t * t - 1) * 0.6 + (t > 0.8 ? (t - 0.8) * 2.5 : 0); br -= (1 - t) * 0.08; }
+      else { const e = 1 - (t - 1) / 0.6; h += e * e * 0.25; br += e * 0.12 * c.b; }
+    }
+    out[0] = h; out[1] = br;
+  },
+  // Isi kanvas equirect sesuai pemetaan UV SphereGeometry: baris atas kutub utara
+  paint(w, h, fn, heightOut) {
+    this.init();
+    const cv = document.createElement('canvas');
+    cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    const img = ctx.createImageData(w, h), d = img.data;
+    let hcv = null, himg = null, hd = null;
+    if (heightOut) {
+      hcv = document.createElement('canvas'); hcv.width = w; hcv.height = h;
+      himg = hcv.getContext('2d').createImageData(w, h); hd = himg.data;
+    }
+    const col = [0, 0, 0, 0];
+    const cosU = new Float32Array(w), sinU = new Float32Array(w);
+    for (let i = 0; i < w; i++) { const ph = ((i + 0.5) / w) * Math.PI * 2; cosU[i] = Math.cos(ph); sinU[i] = Math.sin(ph); }
+    for (let j = 0; j < h; j++) {
+      const th = ((j + 0.5) / h) * Math.PI, st = Math.sin(th), ct = Math.cos(th);
+      const lat = Math.PI / 2 - th;
+      for (let i = 0; i < w; i++) {
+        const dx = -cosU[i] * st, dy = ct, dz = sinU[i] * st;
+        col[3] = 0;
+        fn(dx, dy, dz, lat, i / w, col);
+        const k = (j * w + i) * 4;
+        d[k] = clamp(col[0], 0, 1) * 255; d[k + 1] = clamp(col[1], 0, 1) * 255; d[k + 2] = clamp(col[2], 0, 1) * 255; d[k + 3] = 255;
+        if (hd) { const hv = clamp(col[3], 0, 1) * 255; hd[k] = hv; hd[k + 1] = hv; hd[k + 2] = hv; hd[k + 3] = 255; }
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    if (hcv) hcv.getContext('2d').putImageData(himg, 0, 0);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    let htex = null;
+    if (hcv) { htex = new THREE.CanvasTexture(hcv); htex.colorSpace = THREE.NoColorSpace; }
+    return { map: tex, height: htex };
+  },
+  mix(a, b, t) { return a + (b - a) * t; },
+  // Warna dari palet bertingkat (t 0..1)
+  ramp(stops, t, out) {
+    t = clamp(t, 0, 1);
+    for (let i = 1; i < stops.length; i++) {
+      if (t <= stops[i][0] || i === stops.length - 1) {
+        const a = stops[i - 1], b = stops[i], k = clamp((t - a[0]) / Math.max(1e-5, b[0] - a[0]), 0, 1);
+        out[0] = a[1] + (b[1] - a[1]) * k; out[1] = a[2] + (b[2] - a[2]) * k; out[2] = a[3] + (b[3] - a[3]) * k;
+        return out;
+      }
+    }
+    return out;
+  },
+};
+
+// Resep tekstur per benda. fn(dx, dy, dz, lat, u, col): col[0..2] warna, col[3] tinggi (bump)
+const PLANET_RECIPES = {
+  sun: null,
+  mercury() {
+    const cr = PlanetTex.craters(11, 160, 0.015, 0.22), tmp = [0, 0];
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 3, y * 3, z * 3, 5);
+      PlanetTex.craterAt(cr, x, y, z, tmp);
+      const g = 0.42 + (n - 0.5) * 0.35 + tmp[1];
+      c[0] = g * 1.02; c[1] = g * 0.98; c[2] = g * 0.93; c[3] = 0.5 + tmp[0] * 0.35 + (n - 0.5) * 0.3;
+    };
+  },
+  venus() {
+    const st = [[0, 0.62, 0.42, 0.18], [0.45, 0.86, 0.66, 0.34], [0.7, 0.95, 0.83, 0.55], [1, 0.99, 0.93, 0.74]];
+    return (x, y, z, lat, u, c) => {
+      const wx = PlanetTex.fbm(x * 2 + 3, y * 2, z * 2, 4) * 2.2;
+      const n = PlanetTex.fbm(x * 1.6 + wx, y * 7 + wx * 0.6, z * 1.6 - wx, 5);
+      PlanetTex.ramp(st, n * 1.3 - 0.12, c);
+    };
+  },
+  earth() {
+    const st = [[0, 0.02, 0.06, 0.2], [0.6, 0.03, 0.14, 0.38], [1, 0.08, 0.3, 0.5]];
+    const tmp = [0, 0, 0];
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 1.7 + 7, y * 1.7, z * 1.7, 6);
+      const d = n - 0.56;
+      const alat = Math.abs(lat);
+      if (d < 0) {
+        PlanetTex.ramp(st, 1 + d * 6, c);
+        c[3] = 1;   // laut: masker kilau
+      } else {
+        const m = PlanetTex.fbm(x * 5, y * 5, z * 5, 4);
+        const dry = clamp((1 - Math.abs(lat * 1.1 - 0.42 * Math.sign(lat)) * 3.2) + (m - 0.5) * 0.8 - 0.15, 0, 1);   // gurun di sekitar 25 derajat
+        const green = [0.12 + m * 0.08, 0.3 + m * 0.12, 0.08];
+        c[0] = PlanetTex.mix(green[0], 0.72, dry * 0.75); c[1] = PlanetTex.mix(green[1], 0.58, dry * 0.75); c[2] = PlanetTex.mix(green[2], 0.34, dry * 0.75);
+        if (d > 0.08) { const k = clamp((d - 0.08) * 8, 0, 0.5); c[0] = PlanetTex.mix(c[0], 0.42, k); c[1] = PlanetTex.mix(c[1], 0.38, k); c[2] = PlanetTex.mix(c[2], 0.33, k); }
+        c[3] = 0;
+      }
+      // Es kutub
+      const ice = smoothstep(1.12, 1.22, alat + (PlanetTex.n3(x * 6, y * 6, z * 6) - 0.5) * 0.25);
+      if (ice > 0) { c[0] = PlanetTex.mix(c[0], 0.92, ice); c[1] = PlanetTex.mix(c[1], 0.95, ice); c[2] = PlanetTex.mix(c[2], 0.98, ice); c[3] *= 1 - ice; }
+    };
+  },
+  earthClouds() {
+    return (x, y, z, lat, u, c) => {
+      const w = PlanetTex.fbm(x * 2 + 11, y * 2, z * 2, 3) * 1.6;
+      const n = PlanetTex.fbm(x * 2.6 + w, y * 3.4 + w * 0.5, z * 2.6 - w, 6);
+      const band = 0.06 * Math.cos(lat * 6);   // pita awan subtropis lebih tipis
+      const v = smoothstep(0.5 + band, 0.72 + band, n);
+      c[0] = v; c[1] = v; c[2] = v;
+    };
+  },
+  earthNight() {
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 1.7 + 7, y * 1.7, z * 1.7, 6);
+      c[0] = 0; c[1] = 0; c[2] = 0;
+      if (n < 0.565 ? true : Math.abs(lat) > 1.05) return;
+      const k = PlanetTex.fbm(x * 12, y * 12, z * 12, 3), s = PlanetTex.n3(x * 130, y * 130, z * 130);
+      const v = smoothstep(0.55, 0.75, k) * smoothstep(0.55, 0.8, s) + smoothstep(0.68, 0.8, k) * 0.35;
+      c[0] = v * 1.0; c[1] = v * 0.72; c[2] = v * 0.38;
+    };
+  },
+  moon() {
+    const cr = PlanetTex.craters(23, 140, 0.015, 0.2), tmp = [0, 0];
+    return (x, y, z, lat, u, c) => {
+      const mare = smoothstep(0.52, 0.6, PlanetTex.fbm(x * 1.4 + 2, y * 1.4, z * 1.4, 4));
+      const n = PlanetTex.fbm(x * 4, y * 4, z * 4, 4);
+      PlanetTex.craterAt(cr, x, y, z, tmp);
+      const g = 0.6 - mare * 0.26 + (n - 0.5) * 0.18 + tmp[1];
+      c[0] = g; c[1] = g * 0.99; c[2] = g * 0.96; c[3] = 0.5 + tmp[0] * 0.35 - mare * 0.1;
+    };
+  },
+  mars() {
+    const cr = PlanetTex.craters(31, 60, 0.012, 0.12), tmp = [0, 0];
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 2.2 + 5, y * 2.2, z * 2.2, 6);
+      const dark = smoothstep(0.5, 0.62, PlanetTex.fbm(x * 1.5 - 4, y * 1.8, z * 1.5, 4));
+      PlanetTex.craterAt(cr, x, y, z, tmp);
+      c[0] = 0.72 - dark * 0.28 + (n - 0.5) * 0.25 + tmp[1]; c[1] = 0.36 - dark * 0.14 + (n - 0.5) * 0.12 + tmp[1] * 0.6; c[2] = 0.2 - dark * 0.06 + tmp[1] * 0.4;
+      // Ngarai panjang dekat khatulistiwa
+      const canyon = Math.exp(-Math.pow((lat + 0.12 + (PlanetTex.n3(x * 8, y * 8, z * 8) - 0.5) * 0.05) / 0.018, 2)) * smoothstep(0.15, 0.3, u) * smoothstep(0.55, 0.4, u);
+      c[0] -= canyon * 0.22; c[1] -= canyon * 0.12;
+      const cap = smoothstep(1.2, 1.3, Math.abs(lat) + (n - 0.5) * 0.3);
+      c[0] = PlanetTex.mix(c[0], 0.95, cap); c[1] = PlanetTex.mix(c[1], 0.93, cap); c[2] = PlanetTex.mix(c[2], 0.9, cap);
+      c[3] = 0.5 + tmp[0] * 0.25 + (n - 0.5) * 0.4 - canyon * 0.5;
+    };
+  },
+  rocky() {
+    const cr = PlanetTex.craters(41, 40, 0.06, 0.4), tmp = [0, 0];
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 3, y * 3, z * 3, 4);
+      PlanetTex.craterAt(cr, x, y, z, tmp);
+      const g = 0.38 + (n - 0.5) * 0.2 + tmp[1];
+      c[0] = g * 1.05; c[1] = g * 0.95; c[2] = g * 0.85; c[3] = 0.5 + tmp[0] * 0.4;
+    };
+  },
+  jupiter() {
+    const st = [[0, 0.55, 0.38, 0.26], [0.3, 0.78, 0.62, 0.45], [0.55, 0.93, 0.86, 0.74], [0.8, 0.85, 0.72, 0.56], [1, 0.62, 0.45, 0.32]];
+    // Bintik Merah Besar sekitar 22 derajat selatan
+    const sLat = -0.38, sU = 0.62;
+    return (x, y, z, lat, u, c) => {
+      const t = PlanetTex.fbm(x * 3, y * 3, z * 3, 4);
+      const warp = (t - 0.5) * 0.22 + (PlanetTex.n3(x * 14, y * 3, z * 14) - 0.5) * 0.05;
+      const l = lat + warp;
+      const b = 0.5 + 0.5 * Math.sin(l * 13.5) * Math.cos(l * 4.7);
+      PlanetTex.ramp(st, b * 0.85 + (t - 0.5) * 0.3 + 0.08, c);
+      let du = u - sU; if (du > 0.5) du -= 1; if (du < -0.5) du += 1;
+      const ex = du / 0.045, ey = (lat - sLat) / 0.06, r2 = ex * ex + ey * ey;
+      if (r2 < 2.2) {
+        const sw = Math.sin(Math.atan2(ey, ex) * 2 + r2 * 3) * 0.06;
+        const k = smoothstep(1.4, 0.4, r2 + sw);
+        c[0] = PlanetTex.mix(c[0], 0.74, k); c[1] = PlanetTex.mix(c[1], 0.32, k); c[2] = PlanetTex.mix(c[2], 0.2, k);
+        const rim = smoothstep(0.9, 1.3, r2) * smoothstep(2.2, 1.4, r2);
+        c[0] = PlanetTex.mix(c[0], 0.95, rim * 0.5); c[1] = PlanetTex.mix(c[1], 0.9, rim * 0.5); c[2] = PlanetTex.mix(c[2], 0.82, rim * 0.5);
+      }
+    };
+  },
+  saturn() {
+    const st = [[0, 0.7, 0.58, 0.38], [0.5, 0.88, 0.78, 0.56], [1, 0.97, 0.9, 0.7]];
+    return (x, y, z, lat, u, c) => {
+      const t = PlanetTex.fbm(x * 2.5, y * 2.5, z * 2.5, 3);
+      const l = lat + (t - 0.5) * 0.06;
+      const b = 0.5 + 0.5 * Math.sin(l * 16) * Math.cos(l * 5.3);
+      PlanetTex.ramp(st, b * 0.7 + 0.2 + (t - 0.5) * 0.15, c);
+      const pole = smoothstep(1.15, 1.45, Math.abs(lat));
+      c[0] = PlanetTex.mix(c[0], 0.55, pole * 0.6); c[1] = PlanetTex.mix(c[1], 0.6, pole * 0.6); c[2] = PlanetTex.mix(c[2], 0.62, pole * 0.6);
+    };
+  },
+  uranus() {
+    return (x, y, z, lat, u, c) => {
+      const b = Math.sin(lat * 9) * 0.02 + (PlanetTex.fbm(x * 2, y * 6, z * 2, 3) - 0.5) * 0.03;
+      c[0] = 0.62 + b; c[1] = 0.86 + b; c[2] = 0.9 + b;
+      const pole = smoothstep(0.6, 1.4, lat);
+      c[0] += pole * 0.06; c[1] += pole * 0.04;
+    };
+  },
+  neptune() {
+    const sLat = -0.36, sU = 0.3;
+    return (x, y, z, lat, u, c) => {
+      const t = PlanetTex.fbm(x * 2, y * 7, z * 2, 4);
+      const b = Math.sin(lat * 7 + (t - 0.5)) * 0.05;
+      c[0] = 0.16 + b * 0.5 + (t - 0.5) * 0.06; c[1] = 0.3 + b + (t - 0.5) * 0.08; c[2] = 0.78 + b + (t - 0.5) * 0.08;
+      let du = u - sU; if (du > 0.5) du -= 1; if (du < -0.5) du += 1;
+      const r2 = Math.pow(du / 0.05, 2) + Math.pow((lat - sLat) / 0.06, 2);
+      const spot = smoothstep(1.2, 0.3, r2);
+      c[0] -= spot * 0.08; c[1] -= spot * 0.14; c[2] -= spot * 0.3;
+      // Awan putih tipis memanjang
+      const streak = smoothstep(0.7, 0.85, PlanetTex.fbm(x * 3, y * 18, z * 3, 3));
+      c[0] += streak * 0.6; c[1] += streak * 0.6; c[2] += streak * 0.4;
+    };
+  },
+  pluto() {
+    const cr = PlanetTex.craters(53, 30, 0.02, 0.12), tmp = [0, 0];
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 3, y * 3, z * 3, 5);
+      PlanetTex.craterAt(cr, x, y, z, tmp);
+      c[0] = 0.66 + (n - 0.5) * 0.3 + tmp[1]; c[1] = 0.55 + (n - 0.5) * 0.25 + tmp[1]; c[2] = 0.44 + (n - 0.5) * 0.2 + tmp[1];
+      // Sabuk gelap kemerahan di sekitar khatulistiwa
+      const belt = smoothstep(0.35, 0.05, Math.abs(lat + 0.1 + (n - 0.5) * 0.3)) * smoothstep(0.4, 0.55, n + 0.1);
+      c[0] = PlanetTex.mix(c[0], 0.3, belt); c[1] = PlanetTex.mix(c[1], 0.17, belt); c[2] = PlanetTex.mix(c[2], 0.12, belt);
+      // Dataran terang berbentuk hati
+      let du = u - 0.5; if (du > 0.5) du -= 1; if (du < -0.5) du += 1;
+      const hx = du / 0.1, hy = (lat - 0.22) / 0.2 + 0.35;
+      const hv = Math.pow(hx * hx + hy * hy - 1, 3) - hx * hx * hy * hy * hy + (PlanetTex.n3(x * 12, y * 12, z * 12) - 0.5) * 0.25;
+      const heart = smoothstep(0.05, -0.15, hv);
+      c[0] = PlanetTex.mix(c[0], 0.96, heart); c[1] = PlanetTex.mix(c[1], 0.92, heart); c[2] = PlanetTex.mix(c[2], 0.86, heart);
+      c[3] = 0.5 + tmp[0] * 0.3 - heart * 0.15 + (n - 0.5) * 0.3;
+    };
+  },
+  charon() {
+    const cr = PlanetTex.craters(61, 50, 0.02, 0.18), tmp = [0, 0];
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 3, y * 3, z * 3, 4);
+      PlanetTex.craterAt(cr, x, y, z, tmp);
+      const g = 0.5 + (n - 0.5) * 0.2 + tmp[1];
+      const pole = smoothstep(0.9, 1.25, lat + (n - 0.5) * 0.3);
+      c[0] = PlanetTex.mix(g, 0.36, pole); c[1] = PlanetTex.mix(g * 0.97, 0.2, pole); c[2] = PlanetTex.mix(g * 0.95, 0.15, pole);
+      c[3] = 0.5 + tmp[0] * 0.35;
+    };
+  },
+  io() {
+    const cr = PlanetTex.craters(71, 50, 0.01, 0.05);
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 3, y * 3, z * 3, 5);
+      c[0] = 0.92 + (n - 0.5) * 0.2; c[1] = 0.8 + (n - 0.5) * 0.3; c[2] = 0.35 + (n - 0.5) * 0.3;
+      for (const v of cr) {
+        const d = x * v.x + y * v.y + z * v.z;
+        if (d > v.cos) { const k = smoothstep(v.cos, 1, d); c[0] *= 1 - k * 0.7; c[1] *= 1 - k * 0.8; c[2] *= 1 - k * 0.8; }
+        else if (d > Math.cos(v.r * 3)) { c[0] = PlanetTex.mix(c[0], 0.85, 0.35); c[1] = PlanetTex.mix(c[1], 0.45, 0.35); c[2] = PlanetTex.mix(c[2], 0.2, 0.35); }
+      }
+      const pole = smoothstep(0.8, 1.4, Math.abs(lat));
+      c[0] *= 1 - pole * 0.35; c[1] *= 1 - pole * 0.4; c[2] *= 1 - pole * 0.3;
+      c[3] = 0.5 + (n - 0.5) * 0.3;
+    };
+  },
+  europa() {
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 2, y * 2, z * 2, 4);
+      c[0] = 0.86 + (n - 0.5) * 0.15; c[1] = 0.8 + (n - 0.5) * 0.15; c[2] = 0.7 + (n - 0.5) * 0.1;
+      // Retakan: garis noise bertingkat
+      let crack = 0;
+      for (let k = 0; k < 3; k++) {
+        const f = 3 + k * 2.7;
+        const v = PlanetTex.n3(x * f + k * 7, y * f, z * f - k * 3);
+        crack = Math.max(crack, smoothstep(0.035, 0.0, Math.abs(v - 0.5)) * (1 - k * 0.2));
+      }
+      c[0] = PlanetTex.mix(c[0], 0.55, crack * 0.8); c[1] = PlanetTex.mix(c[1], 0.36, crack * 0.8); c[2] = PlanetTex.mix(c[2], 0.25, crack * 0.8);
+      c[3] = 0.5 - crack * 0.2;
+    };
+  },
+  ganymede() {
+    const cr = PlanetTex.craters(83, 70, 0.015, 0.1), tmp = [0, 0];
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 2.5, y * 2.5, z * 2.5, 5);
+      const light = smoothstep(0.45, 0.6, PlanetTex.fbm(x * 1.6 + 9, y * 1.6, z * 1.6, 4));
+      PlanetTex.craterAt(cr, x, y, z, tmp);
+      const g = 0.38 + light * 0.25 + (n - 0.5) * 0.15 + tmp[1];
+      c[0] = g * 1.0; c[1] = g * 0.93; c[2] = g * 0.84;
+      c[3] = 0.5 + tmp[0] * 0.3 + light * 0.1;
+    };
+  },
+  callisto() {
+    const cr = PlanetTex.craters(97, 260, 0.008, 0.06), tmp = [0, 0];
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 3, y * 3, z * 3, 4);
+      PlanetTex.craterAt(cr, x, y, z, tmp);
+      const g = 0.24 + (n - 0.5) * 0.12 + Math.max(0, tmp[1]) * 3.5;
+      c[0] = g * 1.05; c[1] = g * 0.95; c[2] = g * 0.82;
+      c[3] = 0.5 + tmp[0] * 0.3;
+    };
+  },
+  titan() {
+    return (x, y, z, lat, u, c) => {
+      const n = PlanetTex.fbm(x * 2, y * 5, z * 2, 3);
+      c[0] = 0.84 + (n - 0.5) * 0.1; c[1] = 0.56 + (n - 0.5) * 0.08; c[2] = 0.22;
+    };
+  },
+};
+
+// Cincin: tekstur 1D (alfa dan warna) dari radius dalam ke luar
+const RING_RECIPES = {
+  // Saturnus: cincin C tipis, B padat, celah Cassini, A sedang dengan celah Encke
+  saturn(t, r) {
+    const R = 1.24 + t * (2.27 - 1.24);
+    let a = 0;
+    if (R < 1.53) a = 0.18 + (R - 1.24) * 0.3;
+    else if (R < 1.95) a = 0.82 + Math.sin(R * 90) * 0.06;
+    else if (R < 2.03) a = 0.06;
+    else a = 0.55 + Math.sin(R * 140) * 0.05;
+    if (Math.abs(R - 2.214) < 0.006) a = 0.05;
+    const g = R < 1.53 ? 0.55 : R < 1.95 ? 0.92 : 0.8;
+    return [g, g * 0.88, g * 0.72, a * (0.85 + r * 0.3)];
+  },
+  faint(t, r) { const a = 0.22 * smoothstep(0, 0.25, t) * smoothstep(1, 0.6, t); return [0.62, 0.5, 0.38, a]; },
+  // Uranus: beberapa gelang sempit gelap
+  uranus(t) {
+    const bands = [0.05, 0.18, 0.3, 0.42, 0.55, 0.72, 0.93];
+    let a = 0;
+    for (const b of bands) a = Math.max(a, smoothstep(0.012, 0.0, Math.abs(t - b)));
+    return [0.45, 0.48, 0.5, a * 0.35];
+  },
+};
+function ringTexture(kind) {
+  const w = 1024, cv = document.createElement('canvas');
+  cv.width = w; cv.height = 1;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(w, 1), rnd = makeRng(kind.length * 977);
+  for (let i = 0; i < w; i++) {
+    const c = RING_RECIPES[kind](i / (w - 1), rnd());
+    img.data[i * 4] = clamp(c[0], 0, 1) * 255; img.data[i * 4 + 1] = clamp(c[1], 0, 1) * 255;
+    img.data[i * 4 + 2] = clamp(c[2], 0, 1) * 255; img.data[i * 4 + 3] = clamp(c[3], 0, 1) * 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+const PLANET_VERT = /* glsl */`
+  varying vec2 vUv; varying vec3 vN; varying vec3 vW; varying vec3 vPole;
+  void main() {
+    vUv = uv;
+    vN = normalize(mat3(modelMatrix) * normal);
+    vPole = normalize(mat3(modelMatrix) * vec3(0.0, 1.0, 0.0));
+    vec4 w = modelMatrix * vec4(position, 1.0);
+    vW = w.xyz;
+    gl_Position = projectionMatrix * viewMatrix * w;
+  }`;
+const PLANET_FRAG = /* glsl */`
+  uniform sampler2D uMap; uniform sampler2D uHeight; uniform sampler2D uNight; uniform sampler2D uClouds;
+  uniform float uBump; uniform float uSpec; uniform float uHasNight; uniform float uHasClouds; uniform float uCloudShift;
+  uniform vec3 uLightDir; uniform float uSunI; uniform float uAmbient; uniform vec3 uAtmo; uniform float uAtmoStr; uniform vec2 uTexel;
+  varying vec2 vUv; varying vec3 vN; varying vec3 vW; varying vec3 vPole;
+  void main() {
+    vec3 Ng = normalize(vN);
+    vec3 N = Ng;
+    vec3 L = normalize(uLightDir);
+    vec3 V = normalize(cameraPosition - vW);
+    if (uBump > 0.0) {
+      float hE = texture2D(uHeight, vUv + vec2(uTexel.x, 0.0)).r - texture2D(uHeight, vUv - vec2(uTexel.x, 0.0)).r;
+      float hN = texture2D(uHeight, vUv + vec2(0.0, uTexel.y)).r - texture2D(uHeight, vUv - vec2(0.0, uTexel.y)).r;
+      vec3 E = cross(normalize(vPole), Ng);
+      float el = length(E);
+      E = el > 0.0001 ? E / el : vec3(1.0, 0.0, 0.0);
+      vec3 No = cross(Ng, E);
+      N = normalize(Ng - uBump * (hE * E + hN * No));
+    }
+    vec3 base = texture2D(uMap, vUv).rgb;
+    float cl = 0.0;
+    if (uHasClouds > 0.5) {
+      cl = texture2D(uClouds, vUv + vec2(uCloudShift, 0.0)).r;
+      base = mix(base, vec3(0.95), cl * 0.9);
+    }
+    float ndlG = dot(Ng, L);
+    // Terminator lembut (wrap): nilai linear kecil melebar sehingga tidak tampak sebagai garis tajam di sRGB
+    float term = smoothstep(-0.2, 0.1, ndlG);
+    float w = clamp((dot(N, L) + 0.18) / 1.18, 0.0, 1.0);
+    float diff = w * w * term;
+    vec3 col = base * (diff * uSunI + uAmbient);
+    if (uSpec > 0.0) {
+      float mask = texture2D(uHeight, vUv).r * (1.0 - cl);
+      vec3 H = normalize(L + V);
+      col += vec3(1.0, 0.92, 0.8) * pow(max(dot(Ng, H), 0.0), 90.0) * mask * uSpec * term;
+    }
+    if (uHasNight > 0.5) {
+      float night = 1.0 - smoothstep(-0.2, 0.05, ndlG);
+      col += texture2D(uNight, vUv).rgb * night * (1.0 - cl * 0.85) * 1.4;
+    }
+    float rim = pow(1.0 - max(dot(Ng, V), 0.0), 2.6);
+    col += uAtmo * rim * uAtmoStr * 0.45 * clamp(ndlG * 0.9 + 0.2, 0.0, 1.0);
+    gl_FragColor = vec4(col, 1.0);
+    #include <colorspace_fragment>
+  }`;
+// Kulit atmosfer (BackSide): pendar di tepi siluet, memudar ke luar, lebih terang di sisi siang
+const ATMO_FRAG = /* glsl */`
+  uniform vec3 uAtmo; uniform float uAtmoStr; uniform vec3 uLightDir; uniform float uEdge;
+  varying vec2 vUv; varying vec3 vN; varying vec3 vW; varying vec3 vPole;
+  void main() {
+    vec3 N = normalize(vN);
+    vec3 V = normalize(cameraPosition - vW);
+    float d = -dot(N, V);
+    float a = smoothstep(0.0, uEdge, d);
+    a = a * a;
+    float lit = smoothstep(-0.45, 0.45, dot(N, normalize(uLightDir)));
+    gl_FragColor = vec4(uAtmo * a * lit * uAtmoStr, 1.0);
+    #include <colorspace_fragment>
+  }`;
+// Cincin: alfa dari radius, terang di sisi yang menghadap Matahari, bayangan planet
+const RING_VERT = /* glsl */`
+  varying vec3 vLocal; varying vec3 vW;
+  void main() {
+    vLocal = position;
+    vec4 w = modelMatrix * vec4(position, 1.0);
+    vW = w.xyz;
+    gl_Position = projectionMatrix * viewMatrix * w;
+  }`;
+const RING_FRAG = /* glsl */`
+  uniform sampler2D uMap; uniform float uInner; uniform float uOuter; uniform vec3 uLightLocal; uniform float uOpacity; uniform float uSunI;
+  varying vec3 vLocal; varying vec3 vW;
+  void main() {
+    float r = length(vLocal.xy);
+    float t = (r - uInner) / (uOuter - uInner);
+    if (t < 0.0 || t > 1.0) discard;
+    vec4 c = texture2D(uMap, vec2(t, 0.5));
+    // Bayangan planet (bola radius 1 di pusat lokal) pada cincin
+    vec3 p = vec3(vLocal.xy, 0.0);
+    vec3 L = normalize(uLightLocal);
+    float b = dot(p, L), cc = dot(p, p) - 1.0;
+    float shadow = (b < 0.0 ? (b * b - cc > 0.0 ? 1.0 : 0.0) : 0.0);
+    float lit = 0.35 + 0.65 * abs(L.z);
+    vec3 col = c.rgb * (uSunI * lit * (1.0 - shadow * 0.9) + 0.03);
+    gl_FragColor = vec4(col, c.a * uOpacity);
+    #include <colorspace_fragment>
+  }`;
+// Matahari: granulasi noise 3D beranimasi, penggelapan tepi, sangat terang agar ikut bloom
+const SUN_SPHERE_FRAG = /* glsl */`
+  uniform float uTime;
+  varying vec2 vUv; varying vec3 vN; varying vec3 vW; varying vec3 vPole;
+  varying vec3 vLocalS;
+  float h3(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  float n3(vec3 x) {
+    vec3 i = floor(x), f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(mix(h3(i), h3(i + vec3(1,0,0)), f.x), mix(h3(i + vec3(0,1,0)), h3(i + vec3(1,1,0)), f.x), f.y),
+               mix(mix(h3(i + vec3(0,0,1)), h3(i + vec3(1,0,1)), f.x), mix(h3(i + vec3(0,1,1)), h3(i + vec3(1,1,1)), f.x), f.y), f.z);
+  }
+  void main() {
+    vec3 p = normalize(vLocalS);
+    float t = uTime * 0.04;
+    float g = n3(p * 9.0 + vec3(t, 0.0, -t)) * 0.55 + n3(p * 23.0 - vec3(0.0, t * 2.0, 0.0)) * 0.3 + n3(p * 55.0 + t * 3.0) * 0.15;
+    float spots = smoothstep(0.78, 0.86, n3(p * 4.0 + 20.0));
+    vec3 V = normalize(cameraPosition - vW);
+    float mu = max(dot(normalize(vN), V), 0.0);
+    vec3 col = mix(vec3(1.0, 0.42, 0.08), vec3(1.0, 0.86, 0.55), g);
+    col *= (1.0 - spots * 0.45);
+    col *= 0.5 + 0.5 * pow(mu, 0.45);
+    col *= 1.25;
+    gl_FragColor = vec4(col, 1.0);
+    #include <colorspace_fragment>
+  }`;
+const SUN_SPHERE_VERT = /* glsl */`
+  varying vec2 vUv; varying vec3 vN; varying vec3 vW; varying vec3 vPole; varying vec3 vLocalS;
+  void main() {
+    vUv = uv; vLocalS = position;
+    vN = normalize(mat3(modelMatrix) * normal);
+    vPole = vec3(0.0, 1.0, 0.0);
+    vec4 w = modelMatrix * vec4(position, 1.0);
+    vW = w.xyz;
+    gl_Position = projectionMatrix * viewMatrix * w;
+  }`;
+
+const SolarSystem = {
+  built: false,
+  root: new THREE.Group(),
+  bodies: [],        // planet dan Matahari (tingkat atas)
+  solids: [],        // semua benda yang bisa ditabrak (termasuk bulan), posisi sebenarnya
+  byId: {},
+  time: 0,
+  sunPos: new THREE.Vector3(0, 0, 0),
+  _t: new THREE.Vector3(), _d: new THREE.Vector3(), _q: new THREE.Quaternion(), _qi: new THREE.Quaternion(),
+
+  texSize() { return Q.bloom >= 1 ? 1024 : 512; },
+
+  makeMaterial(def, size) {
+    const recipe = PLANET_RECIPES[def.tex];
+    const big = def.radius > 100;
+    const w = big ? size : Math.max(256, size / 2), h = w / 2;
+    const bump = def.bump || 0;
+    const r = PlanetTex.paint(w, h, recipe(), bump > 0 ? true : def.tex === 'earth');
+    const u = {
+      uMap: { value: r.map }, uHeight: { value: r.height || r.map }, uNight: { value: r.map }, uClouds: { value: r.map },
+      uBump: { value: bump }, uSpec: { value: def.tex === 'earth' ? 0.4 : 0 }, uHasNight: { value: 0 }, uHasClouds: { value: 0 }, uCloudShift: { value: 0 },
+      uLightDir: { value: new THREE.Vector3(1, 0, 0) }, uSunI: { value: 1.35 }, uAmbient: { value: 0.006 },
+      uAtmo: { value: new THREE.Color(def.atmo ? def.atmo[0] : 0, def.atmo ? def.atmo[1] : 0, def.atmo ? def.atmo[2] : 0) },
+      uAtmoStr: { value: def.atmo ? def.atmo[3] : 0 }, uTexel: { value: new THREE.Vector2(1 / w, 1 / h) },
+    };
+    if (def.tex === 'earth') {
+      u.uNight.value = PlanetTex.paint(w, h, PLANET_RECIPES.earthNight()).map; u.uHasNight.value = 1;
+      u.uClouds.value = PlanetTex.paint(w, h, PLANET_RECIPES.earthClouds()).map; u.uHasClouds.value = 1;
+      u.uClouds.value.wrapS = THREE.RepeatWrapping;
+    }
+    return new THREE.ShaderMaterial({ uniforms: u, vertexShader: PLANET_VERT, fragmentShader: PLANET_FRAG });
+  },
+  makeAtmo(def, mat) {
+    const m = new THREE.ShaderMaterial({
+      uniforms: { uAtmo: mat.uniforms.uAtmo, uAtmoStr: { value: def.atmo[3] * 1.15 }, uLightDir: mat.uniforms.uLightDir, uEdge: { value: def.atmoEdge || 0.32 } },
+      vertexShader: PLANET_VERT, fragmentShader: ATMO_FRAG,
+      side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    const s = new THREE.Mesh(this.sphereGeo, m);
+    s.scale.setScalar(def.atmoScale || 1.05);
+    s.renderOrder = 2;
+    return s;
+  },
+  makeRing(def) {
+    const R = def.ring;
+    const g = new THREE.RingGeometry(R.inner, R.outer, 160, 1);
+    const m = new THREE.ShaderMaterial({
+      uniforms: { uMap: { value: ringTexture(R.tex) }, uInner: { value: R.inner }, uOuter: { value: R.outer }, uLightLocal: { value: new THREE.Vector3(1, 0, 0) }, uOpacity: { value: R.opacity || 1 }, uSunI: { value: 1.25 } },
+      vertexShader: RING_VERT, fragmentShader: RING_FRAG,
+      side: THREE.DoubleSide, transparent: true, depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(g, m);
+    mesh.rotation.x = -Math.PI / 2;   // bidang khatulistiwa (XZ lokal)
+    mesh.renderOrder = 3;
+    return mesh;
+  },
+  // Bulan tak beraturan: bola dengan simpangan noise radial (tanpa retak di sambungan)
+  lumpyGeo(amount, seed) {
+    const g = new THREE.SphereGeometry(1, 28, 18), p = g.attributes.position;
+    PlanetTex.init();
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const k = 1 + (PlanetTex.fbm(x * 1.3 + seed, y * 1.3, z * 1.3, 3) - 0.5) * amount * 2.2;
+      p.setXYZ(i, x * k * 1.15, y * k * 0.85, z * k);
+    }
+    g.computeVertexNormals();
+    return g;
+  },
+  makeBody(def, parent) {
+    const b = { def, id: def.id, name: def.name, radius: def.radius, pos: new THREE.Vector3(), parent: parent || null, moons: [], proxyScale: 1 };
+    b.group = new THREE.Group();
+    b.tilt = new THREE.Group();
+    b.tilt.rotation.z = def.tilt || 0;
+    b.group.add(b.tilt);
+    if (def.kind === 'sun') {
+      b.mat = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 } }, vertexShader: SUN_SPHERE_VERT, fragmentShader: SUN_SPHERE_FRAG });
+      b.mesh = new THREE.Mesh(this.sphereGeoHi, b.mat);
+    } else {
+      b.mat = this.makeMaterial(def, this.texSize());
+      b.mesh = new THREE.Mesh(def.lumpy ? this.lumpyGeo(def.lumpy, def.radius) : (def.radius > 100 ? this.sphereGeoHi : this.sphereGeo), b.mat);
+      if (def.atmo) { b.atmo = this.makeAtmo(def, b.mat); b.atmo.scale.multiplyScalar(def.radius); b.tilt.add(b.atmo); }
+      if (def.ring) { b.ring = this.makeRing(def); b.ring.scale.setScalar(def.radius); b.tilt.add(b.ring); }
+    }
+    b.mesh.scale.setScalar(def.radius);
+    b.tilt.add(b.mesh);
+    if (parent) {
+      // Bulan mengorbit di bidang khatulistiwa planet induk
+      b.orbitPivot = new THREE.Group();
+      b.orbitPivot.add(b.group);
+      b.group.position.set(def.dist, 0, 0);
+      parent.tilt.add(b.orbitPivot);
+    } else {
+      this.root.add(b.group);
+      b.pos.set(Math.cos(def.angle) * def.orbit, def.y || 0, Math.sin(def.angle) * def.orbit);
+    }
+    for (const md of def.moons || []) b.moons.push(this.makeBody(md, b));
+    this.byId[def.id] = b;
+    this.solids.push(b);
+    return b;
+  },
+  build() {
+    if (this.built) return;
+    const t0 = performance.now();
+    this.sphereGeo = new THREE.SphereGeometry(1, 48, 32);
+    this.sphereGeoHi = new THREE.SphereGeometry(1, 96, 64);
+    for (const def of CONFIG.solar.bodies) this.bodies.push(this.makeBody(def, null));
+    this.root.visible = false;
+    scene.add(this.root);
+    this.built = true;
+    this.buildMs = Math.round(performance.now() - t0);
+    this.update(0);
+  },
+  // Posisi sebenarnya bulan (dunia) dari pivot orbit lokal dan kemiringan induk
+  moonWorld(m, out) {
+    const p = m.parent, a = m.orbitPivot.rotation.y;
+    out.set(Math.cos(a) * m.def.dist, 0, -Math.sin(a) * m.def.dist);
+    this._q.setFromEuler(p.tilt.rotation);
+    return out.applyQuaternion(this._q).add(p.pos);
+  },
+  update(dt) {
+    if (!this.built) return;
+    this.time += dt;
+    const cam = camera.position, S = CONFIG.solar;
+    for (const b of this.bodies) {
+      b.mesh.rotation.y += (b.def.spin || 0) * dt;
+      for (const m of b.moons) {
+        m.orbitPivot.rotation.y = this.time * (Math.PI * 2 / m.def.period) + (m.def.phase || 0);
+        m.mesh.rotation.y += (m.def.spin || 0.02) * dt;
+        this.moonWorld(m, m.pos);
+      }
+    }
+    // Arah cahaya per benda dari Matahari; matahari di langit mengikuti kamera
+    SpaceSky.sunDir.copy(this.sunPos).sub(cam).normalize();
+    for (const b of this.solids) {
+      if (b.def.kind === 'sun') { b.mat.uniforms.uTime.value = this.time; continue; }
+      const L = b.mat.uniforms.uLightDir.value;
+      L.copy(this.sunPos).sub(b.pos).normalize();
+      if (b.def.tex === 'earth') b.mat.uniforms.uCloudShift.value = this.time * 0.0025;
+      if (b.ring) {
+        // Arah cahaya dalam ruang lokal cincin (bidang XY setelah rotasi -90 derajat X)
+        b.ring.updateWorldMatrix(true, false);
+        b.ring.getWorldQuaternion(this._qi).invert();
+        b.ring.material.uniforms.uLightLocal.value.copy(L).applyQuaternion(this._qi);
+      }
+    }
+    // Proksi berskala: jarak dipetakan monoton ke rentang [proxyDistance, maxDraw]
+    const D = S.proxyDistance, M = S.maxDraw;
+    for (const b of this.bodies) {
+      const d = b.pos.distanceTo(cam);
+      let s = 1;
+      if (d > D) {
+        const dd = D + (M - D) * (1 - Math.exp(-(d - D) / S.proxyFalloff));
+        s = dd / d;
+      }
+      b.proxyScale = s;
+      b.group.position.copy(b.pos).sub(cam).multiplyScalar(s).add(cam);
+      b.group.scale.setScalar(s);
+    }
+  },
+  setVisible(v) { if (this.built) this.root.visible = v; },
+  // Benda terdekat dari titik (jarak ke permukaan)
+  nearest(p) {
+    let best = null, bd = Infinity;
+    for (const b of this.solids) {
+      const d = b.pos.distanceTo(p) - b.radius;
+      if (d < bd) { bd = d; best = b; }
+    }
+    return { body: best, dist: bd };
+  },
+  // Titik di dalam benda (dengan margin)
+  inside(x, y, z, margin = 0) {
+    for (const b of this.solids) {
+      const r = b.radius + margin, dx = x - b.pos.x, dy = y - b.pos.y, dz = z - b.pos.z;
+      if (dx * dx + dy * dy + dz * dz < r * r) return b;
+    }
+    return null;
+  },
+  // Garis dari titik ke Matahari terhalang benda lain (gerhana, lens flare)
+  sunBlocked(p) {
+    const u = this._d.copy(this.sunPos).sub(p);
+    const len = u.length();
+    u.divideScalar(len);
+    for (const b of this.solids) {
+      if (b.def.kind === 'sun') continue;
+      const ox = b.pos.x - p.x, oy = b.pos.y - p.y, oz = b.pos.z - p.z;
+      const t = ox * u.x + oy * u.y + oz * u.z;
+      if (t < 0 ? true : t > len) continue;
+      const d2 = ox * ox + oy * oy + oz * oz - t * t;
+      if (d2 < b.radius * b.radius) return true;
+    }
+    return false;
+  },
+  // Pose awal di dekat sebuah area: dari sisi siang, planet terlihat di depan agak ke kanan
+  startPose(id) {
+    const b = this.byId[id] || this.byId[CONFIG.solar.startArea];
+    const toSun = _va.copy(this.sunPos).sub(b.pos).setY(0).normalize();
+    const ang = Math.atan2(toSun.z, toSun.x) - 0.9;
+    const dist = b.radius * 2.6 + 260;
+    const pos = new THREE.Vector3(b.pos.x + Math.cos(ang) * dist, b.pos.y + b.radius * 0.25, b.pos.z + Math.sin(ang) * dist);
+    // Arah terbang: menuju planet diputar 35 derajat sehingga melintas di sisinya
+    const fx = b.pos.x - pos.x, fz = b.pos.z - pos.z;
+    const yaw = Math.atan2(-fx, -fz) + 0.45;
+    return { pos, yaw, body: b };
   },
 };
 
@@ -4515,16 +5289,20 @@ const EarthWorld = {
 const SpaceWorld = {
   id: 'space',
   label: 'Luar Angkasa',
-  minY: -3000,
-  maxY: 3000,
+  minY: -1e9,
+  maxY: 1e9,
   features: { rings: false, clouds: false },
   viewDistance: 6000,
-  objects() { return SpaceSky.objects(); },
+  area: CONFIG.solar.startArea,   // area awal (stage atau tujuan warp)
+  lightDir: new THREE.Vector3(1, 0, 0),
+  eclipse: 1,
+  objects() { return [...SpaceSky.objects(), SolarSystem.root]; },
   activate() {
+    SolarSystem.build();
     for (const o of this.objects()) o.visible = true;
     scene.background = new THREE.Color(0x02030a);
     scene.fog = null;
-    camera.far = this.viewDistance;
+    camera.far = CONFIG.solar.cameraFar;
     camera.updateProjectionMatrix();
     Env.setLighting('space');
     FX.setFog(this.viewDistance * 0.5, this.viewDistance);
@@ -4535,13 +5313,65 @@ const SpaceWorld = {
     if (SpaceSky.flare) SpaceSky.flare.style.opacity = 0;
   },
   reset() {},
-  update() {},
-  follow() { Env.followLight(SpaceSky.sunDir); SpaceSky.update(lastDt || 0.016); },
+  // Musuh, asteroid dan pesawat attract mode tidak menembus planet: didorong ke permukaan
+  update() {
+    const push = (p, r) => {
+      const b = SolarSystem.inside(p.x, p.y, p.z, r);
+      if (!b) return false;
+      _va.copy(p).sub(b.pos);
+      const l = _va.length() || 1;
+      p.copy(b.pos).addScaledVector(_va, (b.radius + r + 1) / l);
+      return true;
+    };
+    for (const e of Enemies.list) if (e.active) push(e.pos, e.radius + 4);
+    for (const a of Asteroids.list) if (a.active) push(a.pos, a.radius + 2);
+    if (Game.state === 'playing') return;
+    push(Player.pos, 30);
+  },
+  follow() {
+    SolarSystem.update(lastDt || 0.016);
+    // Cahaya kapal dari arah Matahari yang sebenarnya; redup saat berada di bayangan planet
+    this.lightDir.copy(SolarSystem.sunPos).sub(Player.pos).normalize();
+    this.eclipse = damp(this.eclipse, SolarSystem.sunBlocked(Player.pos) ? 0.12 : 1, 4, lastDt || 0.016);
+    Env.sun.intensity = 2.5 * this.eclipse;
+    Env.followLight(this.lightDir);
+    SpaceSky.update(lastDt || 0.016);
+  },
   groundHeightAt() { return -1e9; },
-  solidAt() { return false; },
-  collide(dt) { Player.invuln = Math.max(0, Player.invuln - dt); },
+  solidAt(x, y, z) { return SolarSystem.inside(x, y, z, 0) !== null; },
+  blocked(x, y, z, r) { return SolarSystem.inside(x, y, z, r) !== null; },
+  // Jarak ke permukaan benda terdekat (ditampilkan sebagai ketinggian)
+  altitude() { return Math.max(0, SolarSystem.nearest(Player.pos).dist); },
+  // Menabrak planet, bulan atau Matahari adalah benturan keras
+  collide(dt) {
+    Player.invuln = Math.max(0, Player.invuln - dt);
+    const P = Player.pos, pr = Player.radius;
+    const hit = SolarSystem.inside(P.x, P.y, P.z, pr);
+    if (hit) {
+      const cause = hit.def.kind === 'sun' ? 'Terbakar Matahari' : hit.parent ? 'Menabrak ' + hit.name : 'Menabrak ' + hit.def.cls + ' ' + hit.name;
+      hardImpact(cause, () => {
+        _va.copy(P).sub(hit.pos);
+        const l = _va.length() || 1;
+        P.copy(hit.pos).addScaledVector(_va, (hit.radius + pr + 6) / l);
+        Player.pitchUpAfterBounce();
+      });
+    }
+    // Peringatan: jalur di depan menabrak benda, atau permukaan sangat dekat
+    const n = SolarSystem.nearest(P);
+    let warn = '';
+    if (n.body ? n.dist < CONFIG.solar.warnDistance + Player.speed * 1.4 : false) {
+      for (let k = 1; k <= 3; k++) {
+        const d = Player.speed * 0.5 * k;
+        if (SolarSystem.inside(P.x + Player.forward.x * d, P.y + Player.forward.y * d, P.z + Player.forward.z * d, pr) === n.body) { warn = 'TARIK NAIK!'; break; }
+      }
+      if (!warn) { if (n.dist < CONFIG.solar.warnDistance) warn = 'TERLALU DEKAT'; }
+    }
+    Player.warning = warn;
+  },
   safeStartAltitude() { return 0; },
-  autopilotTargetY(x, z, yaw, t) { return Math.sin(t * 0.12) * 40; },
+  startPose() { return SolarSystem.startPose(this.area); },
+  autopilotTargetY(x, z, yaw, t) { return this.startY + Math.sin(t * 0.12) * 40; },
+  startY: 0,
 };
 Worlds.list = { earth: EarthWorld, space: SpaceWorld };
 
@@ -5967,7 +6797,7 @@ function updateHud(dt) {
   if (changed('best', v)) hud.best.textContent = fmtInt(v);
   v = Math.round(Player.speed * 12);
   if (changed('speed', v)) hud.speed.textContent = v;
-  v = Math.round(Player.pos.y * 4);
+  v = Math.round((Worlds.active.altitude ? Worlds.active.altitude() : Player.pos.y) * 4);
   if (changed('alt', v)) hud.alt.textContent = v;
   v = Game.kills;
   if (changed('kills', v)) hud.kills.textContent = v;
@@ -7360,6 +8190,39 @@ window.__game = {
     ultimate() { return { meter: round2(Player.ult), active: round2(Ultimate.active), hits: Ultimate.hits }; },
     spawnStar(kind, dist = 60) { const P = Player.pos, f = Player.forward; return Stars.spawn(kind, P.x + f.x * dist, P.y + f.y * dist, P.z + f.z * dist) >= 0; },
     stars() { return { alive: Stars.alive, collected: { ...Stars.collected }, xp: Game.xp }; },
+    // Tata Surya
+    solar() {
+      return {
+        built: SolarSystem.built, buildMs: SolarSystem.buildMs, area: SpaceWorld.area, far: camera.far,
+        bodies: SolarSystem.solids.map((b) => {
+          const o = { id: b.id, name: b.name, radius: b.radius, parent: b.parent ? b.parent.id : null, x: Math.round(b.pos.x), y: Math.round(b.pos.y), z: Math.round(b.pos.z), orbit: b.def.orbit || 0, proxy: round2(b.proxyScale), ring: !!b.ring };
+          if (b.mat.uniforms.uLightDir) o.light = b.mat.uniforms.uLightDir.value.toArray().map((v) => Math.round(v * 1000) / 1000);
+          if (!b.parent) {
+            // Jangkauan gambar terjauh: pusat proksi ditambah cincin atau orbit bulan terjauh (diskalakan)
+            let ext = b.radius * (b.ring ? b.def.ring.outer : 1);
+            for (const m of b.moons) ext = Math.max(ext, m.def.dist + m.radius);
+            o.draw = Math.round(b.group.position.distanceTo(camera.position) + ext * b.proxyScale);
+          }
+          return o;
+        }),
+        sunDir: SpaceSky.sunDir.toArray().map(round2), lightDir: SpaceWorld.lightDir.toArray().map(round2), eclipse: round2(SpaceWorld.eclipse),
+      };
+    },
+    solarDebug(o = {}) { for (const b of SolarSystem.solids) { if (b.atmo) b.atmo.visible = o.atmo !== false; if (b.mat.uniforms.uAmbient) b.mat.uniforms.uAmbient.value = o.ambient ?? 0.006; } return true; },
+    setArea(id) { if (!SolarSystem.byId[id]) return false; SpaceWorld.area = id; return true; },
+    // Letakkan pemain menghadap sebuah benda dari sisi siang (untuk screenshot dan uji tabrakan)
+    viewBody(id, distMul = 3, side = 0.9, elev = 0.15) {
+      const b = SolarSystem.byId[id];
+      if (!b) return false;
+      const ref = b.def.kind === 'sun' ? _va.set(1, 0, 0) : _va.copy(SolarSystem.sunPos).sub(b.pos).setY(0).normalize();
+      const ang = Math.atan2(ref.z, ref.x) + side, dist = b.radius * distMul + 30;
+      Player.pos.set(b.pos.x + Math.cos(ang) * Math.cos(elev) * dist, b.pos.y + Math.sin(elev) * dist, b.pos.z + Math.sin(ang) * Math.cos(elev) * dist);
+      const f = _vb.copy(b.pos).sub(Player.pos).normalize();
+      Player.setHeading(Math.atan2(-f.x, -f.z));
+      Player.rotateLocal(_AX_X, Math.asin(f.y)); Player.basis(); Player.syncEuler(); Player.rig.quaternion.copy(Player.quat);
+      CamRig.reset();
+      return true;
+    },
     grantUpgrade(name) { if (name in Player.upgrades) { Player.upgrades[name] = typeof Player.upgrades[name] === 'boolean' ? true : Player.upgrades[name] * 1.2; } return { ...Player.upgrades }; },
     pikoSay(key) { return Piko.say(key); },
     piko() { return { mood: Piko.mood, said: [...Piko.said], panel: !Piko.panel.classList.contains('hidden'), text: Piko.textEl.textContent }; },
