@@ -99,6 +99,15 @@
   .menu-list .btn { width: 100%; text-align: left; }
   .btn:focus-visible, .btn.focus { outline: 3px solid #fff; outline-offset: 3px; box-shadow: 0 0 0 6px rgba(255, 154, 60, 0.35); }
   .keys-hint kbd { min-width: 22px; padding: 3px 5px; }
+  .keymap { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 18px; width: 100%; font-size: 12px; color: var(--ui-dim); text-align: left; }
+  .keymap div { display: flex; align-items: center; gap: 6px; }
+  .keymap kbd { min-width: 20px; padding: 2px 5px; font-size: 11px; }
+  .menu-panel .keymap { max-width: 640px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px 14px; font-size: 11px; }
+  .menu-panel .keymap kbd { font-size: 10px; padding: 1px 4px; min-width: 16px; }
+  @media (max-height: 700px) { .menu-panel { gap: 12px; } .menu-panel .keymap { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (max-height: 560px) { .menu-panel .keymap { display: none; } }
+  .set-sub { margin: 6px 0 0; font-size: 13px; letter-spacing: 0.16em; color: var(--ui-accent); }
+  .about-line { margin: 0; text-align: center; }
   /* Kartu (Tentang, Pengaturan, dialog) */
   .card {
     display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 520px; width: 100%;
@@ -676,7 +685,7 @@
       <button id="btn-about" class="btn secondary" type="button">TENTANG</button>
     </nav>
     <div class="title-foot"><span>Skor tertinggi: <b id="title-best">0</b></span></div>
-    <p class="hint keys-hint"><kbd>W</kbd><kbd>S</kbd> naik turun, <kbd>A</kbd><kbd>D</kbd> belok, <kbd>Spasi</kbd> nitro, <kbd>Enter</kbd> tembak, <kbd>P</kbd> jeda</p>
+    <div class="keymap keys-hint" data-keymap></div>
     <p class="hint">Panah atas dan bawah untuk memilih, Enter untuk menekan</p>
   </div>
 </div>
@@ -785,6 +794,8 @@
         <label class="tog"><input type="checkbox" data-key="autoFire"> Tembak otomatis (mode HP)</label>
       </div>
     </div>
+    <h3 class="set-sub">Kontrol keyboard</h3>
+    <div class="keymap" data-keymap></div>
     <div class="row-btns">
       <button id="btn-reset-data" class="btn secondary danger" type="button">RESET DATA</button>
       <button id="btn-settings-back" class="btn" type="button">KEMBALI</button>
@@ -802,6 +813,7 @@
       <dt>Dibuat dengan bantuan</dt><dd>Claude Code</dd>
       <dt>Mesin grafis</dt><dd>Three.js r187 (versi 0.187.0)</dd>
     </dl>
+    <p class="about-line">Raptor13 dibuat dengan Three.js oleh Ahmad Ngiliyun, bantuan Claude Code.</p>
     <p class="hint">Seluruh visual dan suara dibuat secara prosedural: geometri, tekstur, langit dan suara
       disusun oleh kode saat game berjalan, tanpa file model, gambar, atau audio.</p>
     <button id="btn-about-back" class="btn" type="button">KEMBALI</button>
@@ -1190,6 +1202,7 @@ const CONFIG = {
     proxyFalloff: 15000,
     cameraFar: 10000,
     startArea: 'bumi',
+    attractArea: 'saturnus',   // latar menu (attract mode) di medan Angkasa
     warnDistance: 45,          // peringatan bila permukaan sedekat ini
     boundary: 45000,           // radius batas jelajah dari Matahari (di luar Sabuk Kuiper)
     boundaryWarn: 1500,        // zona peringatan KELUAR BATAS MISI sebelum dinding
@@ -9283,7 +9296,24 @@ DeepSky.init();
 Stars.init();
 Companions.init();
 Ultimate.init();
-// Dunia awal mengikuti pengaturan Medan default (angkasa bila belum pernah diubah)
+// Pemetaan tombol final, ditampilkan di layar judul dan Pengaturan
+const KEYMAP = [
+  [['W', 'S'], 'naik dan turun'], [['A', 'D'], 'belok dan miring'], [['Spasi'], 'nitro'], [['Enter'], 'tembak'],
+  [['E'], 'ultimate'], [['Z'], 'Gulung Tong'], [['X'], 'Balik Arah'], [['C'], 'Looping'],
+  [['Shift'], 'lihat belakang (tahan)'], [['Tab'], 'peta Tata Surya (Angkasa)'], [['P', 'Esc'], 'jeda'], [['M'], 'suara'],
+  [['R'], 'mulai ulang'], [['1', '2', '3'], 'pilih kartu atau kontrak'],
+];
+for (const box of document.querySelectorAll('[data-keymap]')) {
+  box.replaceChildren(...KEYMAP.map(([keys, label]) => {
+    const row = document.createElement('div');
+    for (const k of keys) { const kb = document.createElement('kbd'); kb.textContent = k; row.append(kb); }
+    const t = document.createElement('span'); t.textContent = label; row.append(t);
+    return row;
+  }));
+}
+// Dunia awal mengikuti pengaturan Medan default (angkasa bila belum pernah diubah).
+// Latar menu angkasa memakai area Saturnus agar cincin dan planet terlihat di belakang menu.
+SpaceWorld.area = CONFIG.solar.attractArea;
 setActiveWorld(Save.settings.terrain, CONFIG.seed);
 Player.reset();
 

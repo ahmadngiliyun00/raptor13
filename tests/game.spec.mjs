@@ -1543,3 +1543,19 @@ test('S13: angka skor emas besar saat musuh hancur dan angka merah saat kapal te
   await dbg(page, 'damageAs', 15, 'test');
   await expect(page.locator('.dmgnum.hurt').first()).toBeVisible();
 });
+
+test('S14: pemetaan tombol final tampil di layar judul dan Pengaturan, Tentang diperbarui, latar menu angkasa', async ({ page }) => {
+  await open(page);
+  const keys = ['W', 'S', 'A', 'D', 'Spasi', 'Enter', 'E', 'Z', 'X', 'C', 'Shift', 'Tab', 'P', 'Esc', 'M', 'R'];
+  const titleKeys = await page.locator('#screen-title [data-keymap] kbd').allTextContents();
+  for (const k of keys) expect(titleKeys, k).toContain(k);
+  await page.click('#btn-settings');
+  const setKeys = await page.locator('#screen-settings [data-keymap] kbd').allTextContents();
+  for (const k of keys) expect(setKeys, k).toContain(k);
+  await page.click('#btn-settings-back');
+  await page.click('#btn-about');
+  await expect(page.locator('#screen-about')).toContainText('Raptor13 dibuat dengan Three.js oleh Ahmad Ngiliyun, bantuan Claude Code.');
+  await page.click('#btn-about-back');
+  expect(await page.evaluate(() => window.__game.world())).toBe('space');
+  expect((await dbg(page, 'campaign')).area).toBe('saturnus');
+});
