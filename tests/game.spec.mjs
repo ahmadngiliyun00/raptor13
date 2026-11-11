@@ -1276,8 +1276,8 @@ test('S9 dan A5: gelombang Angkasa lanjutan berisi roster lengkap dan tetap adil
 
 test('B12: cutscene berskrip dengan letterbox dan subtitle, dunia dijeda, bisa dilewati Enter, Esc, dan tap', async ({ page }) => {
   await start(page, { world: 'space' });
-  const t0 = (await snap(page)).time;
   expect(await dbg(page, 'playCutscene', 'demo')).toBe(true);
+  const t0 = (await snap(page)).time;                              // acuan diambil setelah cutscene aktif
   await page.waitForTimeout(700);
   let c = await dbg(page, 'cutscene');
   expect(c.state).toBe('cutscene');
