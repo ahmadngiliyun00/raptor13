@@ -886,3 +886,35 @@ test('A4: pratinjau Piko dari 3 sudut', async ({ page }) => {
     await page.screenshot({ path: `${SHOT_DIR}piko-${view.replace(/_/g, '-')}.png` });
   }
 });
+
+test('S6: asteroid angkasa ukuran kontinu dan empat jenis, HP mengikuti ukuran dan jenis', async ({ page }) => {
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.clearAsteroids(); d.setAsteroidDensity(2); });
+  await page.evaluate(() => { const d = window.__game.debug; for (let i = 0; i < 30; i++) d.simulate(0.5, 0); });
+  const list = await dbg(page, 'asteroids');
+  const kinds = new Set(list.map((a) => a.kind));
+  const radii = new Set(list.map((a) => a.radius));
+  expect(list.length).toBeGreaterThan(8);
+  expect(radii.size).toBeGreaterThan(6);                 // ukuran kontinu, bukan tiga nilai
+  expect(kinds.size).toBeGreaterThanOrEqual(2);
+  for (const a of list) expect(a.radius).toBeGreaterThanOrEqual(2);
+  // Logam lebih tebal dari es pada ukuran yang sama
+  await page.evaluate(() => window.__game.debug.clearAsteroids());
+  await dbg(page, 'spawnAsteroid', 'medium', 300, -0.3, 0, 'metal');
+  await dbg(page, 'spawnAsteroid', 'medium', 300, 0.3, 0, 'ice');
+  const two = await dbg(page, 'asteroids');
+  const metal = two.find((a) => a.kind === 'metal'), ice = two.find((a) => a.kind === 'ice');
+  expect(metal.maxHp / metal.radius ** 1.5).toBeGreaterThan(ice.maxHp / ice.radius ** 1.5);
+});
+
+test('S6: komet berekor memicu peringatan, bisa dihancurkan', async ({ page }) => {
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.clearAsteroids(); d.setAsteroidDensity(0); });
+  await page.waitForTimeout(300);
+  expect(await dbg(page, 'placeComet', 320, 0, 0, 5)).toBe(true);   // diam tepat di jalur pemain
+  await expect.poll(async () => (await dbg(page, 'comets')).threat, { timeout: 4000 }).toBe(true);
+  await expect(page.locator('#comet-warn')).toBeVisible();
+  await page.keyboard.down('Enter');
+  await expect.poll(async () => (await dbg(page, 'comets')).destroyed, { timeout: 6000 }).toBeGreaterThan(0);
+  await page.keyboard.up('Enter');
+});

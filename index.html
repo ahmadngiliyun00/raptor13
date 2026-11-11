@@ -206,6 +206,8 @@
   #lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #ffd24a; transform-origin: center; }
   #rear-warn { position: absolute; left: 50%; bottom: calc(56px + env(safe-area-inset-bottom)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #ffd0d0; border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.6s steps(2) infinite; }
+  #comet-warn { position: absolute; left: 50%; top: calc(110px + env(safe-area-inset-top)); transform: translateX(-50%);
+    padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #d8f6ff; border: 1px solid #6fdcff; background: rgba(0, 70, 110, 0.4); animation: blink 0.5s steps(2) infinite; }
   #maneuvers { position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; gap: 8px; }
   .man {
     position: relative; overflow: hidden; display: flex; align-items: center; gap: 6px; padding: 5px 10px;
@@ -459,6 +461,7 @@
     <div class="buff hidden" data-buff="destroyer"><svg viewBox="0 0 24 24"><path d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1z"/></svg><span>PENGHANCUR</span><b>10</b></div>
   </div>
   <div id="rear-warn" class="hidden">MUSUH DI BELAKANG</div>
+  <div id="comet-warn" class="hidden">KOMET MENDEKAT</div>
   <div class="hud-block tl">
     <div class="row"><span class="label">NYAWA</span><span id="hearts"></span></div>
     <div class="row"><span class="label">INTEGRITAS</span><span id="hp-text" class="num">100</span></div>
@@ -874,6 +877,24 @@ const CONFIG = {
     recycleDistance: 950,
     dropChance: 0.12,          // peluang menjatuhkan pickup (sedang dan besar)
     hpBarTime: 3,              // detik bar HP melayang tampil setelah kena damage
+    // Medan angkasa: ukuran kontinu per kelas dan empat jenis (Bumi tetap memakai ukuran tetap)
+    spaceRadius: { small: [2, 4.5], medium: [4.5, 8], large: [8, 14], giant: [18, 30] },
+    types: {
+      rock:    { label: 'batu',    color: 0x7d736a, emissive: 0x000000, hpMul: 1.0, dropMul: 1, weight: 0.5 },
+      ice:     { label: 'es',      color: 0xb4d4ea, emissive: 0x0c1c2c, hpMul: 0.7, dropMul: 1, weight: 0.22 },
+      metal:   { label: 'logam',   color: 0x8c8f97, emissive: 0x0a0a0c, hpMul: 1.6, dropMul: 1.3, weight: 0.18 },
+      crystal: { label: 'kristal', color: 0xc77cff, emissive: 0x5a1aa0, hpMul: 0.9, dropMul: 3, weight: 0.1 },
+    },
+  },
+  comets: {
+    interval: [12, 22],        // detik antar komet di medan angkasa
+    radius: [3, 9],
+    speed: [120, 180],
+    hpPerRadius: 18,
+    damage: 25,                // tabrakan ringan (ditambah radius)
+    score: 250,
+    warnTime: 6,               // detik ke depan untuk prediksi lintasan dekat pemain
+    warnDistance: 70,
   },
   waves: {
     firstDelay: 2.5,           // jeda sebelum gelombang pertama
@@ -1181,7 +1202,7 @@ function applyDamage(entity, amount, source, x, y, z) {
   let amt = entity === Player ? amount * Game.diff.damageTaken : amount;
   // Peredam (kartu Piko): damage tabrakan ke pemain dikurangi
   if (entity === Player ? Player.upgrades.damper : false) {
-    if (source === 'asteroid' || source === 'tabrakan' || (typeof source === 'string' ? source.startsWith('Menabrak') : false)) amt *= 0.6;
+    if (source === 'asteroid' || source === 'komet' || source === 'tabrakan' || (typeof source === 'string' ? source.startsWith('Menabrak') : false)) amt *= 0.6;
   }
   const dealt = entity.health.takeDamage(amt, source);
   if (dealt > 0) {
@@ -1855,7 +1876,7 @@ function buildStarfighter(params = {}) {
     parent.add(m);
     return m;
   };
-  const skin = { color: P.color, metalness: 0.55, roughness: 0.42, envMap: JetTextures.env, envMapIntensity: 0.7,
+  const skin = { color: P.color, metalness: 0.5, roughness: 0.56, envMap: JetTextures.env, envMapIntensity: 0.45,
     emissive: 0x2ad8ff, emissiveIntensity: 0.9, emissiveMap: T.glow };
   const matBody = new THREE.MeshStandardMaterial({ ...skin, map: T.body });
   const matWing = new THREE.MeshStandardMaterial({ ...skin, map: T.wing });
@@ -2049,6 +2070,7 @@ const groundHeightAt = (x, z) => Worlds.active.groundHeightAt(x, z);
 function causeText(src) {
   if (src === 'peluru') return 'Tertembak musuh';
   if (src === 'asteroid') return 'Dihantam asteroid';
+  if (src === 'komet') return 'Dihantam komet';
   if (src === 'tabrakan') return 'Bertabrakan dengan musuh';
   if (typeof src === 'string' ? src.startsWith('Menabrak') : false) return src;
   return 'Kapal hancur';
@@ -3637,6 +3659,8 @@ class Asteroid {
     this.active = false;
     this.flash = 0;
     this.hpBarTimer = 0;
+    this.kind = 'rock';
+    this.baseEmissive = new THREE.Color(0, 0, 0);
     this.health = new Health(this.cfg.hp, (source) => Asteroids.destroy(this, source));
     scene.add(this.mesh);
   }
@@ -3670,20 +3694,41 @@ const Asteroids = {
     return Math.round(A.baseCount * A.densityLevels[this.densityLevel] * wave * Game.diff.spawnRate);
   },
 
-  spawn(size, x, y, z) {
+  // Jenis asteroid acak berbobot (hanya di angkasa)
+  pickKind() {
+    const T = CONFIG.asteroids.types;
+    let r = rand();
+    for (const [k, t] of Object.entries(T)) { r -= t.weight; if (r <= 0) return k; }
+    return 'rock';
+  },
+  spawn(size, x, y, z, kind) {
     const a = findFree(this.list, size);
     if (!a) return null;
     a.active = true;
     a.mesh.visible = true;
     a.pos.set(x, y, z);
-    a.health.reset(a.cfg.hp * Game.diff.enemyHp);
+    // Angkasa: ukuran kontinu dan empat jenis; Bumi: ukuran tetap berwarna batu
+    const space = Worlds.active === SpaceWorld;
+    const A = CONFIG.asteroids;
+    a.kind = space ? (kind || this.pickKind()) : 'rock';
+    const T = A.types[a.kind];
+    if (space) {
+      const rr = A.spaceRadius[size];
+      a.radius = randRange(rr[0], rr[1]);
+    } else a.radius = a.cfg.radius;
+    a.mesh.scale.setScalar(a.radius);
+    a.material.color.setHex(space ? T.color : a.cfg.color);
+    a.baseEmissive.setHex(space ? T.emissive : 0x000000);
+    a.material.emissive.copy(a.baseEmissive);
+    // HP mengikuti ukuran (makin besar makin tebal), jenis dan variasi acak
+    const sizeMul = Math.pow(a.radius / a.cfg.radius, 1.5);
+    a.health.reset(Math.round(a.cfg.hp * sizeMul * T.hpMul * (space ? randRange(0.85, 1.2) : 1) * Game.diff.enemyHp));
     const drift = randRange(1, 7), ang = rand() * Math.PI * 2;
     a.vel.set(Math.cos(ang) * drift, randRange(-1, 1), Math.sin(ang) * drift);
     a.spin.set(randRange(-0.6, 0.6), randRange(-0.6, 0.6), randRange(-0.6, 0.6)).multiplyScalar(6 / (a.radius + 3));
     a.mesh.rotation.set(rand() * 6.28, rand() * 6.28, rand() * 6.28);
     a.flash = 0;
     a.hpBarTimer = 0;
-    a.material.emissive.setRGB(0, 0, 0);
     this.alive++;
     return a;
   },
@@ -3699,6 +3744,15 @@ const Asteroids = {
     return this.spawn(size, x, y, z);
   },
 
+  // Ubah jenis asteroid yang sudah ada (untuk uji)
+  retype(a, kind) {
+    const T = CONFIG.asteroids.types[kind];
+    a.kind = kind;
+    a.material.color.setHex(T.color);
+    a.baseEmissive.setHex(T.emissive);
+    a.material.emissive.copy(a.baseEmissive);
+    a.health.reset(Math.round(a.cfg.hp * Math.pow(a.radius / a.cfg.radius, 1.5) * T.hpMul * Game.diff.enemyHp));
+  },
   pickSize() {
     const m = CONFIG.asteroids.mix, r = rand();
     return r < m[0] ? 'small' : r < m[0] + m[1] ? 'medium' : r < m[0] + m[1] + m[2] ? 'large' : 'giant';
@@ -3722,7 +3776,7 @@ const Asteroids = {
       for (let i = 0; i < n; i++) {
         const ang = (i / n) * Math.PI * 2 + rand();
         const ox = Math.cos(ang), oz = Math.sin(ang), oy = randRange(-0.5, 0.5);
-        const child = this.spawn(a.cfg.splitInto, a.pos.x + ox * a.radius * 0.6, a.pos.y + oy * a.radius * 0.5, a.pos.z + oz * a.radius * 0.6);
+        const child = this.spawn(a.cfg.splitInto, a.pos.x + ox * a.radius * 0.6, a.pos.y + oy * a.radius * 0.5, a.pos.z + oz * a.radius * 0.6, a.kind);
         if (child) {
           const sp = randRange(8, 15);
           child.vel.set(a.vel.x + ox * sp, a.vel.y + oy * sp, a.vel.z + oz * sp);
@@ -3757,7 +3811,7 @@ const Asteroids = {
       if (a.flash > 0) {
         a.flash -= dt;
         const v = Math.max(a.flash, 0) / 0.09;
-        a.material.emissive.setRGB(v, v, v);   // kilatan putih singkat saat kena tembakan
+        a.material.emissive.setRGB(v, v, v).lerp(a.baseEmissive, 1 - v);   // kilatan putih singkat saat kena tembakan
       }
       if (a.hpBarTimer > 0) a.hpBarTimer -= dt;
       const dx = a.pos.x - P.x, dz = a.pos.z - P.z;
@@ -3767,6 +3821,108 @@ const Asteroids = {
   },
 };
 Asteroids.init();
+
+/* Komet: kepala es atau batu, koma bercahaya, ekor partikel additive yang menjauhi matahari.
+   Melintas cepat pada lintasan yang memotong dekat jalur pemain; ada peringatan bila menuju kapal. */
+class Comet {
+  constructor(geo) {
+    this.material = new THREE.MeshLambertMaterial({ color: 0xcfe6f5, emissive: 0x1a3550, flatShading: true });
+    this.mesh = new THREE.Mesh(geo, this.material);
+    this.coma = new THREE.Mesh(new THREE.IcosahedronGeometry(1.7, 1), new THREE.MeshBasicMaterial({
+      color: 0x7fcfee, transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false }));
+    this.mesh.add(this.coma);
+    this.mesh.visible = false;
+    this.pos = this.mesh.position;
+    this.vel = new THREE.Vector3();
+    this.active = false;
+    this.radius = 4;
+    this.threat = false;
+    this.hpBarTimer = 0;
+    this.flash = 0;
+    this.health = new Health(100, (src) => Comets.destroy(this, src));
+    scene.add(this.mesh);
+  }
+}
+const Comets = {
+  list: [], alive: 0, timer: 8, acc: 0, threat: null, destroyed: 0,
+  init() {
+    const geo = buildAsteroidGeometry(4242);
+    for (let i = 0; i < 4; i++) this.list.push(new Comet(geo));
+  },
+  reset() {
+    for (const c of this.list) { c.active = false; c.mesh.visible = false; }
+    this.alive = 0; this.timer = randRange(6, 10); this.threat = null;
+  },
+  // Muncul jauh di depan dan menyamping, diarahkan melintasi titik dekat posisi pemain berikutnya
+  spawn(dist = 700, aim = 60) {
+    const c = findFree(this.list.map((x) => { x.type = 'comet'; return x; }), 'comet');
+    if (!c) return null;
+    const C = CONFIG.comets, P = Player.pos;
+    c.radius = randRange(C.radius[0], C.radius[1]);
+    c.mesh.scale.setScalar(c.radius);
+    const ang = Player.yaw + randRange(-1.2, 1.2);
+    c.pos.set(P.x - Math.sin(ang) * dist, P.y + randRange(-120, 120), P.z - Math.cos(ang) * dist);
+    const speed = randRange(C.speed[0], C.speed[1]);
+    const t = dist / (speed + Player.speed);
+    _va.copy(Player.vel).multiplyScalar(t).add(P);
+    _va.x += randRange(-aim, aim); _va.y += randRange(-aim * 0.5, aim * 0.5); _va.z += randRange(-aim, aim);
+    c.vel.subVectors(_va, c.pos).setLength(speed);
+    c.health.reset(Math.round(C.hpPerRadius * c.radius * Game.diff.enemyHp));
+    c.material.color.setHex(rand() < 0.65 ? 0xcfe6f5 : 0x8d8278);   // es atau batu
+    c.active = true; c.mesh.visible = true; c.hpBarTimer = 0; c.flash = 0;
+    this.alive++;
+    return c;
+  },
+  remove(c) { if (c.active) { c.active = false; c.mesh.visible = false; this.alive--; } },
+  destroy(c, source) {
+    if (!c.active) return;
+    this.remove(c);
+    if (source === 'pemain') { this.destroyed++; Game.credits += 8; addScore(Math.round(CONFIG.comets.score * Combo.multiplier), 'KOMET'); }
+    Events.emit('cometDestroyed', c, source);
+    // Menjatuhkan dua pickup
+    if (source === 'pemain') for (let i = 0; i < 2; i++) Pickups.place(['repair', 'nitro', 'overdrive', 'destroyer'][Math.floor(rand() * 4)], c.pos.x + i * 4, c.pos.y, c.pos.z);
+  },
+  damage(c, amount, x, y, z) { c.flash = 0.09; c.hpBarTimer = CONFIG.asteroids.hpBarTime; applyDamage(c, amount, 'pemain', x, y, z); },
+  update(dt) {
+    if (Worlds.active !== SpaceWorld) return;
+    const C = CONFIG.comets, P = Player.pos;
+    if (Game.state === 'playing' || Game.state === 'menu') {
+      this.timer -= dt;
+      if (this.timer <= 0) { this.spawn(); this.timer = randRange(C.interval[0], C.interval[1]); }
+    }
+    const away = SpaceSky.sunDir;
+    let threat = null;
+    for (let k = 0; k < this.list.length; k++) {
+      const c = this.list[k];
+      if (!c.active) continue;
+      c.pos.addScaledVector(c.vel, dt);
+      c.mesh.rotation.x += dt * 0.7; c.mesh.rotation.y += dt * 0.4;
+      if (c.hpBarTimer > 0) c.hpBarTimer -= dt;
+      if (c.flash > 0) { c.flash -= dt; const v = Math.max(c.flash, 0) / 0.09; c.material.emissive.setRGB(0.1 + v, 0.2 + v, 0.3 + v); }
+      // Ekor: partikel membawa kecepatan komet ditambah dorongan menjauhi matahari
+      const n = FX.take('comet', 70, dt);
+      for (let i = 0; i < n; i++) {
+        const j = c.radius * 0.6;
+        FX.fire.emit(c.pos.x + (frand() - 0.5) * j, c.pos.y + (frand() - 0.5) * j, c.pos.z + (frand() - 0.5) * j,
+          c.vel.x * 0.85 - away.x * 45 + (frand() - 0.5) * 6, c.vel.y * 0.85 - away.y * 45 + (frand() - 0.5) * 6, c.vel.z * 0.85 - away.z * 45 + (frand() - 0.5) * 6,
+          1.4 + frand(), c.radius * 0.6, c.radius * 1.3, 0.45, 0.72, 0.95, 0.24, 0.3, 0);
+      }
+      // Prediksi jarak terdekat ke pemain dalam beberapa detik ke depan
+      const rx = c.pos.x - P.x, ry = c.pos.y - P.y, rz = c.pos.z - P.z;
+      const vx = c.vel.x - Player.vel.x, vy = c.vel.y - Player.vel.y, vz = c.vel.z - Player.vel.z;
+      const vv = vx * vx + vy * vy + vz * vz;
+      const tc = vv > 1 ? -(rx * vx + ry * vy + rz * vz) / vv : -1;
+      if (tc > 0 ? tc < C.warnTime : false) {
+        const dx = rx + vx * tc, dy = ry + vy * tc, dz = rz + vz * tc;
+        if (dx * dx + dy * dy + dz * dz < C.warnDistance * C.warnDistance) threat = c;
+      }
+      if (rx * rx + ry * ry + rz * rz > 1500 * 1500 ? tc < 0 : false) this.remove(c);   // sudah lewat dan jauh
+    }
+    this.threat = threat;
+    if (threat ? Game.state === 'playing' : false) Piko.say('comet');
+  },
+};
+Comets.init();
 
 /* =====================================================================
    TABRAKAN DAN DAMAGE - jarak kuadrat dan uji segmen ke bola
@@ -3810,6 +3966,14 @@ function updateCombat() {
         }
       }
     }
+    if (!hit) {
+      for (let k = 0; k < Comets.list.length; k++) {
+        const c = Comets.list[k];
+        if (!c.active) continue;
+        const r = c.radius + pad;
+        if (segmentHitsSphere(ax, ay, az, bx, by, bz, c.pos.x, c.pos.y, c.pos.z, r)) { pb.kill(i); Comets.damage(c, pb.dmg[i], bx, by, bz); hit = true; break; }
+      }
+    }
     if (hit) continue;
     if (Worlds.active.solidAt(bx, by, bz)) {
       pb.kill(i);
@@ -3842,8 +4006,17 @@ function updateCombat() {
     }
   }
 
-  // Tabrakan badan musuh dan asteroid dengan pemain
+  // Tabrakan badan musuh, komet dan asteroid dengan pemain
   if (!Player.alive) return;
+  for (let k = 0; k < Comets.list.length; k++) {
+    const c = Comets.list[k];
+    if (!c.active) continue;
+    const r = c.radius * 0.9 + pr;
+    if (c.pos.distanceToSquared(P) < r * r) {
+      if (Player.invuln <= 0) { Player.damage(CONFIG.comets.damage + c.radius * 2, 'komet'); Player.invuln = CONFIG.obstacles.invulnTime; }
+      applyDamage(c, c.health.hp, 'tabrakan', c.pos.x, c.pos.y, c.pos.z);
+    }
+  }
   const al = Asteroids.list;
   for (let k = 0; k < al.length; k++) {
     const a = al[k];
@@ -3890,9 +4063,12 @@ Events.on('enemyDestroyed', (e, byPlayer) => {
 Events.on('asteroidDestroyed', (a, source) => {
   if (source !== 'pemain') return;
   Game.credits += CONFIG.credits.asteroid[a.size] || 0;
-  addScore(Math.round(a.cfg.score * Combo.multiplier), 'ASTEROID');
-  // Asteroid sedang dan besar kadang menjatuhkan pickup
-  if (a.size !== 'small') {
+  addScore(Math.round(a.cfg.score * (a.radius / a.cfg.radius) * Combo.multiplier), 'ASTEROID');
+  // Asteroid sedang dan besar kadang menjatuhkan pickup; kristal jauh lebih sering, termasuk yang kecil
+  const dropMul = CONFIG.asteroids.types[a.kind].dropMul;
+  if (a.kind === 'crystal' ? rand() < CONFIG.asteroids.dropChance * dropMul : false) {
+    Pickups.place(rand() < 0.4 ? 'nitro' : rand() < 0.5 ? 'repair' : (rand() < 0.5 ? 'overdrive' : 'destroyer'), a.pos.x, a.pos.y, a.pos.z);
+  } else if (a.size !== 'small') {
     if (rand() < CONFIG.asteroids.dropChance) Pickups.place(rand() < 0.5 ? 'repair' : 'nitro', a.pos.x, a.pos.y, a.pos.z);
     else if (rand() < CONFIG.buffs.dropChanceAsteroid) Pickups.place(rand() < 0.5 ? 'overdrive' : 'destroyer', a.pos.x, a.pos.y, a.pos.z);
   }
@@ -4726,7 +4902,7 @@ const FX = {
   fire: new ParticleSystem(Math.round(Q.maxParticles * 0.6), true),
   smoke: new ParticleSystem(Math.round(Q.maxParticles * 0.4), false),
   density: Q.particleDensity,
-  acc: { flame: 0, smoke: 0, vapor: 0, damage: 0, enemy: 0 },
+  acc: { flame: 0, smoke: 0, vapor: 0, damage: 0, enemy: 0, comet: 0 },
   prevNozzle: Array.from({ length: 4 }, () => new THREE.Vector3()),
   curNozzle: Array.from({ length: 4 }, () => new THREE.Vector3()),
   hasPrev: false,
@@ -4887,6 +5063,7 @@ Events.on('bulletImpact', (x, y, z) => {
 });
 Events.on('enemyDestroyed', (e) => FX.explosion(e.pos.x, e.pos.y, e.pos.z, e.type === 'drone' ? 1 : 1.5));
 Events.on('asteroidDestroyed', (a) => FX.rockBurst(a.pos.x, a.pos.y, a.pos.z, a.radius));
+Events.on('cometDestroyed', (c) => { FX.rockBurst(c.pos.x, c.pos.y, c.pos.z, c.radius); FX.sparks(c.pos.x, c.pos.y, c.pos.z, 30, 0.6, 0.9, 1); });
 Events.on('fatalCrash', (p) => {
   FX.explosion(p.x, p.y, p.z, 3.2);
   FX.explosion(p.x - 3, p.y + 2, p.z + 2, 1.6);
@@ -5557,6 +5734,8 @@ function updateHud(dt) {
   updateLeadMarker();
   v = Game.state === 'playing' ? (Player.alive ? Enemies.rearThreat : false) : false;
   if (changed('rear', v)) $('rear-warn').classList.toggle('hidden', !v);
+  v = Game.state === 'playing' ? Comets.threat !== null : false;
+  if (changed('comet', v)) $('comet-warn').classList.toggle('hidden', !v);
   updateManeuverHud();
   Touch.updateCooldowns();
   for (const k of ['overdrive', 'destroyer']) {
@@ -5608,6 +5787,10 @@ function updateHpBars() {
   for (let k = 0; k < Enemies.list.length; k++) {
     const e = Enemies.list[k];
     if (e.active) { if (e.hpBarTimer > 0) placeHpBar(e); }
+  }
+  for (let k = 0; k < Comets.list.length; k++) {
+    const c = Comets.list[k];
+    if (c.active) { if (c.hpBarTimer > 0) placeHpBar(c); }
   }
   for (let k = hpBarCount; k < hud.hpBars.length; k++) {
     const b = hud.hpBars[k];
@@ -5871,6 +6054,7 @@ function resetWorld(seed) {
   Worlds.active.reset(seed);
   Player.reset();
   Asteroids.reset();
+  Comets.reset();
   Enemies.reset();
   FX.reset();
   Game.attractTime = 0;
@@ -6676,6 +6860,7 @@ function update(dt) {
     FX.update(dt);
     Worlds.active.update(dt, Player.pos);
     Asteroids.update(dt);
+    Comets.update(dt);
   }
   if (Game.state !== 'paused') {
     CamRig.update(dt);
@@ -6824,13 +7009,29 @@ window.__game = {
       }
       return max;
     },
-    spawnAsteroid(size = 'large', dist = 200, lateral = 0, dy = 0) { return !!Asteroids.spawnAhead(size, dist, lateral, dy); },
+    spawnAsteroid(size = 'large', dist = 200, lateral = 0, dy = 0, kind) {
+      const a = Asteroids.spawnAhead(size, dist, lateral, dy);
+      if (a ? kind : false) Asteroids.retype(a, kind);
+      return !!a;
+    },
     // Daftar asteroid aktif terurut dari yang terdekat
     asteroids() {
       return Asteroids.list.filter((a) => a.active)
-        .map((a) => ({ size: a.size, hp: round2(a.health.hp), maxHp: round2(a.health.maxHp), dist: round2(a.pos.distanceTo(Player.pos)) }))
+        .map((a) => ({ size: a.size, kind: a.kind, radius: round2(a.radius), hp: round2(a.health.hp), maxHp: round2(a.health.maxHp), dist: round2(a.pos.distanceTo(Player.pos)) }))
         .sort((p, q) => p.dist - q.dist);
     },
+    spawnComet(dist = 500, aim = 0) { const c = Comets.spawn(dist, aim); return c ? { radius: round2(c.radius), hp: c.health.hp } : null; },
+    // Komet melintas tegak lurus di depan pemain (untuk memeriksa ekor)
+    placeComet(ahead = 220, side = -160, speed = 140, radius = 7) {
+      const c = Comets.spawn(700, 0);
+      if (!c) return false;
+      const P = Player.pos, f = Player.forward, r = Player._right;
+      c.radius = radius; c.mesh.scale.setScalar(radius);
+      c.pos.copy(P).addScaledVector(f, ahead).addScaledVector(r, side);
+      c.vel.copy(r).multiplyScalar(-Math.sign(side) * speed);
+      return true;
+    },
+    comets() { return { alive: Comets.alive, threat: Comets.threat !== null, destroyed: Comets.destroyed }; },
     clearAsteroids() { for (const a of Asteroids.list) Asteroids.remove(a); },
     setAsteroidDensity(level) { Asteroids.densityLevel = clamp(level | 0, 0, 2); },
     // Hasil kali titik arah pandang kamera dengan arah terbang pesawat (1 depan, -1 belakang)

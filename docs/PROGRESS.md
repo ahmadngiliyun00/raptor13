@@ -33,6 +33,7 @@ Berkas ini adalah catatan kerja agar pengerjaan bisa dilanjutkan otomatis setela
 - A3 buildStarfighter (loft, bahu menyatu, empat bilah X dinamis, thruster manuver, cincin mesin, kanopi, soket Piko di pikoMount, livery kanvas dengan 13), varian Interceptor dan Gunship lewat params, ?shippreview=. Segitiga: Starfighter 3724, Gunship 4036. Tiga putaran visual. 
 - A4 Piko (model loft 852 segitiga, ekspresi mata, bip per ekspresi, panel HUD bersubtitle, jeda 6 detik, cooldown 25 detik per pesan, prioritas, opsi Bantuan robot, upgrade autoRepair, scanner, damper di Player.upgrades). Pemicu komet, ranjau, gerbang sudah ada di PIKO_LINES dan tinggal dipanggil Piko.say saat fiturnya dibuat.
 - Penyetelan B4: maxTailTime 1,2 detik, droneMaxTailTime 0,6 detik; metrik dipisah collisionsPerMin (non-kamikaze, ambang 2) dan ramsPerMin (drone, ambang 6).
+- S6 asteroid angkasa ukuran kontinu (spaceRadius per kelas) dan empat jenis (batu, es, logam, kristal; kristal lebih sering menjatuhkan pickup), komet (Comets) dengan koma, ekor menjauhi matahari, peringatan KOMET MENDEKAT dan Piko, bisa dihancurkan. Asteroid Bumi tidak berubah.
 
 ## Urutan task berikutnya (blok terakhir menang bila bertentangan)
 
@@ -50,7 +51,7 @@ Fase berikutnya:
 9. (SELESAI) S3 Skybox angkasa (bintang paralaks 3 lapis, nebula, debu dekat kamera, warp streak saat nitro), matahari dan lens flare, EffectComposer dan UnrealBloomPass sesuai preset kualitas.
 10. (SELESAI) A3 Starfighter bersayap empat konfigurasi X dengan sayap dinamis dan thruster manuver, varian Interceptor (500 kredit) dan Gunship (1200 kredit), `?shippreview=` (starfighter, jet, interceptor, gunship, piko), minimal 3 putaran iterasi visual.
 11. (SELESAI) A4 Robot Piko (model loft, ekspresi mata, bip, panel HUD bersubtitle, batas frekuensi, opsi Bantuan robot, 3 kartu upgrade).
-12. S6 Asteroid angkasa ukuran kontinu dan 4 jenis (batu, es, logam, kristal) serta komet berekor.
+12. (SELESAI) S6 Asteroid angkasa ukuran kontinu dan 4 jenis (batu, es, logam, kristal) serta komet berekor.
 13. S8 Pickup bintang warna (merah ultimate, hijau HP, biru nitro, emas XP dan skor, ungu nyawa) dan ultimate laser E.
 14. B8 Tata Surya (Matahari, 8 planet, Pluto, bulan, tekstur prosedural, cahaya dari Matahari). Menggantikan S5 dan S7.
 15. B9 Cincin berisi asteroid instanced dengan LOD ke objek ber-HP, Sabuk Asteroid, Sabuk Kuiper.
