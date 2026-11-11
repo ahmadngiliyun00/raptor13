@@ -918,3 +918,37 @@ test('S6: komet berekor memicu peringatan, bisa dihancurkan', async ({ page }) =
   await expect.poll(async () => (await dbg(page, 'comets')).destroyed, { timeout: 6000 }).toBeGreaterThan(0);
   await page.keyboard.up('Enter');
 });
+
+test('S8: lima warna bintang memberi efek yang benar dan tertarik magnet', async ({ page }) => {
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.setEnemiesEnabled(false); d.clearAsteroids(); d.setAsteroidDensity(0); d.setGod(false); });
+  await dbg(page, 'setLives', 2);
+  await dbg(page, 'damageAs', 40, 'test');
+  await page.evaluate(() => { window.__game.debug.simulate(0.1, 0); });
+  const before = await page.evaluate(() => ({ s: window.__game.snapshot(), u: window.__game.debug.ultimate() }));
+  for (const k of ['red', 'green', 'blue', 'gold', 'purple']) expect(await dbg(page, 'spawnStar', k, 30)).toBe(true);
+  // Magnet menarik bintang ke kapal tanpa perlu dibidik
+  await expect.poll(async () => (await dbg(page, 'stars')).alive, { timeout: 6000 }).toBe(0);
+  const after = await page.evaluate(() => ({ s: window.__game.snapshot(), u: window.__game.debug.ultimate(), st: window.__game.debug.stars() }));
+  expect(after.st.collected).toEqual({ red: 1, green: 1, blue: 1, gold: 1, purple: 1 });
+  expect(after.u.meter).toBeGreaterThan(before.u.meter);          // merah: ultimate
+  expect(after.s.health).toBeGreaterThan(before.s.health);        // hijau: HP
+  expect(after.s.lives).toBe(before.s.lives + 1);                 // ungu: nyawa
+  expect(after.st.xp).toBeGreaterThan(0);                          // emas: XP
+  expect(after.s.score).toBeGreaterThan(before.s.score);          // emas: skor
+});
+
+test('S8: ultimate E mengosongkan meter dan menghancurkan sasaran di jalur laser', async ({ page }) => {
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.setEnemiesEnabled(false); d.clearAsteroids(); d.setAsteroidDensity(0); d.setGod(true); });
+  // Meter kosong: tidak bisa ditembakkan
+  expect(await dbg(page, 'fireUltimate')).toBe(false);
+  await dbg(page, 'spawnAsteroid', 'large', 200, 0, 0, 'rock');
+  await dbg(page, 'fillUltimate');
+  await page.keyboard.press('KeyE');
+  await expect.poll(async () => (await dbg(page, 'ultimate')).active, { timeout: 2000 }).toBeGreaterThan(0);
+  await expect.poll(async () => (await dbg(page, 'ultimate')).hits, { timeout: 4000 }).toBeGreaterThan(0);
+  const u = await dbg(page, 'ultimate');
+  expect(u.meter).toBeLessThan(0.5);
+  await expect.poll(async () => (await dbg(page, 'ultimate')).active, { timeout: 5000 }).toBe(0);
+});
