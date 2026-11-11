@@ -1582,3 +1582,29 @@ test('S15: musik ambient generatif berjalan, bisa dimatikan lewat opsi Musik, au
   await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).toBe('playing');
   await expect.poll(async () => (await dbg(page, 'music')).gain, { timeout: 8000 }).toBeLessThan(0.002);
 });
+
+test('A7: dialog pembuka tiap stage antara Raptor 13 dan Piko, 1 sampai 3 baris, tampil sebagai subtitle', async ({ page }) => {
+  test.setTimeout(60000);
+  await start(page, { world: 'space', mode: 'campaign' });
+  const d = await dbg(page, 'stageDialog');
+  expect(d.length).toBe(10);
+  for (const lines of d) {
+    expect(lines.length).toBeGreaterThanOrEqual(1);
+    expect(lines.length).toBeLessThanOrEqual(3);
+    for (const [who, text] of lines) { expect(['PIKO', 'RAPTOR 13']).toContain(who); expect(text.length).toBeGreaterThan(10); }
+    expect(new Set(lines.map((l) => l[0])).size).toBe(2);              // keduanya berbicara
+  }
+  // Stage 3 (pertama kali): tiga baris berurutan di cutscene pembuka
+  await dbg(page, 'setStage', 3);
+  await expect.poll(async () => (await dbg(page, 'cutscene')).active, { timeout: 6000 }).toBe('stage-3');
+  let c = await dbg(page, 'cutscene');
+  expect(c.who).toBe('RAPTOR 13');
+  expect(c.text).toContain('Rumah');
+  await expect(page.locator('#cutscene .cs-sub')).toBeVisible();
+  await expect.poll(async () => (await dbg(page, 'cutscene')).who, { timeout: 5000 }).toBe('PIKO');
+  await expect.poll(async () => (await dbg(page, 'cutscene')).shot, { timeout: 5000 }).toBe(2);
+  c = await dbg(page, 'cutscene');
+  expect(c.text).toContain('antar mereka pulang');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await snap(page)).state).toBe('contract');
+});

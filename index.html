@@ -7162,6 +7162,33 @@ const SolarMap = {
    yang dianimasikan skrip memakai callback update per shot. Bisa dilewati dengan
    Enter, Esc, atau tap.
    ===================================================================== */
+// Dialog pembuka stage (A7): pilot berkode panggil Raptor 13 dan robot Piko, 1 sampai 3 baris
+const STAGE_DIALOG = [
+  [['PIKO', 'Merkurius, planet terdekat dari Matahari. Sensor suhuku berkeringat, padahal aku tidak punya kelenjar keringat.'],
+   ['RAPTOR 13', 'Tenang, Piko. Kita cuma mampir sebentar untuk mengusir Sindikat Vanta.']],
+  [['PIKO', 'Awan Venus setebal selimut. Radar tetap jalan, tapi jangan berharap pemandangan.'],
+   ['RAPTOR 13', 'Bagus. Berarti Vanta juga tidak melihat kita datang.']],
+  [['RAPTOR 13', 'Rumah. Dari sini Bumi kelihatan kecil sekali.'],
+   ['PIKO', 'Dan ada armada Vanta parkir di halaman depannya. Tidak sopan.'],
+   ['RAPTOR 13', 'Kalau begitu kita antar mereka pulang.']],
+  [['PIKO', 'Mars! Warnanya merah karena karat, bukan karena malu.'],
+   ['RAPTOR 13', 'Fokus, Piko. Phobos dan Deimos bisa jadi tempat sembunyi kapal mereka.']],
+  [['PIKO', 'Sabuk Asteroid. Batunya rapat sekali, tolong jangan mencium yang besar.'],
+   ['RAPTOR 13', 'Ada sinyal mesin tambang raksasa di dalam sabuk.'],
+   ['PIKO', 'Mesin tambang? Semoga dia tidak berniat menambang kita.']],
+  [['RAPTOR 13', 'Jupiter. Bintik Merah Besar itu badai yang lebih lebar dari Bumi.'],
+   ['PIKO', 'Sudah kuukur tiga kali. Masih besar. Masih menakutkan.']],
+  [['PIKO', 'Cincin Saturnus! Ribuan bongkahan es, semuanya berkilau.'],
+   ['RAPTOR 13', 'Cantik. Sayang Vanta menjadikannya tempat bersembunyi.']],
+  [['PIKO', 'Uranus berguling di orbitnya. Aku jadi ingin ikut berguling.'],
+   ['RAPTOR 13', 'Simpan gulunganmu untuk menghindari Pemburu Agung. Dia yang tercepat di armada Vanta.']],
+  [['RAPTOR 13', 'Neptunus. Angin di sini bertiup lebih dari dua ribu kilometer per jam.'],
+   ['PIKO', 'Untung kita di luar atmosfernya. Rambutku bisa berantakan.'],
+   ['RAPTOR 13', 'Kamu tidak punya rambut, Piko.']],
+  [['PIKO', 'Pluto, planet katai dengan dataran berbentuk hati. Tapi sinyal di sini besar dan tidak ramah.'],
+   ['RAPTOR 13', 'Itu markas terakhir Sindikat Vanta. Kita selesaikan semuanya di sini.']],
+];
+
 const Cutscene = {
   active: null, shot: 0, t: 0, onEnd: null, prevState: 'playing',
   el: document.getElementById('cutscene'),
@@ -7223,27 +7250,29 @@ const Cutscene = {
     }
     if (cb) cb();
   },
-  // Pembuka stage kampanye: menyapu planet area lalu kembali ke kapal, dengan dialog singkat
+  // Pembuka stage kampanye: menyapu planet area, kembali ke kapal, lalu sisi kokpit; satu baris dialog per shot
   stageIntro(stageIdx) {
-    const st = CONFIG.campaign.stages[stageIdx], body = SolarSystem.byId[st.area];
-    const P = () => Player.pos.clone(), F = () => Player.forward.clone();
+    const st = CONFIG.campaign.stages[stageIdx], body = SolarSystem.byId[st.area], lines = STAGE_DIALOG[stageIdx] || [];
+    const P = () => Player.pos.clone(), F = () => Player.forward.clone(), R3 = () => Player._right.clone();
     const shots = [];
     if (body) {
       const R = body.radius, c = body.pos.clone();
       const side = new THREE.Vector3().subVectors(Player.pos, c).setY(0).normalize();
       const a0 = Math.atan2(side.z, side.x);
       const at = (a, d, h) => new THREE.Vector3(c.x + Math.cos(a) * d, c.y + h, c.z + Math.sin(a) * d);
-      shots.push({ dur: 3.2, from: () => at(a0 - 0.6, R * 3.4 + 120, R * 0.6), to: () => at(a0 + 0.15, R * 2.9 + 100, R * 0.3), lookFrom: () => c, lookTo: () => c,
-        who: 'PIKO', text: 'Tiba di ' + st.name + '. Sinyal Sindikat Vanta terdeteksi di sekitar sini.' });
+      shots.push({ dur: 3.4, from: () => at(a0 - 0.6, R * 3.4 + 120, R * 0.6), to: () => at(a0 + 0.15, R * 2.9 + 100, R * 0.3), lookFrom: () => c, lookTo: () => c });
     } else {
-      shots.push({ dur: 3.0, from: () => P().addScaledVector(F(), 160).add(new THREE.Vector3(0, 60, 0)), to: () => P().addScaledVector(F(), 90).add(new THREE.Vector3(30, 20, 0)), lookFrom: P, lookTo: P,
-        who: 'PIKO', text: 'Tiba di ' + st.name + '. Banyak batu di sini, terbang hati-hati.' });
+      shots.push({ dur: 3.2, from: () => P().addScaledVector(F(), 160).add(new THREE.Vector3(0, 60, 0)), to: () => P().addScaledVector(F(), 90).add(new THREE.Vector3(30, 20, 0)), lookFrom: P, lookTo: P });
     }
-    shots.push({ dur: 2.6,
+    shots.push({ dur: 3.2,
       from: () => P().addScaledVector(F(), 26).add(new THREE.Vector3(8, 3, 0)), to: () => P().addScaledVector(F(), -14).add(new THREE.Vector3(0, 4, 0)),
-      lookFrom: P, lookTo: () => P().addScaledVector(F(), 40),
-      who: 'RAPTOR 13', text: 'Raptor 13 siap. Stage ' + (stageIdx + 1) + ', mari kita mulai.' });
-    return { id: 'stage-' + (stageIdx + 1), shots };
+      lookFrom: P, lookTo: () => P().addScaledVector(F(), 40) });
+    shots.push({ dur: 3.0,
+      from: () => P().addScaledVector(R3(), 9).add(new THREE.Vector3(0, 2.5, 0)), to: () => P().addScaledVector(R3(), 7).addScaledVector(F(), 4).add(new THREE.Vector3(0, 2, 0)),
+      lookFrom: P, lookTo: () => P().addScaledVector(F(), 6) });
+    // Satu baris per shot; shot tanpa baris dibuang (dialog 2 baris memakai 2 shot)
+    lines.forEach((ln, i) => { if (shots[i]) { shots[i].who = ln[0]; shots[i].text = ln[1]; } });
+    return { id: 'stage-' + (stageIdx + 1), shots: shots.slice(0, Math.max(2, lines.length)) };
   },
   // Cutscene contoh untuk uji dan hook debug
   demo() {
@@ -10766,6 +10795,9 @@ const PIKO_LINES = {
   boss: { text: 'Kapal besar mendekat! Cari titik lemahnya.', mood: 'alert', prio: 4 },
   bossPhase: { text: 'Polanya berubah! Tetap bergerak.', mood: 'alert', prio: 3 },
   target: { text: 'Komandan bertanda terdeteksi. Itu target kontrak kita!', mood: 'alert', prio: 3 },
+  contractburu: { text: 'Kontrak buruan diterima. Komandan bertanda akan muncul sebentar lagi.', mood: 'calm', prio: 2 },
+  contractkawal: { text: 'Kargo kawan bergantung pada kita. Jauhkan peluru Vanta darinya.', mood: 'calm', prio: 2 },
+  contractbersihkan: { text: 'Bersihkan sektor! Aku yang menghitung, kamu yang menembak.', mood: 'happy', prio: 2 },
 };
 const Piko = {
   panel: document.getElementById('piko-panel'), face: document.getElementById('piko-face'), textEl: document.getElementById('piko-text'),
@@ -10824,6 +10856,7 @@ const Piko = {
 Piko.drawFace();
 Events.on('waveStart', () => Piko.say('waveStart'));
 Events.on('bossStart', () => Piko.say('boss'));
+Events.on('contract', (type) => Piko.say('contract' + type));
 Events.on('enemyDestroyed', () => { if (Combo.count >= 4) Piko.say('combo'); });
 Events.on('pickupSpawned', (type) => { if (type === 'heart' || type === 'overdrive' || type === 'destroyer') Piko.say('rarePickup'); });
 
@@ -11687,6 +11720,7 @@ window.__game = {
     finalState() { return { state: Game.state, visible: !FinalScreen.el.classList.contains('hidden'), completed: Save.data.campaign.completed }; },
     playCutscene(id = 'demo') { return Cutscene.play(id === 'stage' ? Cutscene.stageIntro(Campaign.stageIdx) : Cutscene.demo()); },
     skipCutscene() { Cutscene.skip(); return Game.state; },
+    stageDialog() { return STAGE_DIALOG.map((d) => d.map((l) => l.slice())); },
     cutscene() { return { active: Cutscene.active ? Cutscene.active.id : null, shot: Cutscene.shot, state: Game.state, who: Cutscene.who.textContent, text: Cutscene.text.textContent, bars: Cutscene.el.classList.contains('on') }; },
     campaign() { return { mode: Campaign.mode, active: Campaign.active, stage: Campaign.stageIdx + 1, area: SpaceWorld.area, cleared: Campaign.cleared, gate: WarpGate.active, warp: Warp.active, wave: Waves.wave, saved: { ...Save.data.campaign }, label: Campaign.label() }; },
     // Pindah ke stage n (1..10) di sesi kampanye berjalan
