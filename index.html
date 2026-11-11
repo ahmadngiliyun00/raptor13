@@ -222,6 +222,22 @@
   .bb-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 4px; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: #ffd0e0; text-shadow: 0 1px 2px #000; }
   .bb-track { height: 10px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 80, 140, 0.7); border-radius: 2px; overflow: hidden; }
   #boss-fill { display: block; height: 100%; background: linear-gradient(90deg, #ff2d6a, #ff9a3c); transform-origin: left center; }
+  #screen-levelup .card { max-width: 760px; }
+  .bar.thin { height: 4px; }
+  #xp-fill { background: linear-gradient(90deg, #8a5cff, #d08cff); }
+  .lv-row .label b { color: #d08cff; margin-left: 4px; }
+  #shield-tag { color: #7fe3ff; }
+  .lv-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; }
+  .lvcard { position: relative; display: flex; flex-direction: column; gap: 6px; padding: 14px 12px 22px; min-height: 150px; text-align: left; cursor: pointer;
+    font: inherit; color: var(--ui-fg); background: rgba(255, 255, 255, 0.05); border: 2px solid #9fb0c4; border-radius: 8px; }
+  .lvcard small { font-size: 10px; font-weight: 800; letter-spacing: 0.2em; color: #9fb0c4; }
+  .lvcard b { font-size: 17px; }
+  .lvcard span { font-size: 13px; line-height: 1.4; color: #cfd8e3; }
+  .lvcard kbd { position: absolute; right: 8px; bottom: 6px; }
+  .lvcard.r-langka { border-color: #3fa9ff; } .lvcard.r-langka small { color: #3fa9ff; }
+  .lvcard.r-epik { border-color: #c264ff; box-shadow: 0 0 18px rgba(194, 100, 255, 0.35); } .lvcard.r-epik small { color: #c264ff; }
+  .lvcard:hover, .lvcard:focus-visible { background: rgba(255, 255, 255, 0.1); }
+  @media (max-width: 640px) { .lv-cards { grid-template-columns: 1fr; } .lvcard { min-height: 0; } }
   .final-rating { font-size: 34px; letter-spacing: 0.2em; color: #ffd24a; }
   #cutscene { position: fixed; inset: 0; z-index: 40; pointer-events: auto; }
   #cutscene .lb { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.45s ease-out; }
@@ -535,6 +551,8 @@
     <div class="bar" id="nitro-bar"><i id="nitro-fill"></i></div>
     <div class="row"><span class="label">ULTIMATE <kbd class="mini">E</kbd></span><span id="ult-tag" class="tag"></span></div>
     <div class="bar" id="ult-bar"><i id="ult-fill"></i></div>
+    <div class="row lv-row"><span class="label">LEVEL <b id="lv-num" class="num">1</b></span><span id="shield-tag" class="tag"></span></div>
+    <div class="bar thin" id="xp-bar"><i id="xp-fill"></i></div>
   </div>
   <div class="hud-block tc">
     <div id="stage-label" class="label stage-label"></div>
@@ -757,6 +775,15 @@
     <p class="hint">Seluruh visual dan suara dibuat secara prosedural: geometri, tekstur, langit dan suara
       disusun oleh kode saat game berjalan, tanpa file model, gambar, atau audio.</p>
     <button id="btn-about-back" class="btn" type="button">KEMBALI</button>
+  </div>
+</div>
+
+<!-- Naik level: pilih satu dari tiga kartu upgrade -->
+<div id="screen-levelup" class="screen pause hidden">
+  <div class="card wide">
+    <h2 id="lv-title">LEVEL 2</h2>
+    <p class="hint">Pilih satu kartu upgrade: tekan 1, 2, atau 3, atau panah lalu Enter.</p>
+    <div id="lv-cards" class="lv-cards"></div>
   </div>
 </div>
 
@@ -1193,6 +1220,10 @@ const CONFIG = {
       laserWarn: 1.0, laserTime: 1.6, laserLength: 420, laserWidth: 5, laserHit: 22, laserCooldown: 5,
     },
   },
+  // XP dan level (S11): kebutuhan XP level n = base x growth^(n-1)
+  xp: { base: 100, growth: 1.35, asteroidPerRadius: 0.4, comet: 20, boss: 150, enemyScoreDiv: 12, enemyMax: 60 },
+  // Drone pendamping dari kartu upgrade
+  companions: { offset: 7.5, range: 320, fireInterval: 0.55, damageFactor: 0.5 },
   // Lompatan warp sinematik (peta Tab dan gerbang loncat)
   warp: { duration: 2.6, flashAt: 1.0, fovBoost: 38 },
   // Pickup bintang bercahaya
@@ -1290,6 +1321,7 @@ const CONFIG = {
     respawnDelay: 2.0,         // detik sebelum respawn setelah meledak
     respawnInvuln: 3.0,        // kebal sementara setelah respawn (pesawat berkedip)
     startInvuln: 1.5,          // kebal di awal sesi
+    shieldDelay: 4, shieldRegen: 10,   // perisai energi dari kartu: jeda pulih dan laju pulih per detik
     hitInvuln: 1.0,            // kebal sesaat setelah menerima damage apa pun (tidak terkena beruntun)
     criticalHp: 0.25,          // di bawah fraksi HP ini muncul peringatan berkedip dan bunyi
   },
@@ -1584,10 +1616,11 @@ function applyDamage(entity, amount, source, x, y, z) {
     if (source === 'asteroid' || source === 'komet' || source === 'tabrakan' || (typeof source === 'string' ? source.startsWith('Menabrak') : false)) amt *= 0.6;
   }
   // Perisai musuh menyerap damage lebih dulu, lalu pulih setelah jeda
-  if (entity.shield > 0 ? amt > 0 : false) {
+  const inv = entity.health.invulnerable ? entity.health.invulnerable(source) : false;
+  if (entity.shield > 0 ? (amt > 0 ? !inv : false) : false) {
     const ab = Math.min(entity.shield, amt);
     entity.shield -= ab; amt -= ab;
-    entity.shieldFlash = 1; entity.shieldWait = entity.cfg.shieldDelay;
+    entity.shieldFlash = 1; entity.shieldWait = entity.cfg ? entity.cfg.shieldDelay : CONFIG.player.shieldDelay;
     Events.emit('shieldHit', x, y, z);
     if (amt <= 0) return 0;
   }
@@ -2490,7 +2523,8 @@ const Player = {
   _up: new THREE.Vector3(0, 1, 0),
   _right: new THREE.Vector3(1, 0, 0),
   autoLevel: true,
-  upgrades: { fireRate: 1, damage: 1, autoRepair: false, scanner: false, damper: false },   // dari kartu upgrade (S11)
+  upgrades: { fireRate: 1, damage: 1, autoRepair: false, scanner: false, damper: false, magnet: 1, ultRate: 1, hpBonus: 0, nitroCap: 1, shieldMax: 0, companions: 0 },   // dari kartu upgrade (S11)
+  shield: 0, shieldWait: 0,
   sinceHit: 0,
   ult: 0,              // meter ultimate 0..1
   addUltimate(v) { this.ult = Math.min(1, this.ult + v * (this.upgrades.ultRate || 1)); },
@@ -2523,7 +2557,7 @@ const Player = {
     this.maneuver = null;
     this.cooldowns.roll = 0; this.cooldowns.immelmann = 0; this.cooldowns.loop = 0;
     this.speed = C.baseSpeed * this.ship.stats.speed;
-    this.health.reset(this.ship.stats.hp);
+    this.health.reset(this.ship.stats.hp + (this.upgrades.hpBonus || 0));
     this.alive = true;
     this.nitro = 1;
     this.nitroLock = 0;
@@ -2688,7 +2722,7 @@ const Player = {
     this.nitroActive = !!want;
     if (!this.alive || this.nitroLock > 0 || this.nitro <= 0) this.nitroActive = false;
     if (this.nitroActive) {
-      this.nitro -= (N.drainPerSec / this.ship.stats.nitro) * dt;   // kapasitas nitro dari kapal
+      this.nitro -= (N.drainPerSec / (this.ship.stats.nitro * (this.upgrades.nitroCap || 1))) * dt;   // kapasitas nitro dari kapal
       this.nitroRegenWait = N.regenDelay;
       if (this.nitro <= 0) {
         this.nitro = 0;
@@ -2740,7 +2774,7 @@ const Player = {
     this.pos.y = clamp(Math.max(this.pos.y, ground + 50), Worlds.active.minY, Worlds.active.maxY - 10);
     this.setHeading(this.yaw);
     this.speed = C.baseSpeed * this.ship.stats.speed;
-    this.health.reset(this.ship.stats.hp);
+    this.health.reset(this.ship.stats.hp + (this.upgrades.hpBonus || 0));
     this.alive = true;
     this.invuln = 0;
     this.spawnInvuln = C.respawnInvuln;
@@ -2752,7 +2786,7 @@ const Player = {
   // Awal sesi dari attract mode: posisi dan arah dipertahankan agar tidak ada lompatan
   resetForSession() {
     const C = CONFIG.player;
-    this.health.reset(this.ship.stats.hp);
+    this.health.reset(this.ship.stats.hp + (this.upgrades.hpBonus || 0));
     this.alive = true;
     this.nitro = 1; this.nitroLock = 0; this.nitroRegenWait = 0; this.nitroActive = false;
     this.invuln = 0; this.spawnInvuln = 0; this.respawnTimer = 0; this.warning = false;
@@ -5047,6 +5081,7 @@ Events.on('enemyDestroyed', (e, byPlayer) => {
   Game.kills++;
   Game.credits += CONFIG.credits[e.type] || 0;
   Player.addUltimate(CONFIG.ultimate.killGain);
+  Levels.add(e.cfg.minor ? 1 : Math.min(CONFIG.xp.enemyMax, Math.round(e.cfg.score / CONFIG.xp.enemyScoreDiv)));
   if (e.cfg.minor) { addScore(e.cfg.score, e.cfg.label.toUpperCase()); return; }
   Stars.burst(e.pos.x, e.pos.y, e.pos.z, (e.cfg.loot || 1) + Math.floor(rand() * 3));
   if (rand() < CONFIG.buffs.dropChanceEnemy) Pickups.place(rand() < 0.5 ? 'overdrive' : 'destroyer', e.pos.x, e.pos.y, e.pos.z);
@@ -5055,6 +5090,7 @@ Events.on('enemyDestroyed', (e, byPlayer) => {
 });
 Events.on('asteroidDestroyed', (a, source) => {
   if (source !== 'pemain') return;
+  Levels.add(Math.round(2 + a.radius * CONFIG.xp.asteroidPerRadius));
   Game.credits += CONFIG.credits.asteroid[a.size] || 0;
   Player.addUltimate(CONFIG.ultimate.asteroidGain);
   if (a.kind === 'crystal') Stars.burst(a.pos.x, a.pos.y, a.pos.z, 2 + Math.floor(rand() * 3));
@@ -7740,7 +7776,154 @@ const FinalScreen = {
 };
 
 Events.on('shieldHit', (x, y, z) => FX.sparks(x, y, z, 5));
-Events.on('bossDefeated', () => { if (Campaign.active) Campaign.bossDone = true; });
+Events.on('bossDefeated', () => { if (Campaign.active) Campaign.bossDone = true; Levels.add(CONFIG.xp.boss); });
+
+/* =====================================================================
+   XP, LEVEL DAN KARTU UPGRADE - XP dari musuh, asteroid, komet dan bintang emas.
+   Naik level menjeda permainan dan menawarkan 3 kartu acak berkelangkaan (biasa,
+   langka, epik). Efek berlaku selama sesi (Player.upgrades).
+   ===================================================================== */
+const UPGRADE_CARDS = [
+  { id: 'damage', name: 'Laras Panas', rarity: 'biasa', desc: 'Damage tembakan +12 persen.', apply: (U) => { U.damage *= 1.12; } },
+  { id: 'fireRate', name: 'Pemicu Cepat', rarity: 'biasa', desc: 'Laju tembak +10 persen.', apply: (U) => { U.fireRate *= 1.1; } },
+  { id: 'hull', name: 'Lambung Tebal', rarity: 'biasa', desc: 'HP maksimum +20 dan langsung pulih 20.', apply: (U) => { U.hpBonus += 20; Player.health.maxHp += 20; Player.heal(20); } },
+  { id: 'nitro', name: 'Tangki Nitro', rarity: 'biasa', desc: 'Kapasitas nitro +25 persen.', apply: (U) => { U.nitroCap *= 1.25; } },
+  { id: 'magnet', name: 'Magnet Bintang', rarity: 'biasa', desc: 'Radius tarik pickup +40 persen.', apply: (U) => { U.magnet *= 1.4; } },
+  { id: 'ultRate', name: 'Pengisi Ultimate', rarity: 'biasa', desc: 'Meter ultimate terisi 20 persen lebih cepat.', apply: (U) => { U.ultRate *= 1.2; } },
+  { id: 'shield', name: 'Perisai Energi', rarity: 'langka', desc: 'Perisai 30 yang menyerap damage dan pulih setelah 4 detik.', apply: (U) => { U.shieldMax += 30; Player.shield = U.shieldMax; } },
+  { id: 'companion', name: 'Drone Pendamping', rarity: 'langka', desc: 'Drone kecil ikut terbang dan menembak musuh terdekat (maksimal 2).', max: 2, apply: (U) => { U.companions += 1; Companions.sync(); } },
+  { id: 'autoRepair', name: 'Perbaikan Otomatis', rarity: 'langka', desc: 'Kartu Piko: HP pulih pelan setelah 4 detik tanpa terkena.', max: 1, apply: (U) => { U.autoRepair = true; } },
+  { id: 'scanner', name: 'Pemindai', rarity: 'langka', desc: 'Kartu Piko: pickup langka ditandai di layar.', max: 1, apply: (U) => { U.scanner = true; } },
+  { id: 'damper', name: 'Peredam', rarity: 'langka', desc: 'Kartu Piko: damage tabrakan berkurang 40 persen.', max: 1, apply: (U) => { U.damper = true; } },
+  { id: 'life', name: 'Nyawa Tambahan', rarity: 'epik', desc: 'Tambah 1 nyawa.', apply: () => { Player.addLife(); } },
+  { id: 'overcore', name: 'Inti Overdrive', rarity: 'epik', desc: 'Damage +25 persen dan laju tembak +15 persen.', apply: (U) => { U.damage *= 1.25; U.fireRate *= 1.15; } },
+];
+const RARITY = { biasa: { weight: 0.68, label: 'BIASA' }, langka: { weight: 0.26, label: 'LANGKA' }, epik: { weight: 0.06, label: 'EPIK' } };
+
+const Levels = {
+  level: 1, xp: 0, pending: 0, picks: {}, offer: [],
+  el: document.getElementById('screen-levelup'), cards: document.getElementById('lv-cards'),
+  need(level) { return Math.round(CONFIG.xp.base * Math.pow(CONFIG.xp.growth, level - 1)); },
+  reset() { this.level = 1; this.xp = 0; this.pending = 0; this.picks = {}; this.offer = []; Game.xp = 0; },
+  add(n) {
+    if (!(n > 0)) return;
+    this.xp += n;
+    Game.xp = this.xp;
+    while (this.xp >= this.need(this.level + this.pending)) { this.xp -= this.need(this.level + this.pending); this.pending++; }
+    Game.xp = this.xp;
+  },
+  // Kartu yang masih boleh ditawarkan (yang punya batas tidak muncul lagi setelah penuh)
+  available() { return UPGRADE_CARDS.filter((c) => c.max ? (this.picks[c.id] || 0) < c.max : true); },
+  roll(rnd = rand) {
+    const pool = this.available(), out = [];
+    while (out.length < 3 ? pool.length > 0 : false) {
+      let r = rnd() * pool.reduce((s, c) => s + RARITY[c.rarity].weight, 0), pick = pool[0];
+      for (const c of pool) { r -= RARITY[c.rarity].weight; if (r <= 0) { pick = c; break; } }
+      out.push(pick);
+      pool.splice(pool.indexOf(pick), 1);
+    }
+    return out;
+  },
+  // Dipanggil tiap frame saat bermain: buka layar kartu bila ada level tertunda
+  update() {
+    if (this.pending <= 0 ? true : Game.state !== 'playing') return;
+    if (Warp.active ? true : !Player.alive) return;
+    // Bot uji (simulasi otomatis) memilih kartu pertama tanpa membuka layar
+    if (Debug.autoInput) { this.offer = this.roll(); this.applyCard(this.offer[0]); return; }
+    this.open();
+  },
+  open(forced) {
+    this.offer = forced ? forced.map((id) => UPGRADE_CARDS.find((c) => c.id === id)).filter(Boolean) : this.roll();
+    const btns = this.offer.map((c, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'lvcard r-' + c.rarity; b.dataset.card = c.id;
+      const tag = document.createElement('small'); tag.textContent = RARITY[c.rarity].label;
+      const h = document.createElement('b'); h.textContent = c.name;
+      const p = document.createElement('span'); p.textContent = c.desc;
+      const k = document.createElement('kbd'); k.textContent = String(i + 1);
+      b.append(tag, h, p, k);
+      b.addEventListener('click', () => this.choose(c.id));
+      return b;
+    });
+    this.cards.replaceChildren(...btns);
+    document.getElementById('lv-title').textContent = 'LEVEL ' + (this.level + 1);
+    setState('levelup');
+    Sfx.star('gold');
+    Events.emit('levelOffer', this.offer.map((c) => c.id));
+  },
+  choose(id) {
+    const c = this.offer.find((x) => x.id === id);
+    if (!c ? true : Game.state !== 'levelup') return false;
+    this.applyCard(c);
+    setState('playing');
+    showBanner(c.name.toUpperCase(), 1200);
+    return true;
+  },
+  applyCard(c) {
+    this.level++;
+    this.pending = Math.max(0, this.pending - 1);
+    this.picks[c.id] = (this.picks[c.id] || 0) + 1;
+    c.apply(Player.upgrades);
+    Events.emit('levelUp', this.level, c.id);
+  },
+};
+
+// Drone pendamping: bola kecil yang mengikuti kapal dan menembak musuh terdekat
+const Companions = {
+  list: [],
+  init() {
+    const mat = new THREE.MeshPhongMaterial({ color: 0xcfe6ff, emissive: 0x0a2440, shininess: 70, flatShading: true });
+    const eye = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.4, 1.6, 2.0) });
+    for (let i = 0; i < 2; i++) {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(loftGeometry([{ z: -0.9, w: 0.05, ht: 0.05, hb: 0.05 }, { z: -0.4, w: 0.5, ht: 0.4, hb: 0.4 }, { z: 0.5, w: 0.5, ht: 0.4, hb: 0.4 }, { z: 0.9, w: 0.2, ht: 0.2, hb: 0.2 }]), mat));
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.75, 0.07, 4, 16), eye);
+      g.add(ring);
+      g.visible = false;
+      g.scale.setScalar(0.7);
+      scene.add(g);
+      this.list.push({ group: g, active: false, cd: 0.5 + i * 0.3, side: i === 0 ? -1 : 1, pos: g.position });
+    }
+  },
+  sync() {
+    const n = Math.min(2, Player.upgrades.companions || 0);
+    this.list.forEach((c, i) => {
+      const was = c.active;
+      c.active = i < n;
+      c.group.visible = c.active ? Player.alive : false;
+      if (c.active ? !was : false) c.pos.copy(Player.pos);
+    });
+  },
+  reset() { for (const c of this.list) { c.active = false; c.group.visible = false; } },
+  update(dt) {
+    const P = Player.pos, f = Player.forward, up = Player._up, right = Player._right, C = CONFIG.companions;
+    for (const c of this.list) {
+      if (!c.active) continue;
+      c.group.visible = Player.alive;
+      // Posisi formasi di samping belakang kapal, berayun pelan
+      // Terikat ke kerangka kapal (tanpa lag yang membuatnya tertinggal di belakang kamera), berayun pelan
+      c.pos.copy(P).addScaledVector(right, c.side * C.offset).addScaledVector(up, 1.8 + Math.sin(Game.time * 2 + c.side) * 0.5).addScaledVector(f, 1.5 + Math.cos(Game.time * 1.3 + c.side) * 0.6);
+      c.group.quaternion.copy(Player.rig.quaternion);
+      c.cd -= dt;
+      if (c.cd > 0 ? true : !Player.alive) continue;
+      // Musuh terdekat di belahan depan dalam jangkauan
+      let best = null, bd = C.range * C.range;
+      for (const e of Enemies.list) {
+        if (!e.active) continue;
+        const d2 = e.pos.distanceToSquared(c.pos);
+        if (d2 > bd) continue;
+        if ((e.pos.x - P.x) * f.x + (e.pos.y - P.y) * f.y + (e.pos.z - P.z) * f.z < 0) continue;
+        bd = d2; best = e;
+      }
+      if (!best) { c.cd = 0.25; continue; }
+      _vb.subVectors(best.pos, c.pos).normalize();
+      const bi = Weapons.pool.spawn(c.pos.x, c.pos.y, c.pos.z, _vb.x, _vb.y, _vb.z, CONFIG.weapons.bulletSpeed, CONFIG.weapons.bulletLife, Weapons.damage() * C.damageFactor);
+      if (bi >= 0) { Weapons.pool.colorIdx[bi] = 0; Weapons.pool.sizes[bi] = 0.7; Weapons.pool.target[bi] = Enemies.list.indexOf(best); }
+      c.cd = C.fireInterval;
+      Events.emit('companionShot', c.pos);
+    }
+  },
+};
 
 const EarthWorld = {
   id: 'earth',
@@ -8198,7 +8381,7 @@ const Stars = {
     if (K.heal) Player.heal(K.heal);
     if (K.nitro) Player.addNitro(K.nitro);
     if (K.score) addScore(Math.round(K.score * Combo.multiplier));
-    if (K.xp) Game.xp += K.xp;
+    if (K.xp) Levels.add(K.xp);
     if (K.life) Player.addLife();
     Events.emit('starCollected', kind, this.px[i * 3], this.px[i * 3 + 1], this.px[i * 3 + 2]);
   },
@@ -8628,6 +8811,7 @@ Events.on('enemyDestroyed', (e) => {
   if (e.cfg.heavy ? true : e.radius >= 4.5) for (let i = 0; i < 4; i++) FX.explosion(e.pos.x + randRange(-1, 1) * e.radius, e.pos.y + randRange(-0.6, 0.6) * e.radius, e.pos.z + randRange(-1, 1) * e.radius, s * 0.6);
 });
 Events.on('asteroidDestroyed', (a) => FX.rockBurst(a.pos.x, a.pos.y, a.pos.z, a.radius));
+Events.on('cometDestroyed', (c, source) => { if (source === 'pemain') Levels.add(CONFIG.xp.comet); });
 Events.on('cometDestroyed', (c) => { FX.rockBurst(c.pos.x, c.pos.y, c.pos.z, c.radius); FX.sparks(c.pos.x, c.pos.y, c.pos.z, 30, 0.6, 0.9, 1); });
 Events.on('fatalCrash', (p) => {
   FX.explosion(p.x, p.y, p.z, 3.2);
@@ -8657,6 +8841,7 @@ Events.on('pickup', (type, pos) => {
 SpaceSky.init();
 DeepSky.init();
 Stars.init();
+Companions.init();
 Ultimate.init();
 // Dunia awal mengikuti pengaturan Medan default (angkasa bila belum pernah diubah)
 setActiveWorld(Save.settings.terrain, CONFIG.seed);
@@ -9298,6 +9483,12 @@ function updateHud(dt) {
   if (changed('wave', v)) hud.wave.textContent = v;
   v = Campaign.label();
   if (changed('stage', v)) $('stage-label').textContent = v;
+  v = Levels.level + Levels.pending;
+  if (changed('lv', v)) $('lv-num').textContent = v;
+  v = Math.round(Levels.xp / Levels.need(Levels.level + Levels.pending) * 50) / 50;
+  if (changed('xp', v)) $('xp-fill').style.transform = 'scaleX(' + v + ')';
+  v = Player.upgrades.shieldMax > 0 ? 'PERISAI ' + Math.round(Player.shield) : '';
+  if (changed('shieldTag', v)) $('shield-tag').textContent = v;
   v = Combo.multiplier;
   if (changed('mult', v)) { hud.mult.textContent = 'x' + v; hud.mult.className = v > 1 ? '' : 'off'; }
   v = Math.max(0, Math.round((Combo.timer / CONFIG.combo.window) * 50) / 50);
@@ -9563,6 +9754,7 @@ function setState(next) {
   ui.over.classList.toggle('hidden', next !== 'gameover');
   SolarMap.screen.classList.toggle('hidden', next !== 'map');
   FinalScreen.el.classList.toggle('hidden', next !== 'final');
+  Levels.el.classList.toggle('hidden', next !== 'levelup');
   document.getElementById('btn-map').classList.toggle('hidden', !(next === 'playing' ? Worlds.active === SpaceWorld : false));
   const hudOn = next === 'playing' || next === 'paused' || next === 'countdown' || next === 'starting';
   document.getElementById('hud').classList.toggle('hidden', !hudOn);
@@ -9600,7 +9792,7 @@ const UI = {
     this.openOverlay(ui.confirm);
     if (this.usingKeyboard) ui.confirmNo.focus();
   },
-  base() { return Game.state === 'menu' ? ui.title : Game.state === 'paused' ? ui.pause : Game.state === 'map' ? SolarMap.screen : Game.state === 'final' ? FinalScreen.el : null; },
+  base() { return Game.state === 'menu' ? ui.title : Game.state === 'paused' ? ui.pause : Game.state === 'map' ? SolarMap.screen : Game.state === 'final' ? FinalScreen.el : Game.state === 'levelup' ? Levels.el : null; },
   openOverlay(el) {
     if (this.overlay) this.overlay.classList.add('hidden');
     this.overlay = el;
@@ -9625,6 +9817,7 @@ const UI = {
     if (Game.state === 'paused') return ui.pause;
     if (Game.state === 'map') return SolarMap.screen;
     if (Game.state === 'final') return FinalScreen.el;
+    if (Game.state === 'levelup') return Levels.el;
     if (Game.state === 'gameover') return ui.over;
     return null;
   },
@@ -9688,7 +9881,10 @@ function resetSession(keepWorld = false) {
   Pickups.reset();
   Combo.reset();
   Buffs.reset();
-  Object.assign(Player.upgrades, { fireRate: 1, damage: 1, autoRepair: false, scanner: false, damper: false, magnet: 1, ultRate: 1 });
+  Object.assign(Player.upgrades, { fireRate: 1, damage: 1, autoRepair: false, scanner: false, damper: false, magnet: 1, ultRate: 1, hpBonus: 0, nitroCap: 1, shieldMax: 0, companions: 0 });
+  Player.shield = 0; Player.shieldWait = 0;
+  Levels.reset();
+  Companions.reset();
   Player.ult = 0;
   Game.xp = 0;
   Stars.reset();
@@ -10060,7 +10256,7 @@ Controls.addSource(Keyboard);
 // Tombol yang aksi bawaan browsernya harus dicegah (scroll, klik tombol yang sedang fokus)
 const PREVENT_CODES = new Set(['Tab', 'Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM',
-  'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC', 'KeyE', 'Tab',
+  'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC', 'KeyE', 'Tab', 'Digit1', 'Digit2', 'Digit3',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 // Navigasi menu dengan keyboard: panah atas dan bawah memilih, Enter menekan, Esc menutup overlay.
 // Mengembalikan true bila tombol sudah ditangani.
@@ -10119,6 +10315,8 @@ function onKeyDown(e) {
   onAudioGesture();
   // Cutscene: Enter atau Esc melewati, tombol lain diabaikan
   if (Game.state === 'cutscene') { if (code === 'Enter' || code === 'NumpadEnter' || code === 'Escape') Cutscene.skip(); return; }
+  // Kartu level: angka 1 sampai 3 memilih langsung
+  if (Game.state === 'levelup') { const k = { Digit1: 0, Digit2: 1, Digit3: 2 }[code]; if (k !== undefined) { if (Levels.offer[k]) Levels.choose(Levels.offer[k].id); return; } }
   if (menuKeyHandler(code)) return;
   switch (code) {
     case 'KeyP':
@@ -10514,6 +10712,10 @@ function update(dt) {
     Enemies.update(dt);
     Bosses.update(dt);
     if (Player.alive ? Bosses.active : false) Bosses.collide(Player.pos, Player.radius);
+    Companions.update(dt);
+    // Perisai energi pemain: pulih setelah jeda tanpa terkena
+    if (Player.upgrades.shieldMax > 0) { if (Player.shieldWait > 0) Player.shieldWait -= dt; else Player.shield = Math.min(Player.upgrades.shieldMax, Player.shield + CONFIG.player.shieldRegen * dt); }
+    Levels.update();
     updateCombat();
     Combo.update(dt);
     Buffs.update(dt);
@@ -10831,6 +11033,12 @@ window.__game = {
     dataPanel() { return { visible: !Discovery.el.classList.contains('hidden'), title: Discovery.title.textContent, facts: Discovery.list.children.length, isNew: !Discovery.tag.classList.contains('hidden') }; },
     // Arahkan kamera ke black hole (untuk screenshot)
     lookBlackHole() { const d = DeepSky.bhDir; Player.setHeading(Math.atan2(-d.x, -d.z)); Player.rotateLocal(_AX_X, Math.asin(d.y)); Player.basis(); Player.syncEuler(); Player.rig.quaternion.copy(Player.quat); CamRig.reset(); return true; },
+    addXp(n) { Levels.add(n); return { level: Levels.level, pending: Levels.pending, xp: Levels.xp }; },
+    levelUp() { Levels.add(Levels.need(Levels.level + Levels.pending) - Levels.xp); return Levels.pending; },
+    levelState() { return { level: Levels.level, xp: Levels.xp, need: Levels.need(Levels.level + Levels.pending), pending: Levels.pending, offer: Levels.offer.map((c) => c.id + ':' + c.rarity), state: Game.state, upgrades: { ...Player.upgrades }, shield: round2(Player.shield), maxHp: Player.health.maxHp, companions: Companions.list.filter((c) => c.active).length }; },
+    offerCards(ids) { Levels.open(ids); return Levels.offer.map((c) => c.id); },
+    pickCard(id) { return Levels.choose(id); },
+    companions() { return Companions.list.map((c) => ({ active: c.active, visible: c.group.visible, inScene: !!c.group.parent, d: round2(c.pos.distanceTo(Player.pos)) })); },
     startBoss(kind) { return Bosses.start(kind); },
     bossState() {
       const b = Bosses.active;

@@ -1302,7 +1302,12 @@ test('B12: pembuka stage kampanye diputar sekali per stage', async ({ page }) =>
 });
 
 // Pembantu bos: lewati cutscene yang sedang berjalan
-const skipCs = (page) => page.evaluate(() => window.__game.debug.skipCutscene());
+const skipCs = (page) => page.evaluate(() => {
+  const d = window.__game.debug;
+  d.skipCutscene();
+  const lv = d.levelState();                                          // XP bos bisa membuka layar kartu
+  if (lv.state === 'levelup') d.pickCard(lv.offer[0].split(':')[0]);
+});
 async function bossPhase(page, n) {
   await expect.poll(async () => { await skipCs(page); return (await dbg(page, 'bossState'))?.phase; }, { timeout: 6000 }).toBe(n);
 }
@@ -1378,4 +1383,51 @@ test('B13: medan Bumi memunculkan bos Penjaga Raksasa setiap 5 gelombang', async
   const b = await dbg(page, 'bossState');
   expect(b.kind).toBe('raksasa');
   await expect(page.locator('#boss-bar')).toBeVisible();
+});
+
+test('S11: XP menaikkan level, permainan dijeda dengan 3 kartu berkelangkaan, pilihan berlaku', async ({ page }) => {
+  await start(page, { world: 'space' });
+  const need = (await dbg(page, 'levelState')).need;
+  await dbg(page, 'addXp', need - 1);
+  expect((await snap(page)).state).toBe('playing');
+  await dbg(page, 'addXp', 1);
+  await expect.poll(async () => (await snap(page)).state).toBe('levelup');
+  await expect(page.locator('#screen-levelup')).toBeVisible();
+  await expect(page.locator('.lvcard')).toHaveCount(3);
+  const t0 = (await snap(page)).time;
+  await page.waitForTimeout(300);
+  expect((await snap(page)).time).toBe(t0);                          // dijeda saat memilih
+  for (const c of await page.locator('.lvcard').all()) expect(await c.getAttribute('class')).toMatch(/r-(biasa|langka|epik)/);
+  await page.screenshot({ path: `${SHOT_DIR}kartu-level.png` });
+  // Kartu tertentu: damage naik 12 persen, lewat tombol angka
+  await dbg(page, 'pickCard', (await dbg(page, 'levelState')).offer[0].split(':')[0]);
+  await dbg(page, 'offerCards', ['shield', 'damage', 'life']);
+  const before = await dbg(page, 'bulletDamage');
+  await page.keyboard.press('Digit2');
+  await expect.poll(async () => (await snap(page)).state).toBe('playing');
+  expect(await dbg(page, 'bulletDamage')).toBeCloseTo(before * 1.12, 1);
+  expect((await dbg(page, 'levelState')).level).toBe(3);
+});
+
+test('S11: perisai energi menyerap damage dan drone pendamping maksimal dua menembak musuh', async ({ page }) => {
+  await start(page, { world: 'space', god: false });
+  await page.evaluate(() => { const d = window.__game.debug; d.clearAsteroids(); d.setAsteroidDensity(0); });
+  await dbg(page, 'offerCards', ['shield']);
+  await dbg(page, 'pickCard', 'shield');
+  expect((await dbg(page, 'levelState')).shield).toBe(30);
+  await dbg(page, 'damageAs', 20, 'test');
+  let s = await dbg(page, 'levelState');
+  expect(s.shield).toBe(10);
+  expect((await snap(page)).health).toBe(100);                        // HP utuh, perisai yang menyerap
+  for (let i = 0; i < 2; i++) { await dbg(page, 'offerCards', ['companion']); await dbg(page, 'pickCard', 'companion'); }
+  s = await dbg(page, 'levelState');
+  expect(s.companions).toBe(2);
+  // Kartu drone tidak ditawarkan lagi setelah dua
+  for (let i = 0; i < 20; i++) { await dbg(page, 'levelUp'); await expect.poll(async () => (await snap(page)).state).toBe('levelup'); const offer = (await dbg(page, 'levelState')).offer; expect(offer.some((o) => o.startsWith('companion'))).toBe(false); await dbg(page, 'pickCard', offer[0].split(':')[0]); }
+  // Drone menembak musuh di depan
+  await page.evaluate(() => window.__game.debug.setGod(true));
+  await dbg(page, 'spawnEnemy', 'creature', 240, 0, 0);
+  const shots0 = (await snap(page)).shotsFired;
+  await expect.poll(async () => (await dbg(page, 'enemyInfo')).find((e) => e.type === 'creature')?.hp ?? 0, { timeout: 4000 }).toBeLessThan(90);
+  expect((await snap(page)).shotsFired).toBe(shots0);                 // yang menembak drone, bukan pemain
 });
