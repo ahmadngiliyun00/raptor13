@@ -194,6 +194,15 @@
   .buff[data-buff="overdrive"] { color: #ffc84a; border-color: rgba(255, 190, 60, 0.6); }
   .buff[data-buff="destroyer"] { color: #d58bff; border-color: rgba(200, 100, 255, 0.6); }
   body.mode-hp #buffs { top: calc(200px + env(safe-area-inset-top)); }
+  #piko-panel {
+    position: absolute; left: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px;
+    max-width: min(380px, 42vw); padding: 6px 12px 6px 6px; background: rgba(8, 14, 24, 0.72); border: 1px solid var(--ui-line); border-radius: 8px;
+  }
+  #piko-face { width: 40px; height: 40px; flex: none; }
+  #piko-text { margin: 0; font-size: 13px; line-height: 1.35; }
+  #piko-text b { color: var(--ui-accent); margin-right: 4px; }
+  body.mode-hp #piko-panel { left: 50%; transform: translateX(-50%); bottom: auto; top: calc(96px + env(safe-area-inset-top)); }
+  .ind.pickup { border-left-color: #5dff7a; }
   #lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #ffd24a; transform-origin: center; }
   #rear-warn { position: absolute; left: 50%; bottom: calc(56px + env(safe-area-inset-bottom)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #ffd0d0; border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.6s steps(2) infinite; }
@@ -444,6 +453,7 @@
   <div id="critical" class="hidden">INTEGRITAS KRITIS</div>
   <div id="reticle"><i id="hitmark"></i></div>
   <div id="lead" class="hidden"></div>
+  <div id="piko-panel" class="hidden"><canvas id="piko-face" width="56" height="56"></canvas><p id="piko-text"></p></div>
   <div id="buffs">
     <div class="buff hidden" data-buff="overdrive"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span>OVERDRIVE</span><b>10</b></div>
     <div class="buff hidden" data-buff="destroyer"><svg viewBox="0 0 24 24"><path d="M12 2l3 6 6 1-4.5 4.5L18 20l-6-3-6 3 1.5-6.5L3 9l6-1z"/></svg><span>PENGHANCUR</span><b>10</b></div>
@@ -629,6 +639,10 @@
       <span class="set-label">Bantuan bidik</span>
       <div class="seg" data-key="aimAssist">
         <button type="button" data-v="mati">Mati</button><button type="button" data-v="rendah">Rendah</button><button type="button" data-v="sedang">Sedang</button>
+      </div>
+      <span class="set-label">Bantuan robot</span>
+      <div class="seg" data-key="robotHelp">
+        <button type="button" data-v="penuh">Penuh</button><button type="button" data-v="tanpa-teks">Tanpa teks</button><button type="button" data-v="tanpa-suara">Tanpa suara</button><button type="button" data-v="mati">Mati</button>
       </div>
       <span class="set-label">Mode kontrol</span>
       <div class="seg" data-key="controlMode">
@@ -826,8 +840,8 @@ const CONFIG = {
     // Kecepatan relatif pemain: jelajah = fraksi kecepatan dasar pemain, maksimum = fraksi kecepatan nitro
     cruiseFactor: { drone: 0.75, gunship: 0.82 },
     maxSpeedFactor: 0.8,       // tidak ada musuh (selain rudal) yang lebih cepat dari 80 persen nitro pemain
-    maxTailTime: 1.5,          // detik maksimum penembak menempel di kerucut belakang pemain sebelum dipaksa menjauh
-    droneMaxTailTime: 1.0,     // drone yang menempel lebih lama dipindah lagi ke depan
+    maxTailTime: 1.2,          // detik maksimum penembak menempel di kerucut belakang pemain sebelum dipaksa menjauh
+    droneMaxTailTime: 0.6,     // drone yang menempel lebih lama dipindah lagi ke depan
     tailDistance: 220,         // kerucut belakang: dalam jarak ini dan sekitar 45 derajat tepat di belakang
     separation: 30,            // jarak pisah minimum antar musuh
     playerSeparation: 40,      // penembak menjaga jarak dari pemain
@@ -906,7 +920,8 @@ const CONFIG = {
   // Ambang keseimbangan tempur yang diperiksa uji bot (dicatat di README)
   balance: {
     maxTailRatio: 0.25,        // fraksi waktu ada musuh menempel di belakang pemain
-    maxCollisionsPerMin: 4,    // tabrakan badan musuh dengan pemain per menit
+    maxCollisionsPerMin: 2,    // tabrakan musuh non-kamikaze dengan pemain per menit (tidak diinginkan)
+    maxRamsPerMin: 6,          // serudukan drone kamikaze per menit (memang dirancang menabrak)
   },
   // Klasifikasi tabrakan: fatal (langsung game over) atau ringan (hanya damage)
   collision: {
@@ -996,6 +1011,7 @@ const SETTING_DEFAULTS = {
   showFps: false,
   autoFire: false,             // tembak otomatis di mode HP
   bloom: true,                 // efek bloom di medan angkasa (dimatikan oleh kualitas Rendah)
+  robotHelp: 'penuh',          // bantuan robot Piko: penuh | tanpa-teks | tanpa-suara | mati
   touchPromptShown: false,
 };
 const SETTING_ENUMS = {
@@ -1004,6 +1020,7 @@ const SETTING_ENUMS = {
   controlMode: ['keyboard', 'hp'],
   terrain: ['space', 'earth'],
   aimAssist: ['mati', 'rendah', 'sedang'],
+  robotHelp: ['penuh', 'tanpa-teks', 'tanpa-suara', 'mati'],
 };
 const SETTING_RANGES = { asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100] };
 
@@ -1161,7 +1178,11 @@ class Health {
 // (HP musuh dan asteroid sudah dikalikan saat spawn). Posisi dipakai untuk angka damage dan percikan.
 const _dmgPos = new THREE.Vector3();
 function applyDamage(entity, amount, source, x, y, z) {
-  const amt = entity === Player ? amount * Game.diff.damageTaken : amount;
+  let amt = entity === Player ? amount * Game.diff.damageTaken : amount;
+  // Peredam (kartu Piko): damage tabrakan ke pemain dikurangi
+  if (entity === Player ? Player.upgrades.damper : false) {
+    if (source === 'asteroid' || source === 'tabrakan' || (typeof source === 'string' ? source.startsWith('Menabrak') : false)) amt *= 0.6;
+  }
   const dealt = entity.health.takeDamage(amt, source);
   if (dealt > 0) {
     _dmgPos.set(x, y, z);
@@ -1751,6 +1772,68 @@ function starfighterTextures(accent) {
   return T;
 }
 
+/* =====================================================================
+   PIKO - robot pendamping orisinal: kapsul pipih melayang dengan satu visor mata
+   emissive, dua sirip kecil dan thruster mini. Dibangun dengan loft, bukan balok.
+   ===================================================================== */
+const PIKO_MOODS = {
+  calm: 0x3ff0ff,    // tenang
+  alert: 0xffd23a,   // waspada
+  danger: 0xff3a3a,  // bahaya
+  happy: 0x5dff7a,   // senang
+};
+const PikoEyeMat = new THREE.MeshBasicMaterial({ color: PIKO_MOODS.calm });
+const PikoInstances = [];
+function buildPiko() {
+  const root = new THREE.Group();
+  const head = new THREE.Group();   // bagian yang menoleh
+  root.add(head);
+  const matShell = new THREE.MeshStandardMaterial({ color: 0xb9c1cb, metalness: 0.3, roughness: 0.55, envMap: JetTextures.env || null, envMapIntensity: 0.5 });
+  const matVisor = new THREE.MeshStandardMaterial({ color: 0x14181e, metalness: 0.7, roughness: 0.2 });
+  const matDark = new THREE.MeshStandardMaterial({ color: 0x23272e, metalness: 0.5, roughness: 0.5 });
+  const add = (geo, mat, parent = head) => { const m = new THREE.Mesh(geo, mat); parent.add(m); return m; };
+  // Kapsul pipih (loft superellipse) panjang 0,9
+  // Wajah depan tumpul dan lebar agar visor menempel di permukaannya
+  add(loftFuselage([
+    { z: -0.44, w: 0.17, ht: 0.09, hb: 0.07, n: 3.2 }, { z: -0.4, w: 0.26, ht: 0.14, hb: 0.11, n: 3.2 },
+    { z: -0.2, w: 0.3, ht: 0.17, hb: 0.13, n: 3.2 }, { z: 0.1, w: 0.31, ht: 0.17, hb: 0.13, n: 3.2 },
+    { z: 0.32, w: 0.24, ht: 0.13, hb: 0.11, n: 3 }, { z: 0.44, w: 0.1, ht: 0.06, hb: 0.06, n: 2.6 },
+  ], 16), matShell);
+  // Visor gelap di wajah depan, dengan mata emissive di dalamnya
+  const face = capsuleGeometry(0.075, 0.2, 12);
+  face.rotateY(Math.PI / 2);
+  const faceM = add(face, matVisor);
+  faceM.position.set(0, 0.02, -0.43);
+  faceM.scale.set(1, 1, 0.55);
+  const visor = capsuleGeometry(0.04, 0.13, 10);
+  visor.rotateY(Math.PI / 2);
+  const eye = add(visor, PikoEyeMat);
+  eye.position.set(0, 0.02, -0.468);
+  eye.scale.set(1, 1.3, 0.5);
+  // Dua sirip kecil di samping (permukaan airfoil tipis)
+  const fin = liftingSurface({ rootX: 0, rootLE: -0.05, rootTE: 0.2, tipXLE: 0.22, tipLE: 0.12, tipXTE: 0.2, tipTE: 0.26, thickRoot: 0.025, thickTip: 0.012, ns: 2, nc: 4 });
+  add(fin, matDark).position.set(0.28, 0, 0.05);
+  add(mirrorX(fin), matDark).position.set(-0.28, 0, 0.05);
+  // Thruster mini
+  const thr = add(new THREE.CircleGeometry(0.07, 12), new THREE.MeshBasicMaterial({ color: 0x7fe8ff }));
+  thr.position.set(0, 0, 0.445);
+  const inst = { root, head, eye, t: Math.random() * 10, blink: 0 };
+  PikoInstances.push(inst);
+  return { root, flames: [], light: { intensity: 0 }, matGlow: new THREE.MeshBasicMaterial(), matFlame: { opacity: 0 }, wingtips: [], piko: inst };
+}
+// Animasi semua Piko: kedip, menoleh pelan, melayang naik turun bila tidak duduk di soket
+function updatePikos(dt) {
+  for (const p of PikoInstances) {
+    p.t += dt;
+    p.blink -= dt;
+    if (p.blink < -3 - (p.t % 2)) p.blink = 0.12;
+    p.eye.scale.y = p.blink > 0 ? 0.25 : 1.4;
+    p.head.rotation.y = Math.sin(p.t * 0.6) * 0.35;
+    p.head.rotation.x = Math.sin(p.t * 0.43) * 0.08;
+    if (p.floating) p.root.position.y = p.baseY + Math.sin(p.t * 1.7) * 0.15;
+  }
+}
+
 const STARFIGHTER_BASE = {
   length: 8.2, width: 0.62, height: 0.5,
   wing: { span: 3.4, rootChord: 2.5, tipChord: 0.95, sweep: 1.2, rootZ: 0.6 },
@@ -1947,7 +2030,12 @@ PlayerRig.rotation.order = 'YXZ';
 scene.add(PlayerRig);
 const ShipModels = {};      // cache model per id kapal: dibuat sekali, dipakai ulang
 function getShipModel(id) {
-  if (!ShipModels[id]) ShipModels[id] = SHIPS[id].build(SHIPS[id].params);
+  if (!ShipModels[id]) {
+    const m = SHIPS[id].build(SHIPS[id].params);
+    // Piko duduk di soket belakang kokpit (kapal yang punya soket)
+    if (m.pikoMount) { const pk = buildPiko(); pk.root.scale.setScalar(0.7); m.pikoMount.add(pk.root); }
+    ShipModels[id] = m;
+  }
   return ShipModels[id];
 }
 const PlayerModel = getShipModel('raptor-j');
@@ -1993,7 +2081,8 @@ const Player = {
   _up: new THREE.Vector3(0, 1, 0),
   _right: new THREE.Vector3(1, 0, 0),
   autoLevel: true,
-  upgrades: { fireRate: 1, damage: 1 },   // pengali permanen dari kartu upgrade (S11)
+  upgrades: { fireRate: 1, damage: 1, autoRepair: false, scanner: false, damper: false },   // dari kartu upgrade (S11)
+  sinceHit: 0,
   maneuver: null,                     // { type, t, dur, dir, applied }
   cooldowns: { roll: 0, immelmann: 0, loop: 0 },
   get rolling() { return this.maneuver ? this.maneuver.type === 'roll' : false; },
@@ -2209,6 +2298,7 @@ const Player = {
   isInvulnerable() { return !this.alive || Debug.god || Game.state !== 'playing' || this.spawnInvuln > 0 || this.hitInvuln > 0; },
   onDamaged(amount, source) {
     this.hitInvuln = CONFIG.player.hitInvuln;
+    this.sinceHit = 0;
     CamRig.addTrauma(clamp(amount / 30, 0.3, 0.9));
     Events.emit('playerHit', amount, source);
   },
@@ -2285,6 +2375,9 @@ const Player = {
   // Kedip selama kebal setelah mulai atau respawn
   updateInvuln(dt) {
     if (this.hitInvuln > 0) this.hitInvuln = Math.max(0, this.hitInvuln - dt);
+    // Perbaikan Otomatis (kartu Piko): HP pulih pelan setelah 4 detik tanpa terkena
+    this.sinceHit += dt;
+    if (this.upgrades.autoRepair ? this.sinceHit > 4 : false) this.heal(3 * dt);
     if (this.spawnInvuln > 0) {
       this.spawnInvuln = Math.max(0, this.spawnInvuln - dt);
       this.rig.visible = this.spawnInvuln <= 0 || Math.floor(this.spawnInvuln * 12) % 2 === 0;
@@ -3431,14 +3524,14 @@ Enemies.init();
 
 /* Metrik keseimbangan tempur untuk uji bot: waktu ada musuh menempel di belakang dan tabrakan */
 const Metrics = {
-  time: 0, tailTime: 0, collisions: 0,
+  time: 0, tailTime: 0, collisions: 0, rams: 0,
   tailByType: { drone: 0, gunship: 0 },
   seen: {},   // state AI penembak yang pernah dimasuki
-  reset() { this.time = 0; this.tailTime = 0; this.collisions = 0; this.tailByType.drone = 0; this.tailByType.gunship = 0; this.seen = {}; },
+  reset() { this.time = 0; this.tailTime = 0; this.collisions = 0; this.rams = 0; this.tailByType.drone = 0; this.tailByType.gunship = 0; this.seen = {}; },
   track(dt, tailing) { this.time += dt; if (tailing) this.tailTime += dt; },
   summary() {
     const min = Math.max(this.time / 60, 1e-6);
-    return { time: round2(this.time), tailRatio: round2(this.tailTime / Math.max(this.time, 1e-6)), collisionsPerMin: round2(this.collisions / min),
+    return { time: round2(this.time), tailRatio: round2(this.tailTime / Math.max(this.time, 1e-6)), collisionsPerMin: round2(this.collisions / min), ramsPerMin: round2(this.rams / min),
       tailByType: { drone: round2(this.tailByType.drone), gunship: round2(this.tailByType.gunship) }, states: Object.keys(this.seen) };
   },
 };
@@ -3778,7 +3871,7 @@ function updateCombat() {
     if (!e.active) continue;
     const r = e.radius + pr;
     if (e.pos.distanceToSquared(P) < r * r) {
-      Metrics.collisions++;
+      if (e.type === 'drone') Metrics.rams++; else Metrics.collisions++;
       Enemies.destroy(e, false);
       Player.damage(e.cfg.contactDamage, 'tabrakan');
     }
@@ -4425,6 +4518,7 @@ const Pickups = {
     const it = findFree(this.items, type);
     if (!it) return null;
     it.active = true; it.group.visible = true; it.baseY = y; it.t = 0;
+    Events.emit('pickupSpawned', type);
     it.group.position.set(x, y, z);
     return it;
   },
@@ -5126,6 +5220,15 @@ const Sfx = {
     this.tone('sine', 58, 40, 0.38, 0.28);
   },
 
+  // Bip dan siulan Piko, pola berbeda per ekspresi (tanpa suara manusia)
+  pikoBeep(mood) {
+    if (!this.ready) return;
+    if (mood === 'calm') { this.tone('sine', 880, 1040, 0.08, 0.05); this.tone('sine', 1040, 1240, 0.08, 0.05, 0.1); }
+    else if (mood === 'alert') { for (let i = 0; i < 3; i++) this.tone('triangle', 1320, 1320, 0.05, 0.05, i * 0.08); }
+    else if (mood === 'danger') { this.tone('square', 520, 520, 0.08, 0.035); this.tone('square', 980, 980, 0.08, 0.035, 0.11); this.tone('square', 520, 520, 0.08, 0.035, 0.22); }
+    else { this.tone('sine', 600, 1500, 0.22, 0.05); this.tone('sine', 1500, 1900, 0.08, 0.04, 0.24); }
+  },
+
   // Uji sanity: semua gain dan frekuensi berhingga, gain master di bawah 1
   check() {
     if (!this.ready) return { ready: false };
@@ -5582,6 +5685,25 @@ function updateIndicators() {
     el.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) rotate(${ang.toFixed(3)}rad)`;
     n++;
   }
+  // Pemindai (kartu Piko): pickup langka ditandai panah hijau
+  if (Player.upgrades.scanner) {
+    for (let k = 0; k < Pickups.items.length; k++) {
+      if (n >= hud.indicators.length) break;
+      const it = Pickups.items[k];
+      if (!it.active || it.type === 'repair' || it.type === 'nitro') continue;
+      _vc.copy(it.group.position).project(camera);
+      let x = _vc.x, y = _vc.y;
+      const behind = _vc.z > 1;
+      if (behind ? false : Math.max(Math.abs(x), Math.abs(y)) <= 1) continue;
+      if (behind) { x = -x; y = -y; }
+      const sc = 1 / Math.max(Math.abs(x), Math.abs(y), 1e-3);
+      x *= sc; y *= sc;
+      const el = hud.indicators[n];
+      if (hud.indicatorType[n] !== 'pickup') { hud.indicatorType[n] = 'pickup'; el.className = 'ind pickup'; el.style.display = 'block'; }
+      el.style.transform = `translate(${clamp((x * 0.5 + 0.5) * w, margin, w - margin).toFixed(1)}px, ${clamp((0.5 - y * 0.5) * h, margin, h - margin).toFixed(1)}px) rotate(${Math.atan2(-y, x).toFixed(3)}rad)`;
+      n++;
+    }
+  }
   for (let k = n; k < hud.indicators.length; k++) {
     if (hud.indicatorType[k] !== '') { hud.indicatorType[k] = ''; hud.indicators[k].style.display = 'none'; }
   }
@@ -5772,7 +5894,8 @@ function resetSession(keepWorld = false) {
   Pickups.reset();
   Combo.reset();
   Buffs.reset();
-  Player.upgrades.fireRate = 1; Player.upgrades.damage = 1;
+  Object.assign(Player.upgrades, { fireRate: 1, damage: 1, autoRepair: false, scanner: false, damper: false });
+  Piko.reset();
   Metrics.reset();
   hud.vignetteLevel = 0;
   Game.hasSession = true;
@@ -5971,6 +6094,76 @@ Events.on('gameover', () => {
   st.asteroidsDestroyed += Asteroids.destroyedCount;
   Save.save();
 });
+
+/* Piko: peringatan bersubtitle dan bunyi bip, dengan jeda minimum, cooldown per pesan dan prioritas */
+const PIKO_LINES = {
+  enemyBehind: { text: 'Ada musuh di belakang kita! Coba Balik Arah dengan X.', mood: 'alert', prio: 3 },
+  hpLow: { text: 'Integritas kritis! Cari bintang perbaikan, cepat.', mood: 'danger', prio: 4 },
+  waveStart: { text: 'Gelombang baru datang. Siap, Raptor 13?', mood: 'calm', prio: 1 },
+  combo: { text: 'Mantap! Kombo terus naik, jangan berhenti!', mood: 'happy', prio: 1 },
+  rarePickup: { text: 'Sinyal langka terdeteksi di dekat kita. Kuberi tanda hijau.', mood: 'happy', prio: 2 },
+  comet: { text: 'Komet mendekat! Menyingkir atau hancurkan.', mood: 'alert', prio: 3 },
+  mine: { text: 'Ranjau di dekat sini. Jangan terlalu rapat.', mood: 'danger', prio: 3 },
+  gate: { text: 'Gerbang loncat terbuka. Ayo kita pergi!', mood: 'happy', prio: 2 },
+  terrain: { text: 'Terlalu dekat dengan permukaan! Tarik naik!', mood: 'danger', prio: 4 },
+};
+const Piko = {
+  panel: document.getElementById('piko-panel'), face: document.getElementById('piko-face'), textEl: document.getElementById('piko-text'),
+  minGap: 6, cooldown: 25, showTime: 3.6,
+  last: -100, lastByKey: {}, curPrio: 0, showLeft: 0, mood: 'calm', moodLeft: 0, clock: 0, said: [],
+  get help() { return Save.settings.robotHelp; },
+  reset() { this.last = -100; this.lastByKey = {}; this.curPrio = 0; this.showLeft = 0; this.setMood('calm', 0); this.panel.classList.add('hidden'); this.said.length = 0; },
+  setMood(m, dur = 2.5) {
+    this.mood = m; this.moodLeft = dur;
+    PikoEyeMat.color.setHex(PIKO_MOODS[m]);
+    this.drawFace();
+  },
+  // Potret mata Piko di canvas 2D
+  drawFace() {
+    const g = this.face.getContext('2d'), c = '#' + PIKO_MOODS[this.mood].toString(16).padStart(6, '0');
+    g.clearRect(0, 0, 56, 56);
+    g.fillStyle = '#d8dde4'; g.beginPath(); g.ellipse(28, 30, 26, 18, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#1b1f26'; g.beginPath(); g.ellipse(28, 28, 19, 9, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = c; g.shadowColor = c; g.shadowBlur = 8;
+    g.beginPath(); g.ellipse(28, 28, 14, this.mood === 'happy' ? 3 : 5, 0, 0, Math.PI * 2); g.fill();
+    g.shadowBlur = 0;
+  },
+  // Ucapan: dibatasi jeda minimum dan cooldown per pesan; prioritas lebih tinggi boleh menyela
+  say(key) {
+    const L = PIKO_LINES[key];
+    if (!L || this.help === 'mati' || Game.state !== 'playing') return false;
+    const t = this.clock;
+    if (t - (this.lastByKey[key] || -100) < this.cooldown) return false;
+    if (t - this.last < this.minGap ? L.prio <= this.curPrio : false) return false;
+    this.last = t; this.lastByKey[key] = t; this.curPrio = L.prio;
+    this.said.push(key);
+    this.setMood(L.mood, this.showTime);
+    if (this.help !== 'tanpa-teks') {
+      this.textEl.innerHTML = '';
+      const b = document.createElement('b'); b.textContent = 'PIKO';
+      this.textEl.append(b, document.createTextNode(L.text));
+      this.panel.classList.remove('hidden');
+      this.showLeft = this.showTime;
+    }
+    if (this.help !== 'tanpa-suara') Sfx.pikoBeep(L.mood);
+    return true;
+  },
+  update(dt) {
+    this.clock += dt;
+    if (this.showLeft > 0) { this.showLeft -= dt; if (this.showLeft <= 0) { this.panel.classList.add('hidden'); this.curPrio = 0; } }
+    if (this.moodLeft > 0) { this.moodLeft -= dt; if (this.moodLeft <= 0) this.setMood('calm', 0); }
+    if (Game.state !== 'playing' || !Player.alive) return;
+    // Pemicu berbasis keadaan
+    this.behindT = Enemies.rearThreat ? (this.behindT || 0) + dt : 0;
+    if (this.behindT > 1.0) this.say('enemyBehind');
+    if (Player.health.ratio < CONFIG.player.criticalHp) this.say('hpLow');
+    if (Player.warning === 'TARIK NAIK!') this.say('terrain');
+  },
+};
+Piko.drawFace();
+Events.on('waveStart', () => Piko.say('waveStart'));
+Events.on('enemyDestroyed', () => { if (Combo.count >= 4) Piko.say('combo'); });
+Events.on('pickupSpawned', (type) => { if (type === 'heart' || type === 'overdrive' || type === 'destroyer') Piko.say('rarePickup'); });
 
 /* =====================================================================
    INPUT - satu state abstrak (naik, turun, kiri, kanan, tembak, nitro) yang
@@ -6284,6 +6477,12 @@ const Hangar = {
     this.camera.lookAt(0, -0.5, 0);
     this.holder = new THREE.Group();
     this.scene.add(this.holder);
+    // Piko melayang di samping kapal di hangar
+    const pk = buildPiko();
+    pk.root.scale.setScalar(1.6);
+    pk.root.position.set(4.2, 0.8, 2.5);
+    pk.piko.floating = true; pk.piko.baseY = 0.8;
+    this.scene.add(pk.root);
     // Seret untuk memutar
     this.canvas.addEventListener('pointerdown', (e) => { this.dragX = e.clientX; try { this.canvas.setPointerCapture(e.pointerId); } catch (err) { /* abaikan */ } });
     this.canvas.addEventListener('pointermove', (e) => { if (this.dragX !== null) { this.angle += (e.clientX - this.dragX) * 0.012; this.dragX = e.clientX; } });
@@ -6446,6 +6645,7 @@ function update(dt) {
     updateCombat();
     Combo.update(dt);
     Buffs.update(dt);
+    Piko.update(dt);
     if (Player.alive) Game.score += CONFIG.score.perSecond * dt;
     else if (Player.lives > 0) {
       Player.respawnTimer -= dt;
@@ -6470,6 +6670,7 @@ function update(dt) {
   } else if (Game.state === 'menu') {
     if (!Game.hasSession) { Game.attractTime += dt; Player.autopilot(dt, Game.attractTime); }
   }
+  updatePikos(dt);
   if (Game.simulating) {
     Player.updateVisuals(dt, Game.stateTime);
     FX.update(dt);
@@ -6674,6 +6875,11 @@ window.__game = {
     audioCheck() { return Sfx.check(); },
     hangarList() { return Hangar.list.map((d) => d.id); },
     addCredits(n) { Save.data.ships.credits += n; Save.save(); return Save.data.ships.credits; },
+    // Damage langsung dengan sumber tertentu (melewati masa kebal) untuk uji efek kartu
+    damageAs(n, source) { Player.spawnInvuln = 0; Player.hitInvuln = 0; return Player.damage(n, source); },
+    grantUpgrade(name) { if (name in Player.upgrades) { Player.upgrades[name] = typeof Player.upgrades[name] === 'boolean' ? true : Player.upgrades[name] * 1.2; } return { ...Player.upgrades }; },
+    pikoSay(key) { return Piko.say(key); },
+    piko() { return { mood: Piko.mood, said: [...Piko.said], panel: !Piko.panel.classList.contains('hidden'), text: Piko.textEl.textContent }; },
     forceManeuver(type, dir = 1) { return Player.startManeuver(type, dir, true); },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
     shootPlayer(dist = 60) {
@@ -6765,6 +6971,7 @@ const JetPreview = {
     rim.position.set(-8, 4, -10);
     this.jet = PREVIEW_ID === 'piko' ? buildPiko() : SHIPS[PREVIEW_ID] ? SHIPS[PREVIEW_ID].build(SHIPS[PREVIEW_ID].params) : createPlayerJet();
     this.anim = { nitro: 0, brake: 0, turn: 0 };
+    if (PREVIEW_ID === 'piko') this.jet.root.scale.setScalar(8);   // robot kecil diperbesar agar bisa diperiksa
     this.group.add(hemi, key, rim, this.jet.root);
     scene.add(this.group);
     camera.fov = 35;

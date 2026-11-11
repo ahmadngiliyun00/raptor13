@@ -328,6 +328,7 @@ for (const world of ['earth', 'space']) {
     expect(r.m.time).toBeGreaterThan(110);
     expect(r.m.tailRatio).toBeLessThan(cfg.maxTailRatio);
     expect(r.m.collisionsPerMin).toBeLessThan(cfg.maxCollisionsPerMin);
+    expect(r.m.ramsPerMin).toBeLessThan(cfg.maxRamsPerMin);
     expect(r.maxSpeed).toBeLessThanOrEqual(r.limit + 0.01);
     for (const st of ['approach', 'attack', 'break', 'reposition']) expect(r.m.states).toContain(st);   // siklus serang terlihat
   });
@@ -842,3 +843,46 @@ for (const id of ['starfighter', 'interceptor', 'gunship']) {
     }
   });
 }
+
+test('A4: Piko berbicara dengan batas frekuensi, opsi Bantuan robot dihormati', async ({ page }) => {
+  await start(page, { world: 'space' });
+  await page.waitForTimeout(400);
+  expect(await dbg(page, 'pikoSay', 'combo')).toBe(true);
+  expect(await dbg(page, 'pikoSay', 'rarePickup')).toBe(true);      // prioritas lebih tinggi boleh menyela
+  expect(await dbg(page, 'pikoSay', 'waveStart')).toBe(false);      // prioritas rendah dalam jeda minimum ditolak
+  expect(await dbg(page, 'pikoSay', 'combo')).toBe(false);          // cooldown per pesan
+  const p = await dbg(page, 'piko');
+  expect(p.panel).toBe(true);
+  expect(p.text).toContain('PIKO');
+  await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('raptor13.v3')); s.settings.robotHelp = 'mati'; localStorage.setItem('raptor13.v3', JSON.stringify(s)); });
+  await page.reload();
+  await start(page, { world: 'space' });
+  expect(await dbg(page, 'pikoSay', 'hpLow')).toBe(false);          // bantuan robot dimatikan
+});
+
+test('A4: kartu Piko Perbaikan Otomatis dan Peredam bekerja', async ({ page }) => {
+  await start(page, { god: false, world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.clearAsteroids(); d.setAsteroidDensity(0); });
+  await page.waitForTimeout(1700);
+  await dbg(page, 'grantUpgrade', 'autoRepair');
+  await dbg(page, 'forceDamagePlayer', 30);
+  expect((await snap(page)).health).toBe(70);
+  await page.waitForTimeout(6000);
+  expect((await snap(page)).health).toBeGreaterThan(73);            // pulih pelan setelah 4 detik
+  await dbg(page, 'grantUpgrade', 'damper');
+  const h0 = (await snap(page)).health;
+  await page.evaluate(() => { window.__game.debug.forceDamagePlayer(0); });
+  await page.evaluate(() => window.__game.debug.damageAs(20, 'asteroid'));
+  expect((await snap(page)).health).toBeCloseTo(h0 - 12, 0);        // 20 dikali 0,6
+});
+
+test('A4: pratinjau Piko dari 3 sudut', async ({ page }) => {
+  await page.setViewportSize({ width: 960, height: 600 });
+  await page.goto('/index.html?shippreview=piko');
+  await page.waitForFunction(() => window.__shipPreview);
+  for (const view of ['front', 'three_quarter_front', 'side']) {
+    await page.evaluate((v) => window.__shipPreview.setView(v), view);
+    await page.waitForTimeout(120);
+    await page.screenshot({ path: `${SHOT_DIR}piko-${view.replace(/_/g, '-')}.png` });
+  }
+});
