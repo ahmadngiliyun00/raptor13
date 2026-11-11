@@ -1182,3 +1182,76 @@ test('B11: Jelajah Bebas, peta Tab menampilkan orbit dan warp sinematik ke area 
   await expect(page.locator('#screen-map')).toBeHidden();
   expect((await snap(page)).state).toBe('playing');
 });
+
+test('S9 dan A5: galeri ?gallery=1 menampilkan semua jenis musuh dengan anggaran segitiga wajar', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto('/index.html?gallery=1');
+  await page.waitForFunction(() => window.__gallery);
+  const g = await page.evaluate(() => ({ types: window.__gallery.types, tris: window.__gallery.triangles }));
+  // 8 jenis ancaman ditambah 6 kapal Sindikat Vanta (beberapa berbagi peran), plus ranjau dan rudal
+  for (const t of ['drone', 'gunship', 'scout', 'hunter', 'guardian', 'stalker', 'commander', 'sniper', 'minelayer', 'shieldship', 'creature', 'carrier', 'station', 'mine', 'missile']) expect(g.types).toContain(t);
+  for (const [t, n] of Object.entries(g.tris)) expect(n, t).toBeLessThan(2500);
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: `${SHOT_DIR}galeri-musuh.png` });
+});
+
+test('S9 dan A5: perilaku khusus roster (perisai, pengawal, penyamaran, garis bidik, ranjau, kapal induk)', async ({ page }) => {
+  test.setTimeout(60000);
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.clearAsteroids(); d.setAsteroidDensity(0); });
+  // Komandan datang dengan perisai dan dua pengawal; perisai menyerap damage lebih dulu
+  expect(await dbg(page, 'spawnGroup', 'commander', 1)).toBe(1);
+  let info = await dbg(page, 'enemyInfo');
+  expect(info.filter((e) => e.leader === 'commander').length).toBe(2);
+  const before = info.find((e) => e.type === 'commander');
+  const hit = await dbg(page, 'damageEnemy', 'commander', 50);
+  expect(hit.dealt).toBe(0);
+  expect(hit.hp).toBe(before.hp);
+  expect(hit.shield).toBeLessThan(before.shield);
+  // Penyergap muncul tersamar
+  await dbg(page, 'spawnEnemy', 'stalker');
+  info = await dbg(page, 'enemyInfo');
+  expect(info.find((e) => e.type === 'stalker').cloak).toBeLessThan(0.3);
+  // Penembak Jitu: garis bidik tampil sebelum peluru pertama
+  await dbg(page, 'startWave', 1);                                   // bersihkan musuh lain
+  await dbg(page, 'spawnEnemy', 'sniper', 320, 0, 20);
+  await expect.poll(async () => (await dbg(page, 'enemyInfo')).some((e) => e.aim), { timeout: 8000 }).toBe(true);
+  // Penabur Ranjau menjatuhkan ranjau; Kapal Induk meluncurkan drone
+  await dbg(page, 'spawnEnemy', 'minelayer', 250, 0.3);
+  await dbg(page, 'spawnEnemy', 'carrier', 420, -0.5);
+  await expect.poll(async () => (await dbg(page, 'enemyInfo')).some((e) => e.type === 'mine'), { timeout: 8000 }).toBe(true);
+  await expect.poll(async () => (await dbg(page, 'enemyInfo')).some((e) => e.owner === 'carrier'), { timeout: 12000 }).toBe(true);
+});
+
+test('S9 dan A5: rudal Pemburu bisa ditembak jatuh, ranjau meledak bila didekati', async ({ page }) => {
+  await start(page, { world: 'space', god: false });
+  await page.evaluate(() => { const d = window.__game.debug; d.clearAsteroids(); d.setAsteroidDensity(0); });
+  await page.waitForTimeout(2600);   // lewati kebal awal
+  // Rudal di depan: tahan Enter, rudal hancur sebelum mengenai
+  await dbg(page, 'spawnEnemy', 'missile', 160, 0, 0);
+  await page.keyboard.down('Enter');
+  await expect.poll(async () => (await dbg(page, 'enemyInfo')).some((e) => e.type === 'missile'), { timeout: 4000 }).toBe(false);
+  await page.keyboard.up('Enter');
+  expect((await snap(page)).health).toBe(100);
+  // Ranjau tepat di jalur: menyala lalu meledak dan memberi damage
+  await dbg(page, 'spawnEnemy', 'mine', 50, 0, 0);
+  await expect.poll(async () => (await snap(page)).health, { timeout: 5000 }).toBeLessThan(100);
+});
+
+test('S9 dan A5: gelombang Angkasa lanjutan berisi roster lengkap dan tetap adil', async ({ page }) => {
+  await start(page, { world: 'space', enemies: true, seed: 4242 });
+  const r = await page.evaluate(() => {
+    const d = window.__game.debug;
+    d.resetMetrics();
+    const q = d.startWave(7);
+    const types = new Set();
+    for (let i = 0; i < 24; i++) { d.simulate(5, 0); d.enemyInfo().forEach((e) => types.add(e.type)); }
+    return { q, types: [...types], m: d.metrics(), limit: d.enemySpeeds().limit };
+  });
+  test.info().annotations.push({ type: 'metrik-roster', description: JSON.stringify(r.m) });
+  expect(r.types.length).toBeGreaterThanOrEqual(10);
+  const cfg = await page.evaluate(() => window.__game.config().balance);
+  expect(r.m.tailRatio).toBeLessThan(cfg.maxTailRatio);
+  expect(r.m.collisionsPerMin).toBeLessThan(cfg.maxCollisionsPerMin);
+  expect(r.m.ramsPerMin).toBeLessThan(cfg.maxRamsPerMin);
+});

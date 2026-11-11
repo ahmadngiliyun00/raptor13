@@ -209,7 +209,7 @@
   #comet-warn { position: absolute; left: 50%; top: calc(110px + env(safe-area-inset-top)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #d8f6ff; border: 1px solid #6fdcff; background: rgba(0, 70, 110, 0.4); animation: blink 0.5s steps(2) infinite; }
   #data-panel {
-    position: absolute; right: 16px; top: 46%; transform: translateY(-50%); width: min(300px, 40vw); padding: 10px 14px;
+    position: absolute; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom)); width: min(290px, 40vw); padding: 10px 14px;
     background: rgba(8, 14, 24, 0.8); border: 1px solid var(--ui-line); border-left: 3px solid #6fdcff; border-radius: 6px;
   }
   #data-panel h3 { margin: 0; font-size: 18px; letter-spacing: 0.08em; }
@@ -936,7 +936,7 @@ const CONFIG = {
     behindDistance: 220,       // musuh sejauh ini di belakang pemain dianggap tertinggal
     behindTime: [5, 12],       // detik tertinggal sebelum dipindah lagi ke depan (drone, penembak)
     // Kecepatan relatif pemain: jelajah = fraksi kecepatan dasar pemain, maksimum = fraksi kecepatan nitro
-    cruiseFactor: { drone: 0.75, gunship: 0.82 },
+    cruiseFactor: { drone: 0.75, gunship: 0.82, scout: 0.86, hunter: 0.78, guardian: 0.66, stalker: 0.84, commander: 0.8, shieldship: 0.74 },
     maxSpeedFactor: 0.8,       // tidak ada musuh (selain rudal) yang lebih cepat dari 80 persen nitro pemain
     maxTailTime: 1.2,          // detik maksimum penembak menempel di kerucut belakang pemain sebelum dipaksa menjauh
     droneMaxTailTime: 0.6,     // drone yang menempel lebih lama dipindah lagi ke depan
@@ -944,14 +944,45 @@ const CONFIG = {
     separation: 30,            // jarak pisah minimum antar musuh
     playerSeparation: 40,      // penembak menjaga jarak dari pemain
     frontSpawnShare: 0.8,      // 80 persen musuh muncul di kerucut depan pemain
-    drone: { hp: 30, speed: 46, agility: 1.5, radius: 2.3, contactDamage: 18, score: 100 },
+    // Ukuran pool per jenis (semua dibuat sekali saat init)
+    pools: { drone: 20, gunship: 10, scout: 8, hunter: 4, guardian: 3, stalker: 3, commander: 2, sniper: 3, minelayer: 2, shieldship: 4, creature: 6, carrier: 2, station: 2, mine: 16, missile: 12 },
+    drone: { label: 'Drone Pengintai', ai: 'drone', hp: 30, speed: 46, agility: 1.5, radius: 2.3, contactDamage: 18, score: 100 },
+    // Sindikat Vanta: kapal berawak. ai 'fighter' memakai siklus approach, attack (dengan tanda), break, reposition
     gunship: {
+      label: 'Penyerbu', ai: 'fighter', weapon: 'burst',
       hp: 60, speed: 84, turnRate: 0.85, radius: 3.4, contactDamage: 15, score: 300,
       telegraph: 0.5,          // detik tanda (kilat moncong) sebelum menembak
       approach: [300, 500], attackTime: [1.5, 2.5], breakTime: [2, 3], repositionTime: [3, 5],
-      fireInterval: 1.15, fireRange: 320, fireCone: 0.33, burst: 2,
+      fireInterval: 1.15, fireRange: 320, fireCone: 0.33, burst: 3,
       bulletSpeed: 175, bulletDamage: 8, extendTime: 3.2,
     },
+    scout: { label: 'Pengintai', ai: 'fighter', weapon: 'single', hp: 22, speed: 80, turnRate: 1.1, radius: 2.2, contactDamage: 10, score: 150,
+      telegraph: 0.5, approach: [260, 420], attackTime: [1.2, 2], breakTime: [1.5, 2.5], repositionTime: [2, 4],
+      fireInterval: 1.0, fireRange: 300, fireCone: 0.3, burst: 1, bulletSpeed: 170, bulletDamage: 5 },
+    hunter: { label: 'Pemburu', ai: 'fighter', weapon: 'missile', hp: 70, speed: 80, turnRate: 0.75, radius: 3.4, contactDamage: 15, score: 400,
+      telegraph: 0.7, approach: [350, 520], attackTime: [1.6, 2.4], breakTime: [2, 3], repositionTime: [3, 5],
+      fireInterval: 3.2, fireRange: 480, fireCone: 0.5, burst: 1, bulletSpeed: 60, bulletDamage: 0 },
+    guardian: { label: 'Penjaga', ai: 'fighter', weapon: 'spread', spread: 5, spreadAngle: 0.16, hp: 170, speed: 70, turnRate: 0.55, radius: 5, contactDamage: 25, score: 600,
+      telegraph: 0.6, approach: [300, 450], attackTime: [2, 3], breakTime: [2.5, 3.5], repositionTime: [3, 5],
+      fireInterval: 1.9, fireRange: 340, fireCone: 0.4, burst: 1, bulletSpeed: 150, bulletDamage: 7 },
+    stalker: { label: 'Penyergap', ai: 'fighter', weapon: 'burst', ambush: true, cloakAlpha: 0.1, maxTail: 2.2, hp: 55, speed: 80, turnRate: 1.0, radius: 3, contactDamage: 15, score: 500,
+      telegraph: 0.8, approach: [160, 240], attackTime: [1.4, 2.2], breakTime: [2, 3], repositionTime: [3, 4],
+      fireInterval: 1.2, fireRange: 280, fireCone: 0.35, burst: 2, bulletSpeed: 175, bulletDamage: 8 },
+    commander: { label: 'Komandan', ai: 'fighter', weapon: 'burst', shield: 80, shieldRegen: 14, shieldDelay: 3, escorts: 2, escortType: 'gunship', marked: true,
+      hp: 160, speed: 80, turnRate: 0.8, radius: 4.2, contactDamage: 20, score: 900,
+      telegraph: 0.6, approach: [320, 480], attackTime: [1.8, 2.6], breakTime: [2, 3], repositionTime: [3, 5],
+      fireInterval: 1.3, fireRange: 340, fireCone: 0.35, burst: 3, bulletSpeed: 180, bulletDamage: 8 },
+    shieldship: { label: 'Kapal Pelindung', ai: 'fighter', weapon: 'single', shield: 60, shieldRegen: 12, shieldDelay: 3, hp: 70, speed: 70, turnRate: 0.7, radius: 3.4, contactDamage: 15, score: 450,
+      telegraph: 0.5, approach: [300, 460], attackTime: [1.5, 2.5], breakTime: [2, 3], repositionTime: [3, 5],
+      fireInterval: 1.4, fireRange: 320, fireCone: 0.33, burst: 1, bulletSpeed: 165, bulletDamage: 6 },
+    // Ancaman lain
+    sniper: { label: 'Penembak Jitu', ai: 'sniper', hp: 45, radius: 3, contactDamage: 12, score: 450, keepDistance: 520, fireRange: 700, aimTime: 1.0, fireInterval: 3.2, bulletSpeed: 260, bulletDamage: 14 },
+    minelayer: { label: 'Penabur Ranjau', ai: 'minelayer', hp: 80, radius: 3.4, contactDamage: 15, score: 400, dropInterval: 2.2 },
+    creature: { label: 'Makhluk Angkasa', ai: 'creature', hp: 90, radius: 3.2, contactDamage: 10, score: 350, holdDistance: 6, speedFactor: 0.7, meleeInterval: 0.9 },
+    carrier: { label: 'Kapal Induk Kecil', ai: 'carrier', heavy: true, hp: 380, radius: 9, contactDamage: 0, score: 1200, keepDistance: 520, launchRange: 900, launchInterval: 7, launchCount: 2, maxDrones: 4 },
+    station: { label: 'Menara Pos', ai: 'station', heavy: true, static: true, loot: 8, hp: 520, radius: 10, contactDamage: 0, score: 1500, fireRange: 520, fireInterval: 2.2, telegraph: 0.6, bulletSpeed: 165, bulletDamage: 8 },
+    mine: { label: 'Ranjau', ai: 'mine', minor: true, static: true, hp: 8, radius: 1.8, contactDamage: 0, score: 40, triggerRadius: 30, armTime: 0.55, blastRadius: 32, blastDamage: 22, lifetime: 45 },
+    missile: { label: 'Rudal', ai: 'missile', minor: true, hp: 6, radius: 1.4, contactDamage: 16, score: 60, speed: 62, turnRate: 1.1, lifetime: 8 },
   },
   asteroids: {
     sizes: {
@@ -1021,7 +1052,7 @@ const CONFIG = {
   },
   // Kredit dari loot; saat game over hanya sebagian yang dibawa pulang
   credits: {
-    drone: 4, gunship: 12,
+    drone: 4, gunship: 12, scout: 6, hunter: 16, guardian: 24, stalker: 20, commander: 40, shieldship: 18, sniper: 18, minelayer: 16, creature: 14, carrier: 50, station: 70, mine: 1, missile: 2,
     asteroid: { small: 1, medium: 2, large: 4, giant: 10 },
     keepOnGameOver: 0.5,
   },
@@ -1491,6 +1522,14 @@ function applyDamage(entity, amount, source, x, y, z) {
   // Peredam (kartu Piko): damage tabrakan ke pemain dikurangi
   if (entity === Player ? Player.upgrades.damper : false) {
     if (source === 'asteroid' || source === 'komet' || source === 'tabrakan' || (typeof source === 'string' ? source.startsWith('Menabrak') : false)) amt *= 0.6;
+  }
+  // Perisai musuh menyerap damage lebih dulu, lalu pulih setelah jeda
+  if (entity.shield > 0 ? amt > 0 : false) {
+    const ab = Math.min(entity.shield, amt);
+    entity.shield -= ab; amt -= ab;
+    entity.shieldFlash = 1; entity.shieldWait = entity.cfg.shieldDelay;
+    Events.emit('shieldHit', x, y, z);
+    if (amt <= 0) return 0;
   }
   const dealt = entity.health.takeDamage(amt, source);
   if (dealt > 0) {
@@ -3522,6 +3561,41 @@ class Enemy {
     this.breakDir = new THREE.Vector3();
     this.telegraph = 0;
     this.radius = this.cfg.radius;
+    this.formOff = new THREE.Vector3(); this.leader = null; this.owner = null;
+    this.aim = 0; this.aimPoint = new THREE.Vector3(); this.life = 0; this.armed = 0; this.pulse = 0; this.meleeCd = 0;
+    this.shield = 0; this.shieldWait = 0; this.shieldFlash = 0; this.cloak = 1;
+    const c = this.cfg;
+    this.muzzleObj = this.group.getObjectByName('muzzle') || null;
+    this.lamp = this.group.getObjectByName('lamp') || null;
+    if (c.shield) {
+      this.shieldMesh = new THREE.Mesh(Enemies.shieldGeo, shieldMaterial(0xff4fc8));
+      this.shieldMesh.scale.setScalar(c.radius * 1.55);
+      this.group.add(this.shieldMesh);
+    }
+    if (c.ambush) {
+      // Materi per instans agar bisa memudar (menyamar) tanpa memengaruhi kapal lain
+      this.cloakMats = [];
+      this.group.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; this.cloakMats.push(o.material); } });
+    }
+    if (c.ai === 'creature') {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(8 * 9 * 2 * 3), 3));
+      this.tentacles = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: new THREE.Color(1.2, 0.35, 1.6), transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+      this.tentacles.frustumCulled = false;
+      this.group.add(this.tentacles);
+    }
+    if (c.ai === 'sniper') {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+      this.aimLine = new THREE.Line(g, new THREE.LineBasicMaterial({ color: new THREE.Color(1.8, 0.1, 0.15), transparent: true, opacity: 0, depthWrite: false }));
+      this.aimLine.frustumCulled = false;
+      this.aimLine.visible = false;
+      scene.add(this.aimLine);
+    }
+    if (c.ai === 'station') {
+      this.turrets = [];
+      this.group.traverse((o) => { if (o.name === 'turret') this.turrets.push({ obj: o, lamp: o.getObjectByName('lamp'), cd: 1, tele: 0 }); });
+    }
     scene.add(this.group);
   }
 }
@@ -3546,9 +3620,13 @@ const Enemies = {
   bullets: null,
 
   init() {
-    const droneT = buildDroneModel(), gunT = buildGunshipModel();
-    for (let i = 0; i < CONFIG.enemies.maxDrones; i++) this.list.push(new Enemy('drone', droneT));
-    for (let i = 0; i < CONFIG.enemies.maxGunships; i++) this.list.push(new Enemy('gunship', gunT));
+    this.shieldGeo = new THREE.IcosahedronGeometry(1, 2);
+    this.templates = {};
+    for (const type of ENEMY_TYPES) {
+      const t = ENEMY_BUILDERS[type]();
+      this.templates[type] = t;
+      for (let i = 0; i < CONFIG.enemies.pools[type]; i++) this.list.push(new Enemy(type, t));
+    }
     // Peluru musuh: bola bulat merah magenta gelap dengan halo, beda bentuk dan warna dari bolt pemain
     this.bullets = new BulletPool(
       CONFIG.enemies.maxBullets,
@@ -3561,9 +3639,11 @@ const Enemies = {
     this.bullets.glowScale.set(2.4, 2.4, 2.4);
   },
 
+  minorAlive: 0,
   reset() {
-    for (const e of this.list) { e.active = false; e.group.visible = false; }
+    for (const e of this.list) { e.active = false; e.group.visible = false; if (e.aimLine) e.aimLine.visible = false; }
     this.alive = 0;
+    this.minorAlive = 0;
     this.bullets.reset();
   },
 
@@ -3580,7 +3660,13 @@ const Enemies = {
     e.timer = 0;
     e.tail = 0;
     e.telegraph = 0;
-    e.slotAngle = randRange(-1.05, 1.05);
+    e.leader = null; e.owner = null; e.escort = false; e.launched = false; e.retreated = false;
+    e.aim = 0; e.life = 0; e.armed = 0; e.pulse = rand() * 6; e.meleeCd = 0;
+    e.shield = e.cfg.shield || 0; e.shieldWait = 0; e.shieldFlash = 0;
+    e.cloak = e.cfg.ambush ? e.cfg.cloakAlpha : 1;
+    if (e.cloakMats) for (const m of e.cloakMats) m.opacity = e.cloak;
+    if (e.aimLine) e.aimLine.visible = false;
+    e.slotAngle = e.cfg.ambush ? (rand() < 0.5 ? -1 : 1) * randRange(2.5, 2.9) : randRange(-1.05, 1.05);
     e.slotDist = randRange(e.cfg.approach ? e.cfg.approach[0] : 300, e.cfg.approach ? e.cfg.approach[1] : 500);
     e.fireCd = randRange(0.8, 1.6);
     e.burstLeft = 0;
@@ -3588,7 +3674,7 @@ const Enemies = {
     e.bank = 0;
     e.behind = 0;
     e.group.scale.setScalar(1);
-    this.alive++;
+    if (e.cfg.minor) this.minorAlive++; else this.alive++;
     return e;
   },
 
@@ -3597,8 +3683,10 @@ const Enemies = {
     const D = CONFIG.enemies.spawnDistance;
     // 80 persen di kerucut depan (plus minus 60 derajat), sisanya di samping
     const side = rand() < CONFIG.enemies.frontSpawnShare ? randRange(-1.05, 1.05) : (rand() < 0.5 ? -1 : 1) * randRange(1.05, 2.0);
-    const ang = Player.yaw + (lateralAngle !== undefined ? lateralAngle : side);
-    const d = dist !== undefined ? dist : randRange(D[0], D[1]);
+    const cf = CONFIG.enemies[type];
+    // Penyergap muncul di belakang samping pemain; menara pos lebih jauh di depan
+    const ang = Player.yaw + (lateralAngle !== undefined ? lateralAngle : cf.ambush ? (rand() < 0.5 ? -1 : 1) * randRange(2.3, 2.8) : side);
+    const d = dist !== undefined ? dist : cf.static ? randRange(620, 760) : cf.ambush ? randRange(260, 320) : randRange(D[0], D[1]);
     const x = Player.pos.x - Math.sin(ang) * d, z = Player.pos.z - Math.cos(ang) * d;
     const y = clamp(Player.pos.y + randRange(-20, 35), groundHeightAt(x, z) + 30, Worlds.active.maxY - 15);
     return this.spawn(type, x, y, z);
@@ -3608,7 +3696,8 @@ const Enemies = {
     if (!e.active) return;
     e.active = false;
     e.group.visible = false;
-    this.alive--;
+    if (e.aimLine) e.aimLine.visible = false;
+    if (e.cfg.minor) this.minorAlive--; else this.alive--;
   },
 
   // Musuh hancur: byPlayer true berarti ditembak pemain (dapat skor)
@@ -3635,28 +3724,47 @@ const Enemies = {
       if (!e.active) continue;
       _toP.subVectors(P, e.pos);
       const dist = _toP.length();
-      if (dist > CONFIG.enemies.despawnDistance) { this.remove(e); continue; }
+      const c = e.cfg, ai = c.ai;
+      if (dist > CONFIG.enemies.despawnDistance * (c.heavy ? 1.6 : 1)) { this.remove(e); if (c.minor || e.launched ? false : !c.static) Waves.requeue(e.type); continue; }
+      // Rudal dan ranjau: perilaku sendiri, tanpa aturan tertinggal atau ekor
+      if (c.minor) {
+        if (ai === 'missile') this.updateMissile(e, dt, dist); else this.updateMine(e, dt, dist);
+        if (e.hpBarTimer > 0) e.hpBarTimer -= dt;
+        continue;
+      }
       // Tertinggal lama di belakang pemain: pindahkan lagi ke depan lewat antrean gelombang
       const ahead = -(_toP.x * Player.forward.x + _toP.z * Player.forward.z);
-      e.behind = ahead < -CONFIG.enemies.behindDistance ? e.behind + dt : 0;
-      if (e.behind > CONFIG.enemies.behindTime[e.type === 'drone' ? 0 : 1]) {
+      e.behind = (c.static ? false : ahead < -CONFIG.enemies.behindDistance) ? e.behind + dt : 0;
+      if (e.behind > CONFIG.enemies.behindTime[e.type === 'drone' ? 0 : 1] * (c.ambush ? 2 : 1)) {
         this.remove(e);
-        Waves.requeue(e.type);
+        if (!e.launched) Waves.requeue(e.type);
         continue;
       }
       // Menempel di kerucut belakang pemain (dekat dan di belakang arah terbang)
       const behindDot = -(_toP.x * Player.forward.x + _toP.y * Player.forward.y + _toP.z * Player.forward.z);
-      const inTail = dist < CONFIG.enemies.tailDistance ? behindDot < -0.7 * dist : false;
+      // Membuntuti: di kerucut belakang DAN terbang searah pemain (bukan sekadar melintas menjauh)
+      const vl = e.vel.length();
+      const following = vl > 1 ? (e.vel.x * Player.forward.x + e.vel.y * Player.forward.y + e.vel.z * Player.forward.z) > 0.5 * vl : false;
+      const inTail = (dist < CONFIG.enemies.tailDistance ? behindDot < -0.7 * dist : false) ? following : false;
       e.tail = inTail ? e.tail + dt : 0;
-      if (inTail) { tailing = true; if (Game.state === 'playing') Metrics.tailByType[e.type] += dt; }
+      // Penyergap dan makhluk memang datang dari belakang atau lambat: tidak dihitung sebagai pengekor
+      const tracked = c.ambush ? false : ai !== 'creature';
+      if (inTail ? tracked : false) { tailing = true; if (Game.state === 'playing') Metrics.tailByType[e.type] = (Metrics.tailByType[e.type] || 0) + dt; }
       // Drone yang menempel terlalu lama di ekor dipindah lagi ke depan (bukan mengekor terus)
       if (e.type === 'drone' ? e.tail > CONFIG.enemies.droneMaxTailTime : false) {
         this.remove(e);
-        Waves.requeue('drone');
+        if (!e.launched) Waves.requeue('drone');
         continue;
       }
-      if (e.type === 'drone') this.updateDrone(e, dt, dist, diff, inTail);
-      else { this.updateGunship(e, dt, dist, diff); Metrics.seen[e.state] = true; }
+      if (ai === 'drone') this.updateDrone(e, dt, dist, diff, inTail);
+      else if (ai === 'fighter') { this.updateGunship(e, dt, dist, diff); Metrics.seen[e.state] = true; }
+      else if (ai === 'sniper') this.updateSniper(e, dt, dist, diff);
+      else if (ai === 'creature') { this.updateCreature(e, dt, dist, diff); e.meleeCd -= dt; }
+      else if (ai === 'carrier') this.updateCarrier(e, dt, dist, diff);
+      else if (ai === 'station') this.updateStation(e, dt, dist, diff);
+      else if (ai === 'minelayer') this.updateMinelayer(e, dt, dist, diff);
+      if (c.shield) this.updateShield(e, dt);
+      if (c.ambush) this.updateCloak(e, dt);
 
       // Jaga di atas terrain
       const ground = groundHeightAt(e.pos.x, e.pos.z) + (e.type === 'drone' ? 8 : 18);
@@ -3697,7 +3805,7 @@ const Enemies = {
 
   // Kecepatan jelajah dan maksimum musuh dihitung dari kecepatan pemain (CONFIG.enemies)
   cruiseSpeed(type, diff) {
-    return CONFIG.player.baseSpeed * CONFIG.enemies.cruiseFactor[type] * Math.min(Math.sqrt(diff), 1.15);
+    return CONFIG.player.baseSpeed * (CONFIG.enemies.cruiseFactor[type] || 0.8) * Math.min(Math.sqrt(diff), 1.15);
   },
   maxSpeed() { return CONFIG.player.nitroSpeed * CONFIG.enemies.maxSpeedFactor; },
 
@@ -3708,11 +3816,11 @@ const Enemies = {
     const cruise = this.cruiseSpeed('drone', diff);
     const behind = (_toP.x * Player.forward.x + _toP.z * Player.forward.z) > 0;   // drone di belakang pemain
     const speed = behind ? cruise : Math.min(this.maxSpeed(), cruise * (1 + clamp((dist - 250) / 250, 0, 1)));
-    if (inTail) {
-      // Sudah di ekor pemain: menyimpang ke samping, tidak mengejar dari belakang
-      // Sudah di ekor: mengerem dan menyimpang agar cepat keluar dari jangkauan
-      const side = (e.slotAngle >= 0 ? 1 : -1);
-      _desired.set(-Player.forward.z * side, 0.1, Player.forward.x * side).multiplyScalar(speed * 0.4);
+    if (inTail ? true : behind) {
+      // Sudah melewati pemain: tidak mengejar dari belakang, membelok keluar ke samping dan naik
+      // sehingga cepat keluar dari kerucut ekor (lalu didaur ulang ke depan)
+      const side = (e.pos.x - Player.pos.x) * -Player.forward.z + (e.pos.z - Player.pos.z) * Player.forward.x >= 0 ? 1 : -1;
+      _desired.set(-Player.forward.z * side, 0.35, Player.forward.x * side).normalize().multiplyScalar(cruise);
     } else {
       _desired.copy(_toP).multiplyScalar(1 / Math.max(dist, 0.001)).addScaledVector(e.sep, 0.8).normalize().multiplyScalar(speed);
     }
@@ -3728,11 +3836,13 @@ const Enemies = {
   // BREAK (menjauh menyamping atau menukik), REPOSITION (berputar balik lebih lambat dari pemain)
   updateGunship(e, dt, dist, diff) {
     const c = e.cfg, P = Player.pos, f = Player.forward;
-    const cruise = this.cruiseSpeed('gunship', diff), vmax = this.maxSpeed();
+    const cruise = this.cruiseSpeed(e.type, diff), vmax = this.maxSpeed();
     let speed = cruise, turnRate = c.turnRate;
     _prevDir.copy(e.dir);
     // Tidak boleh menempel di ekor pemain terlalu lama
-    if (e.tail > CONFIG.enemies.maxTailTime) { this.beginBreak(e); e.tail = 0; }
+    if (e.tail > (c.maxTail || CONFIG.enemies.maxTailTime)) { this.beginBreak(e); e.tail = 0; }
+    // HP rendah: mundur sekali (menjauh lebih lama)
+    if (e.retreated ? false : e.health.ratio < 0.3) { e.retreated = true; this.beginBreak(e); e.timer = c.breakTime[1] * 2; }
     e.timer -= dt;
     if (e.state === 'approach' || e.state === 'reposition') {
       // Slot di busur depan pemain (sudut dan jarak dipilih saat masuk state)
@@ -3740,6 +3850,8 @@ const Enemies = {
       const ca = Math.cos(e.slotAngle), sa = Math.sin(e.slotAngle);
       const sx = (hx * ca - hz * sa) / hl, sz = (hx * sa + hz * ca) / hl;
       _va.set(P.x + sx * e.slotDist, P.y + (e.slotAngle > 0 ? 15 : -10), P.z + sz * e.slotDist);
+      // Anggota rombongan mengikuti posisi formasi pemimpinnya
+      this.formationTarget(e, _va);
       _desired.subVectors(_va, e.pos);
       const dSlot = _desired.length();
       _desired.multiplyScalar(1 / Math.max(dSlot, 0.001));
@@ -3753,7 +3865,7 @@ const Enemies = {
       if (dSlot > 250) speed = vmax;
       // Sudah berada di busur depan pemain dalam jangkauan: berbalik menghadap pemain dan menyerang
       const relFront = -(_toP.x * f.x + _toP.y * f.y + _toP.z * f.z);
-      const inFront = dist < 550 ? relFront > Math.cos(1.22) * dist : false;
+      const inFront = c.ambush ? false : dist < 550 ? relFront > Math.cos(1.22) * dist : false;
       if (e.state === 'reposition') {
         turnRate = c.turnRate * 0.6;
         if (e.timer <= 0) e.state = 'approach';
@@ -3768,7 +3880,7 @@ const Enemies = {
       speed = cruise * 0.9;
       // Serangan hanya dari depan atau samping: bila sudah di belakang pemain, langsung menjauh
       const rel = -(_toP.x * f.x + _toP.y * f.y + _toP.z * f.z);
-      if (e.timer <= 0 || dist < 70 || rel < -0.2 * dist) this.beginBreak(e);
+      if (e.timer <= 0 || dist < 70 || (c.ambush ? false : rel < -0.2 * dist)) this.beginBreak(e);
     } else {
       // BREAK: menjauh menyamping atau menukik
       _desired.copy(e.breakDir);
@@ -3776,7 +3888,7 @@ const Enemies = {
       if (e.timer <= 0) {
         e.state = 'reposition';
         e.timer = randRange(c.repositionTime[0], c.repositionTime[1]);
-        e.slotAngle = randRange(-1.05, 1.05);
+        e.slotAngle = c.ambush ? (rand() < 0.5 ? -1 : 1) * randRange(2.5, 2.9) : randRange(-1.05, 1.05);
         e.slotDist = randRange(c.approach[0], c.approach[1]);
       }
     }
@@ -3810,18 +3922,7 @@ const Enemies = {
     }
     if (dist >= c.fireRange || e.fireCd > 0) return;
     const facing = (e.dir.x * _toP.x + e.dir.y * _toP.y + e.dir.z * _toP.z) / Math.max(dist, 0.001);
-    if (facing > Math.cos(c.fireCone)) {
-      const t = dist / c.bulletSpeed;
-      _va.copy(Player.vel).multiplyScalar(t * 0.8).add(P);
-      _va.x += randRange(-2, 2); _va.y += randRange(-2, 2); _va.z += randRange(-2, 2);
-      _va.sub(_vb).normalize();
-      this.bullets.spawn(_vb.x, _vb.y, _vb.z, _va.x, _va.y, _va.z, c.bulletSpeed, CONFIG.enemies.bulletLife, c.bulletDamage);
-      Events.emit('enemyShot', _vb);
-      if (e.burstLeft <= 0) e.burstLeft = c.burst;
-      e.burstLeft--;
-      e.fireCd = e.burstLeft > 0 ? 0.16 : c.fireInterval / (diff * Game.diff.enemyFire);
-      if (e.burstLeft <= 0) e.telegraph = c.telegraph;   // semburan berikutnya ditandai lagi
-    }
+    if (facing > Math.cos(c.fireCone)) this.fireWeapon(e, dist, diff);
   },
 
   beginBreak(e) {
@@ -3835,6 +3936,495 @@ const Enemies = {
     e.breakDir.addScaledVector(_toP, -0.4 / Math.max(_toP.length(), 1)).normalize();
   },
 };
+
+/* =====================================================================
+   ROSTER MUSUH - Sindikat Vanta (faksi fiktif) dan ancaman lain. Semua model dari loft,
+   lathe dan pelat; lambung gelap dengan aksen emissive merah, magenta atau ungu.
+   ===================================================================== */
+const VANTA = {
+  hull: new THREE.MeshPhongMaterial({ color: 0x2b2d35, specular: 0x2a2a30, shininess: 30, flatShading: true }),
+  plate: new THREE.MeshPhongMaterial({ color: 0x5a1f33, specular: 0x331018, shininess: 24, flatShading: true }),
+  dark: new THREE.MeshPhongMaterial({ color: 0x17181d, specular: 0x111111, shininess: 12, flatShading: true }),
+  magenta: new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.18, 0.75) }),
+  red: new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 0.22, 0.12) }),
+  violet: new THREE.MeshBasicMaterial({ color: new THREE.Color(0.85, 0.3, 1.8) }),
+  amber: new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 0.75, 0.15) }),
+};
+// Kulit perisai: pendar fresnel additive, opasitas per instans
+const SHIELD_VERT = /* glsl */`varying vec3 vN; varying vec3 vV; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal); vV = cameraPosition - w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
+const SHIELD_FRAG = /* glsl */`uniform float uI; uniform vec3 uC; varying vec3 vN; varying vec3 vV;
+  void main() { float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.5); gl_FragColor = vec4(uC * (f * 1.4 + 0.08) * uI, 1.0);
+  #include <colorspace_fragment>
+  }`;
+function shieldMaterial(color) {
+  return new THREE.ShaderMaterial({ uniforms: { uI: { value: 0.4 }, uC: { value: new THREE.Color(color) } }, vertexShader: SHIELD_VERT, fragmentShader: SHIELD_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+}
+const latheGeo = (pts, seg = 14) => new THREE.LatheGeometry(pts.map(([r, y]) => new THREE.Vector2(r, y)), seg);
+
+function enemyModelKit() {
+  const g = new THREE.Group();
+  const add = (geo, mat, x = 0, y = 0, z = 0, name) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); if (name) m.name = name; g.add(m); return m; };
+  const wings = (poly, t, mat, y = 0) => { add(slabGeometry(poly, t), mat, 0, y, 0); add(slabGeometry(mirrorPoly(poly), t), mat, 0, y, 0); };
+  const glow = (r, mat, x, y, z) => { const m = add(new THREE.CircleGeometry(r, 10), mat, x, y, z); return m; };
+  const fin = (poly, t, mat, x, y, rz) => { const geo = slabGeometry(poly, t); geo.rotateZ(rz); return add(geo, mat, x, y, 0); };
+  return { g, add, wings, glow, fin };
+}
+
+const ENEMY_BUILDERS = {
+  drone: buildDroneModel,
+  gunship: buildGunshipModel,
+  // Pengintai: anak panah ramping bersayap maju
+  scout() {
+    const { g, add, wings, glow } = enemyModelKit();
+    add(loftGeometry([{ z: -2.8, w: 0.03, ht: 0.03, hb: 0.03 }, { z: -1.3, w: 0.32, ht: 0.28, hb: 0.2 }, { z: 0.6, w: 0.44, ht: 0.32, hb: 0.22 }, { z: 1.7, w: 0.3, ht: 0.22, hb: 0.18 }]), VANTA.hull);
+    wings([[0.3, 0.9], [2.1, -0.4], [2.2, -0.05], [0.35, 1.45]], 0.08, VANTA.plate);
+    add(loftGeometry([{ z: -1.0, w: 0.02, ht: 0.02, hb: 0.02 }, { z: -0.4, w: 0.16, ht: 0.12, hb: 0.02 }, { z: 0.3, w: 0.14, ht: 0.1, hb: 0.02 }]), VANTA.magenta, 0, 0.27, 0);
+    glow(0.22, VANTA.magenta, 0, 0, 1.72).rotation.y = Math.PI;
+    return g;
+  },
+  // Pemburu: sayap delta lebar dengan dua tabung rudal
+  hunter() {
+    const { g, add, wings, glow } = enemyModelKit();
+    add(loftGeometry([{ z: -3.4, w: 0.04, ht: 0.04, hb: 0.04 }, { z: -1.8, w: 0.5, ht: 0.42, hb: 0.3 }, { z: 0.8, w: 0.7, ht: 0.48, hb: 0.36 }, { z: 2.7, w: 0.5, ht: 0.34, hb: 0.3 }]), VANTA.hull);
+    wings([[0.4, -1.4], [3.1, 1.7], [3.1, 2.2], [0.4, 2.5]], 0.12, VANTA.plate);
+    for (const s of [-1, 1]) {
+      add(loftGeometry([{ z: -1.6, w: 0.03, ht: 0.03, hb: 0.03 }, { z: -1.1, w: 0.22, ht: 0.22, hb: 0.22 }, { z: 1.2, w: 0.22, ht: 0.22, hb: 0.22 }, { z: 1.5, w: 0.15, ht: 0.15, hb: 0.15 }]), VANTA.dark, s * 1.7, -0.32, 0.6);
+      add(new THREE.IcosahedronGeometry(0.16, 0), VANTA.red, s * 1.7, -0.32, -1.0);
+    }
+    glow(0.3, VANTA.red, 0, 0, 2.72).rotation.y = Math.PI;
+    return g;
+  },
+  // Penjaga: kapal berat berbadan lebar dengan dua lengan mesin
+  guardian() {
+    const { g, add, wings, glow, fin } = enemyModelKit();
+    add(loftGeometry([{ z: -3.8, w: 0.5, ht: 0.3, hb: 0.3 }, { z: -2.6, w: 1.25, ht: 0.75, hb: 0.6 }, { z: 1.2, w: 1.45, ht: 0.85, hb: 0.7 }, { z: 3.4, w: 1.0, ht: 0.6, hb: 0.55 }]), VANTA.hull);
+    add(loftGeometry([{ z: -3.9, w: 0.55, ht: 0.12, hb: 0.12 }, { z: -2.9, w: 1.3, ht: 0.16, hb: 0.16 }, { z: -2.2, w: 1.3, ht: 0.16, hb: 0.16 }]), VANTA.plate, 0, -0.35, 0);
+    wings([[1.0, -1.2], [2.6, -0.6], [2.6, 1.8], [1.0, 2.4]], 0.3, VANTA.plate);
+    for (const s of [-1, 1]) {
+      add(loftGeometry([{ z: -2.2, w: 0.08, ht: 0.08, hb: 0.08 }, { z: -1.4, w: 0.45, ht: 0.45, hb: 0.45 }, { z: 3.4, w: 0.5, ht: 0.5, hb: 0.5 }, { z: 3.9, w: 0.42, ht: 0.42, hb: 0.42 }]), VANTA.dark, s * 2.8, 0, 0);
+      glow(0.36, VANTA.red, s * 2.8, 0, 3.92).rotation.y = Math.PI;
+      fin([[0, 1.6], [1.3, 3.0], [1.3, 3.6], [0, 3.8]], 0.1, VANTA.plate, s * 2.8, 0.4, Math.PI / 2);
+    }
+    for (const x of [-0.7, 0, 0.7]) add(new THREE.IcosahedronGeometry(0.17, 0), VANTA.magenta, x, 0.1, -3.85);
+    return g;
+  },
+  // Penyergap: bentuk pari pipih dengan garis ungu, bisa menyamar
+  stalker() {
+    const { g, add, wings, glow } = enemyModelKit();
+    wings([[0, -2.8], [1.5, -1.0], [3.4, 1.3], [0, 1.7]], 0.22, VANTA.hull);
+    add(loftGeometry([{ z: -2.6, w: 0.03, ht: 0.03, hb: 0.03 }, { z: -1.0, w: 0.5, ht: 0.38, hb: 0.16 }, { z: 1.4, w: 0.55, ht: 0.3, hb: 0.16 }, { z: 2.1, w: 0.3, ht: 0.18, hb: 0.12 }]), VANTA.dark);
+    wings([[0.4, -1.6], [3.0, 1.15], [3.0, 1.32], [0.4, -1.3]], 0.25, VANTA.violet, 0.02);
+    glow(0.25, VANTA.violet, 0, 0, 2.12).rotation.y = Math.PI;
+    return g;
+  },
+  // Komandan: kapal elit memanjang dengan jambul tinggi dan perisai
+  commander() {
+    const { g, add, wings, glow, fin } = enemyModelKit();
+    add(loftGeometry([{ z: -4.6, w: 0.05, ht: 0.05, hb: 0.05 }, { z: -2.8, w: 0.7, ht: 0.55, hb: 0.4 }, { z: 0.6, w: 0.95, ht: 0.65, hb: 0.45 }, { z: 3.6, w: 0.6, ht: 0.4, hb: 0.38 }]), VANTA.hull);
+    wings([[0.6, -1.6], [3.6, 0.8], [3.8, 1.3], [0.6, 2.6]], 0.14, VANTA.plate);
+    wings([[0.5, -3.4], [1.5, -2.6], [1.5, -2.3], [0.5, -2.2]], 0.08, VANTA.plate);
+    fin([[0, -1.2], [2.0, 1.4], [2.0, 2.4], [0, 3.0]], 0.12, VANTA.plate, 0, 0.5, Math.PI / 2);
+    add(loftGeometry([{ z: -1.0, w: 0.02, ht: 0.02, hb: 0.02 }, { z: 0.0, w: 0.06, ht: 1.6, hb: 0.02 }, { z: 1.6, w: 0.06, ht: 1.7, hb: 0.02 }]), VANTA.amber, 0, 0.6, 0);
+    glow(0.4, VANTA.magenta, 0, 0, 3.62).rotation.y = Math.PI;
+    for (const s of [-1, 1]) add(new THREE.IcosahedronGeometry(0.14, 0), VANTA.amber, s * 3.7, 0, 1.05);
+    return g;
+  },
+  // Penembak Jitu: jarum panjang dengan laras
+  sniper() {
+    const { g, add, glow, fin } = enemyModelKit();
+    add(loftGeometry([{ z: -4.4, w: 0.06, ht: 0.06, hb: 0.06 }, { z: -2.2, w: 0.38, ht: 0.34, hb: 0.3 }, { z: 1.4, w: 0.46, ht: 0.4, hb: 0.34 }, { z: 2.4, w: 0.3, ht: 0.26, hb: 0.24 }]), VANTA.hull);
+    add(loftGeometry([{ z: -7.4, w: 0.07, ht: 0.07, hb: 0.07 }, { z: -4.2, w: 0.1, ht: 0.1, hb: 0.1 }]), VANTA.dark);
+    add(new THREE.IcosahedronGeometry(0.14, 0), VANTA.red, 0, 0, -7.45, 'muzzle');
+    for (let k = 0; k < 4; k++) fin([[0, 0.8], [1.4, 2.0], [1.4, 2.4], [0, 2.5]], 0.07, VANTA.plate, 0, 0, Math.PI / 4 + k * Math.PI / 2);
+    glow(0.24, VANTA.red, 0, 0, 2.42).rotation.y = Math.PI;
+    return g;
+  },
+  // Penabur Ranjau: piring datar dengan wadah ranjau di belakang
+  minelayer() {
+    const { g, add, wings, glow } = enemyModelKit();
+    const body = add(latheGeo([[0, -0.5], [1.6, -0.35], [2.4, 0], [1.7, 0.4], [0.6, 0.62], [0, 0.66]], 16), VANTA.hull);
+    body.scale.set(1, 1, 1.25);
+    add(new THREE.TorusGeometry(2.3, 0.08, 4, 24), VANTA.amber).rotation.x = Math.PI / 2;
+    add(loftGeometry([{ z: 0.8, w: 0.6, ht: 0.5, hb: 0.5 }, { z: 2.8, w: 0.8, ht: 0.55, hb: 0.6 }, { z: 3.4, w: 0.5, ht: 0.4, hb: 0.4 }]), VANTA.plate);
+    wings([[0.4, 1.8], [1.6, 3.2], [1.6, 3.5], [0.4, 3.4]], 0.08, VANTA.plate);
+    glow(0.3, VANTA.amber, 0, -0.1, 3.42).rotation.y = Math.PI;
+    return g;
+  },
+  // Kapal Pelindung: lambung telur bersirip tiga dengan perisai
+  shieldship() {
+    const { g, add, glow, fin } = enemyModelKit();
+    const body = add(latheGeo([[0, -2.6], [0.7, -2.2], [1.2, -0.8], [1.25, 0.8], [0.9, 2.0], [0.5, 2.4], [0, 2.45]], 12), VANTA.hull);
+    body.rotation.x = Math.PI / 2;
+    for (let k = 0; k < 3; k++) fin([[0.9, -0.6], [2.4, 0.8], [2.4, 1.4], [0.9, 2.0]], 0.12, VANTA.plate, 0, 0, k * Math.PI * 2 / 3);
+    add(new THREE.TorusGeometry(1.28, 0.07, 4, 20), VANTA.magenta, 0, 0, -0.4);
+    glow(0.35, VANTA.magenta, 0, 0, 2.47).rotation.y = Math.PI;
+    return g;
+  },
+  // Makhluk Angkasa: ubur-ubur dengan lonceng tembus pandang dan tentakel
+  creature() {
+    const g = new THREE.Group();
+    const bell = new THREE.Mesh(latheGeo([[0.05, 1.6], [1.0, 1.45], [1.8, 0.9], [2.2, 0.1], [2.3, -0.3], [2.0, -0.35], [1.4, 0.1], [0.4, 0.35]], 18),
+      new THREE.MeshPhongMaterial({ color: 0x8a3cc8, emissive: 0x3a0a5a, specular: 0xffffff, shininess: 60, transparent: true, opacity: 0.78, side: THREE.DoubleSide }));
+    bell.name = 'bell';
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.7, 1), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.4, 1.8) }));
+    core.position.y = 0.6;
+    g.add(bell, core);
+    g.rotation.x = -Math.PI / 2;   // lonceng menghadap arah gerak (-Z lokal setelah lookAt)
+    const wrap = new THREE.Group();
+    wrap.add(g);
+    return wrap;
+  },
+  // Kapal Induk Kecil: lambung besar dengan dok peluncur drone
+  carrier() {
+    const { g, add, wings, glow, fin } = enemyModelKit();
+    add(loftGeometry([{ z: -9, w: 0.8, ht: 0.6, hb: 0.6 }, { z: -6.5, w: 2.4, ht: 1.5, hb: 1.3 }, { z: 4, w: 2.8, ht: 1.7, hb: 1.5 }, { z: 8.5, w: 2.0, ht: 1.3, hb: 1.2 }]), VANTA.hull);
+    add(loftGeometry([{ z: -6.6, w: 1.4, ht: 0.1, hb: 0.1 }, { z: -2.5, w: 1.5, ht: 0.1, hb: 0.1 }]), VANTA.red, 0, -1.4, 0);
+    for (const s of [-1, 1]) {
+      add(loftGeometry([{ z: -5, w: 0.1, ht: 0.1, hb: 0.1 }, { z: -3.5, w: 0.75, ht: 0.75, hb: 0.75 }, { z: 6.5, w: 0.8, ht: 0.8, hb: 0.8 }, { z: 7.4, w: 0.6, ht: 0.6, hb: 0.6 }]), VANTA.dark, s * 3.6, -0.3, 0);
+      glow(0.6, VANTA.magenta, s * 3.6, -0.3, 7.42).rotation.y = Math.PI;
+    }
+    wings([[2.0, -2.0], [3.4, -1.5], [3.4, 3.0], [2.0, 3.6]], 0.35, VANTA.plate);
+    fin([[0, 1.0], [2.6, 3.2], [2.6, 4.4], [0, 5.0]], 0.2, VANTA.plate, 0, 1.4, Math.PI / 2);
+    glow(1.1, VANTA.red, 0, 0, 8.52).rotation.y = Math.PI;
+    return g;
+  },
+  // Menara Pos: poros tengah, cincin, dan tiga turret
+  station() {
+    const g = new THREE.Group();
+    const spindle = new THREE.Mesh(latheGeo([[0, -8], [1.2, -6.5], [2.2, -3], [3.2, -1], [3.4, 1], [2.2, 3], [1.4, 6], [0.6, 8.5], [0, 9]], 16), VANTA.hull);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(9, 0.9, 8, 40), VANTA.plate);
+    ring.rotation.x = Math.PI / 2;
+    const core = new THREE.Mesh(new THREE.TorusGeometry(3.45, 0.18, 4, 28), VANTA.magenta);
+    core.rotation.x = Math.PI / 2;
+    g.add(spindle, ring, core);
+    for (let k = 0; k < 3; k++) {
+      const a = k * Math.PI * 2 / 3;
+      const spoke = new THREE.Mesh(loftGeometry([{ z: 3, w: 0.35, ht: 0.3, hb: 0.3 }, { z: 8.4, w: 0.35, ht: 0.3, hb: 0.3 }]), VANTA.dark);
+      spoke.rotation.y = a;
+      const t = new THREE.Group();
+      t.name = 'turret';
+      t.position.set(Math.sin(a) * 9, 1.1, Math.cos(a) * 9);
+      const dome = new THREE.Mesh(latheGeo([[0, 0], [1.1, 0], [1.0, 0.6], [0.6, 1.0], [0, 1.1]], 10), VANTA.hull);
+      const barrel = new THREE.Mesh(loftGeometry([{ z: -2.6, w: 0.12, ht: 0.12, hb: 0.12 }, { z: 0, w: 0.18, ht: 0.18, hb: 0.18 }]), VANTA.dark);
+      barrel.position.y = 0.6;
+      const lamp = new THREE.Mesh(new THREE.IcosahedronGeometry(0.22, 0), VANTA.red);
+      lamp.position.set(0, 0.6, -2.7);
+      lamp.name = 'lamp';
+      t.add(dome, barrel, lamp);
+      g.add(spoke, t);
+    }
+    return g;
+  },
+  // Ranjau: inti berduri dengan lampu berkedip
+  mine() {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(1.0, 0), VANTA.dark));
+    const spike = loftGeometry([{ z: 0.8, w: 0.18, ht: 0.18, hb: 0.18 }, { z: 1.8, w: 0.02, ht: 0.02, hb: 0.02 }]);
+    for (const d of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]]) {
+      const m = new THREE.Mesh(spike, VANTA.hull);
+      m.lookAt(-d[0], -d[1], -d[2]);
+      g.add(m);
+    }
+    const lamp = new THREE.Mesh(new THREE.IcosahedronGeometry(0.45, 0), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.8, 0.2, 0.1) }));
+    lamp.name = 'lamp';
+    g.add(lamp);
+    return g;
+  },
+  // Rudal pemburu: tabung kecil bersirip dengan api merah
+  missile() {
+    const { g, add, glow, fin } = enemyModelKit();
+    add(loftGeometry([{ z: -1.3, w: 0.04, ht: 0.04, hb: 0.04 }, { z: -0.8, w: 0.22, ht: 0.22, hb: 0.22 }, { z: 1.0, w: 0.22, ht: 0.22, hb: 0.22 }]), VANTA.plate);
+    for (let k = 0; k < 4; k++) fin([[0.15, 0.4], [0.6, 1.0], [0.6, 1.15], [0.15, 1.0]], 0.05, VANTA.hull, 0, 0, k * Math.PI / 2);
+    add(new THREE.IcosahedronGeometry(0.45, 1), new THREE.MeshBasicMaterial({ color: new THREE.Color(1.9, 0.35, 0.2), transparent: true, opacity: 0.85, depthWrite: false, blending: THREE.AdditiveBlending }), 0, 0, 1.25);
+    return g;
+  },
+};
+const ENEMY_TYPES = Object.keys(ENEMY_BUILDERS);
+
+// Perilaku tambahan musuh (digabung ke Enemies)
+Object.assign(Enemies, {
+  // Tembakan kapal penembak sesuai pola senjata dari CONFIG
+  fireWeapon(e, dist, diff) {
+    const c = e.cfg, P = Player.pos;
+    const t = dist / (c.bulletSpeed || 175);
+    _va.copy(Player.vel).multiplyScalar(t * 0.8).add(P);
+    _va.x += randRange(-2, 2); _va.y += randRange(-2, 2); _va.z += randRange(-2, 2);
+    _va.sub(_vb).normalize();
+    const w = c.weapon || 'burst';
+    if (w === 'missile') {
+      const m = this.spawn('missile', _vb.x, _vb.y, _vb.z);
+      if (m) { m.dir.copy(e.dir); m.owner = e; }
+    } else if (w === 'spread') {
+      // Kipas peluru di bidang horizontal relatif arah bidik
+      const n = c.spread, sx = -_va.z, sz = _va.x, sl = Math.hypot(sx, sz) || 1;
+      for (let i = 0; i < n; i++) {
+        const k = (i - (n - 1) / 2) * c.spreadAngle;
+        _vc.copy(_va).addScaledVector(_vd.set(sx / sl, 0, sz / sl), k).normalize();
+        this.bullets.spawn(_vb.x, _vb.y, _vb.z, _vc.x, _vc.y, _vc.z, c.bulletSpeed, CONFIG.enemies.bulletLife, c.bulletDamage);
+      }
+    } else this.bullets.spawn(_vb.x, _vb.y, _vb.z, _va.x, _va.y, _va.z, c.bulletSpeed, CONFIG.enemies.bulletLife, c.bulletDamage);
+    Events.emit('enemyShot', _vb);
+    if (e.burstLeft <= 0) e.burstLeft = c.burst || 1;
+    e.burstLeft--;
+    e.fireCd = e.burstLeft > 0 ? 0.16 : c.fireInterval / (diff * Game.diff.enemyFire);
+    if (e.burstLeft <= 0) e.telegraph = c.telegraph;
+  },
+
+  // Penembak Jitu: menjaga jarak jauh di depan pemain, garis bidik terlihat sebelum menembak
+  updateSniper(e, dt, dist, diff) {
+    const c = e.cfg, P = Player.pos, f = Player.forward;
+    const hl = Math.hypot(f.x, f.z) || 1;
+    const ca = Math.cos(e.slotAngle), sa = Math.sin(e.slotAngle);
+    _va.set(P.x + (f.x * ca - f.z * sa) / hl * c.keepDistance, P.y + 25, P.z + (f.x * sa + f.z * ca) / hl * c.keepDistance);
+    _desired.subVectors(_va, e.pos);
+    const dSlot = _desired.length();
+    const speed = Math.min(this.maxSpeed(), dSlot > 150 ? this.cruiseSpeed('gunship', diff) * 1.2 : 25);
+    _desired.normalize().addScaledVector(e.sep, 1.2).normalize();
+    e.pos.addScaledVector(_desired, speed * dt);
+    e.vel.copy(_desired).multiplyScalar(speed);
+    // Menghadap pemain (membidik)
+    e.dir.lerp(_vd.copy(_toP).normalize(), clamp(dt * 2, 0, 1)).normalize();
+    e.group.lookAt(e.pos.x - e.dir.x, e.pos.y - e.dir.y, e.pos.z - e.dir.z);
+    e.fireCd -= dt;
+    const inRange = dist < c.fireRange ? -(_toP.x * f.x + _toP.y * f.y + _toP.z * f.z) > 0.2 * dist : false;
+    if (e.aim > 0) {
+      e.aim -= dt;
+      e.state = 'attack';
+      // Garis bidik dari moncong ke titik bidik (sedikit tertinggal dari pemain)
+      e.aimPoint.lerp(P, clamp(dt * 3, 0, 1));
+      this.setAimLine(e, 1 - e.aim / c.aimTime);
+      Events.emit('enemyTelegraph', this.muzzle(e));
+      if (e.aim <= 0) {
+        const m = this.muzzle(e);
+        _va.copy(e.aimPoint).sub(m).normalize();
+        this.bullets.spawn(m.x, m.y, m.z, _va.x, _va.y, _va.z, c.bulletSpeed, CONFIG.enemies.bulletLife * 1.5, c.bulletDamage);
+        Events.emit('enemyShot', m);
+        e.fireCd = c.fireInterval / (Math.sqrt(diff) * Game.diff.enemyFire);
+        this.setAimLine(e, 0);
+      }
+    } else {
+      e.state = 'approach';
+      this.setAimLine(e, 0);
+      if (e.fireCd <= 0 ? inRange : false) { e.aim = c.aimTime; e.aimPoint.copy(P); }
+    }
+  },
+  muzzle(e) { return e.muzzleObj ? e.muzzleObj.getWorldPosition(_vb) : _vb.copy(e.pos).addScaledVector(e.dir, 4); },
+  setAimLine(e, k) {
+    if (!e.aimLine) return;
+    e.aimLine.visible = k > 0;
+    if (k <= 0) return;
+    const a = e.aimLine.geometry.attributes.position, m = this.muzzle(e);
+    a.setXYZ(0, m.x, m.y, m.z); a.setXYZ(1, e.aimPoint.x, e.aimPoint.y, e.aimPoint.z);
+    a.needsUpdate = true;
+    e.aimLine.geometry.computeBoundingSphere();
+    e.aimLine.material.opacity = 0.25 + 0.65 * k;
+  },
+
+  // Makhluk Angkasa: melayang pelan mendekat, menyengat dari jarak dekat, tentakel bergoyang
+  updateCreature(e, dt, dist, diff) {
+    const c = e.cfg;
+    const speed = dist > c.holdDistance ? this.cruiseSpeed('drone', diff) * c.speedFactor : 4;
+    _desired.copy(_toP).normalize().addScaledVector(e.sep, 1).normalize();
+    e.dir.lerp(_desired, clamp(dt * 0.8, 0, 1)).normalize();
+    e.pos.addScaledVector(e.dir, speed * dt);
+    e.vel.copy(e.dir).multiplyScalar(speed);
+    e.pulse += dt * (dist < 60 ? 5 : 2.2);
+    e.group.lookAt(e.pos.x - e.dir.x, e.pos.y - e.dir.y, e.pos.z - e.dir.z);
+    const s = 1 + Math.sin(e.pulse) * 0.08;
+    e.group.scale.set(s, s, 1 / s);
+    e.state = dist < 60 ? 'attack' : 'approach';
+    this.updateTentacles(e);
+  },
+  updateTentacles(e) {
+    if (!e.tentacles) return;
+    const a = e.tentacles.geometry.attributes.position, N = 8, S = 9;
+    let k = 0;
+    for (let i = 0; i < N; i++) {
+      const ang = i / N * Math.PI * 2, r0 = 1.5;
+      let x = Math.cos(ang) * r0, y = Math.sin(ang) * r0, z = 0.3, px = x, py = y, pz = z;
+      for (let j = 1; j <= S; j++) {
+        const w = Math.sin(e.pulse * 1.3 + j * 0.7 + i) * 0.35 * j / S;
+        x = Math.cos(ang) * (r0 - j * 0.06) + w * Math.sin(ang); y = Math.sin(ang) * (r0 - j * 0.06) - w * Math.cos(ang); z = 0.3 + j * 0.75;
+        a.setXYZ(k++, px, py, pz); a.setXYZ(k++, x, y, z);
+        px = x; py = y; pz = z;
+      }
+    }
+    a.needsUpdate = true;
+  },
+
+  // Kapal Induk Kecil: menjaga jarak di samping depan, meluncurkan drone berkala
+  updateCarrier(e, dt, dist, diff) {
+    const c = e.cfg, P = Player.pos, f = Player.forward, hl = Math.hypot(f.x, f.z) || 1;
+    const ca = Math.cos(e.slotAngle), sa = Math.sin(e.slotAngle);
+    _va.set(P.x + (f.x * ca - f.z * sa) / hl * c.keepDistance, P.y + 40, P.z + (f.x * sa + f.z * ca) / hl * c.keepDistance);
+    _desired.subVectors(_va, e.pos);
+    const dSlot = _desired.length();
+    _desired.normalize().addScaledVector(e.sep, 1).normalize();
+    const speed = Math.min(this.maxSpeed() * 0.8, dSlot > 120 ? this.cruiseSpeed('gunship', diff) : 20);
+    e.dir.lerp(_desired, clamp(dt * 0.5, 0, 1)).normalize();
+    e.pos.addScaledVector(e.dir, speed * dt);
+    e.vel.copy(e.dir).multiplyScalar(speed);
+    e.group.lookAt(e.pos.x - e.dir.x, e.pos.y - e.dir.y, e.pos.z - e.dir.z);
+    e.state = 'approach';
+    e.fireCd -= dt;
+    if (e.fireCd <= 0 ? dist < c.launchRange : false) {
+      e.fireCd = c.launchInterval;
+      let launched = 0;
+      for (const d of this.list) if (d.active ? d.owner === e : false) launched++;
+      for (let i = 0; i < c.launchCount; i++) {
+        if (launched >= c.maxDrones) break;
+        _vb.copy(e.pos).addScaledVector(e.dir, -6).y -= 2;
+        const d = this.spawn('drone', _vb.x + randRange(-3, 3), _vb.y, _vb.z + randRange(-3, 3));
+        if (d) { d.owner = e; d.launched = true; launched++; }
+      }
+      Events.emit('enemyTelegraph', _vb);
+    }
+  },
+
+  // Menara Pos: diam, berputar pelan, tiga turret menembak dengan tanda lampu
+  updateStation(e, dt, dist, diff) {
+    const c = e.cfg;
+    e.group.rotation.y += dt * 0.12;
+    e.vel.set(0, 0, 0);
+    e.state = dist < c.fireRange ? 'attack' : 'approach';
+    for (const t of e.turrets) {
+      t.obj.getWorldPosition(_vb);
+      _va.subVectors(Player.pos, _vb);
+      t.obj.lookAt(_vc.copy(_vb).sub(_va));   // laras menghadap pemain (laras ke -Z lokal)
+      t.cd -= dt;
+      if (dist >= c.fireRange ? true : !Player.alive) { t.tele = 0; t.lamp.scale.setScalar(1); continue; }
+      if (t.tele > 0) {
+        t.tele -= dt;
+        t.lamp.scale.setScalar(1.5 + Math.sin(t.tele * 40) * 0.6);
+        if (t.tele <= 0) {
+          t.lamp.getWorldPosition(_vb);
+          _va.copy(Player.vel).multiplyScalar(dist / c.bulletSpeed * 0.7).add(Player.pos).sub(_vb).normalize();
+          this.bullets.spawn(_vb.x, _vb.y, _vb.z, _va.x, _va.y, _va.z, c.bulletSpeed, CONFIG.enemies.bulletLife * 1.4, c.bulletDamage);
+          Events.emit('enemyShot', _vb);
+          t.cd = c.fireInterval / (Math.sqrt(diff) * Game.diff.enemyFire) + rand() * 0.6;
+          t.lamp.scale.setScalar(1);
+        }
+      } else if (t.cd <= 0) t.tele = c.telegraph;
+    }
+  },
+
+  // Penabur Ranjau: melintas di depan pemain dan menjatuhkan ranjau berkala
+  updateMinelayer(e, dt, dist, diff) {
+    const c = e.cfg, P = Player.pos, f = Player.forward;
+    // Garis lintasan menyilang di depan pemain
+    const ahead = 260, hl = Math.hypot(f.x, f.z) || 1;
+    const side = e.slotAngle >= 0 ? 1 : -1;
+    _va.set(P.x + f.x / hl * ahead - f.z / hl * side * 400, P.y + 10, P.z + f.z / hl * ahead + f.x / hl * side * 400);
+    _desired.subVectors(_va, e.pos);
+    if (_desired.length() < 80) e.slotAngle = -e.slotAngle;   // sampai di ujung: berbalik menyilang lagi
+    _desired.normalize().addScaledVector(e.sep, 1).normalize();
+    if (dist < 90) _desired.addScaledVector(_toP, -1.5 / dist).normalize();   // menjauh bila didekati
+    const speed = Math.min(this.maxSpeed(), this.cruiseSpeed('gunship', diff) * 0.85);
+    e.dir.lerp(_desired, clamp(dt * 1.2, 0, 1)).normalize();
+    e.pos.addScaledVector(e.dir, speed * dt);
+    e.vel.copy(e.dir).multiplyScalar(speed);
+    e.group.lookAt(e.pos.x - e.dir.x, e.pos.y - e.dir.y, e.pos.z - e.dir.z);
+    e.state = 'approach';
+    e.fireCd -= dt;
+    if (e.fireCd <= 0) {
+      e.fireCd = c.dropInterval;
+      _vb.copy(e.pos).addScaledVector(e.dir, -4);
+      const m = this.spawn('mine', _vb.x, _vb.y, _vb.z);
+      if (m) m.owner = e;
+    }
+  },
+
+  // Ranjau: diam, berkedip; bila pemain mendekat menyala cepat lalu meledak
+  updateMine(e, dt, dist) {
+    const c = e.cfg;
+    e.life += dt;
+    e.vel.set(0, 0, 0);
+    e.group.rotation.y += dt * 0.8;
+    if (e.armed > 0) {
+      e.armed -= dt;
+      e.lamp.scale.setScalar(1.4 + Math.sin(e.armed * 50) * 0.6);
+      if (e.armed <= 0) {
+        if (dist < c.blastRadius + Player.radius ? Player.alive : false) Player.damage(c.blastDamage, 'ranjau');
+        FX.explosion(e.pos.x, e.pos.y, e.pos.z, 1.3);
+        Events.emit('mineBlast', e.pos);
+        this.destroy(e, false);
+      }
+      return;
+    }
+    e.lamp.scale.setScalar(Math.sin(e.life * 4) > 0.6 ? 1.3 : 0.7);
+    if (dist < c.triggerRadius) { e.armed = c.armTime; Events.emit('enemyTelegraph', e.pos); }
+    if (e.life > c.lifetime) this.remove(e);
+  },
+
+  // Rudal: mengejar pemain dengan laju belok terbatas (bisa dihindari dan ditembak jatuh)
+  updateMissile(e, dt, dist) {
+    const c = e.cfg;
+    e.life += dt;
+    _desired.copy(_toP).normalize();
+    const maxTurn = c.turnRate * dt;
+    const ang = e.dir.angleTo(_desired);
+    if (ang > 1e-4) e.dir.lerp(_desired, Math.min(1, maxTurn / ang)).normalize();
+    e.pos.addScaledVector(e.dir, c.speed * dt);
+    e.vel.copy(e.dir).multiplyScalar(c.speed);
+    e.group.lookAt(e.pos.x - e.dir.x, e.pos.y - e.dir.y, e.pos.z - e.dir.z);
+    if (Game.frame % 2 === 0) FX.fire.emit(e.pos.x - e.dir.x * 1.5, e.pos.y - e.dir.y * 1.5, e.pos.z - e.dir.z * 1.5, 0, 0, 0, 0.35, 1.4, 0, 1, 0.35, 0.15, 0.9, 0, 0);
+    if (e.life > c.lifetime) { FX.explosion(e.pos.x, e.pos.y, e.pos.z, 0.6); this.remove(e); }
+  },
+
+  // Penyergap: menyamar saat mendekat, tampak jelas saat menyerang
+  updateCloak(e, dt) {
+    const target = e.state === 'attack' ? 1 : e.cfg.cloakAlpha;
+    e.cloak = damp(e.cloak, target, 3, dt);
+    for (const m of e.cloakMats) m.opacity = e.cloak;
+    e.group.visible = e.cloak > 0.03;
+  },
+
+  // Perisai: pulih setelah jeda tanpa terkena, kulit bersinar saat menyerap
+  updateShield(e, dt) {
+    const c = e.cfg;
+    if (e.shieldWait > 0) e.shieldWait -= dt; else e.shield = Math.min(c.shield, e.shield + c.shieldRegen * dt);
+    e.shieldFlash = Math.max(0, e.shieldFlash - dt * 3);
+    if (e.shieldMesh) {
+      e.shieldMesh.visible = e.shield > 0.5;
+      e.shieldMesh.material.uniforms.uI.value = 0.35 + e.shieldFlash * 2.2;
+    }
+  },
+
+  // Rombongan: anggota mengikuti posisi formasi pemimpin sampai pemimpin menyerang
+  formationTarget(e, out) {
+    const L = e.leader;
+    if (L ? !L.active : true) { e.leader = null; return false; }
+    if (L.state === 'attack' ? true : L.state === 'break') return false;
+    const fx = L.dir.x, fz = L.dir.z, hl = Math.hypot(fx, fz) || 1;
+    out.set(L.pos.x + (-fz / hl) * e.formOff.x + (fx / hl) * e.formOff.z, L.pos.y + e.formOff.y, L.pos.z + (fx / hl) * e.formOff.x + (fz / hl) * e.formOff.z);
+    return true;
+  },
+
+  // Muncul berkelompok dalam formasi V, baris, atau lingkaran
+  spawnGroup(type, count, formation) {
+    const lead = this.spawnAhead(type);
+    if (!lead) return 0;
+    let n = 1;
+    if (lead.cfg.escorts) {
+      for (let i = 0; i < lead.cfg.escorts; i++) {
+        const s = i === 0 ? -1 : 1;
+        const es = this.spawn(lead.cfg.escortType, lead.pos.x + s * 22, lead.pos.y, lead.pos.z + 18);
+        if (es) { es.leader = lead; es.formOff.set(s * 22, 0, 18); es.escort = true; }
+      }
+    }
+    for (let i = 1; i < count; i++) {
+      const off = new THREE.Vector3();
+      if (formation === 'v') off.set((i % 2 ? -1 : 1) * Math.ceil(i / 2) * 20, 0, Math.ceil(i / 2) * 18);
+      else if (formation === 'line') off.set((i % 2 ? -1 : 1) * Math.ceil(i / 2) * 24, 0, 0);
+      else { const a = i / (count - 1) * Math.PI * 2; off.set(Math.cos(a) * 26, Math.sin(a) * 14, Math.sin(a) * 26); }
+      const e = this.spawn(type, lead.pos.x + off.x, lead.pos.y + off.y, lead.pos.z + off.z);
+      if (!e) break;
+      e.leader = lead; e.formOff.copy(off);
+      n++;
+    }
+    return n;
+  },
+});
 Enemies.init();
 
 /* Metrik keseimbangan tempur untuk uji bot: waktu ada musuh menempel di belakang dan tabrakan */
@@ -3856,11 +4446,35 @@ const Metrics = {
    ===================================================================== */
 const Waves = {
   wave: 0, phase: 'break', timer: 0, waveTime: 0, spawnTimer: 0,
-  remDrones: 0, remGunships: 0, difficulty: 1,
+  queue: [], difficulty: 1,
 
   reset() {
     this.wave = 0; this.phase = 'break'; this.timer = CONFIG.waves.firstDelay;
-    this.waveTime = 0; this.spawnTimer = 0; this.remDrones = 0; this.remGunships = 0; this.difficulty = 1;
+    this.waveTime = 0; this.spawnTimer = 0; this.queue = []; this.difficulty = 1;
+  },
+  // Susunan gelombang: Bumi tetap drone dan penembak; Angkasa mendapat roster yang bertambah per gelombang
+  buildQueue(n, rate) {
+    const q = [], add = (type, count = 1, formation = 'v') => q.push({ type, count, formation });
+    let drones = Math.max(1, Math.round(Math.min(3 + 2 * (n - 1), 14) * rate));
+    let guns = Math.max(1, Math.round(Math.min(1 + Math.floor((n - 1) / 2), 7) * rate));
+    if (Worlds.active === SpaceWorld) {
+      drones = Math.max(1, Math.min(6, Math.round(drones * 0.5)));
+      guns = Math.max(1, Math.round(guns * 0.7));
+    }
+    for (let i = 0; i < drones; i++) add('drone');
+    for (let i = 0; i < guns; i++) add('gunship');
+    if (Worlds.active === SpaceWorld) {
+      if (n >= 2) add('scout', Math.min(2 + Math.floor(n / 3), 4), 'v');
+      if (n >= 3) add(n % 2 ? 'sniper' : 'minelayer');
+      if (n >= 4) { add('hunter'); add('shieldship'); }
+      if (n >= 5) { add('creature', 2, 'circle'); add('guardian'); }
+      if (n >= 6) add('stalker');
+      if (n >= 6 ? n % 3 === 0 : false) add('carrier');
+      if (n >= 7 ? n % 4 === 3 : false) add('commander');
+      if (n >= 5 ? n % 5 === 0 : false) add('station');
+    }
+    for (let i = q.length - 1; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); const t = q[i]; q[i] = q[j]; q[j] = t; }
+    return q;
   },
 
   start(n) {
@@ -3870,8 +4484,7 @@ const Waves = {
     // Jumlah musuh per gelombang dikalikan laju spawn dari tabel kesulitan
     const rate = Game.diff.spawnRate;
     n += Campaign.waveOffset();   // stage kampanye yang lebih jauh lebih berat
-    this.remDrones = Math.max(1, Math.round(Math.min(3 + 2 * (n - 1), 14) * rate));
-    this.remGunships = Math.max(1, Math.round(Math.min(1 + Math.floor((n - 1) / 2), 7) * rate));
+    this.queue = this.buildQueue(n, rate);
     this.spawnTimer = 0.4;
     this.waveTime = 0;
     this.difficulty = Math.min(1 + W.difficultyStep * (n - 1), W.maxDifficulty);
@@ -3881,7 +4494,7 @@ const Waves = {
   // Musuh yang dipindah karena tertinggal akan muncul lagi di depan pemain
   requeue(type) {
     if (this.phase !== 'active') return;
-    if (type === 'drone') this.remDrones++; else this.remGunships++;
+    this.queue.push({ type, count: 1, formation: 'v' });
   },
 
   update(dt) {
@@ -3896,12 +4509,11 @@ const Waves = {
     }
     this.waveTime += dt;
     this.spawnTimer -= dt;
-    const rem = this.remDrones + this.remGunships;
+    const rem = this.queue.length;
     if (rem > 0 ? this.spawnTimer <= 0 : false) {
-      let pickGun = false;
-      if (this.remGunships > 0) pickGun = this.remDrones === 0 || rand() < this.remGunships / rem;
-      const e = Enemies.spawnAhead(pickGun ? 'gunship' : 'drone');
-      if (e) { if (pickGun) this.remGunships--; else this.remDrones--; }
+      const g = this.queue[this.queue.length - 1];
+      const ok = g.count > 1 ? Enemies.spawnGroup(g.type, g.count, g.formation) > 0 : !!Enemies.spawnAhead(g.type);
+      if (ok) this.queue.pop();
       this.spawnTimer = W.spawnInterval / (Math.sqrt(this.difficulty) * Game.diff.spawnRate);
     }
     const cleared = rem + Enemies.alive === 0;
@@ -4346,9 +4958,22 @@ function updateCombat() {
     if (!e.active) continue;
     const r = e.radius + pr;
     if (e.pos.distanceToSquared(P) < r * r) {
+      const c = e.cfg;
+      if (c.ai === 'mine') continue;                       // ranjau meledak lewat pemicunya sendiri
+      if (c.ai === 'missile') { Player.damage(c.contactDamage, 'rudal'); FX.explosion(e.pos.x, e.pos.y, e.pos.z, 0.7); Enemies.destroy(e, false); continue; }
+      if (c.ai === 'creature') {
+        // Sengatan berkala, makhluk tidak hancur karena bersentuhan
+        if (e.meleeCd <= 0) { e.meleeCd = c.meleeInterval; Metrics.rams++; Player.damage(c.contactDamage, 'sengatan'); }
+        continue;
+      }
+      if (c.heavy) {
+        hardImpact('Menabrak ' + c.label, () => { _vb.subVectors(P, e.pos).normalize(); P.copy(e.pos).addScaledVector(_vb, r + 4); Player.pitchUpAfterBounce(); });
+        if (!Player.alive) return;
+        continue;
+      }
       if (e.type === 'drone') Metrics.rams++; else Metrics.collisions++;
       Enemies.destroy(e, false);
-      Player.damage(e.cfg.contactDamage, 'tabrakan');
+      Player.damage(c.contactDamage, 'tabrakan');
     }
   }
 }
@@ -4359,10 +4984,11 @@ Events.on('enemyDestroyed', (e, byPlayer) => {
   Game.kills++;
   Game.credits += CONFIG.credits[e.type] || 0;
   Player.addUltimate(CONFIG.ultimate.killGain);
-  Stars.burst(e.pos.x, e.pos.y, e.pos.z, 1 + Math.floor(rand() * 3));
+  if (e.cfg.minor) { addScore(e.cfg.score, e.cfg.label.toUpperCase()); return; }
+  Stars.burst(e.pos.x, e.pos.y, e.pos.z, (e.cfg.loot || 1) + Math.floor(rand() * 3));
   if (rand() < CONFIG.buffs.dropChanceEnemy) Pickups.place(rand() < 0.5 ? 'overdrive' : 'destroyer', e.pos.x, e.pos.y, e.pos.z);
   Combo.registerKill();
-  addScore(Math.round(e.cfg.score * Combo.multiplier), e.type === 'drone' ? 'DRONE' : 'PENEMBAK');
+  addScore(Math.round(e.cfg.score * Combo.multiplier), e.cfg.label.toUpperCase());
 });
 Events.on('asteroidDestroyed', (a, source) => {
   if (source !== 'pemain') return;
@@ -7215,7 +7841,12 @@ Events.on('bulletImpact', (x, y, z) => {
   FX.sparks(x, y, z, 6, 1, 0.75, 0.4);
   FX.smoke.emit(x, y, z, 0, 2, 0, 0.8, 1.5, 3, 0.55, 0.52, 0.48, 0.35, 1, -1);
 });
-Events.on('enemyDestroyed', (e) => FX.explosion(e.pos.x, e.pos.y, e.pos.z, e.type === 'drone' ? 1 : 1.5));
+Events.on('enemyDestroyed', (e) => {
+  const s = clamp(e.radius / 2.6, 0.7, 3);
+  FX.explosion(e.pos.x, e.pos.y, e.pos.z, s);
+  // Kapal besar meledak bertahap: beberapa ledakan kecil di sekitar lambung
+  if (e.cfg.heavy ? true : e.radius >= 4.5) for (let i = 0; i < 4; i++) FX.explosion(e.pos.x + randRange(-1, 1) * e.radius, e.pos.y + randRange(-0.6, 0.6) * e.radius, e.pos.z + randRange(-1, 1) * e.radius, s * 0.6);
+});
 Events.on('asteroidDestroyed', (a) => FX.rockBurst(a.pos.x, a.pos.y, a.pos.z, a.radius));
 Events.on('cometDestroyed', (c) => { FX.rockBurst(c.pos.x, c.pos.y, c.pos.z, c.radius); FX.sparks(c.pos.x, c.pos.y, c.pos.z, 30, 0.6, 0.9, 1); });
 Events.on('fatalCrash', (p) => {
@@ -9322,6 +9953,15 @@ window.__game = {
       return out;
     },
     metrics() { return Metrics.summary(); },
+    resetMetrics() { Metrics.reset(); return true; },
+    startWave(n) { Enemies.reset(); Waves.start(n); return Waves.queue.map((g) => g.type + (g.count > 1 ? 'x' + g.count : '')); },
+    // Daftar musuh aktif dengan keadaan khusus jenisnya
+    enemyInfo() {
+      return Enemies.list.filter((e) => e.active).map((e) => ({ type: e.type, ai: e.cfg.ai, state: e.state, hp: round2(e.health.hp), shield: round2(e.shield), cloak: round2(e.cloak), aim: e.aimLine ? e.aimLine.visible : false, armed: round2(e.armed), leader: e.leader ? e.leader.type : null, owner: e.owner ? e.owner.type : null, dist: round2(e.pos.distanceTo(Player.pos)) }));
+    },
+    roster() { return ENEMY_TYPES.map((t) => ({ type: t, label: CONFIG.enemies[t].label })); },
+    spawnGroup(type, count, formation) { return Enemies.spawnGroup(type, count, formation || 'v'); },
+    damageEnemy(type, amount) { const e = Enemies.list.find((x) => x.active ? x.type === type : false); if (!e) return null; const d = applyDamage(e, amount, 'pemain', e.pos.x, e.pos.y, e.pos.z); return { dealt: round2(d), hp: round2(e.health.hp), shield: round2(e.shield) }; },
     enemySpeeds() {
       return { max: Math.max(0, ...Enemies.list.filter((e) => e.active).map((e) => e.vel.length())), limit: round2(Enemies.maxSpeed()), states: Enemies.list.filter((e) => e.active).map((e) => e.state) };
     },
@@ -9489,6 +10129,7 @@ const PREVIEW_ID = (() => {
   try {
     const q = new URLSearchParams(location.search);
     if (q.get('jetpreview') === '1') return 'raptor-j';
+    if (q.get('gallery') === '1') return 'gallery';
     const id = q.get('shippreview');
     if (!id) return null;
     return id === 'jet' ? 'raptor-j' : id;
@@ -9513,6 +10154,7 @@ const JetPreview = {
     key.position.set(8, 12, 6);
     const rim = new THREE.DirectionalLight(0xcfe0ff, 0.9);
     rim.position.set(-8, 4, -10);
+    if (PREVIEW_ID === 'gallery') { this.startGallery(hemi, key, rim); return; }
     this.jet = PREVIEW_ID === 'piko' ? buildPiko() : SHIPS[PREVIEW_ID] ? SHIPS[PREVIEW_ID].build(SHIPS[PREVIEW_ID].params) : createPlayerJet();
     this.anim = { nitro: 0, brake: 0, turn: 0 };
     if (PREVIEW_ID === 'piko') this.jet.root.scale.setScalar(8);   // robot kecil diperbesar agar bisa diperiksa
@@ -9538,7 +10180,54 @@ const JetPreview = {
     };
     window.__shipPreview = window.__jetPreview;
   },
+  // Galeri musuh (?gallery=1): semua jenis berjajar dengan label, ukuran disamakan untuk difoto
+  startGallery(hemi, key, rim) {
+    scene.background = new THREE.Color(0x1a1e26);
+    this.gallery = { items: [], focus: -1, t: 0 };
+    const root = new THREE.Group(), cols = 5, gap = 16;
+    ENEMY_TYPES.forEach((type, i) => {
+      const m = Enemies.templates[type].clone();
+      m.visible = true;
+      const box = new THREE.Box3().setFromObject(m), size = box.getSize(new THREE.Vector3()), k = 9 / Math.max(size.x, size.y, size.z);
+      const holder = new THREE.Group();
+      m.scale.multiplyScalar(k);
+      m.position.sub(box.getCenter(new THREE.Vector3()).multiplyScalar(k));
+      holder.add(m);
+      holder.position.set((i % cols - (cols - 1) / 2) * gap, 0, Math.floor(i / cols) * gap - 16);
+      // Label nama di bawah model
+      const cv = document.createElement('canvas'); cv.width = 256; cv.height = 48;
+      const ctx = cv.getContext('2d'); ctx.fillStyle = '#e8eef6'; ctx.font = 'bold 26px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(CONFIG.enemies[type].label, 128, 34);
+      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+      const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
+      label.scale.set(10, 1.9, 1); label.position.set(0, -6.5, 0);
+      holder.add(label);
+      root.add(holder);
+      let tris = 0;
+      m.traverse((o) => { if (o.isMesh) tris += (o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count) / 3; });
+      this.gallery.items.push({ type, holder, tris: Math.round(tris) });
+    });
+    this.group.add(hemi, key, rim, root);
+    scene.add(this.group);
+    camera.fov = 35; camera.near = 0.1; camera.updateProjectionMatrix();
+    this.jet = { root };
+    window.__gallery = {
+      types: ENEMY_TYPES.slice(),
+      triangles: Object.fromEntries(this.gallery.items.map((it) => [it.type, it.tris])),
+      focus: (i) => { this.gallery.focus = i; return this.gallery.items[i] ? this.gallery.items[i].type : null; },
+      overview: () => { this.gallery.focus = -1; },
+    };
+  },
+  updateGallery(dt) {
+    const G = this.gallery;
+    G.t += dt;
+    for (const it of G.items) it.holder.children[0].rotation.y = G.t * 0.5;
+    if (G.focus < 0) { camera.position.set(0, 42, 56); camera.lookAt(0, -2, 4); return; }
+    const p = G.items[G.focus].holder.position;
+    camera.position.set(p.x + 13, p.y + 7, p.z + 17);
+    camera.lookAt(p.x, p.y - 1, p.z);
+  },
   update(dt) {
+    if (this.gallery) { this.updateGallery(dt); return; }
     if (this.jet.animate) this.jet.animate(dt, this.anim);
     if (this.view === 'orbit') {
       if (camera.fov !== 35) { camera.fov = 35; camera.updateProjectionMatrix(); }
