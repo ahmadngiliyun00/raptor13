@@ -1704,6 +1704,182 @@ function buildJetRaptor() {
 }
 
 const createPlayerJet = buildJetRaptor;
+
+/* =====================================================================
+   STARFIGHTER - kapal tempur angkasa satu pilot, orisinal, dengan empat bilah sayap
+   dalam konfigurasi X yang bergerak dinamis. Satu pembuat model dengan parameter untuk
+   varian Interceptor dan Gunship. Hidung menghadap -Z.
+   ===================================================================== */
+const SF_TEX = {};
+// Tekstur kanvas livery: dasar gelap dengan aksen oranye, peta emissive garis panel cyan, angka 13
+function starfighterTextures(accent) {
+  if (SF_TEX[accent]) return SF_TEX[accent];
+  const make = (draw, srgb = true) => {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    draw(c.getContext('2d'));
+    const t = new THREE.CanvasTexture(c);
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
+    return t;
+  };
+  const acc = '#' + accent.toString(16).padStart(6, '0');
+  const base = (g) => {
+    g.fillStyle = '#c4c9d1'; g.fillRect(0, 0, 256, 256);
+    const rnd = makeRng(91);
+    for (let i = 0; i < 1800; i++) { const v = 185 + Math.floor(rnd() * 30); g.fillStyle = `rgb(${v},${v + 2},${v + 6})`; g.fillRect(rnd() * 256, rnd() * 256, 2, 2); }
+    g.strokeStyle = 'rgba(30, 34, 42, 0.5)'; g.lineWidth = 1.2;
+    for (const x of [40, 96, 150, 210]) { g.beginPath(); g.moveTo(x + 0.5, 0); g.lineTo(x + 0.5, 256); g.stroke(); }
+    for (const y of [70, 160]) { g.beginPath(); g.moveTo(0, y + 0.5); g.lineTo(256, y + 0.5); g.stroke(); }
+  };
+  const T = {
+    body: make((g) => { base(g); g.fillStyle = acc; g.fillRect(0, 118, 256, 10); }),
+    wing: make((g) => { base(g); g.fillStyle = acc; g.fillRect(0, 0, 14, 256); g.fillRect(0, 236, 256, 20); }),
+    wing13: make((g) => {
+      base(g); g.fillStyle = acc; g.fillRect(0, 0, 14, 256); g.fillRect(0, 236, 256, 20);
+      g.font = 'italic 900 96px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 6; g.strokeStyle = 'rgba(20, 22, 28, 0.9)'; g.strokeText('13', 140, 120);
+      g.fillStyle = acc; g.fillText('13', 140, 120);
+    }),
+    // Peta emissive: garis panel cyan tipis di atas hitam
+    glow: make((g) => {
+      g.fillStyle = '#000'; g.fillRect(0, 0, 256, 256);
+      g.strokeStyle = '#3ff0ff'; g.lineWidth = 2.2;
+      g.beginPath(); g.moveTo(20, 40); g.lineTo(230, 40); g.moveTo(20, 200); g.lineTo(180, 200); g.moveTo(60, 40); g.lineTo(60, 200); g.stroke();
+    }),
+  };
+  SF_TEX[accent] = T;
+  return T;
+}
+
+const STARFIGHTER_BASE = {
+  length: 8.2, width: 0.62, height: 0.5,
+  wing: { span: 3.4, rootChord: 2.5, tipChord: 0.95, sweep: 1.2, rootZ: 0.6 },
+  spread: 0.5,               // sudut bilah dari bidang horizontal (radian)
+  color: 0x323843, accent: 0xff8a24, ring: 0x46e8ff, guns: 2,
+};
+
+function buildStarfighter(params = {}) {
+  const P = { ...STARFIGHTER_BASE, ...params, wing: { ...STARFIGHTER_BASE.wing, ...(params.wing || {}) } };
+  JetTextures.init();
+  const T = starfighterTextures(P.accent);
+  const root = new THREE.Group();
+  root.rotation.order = 'YXZ';
+  const body = new THREE.Group();
+  root.add(body);
+  const add = (geo, mat, parent = body, shadow = true) => {
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = shadow; m.receiveShadow = shadow;
+    parent.add(m);
+    return m;
+  };
+  const skin = { color: P.color, metalness: 0.55, roughness: 0.42, envMap: JetTextures.env, envMapIntensity: 0.7,
+    emissive: 0x2ad8ff, emissiveIntensity: 0.9, emissiveMap: T.glow };
+  const matBody = new THREE.MeshStandardMaterial({ ...skin, map: T.body });
+  const matWing = new THREE.MeshStandardMaterial({ ...skin, map: T.wing });
+  const matWing13 = new THREE.MeshStandardMaterial({ ...skin, map: T.wing13 });
+  const matCanopy = new THREE.MeshStandardMaterial({ color: 0x0f1822, metalness: 0.9, roughness: 0.06, envMap: JetTextures.env, envMapIntensity: 1.4 });
+  const matDark = new THREE.MeshStandardMaterial({ color: 0x1a1d22, metalness: 0.6, roughness: 0.5 });
+  const matGlow = new THREE.MeshBasicMaterial({ color: P.ring });
+  const matFlame = new THREE.MeshBasicMaterial({ color: 0x66ddff, transparent: true, opacity: 0.1, blending: THREE.AdditiveBlending, depthWrite: false });
+  const matThrL = new THREE.MeshBasicMaterial({ color: 0x1a3a44 }), matThrR = new THREE.MeshBasicMaterial({ color: 0x1a3a44 });
+
+  // Badan: loft superellipse, hidung pipih ber-chine, rumah mesin membulat di belakang
+  const L = P.length, W = P.width, H = P.height, z0 = -L * 0.52;
+  // [posisi relatif, lebar, tinggi atas, tinggi bawah, offset y, chine]: bahu melebar dan pipih di pangkal sayap
+  const prof = [
+    [0.0, 0.03, 0.02, 0.02, -0.06, 1.0], [0.05, 0.2, 0.08, 0.06, -0.05, 1.0], [0.13, 0.4, 0.17, 0.12, -0.03, 1.0],
+    [0.24, 0.62, 0.3, 0.2, 0, 0.8], [0.36, 0.86, 0.42, 0.28, 0, 0.7], [0.48, 1.28, 0.46, 0.3, 0, 0.75],
+    [0.6, 1.42, 0.44, 0.3, 0, 0.75], [0.72, 1.3, 0.42, 0.32, 0, 0.6], [0.84, 1.02, 0.44, 0.38, 0, 0.3],
+    [0.93, 1.0, 0.5, 0.46, 0, 0], [0.98, 0.98, 0.5, 0.46, 0, 0], [1.0, 0.86, 0.42, 0.4, 0, 0],
+  ];
+  const sections = prof.map(([u, w, ht, hb, y, chine]) => ({ z: z0 + u * L, w: w * W, ht: ht * H * 2, hb: hb * H * 2, y, n: 2.4 + u * 0.8, chine }));
+  add(loftFuselage(sections, 24, { tipLength: 0.15 }), matBody);
+  const zTail = sections[sections.length - 1].z;
+
+  // Kanopi gelembung dan soket robot pendamping tepat di belakangnya
+  add(canopyGeometry(L * 0.22, W * 1.05, H * 0.75), matCanopy).position.set(0, H * 0.85, z0 + L * 0.3);
+  const socket = add(new THREE.TorusGeometry(0.28, 0.06, 6, 16), matDark);
+  socket.rotation.x = Math.PI / 2;
+  socket.position.set(0, H * 0.95, z0 + L * 0.45);
+  const pikoMount = new THREE.Group();
+  pikoMount.position.set(0, H * 1.05, z0 + L * 0.45);
+  body.add(pikoMount);
+
+  // Cincin mesin utama emissive dan glow dalam
+  const ringR = W * 0.78;
+  add(new THREE.TorusGeometry(ringR, 0.1, 8, 28), matGlow, body, false).position.set(0, 0, zTail + 0.02);
+  const disc = add(new THREE.CircleGeometry(ringR * 0.92, 24), matGlow, body, false);
+  disc.position.set(0, 0, zTail - 0.02);
+  const flame = add(flameGeometry(), matFlame, body, false);
+  flame.position.set(0, 0, zTail + 0.05);
+  flame.scale.set(ringR * 3.2, ringR * 3.2, 0.5);
+
+  // Empat bilah sayap X. Tiap bilah: pivot di sumbu badan (sudut sebar) lalu sendi puntir di sumbu bentang
+  const wp = P.wing;
+  const plan = { rootX: 0, rootLE: -wp.rootChord * 0.45, rootTE: wp.rootChord * 0.55,
+    tipXLE: wp.span, tipLE: -wp.rootChord * 0.45 + wp.sweep, tipXTE: wp.span * 0.94, tipTE: -wp.rootChord * 0.45 + wp.sweep + wp.tipChord,
+    thickRoot: 0.08, thickTip: 0.03, ns: 6, nc: 10 };
+  const wingGeo = liftingSurface(plan);
+  const tipGeo = capsuleGeometry(0.11, 0.9, 8);
+  const wings = [];
+  for (const [side, up] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+    const pivot = new THREE.Group();
+    pivot.position.set(0, 0, wp.rootZ);
+    body.add(pivot);
+    const twist = new THREE.Group();
+    pivot.add(twist);
+    const geo = side > 0 ? wingGeo : mirrorX(wingGeo);
+    const mat = side > 0 ? (up > 0 ? matWing13 : matWing) : matWing;
+    const blade = add(geo, mat, twist);
+    blade.position.x = side * W * 0.45;   // pangkal terbenam di dalam badan
+    // Thruster manuver kecil di ujung bilah
+    const thr = add(tipGeo, side > 0 ? matThrR : matThrL, twist, false);
+    thr.position.set(side * (W * 0.45 + wp.span * 0.97), 0, plan.tipLE + wp.tipChord * 0.5);
+    wings.push({ pivot, twist, side, up });
+  }
+
+  // Lampu navigasi
+  const navGeo = new THREE.SphereGeometry(0.06, 6, 4);
+  add(navGeo, new THREE.MeshBasicMaterial({ color: 0xff3030 }), body, false).position.set(-W * 0.9, 0.05, z0 + L * 0.7);
+  add(navGeo, new THREE.MeshBasicMaterial({ color: 0x30ff70 }), body, false).position.set(W * 0.9, 0.05, z0 + L * 0.7);
+
+  // Laras tambahan untuk varian bersenjata berat
+  if (P.guns > 2) {
+    const barrel = capsuleGeometry(0.09, 1.4, 6);
+    for (const sx of [-1, 1]) add(barrel, matDark).position.set(sx * W * 0.95, -H * 0.25, z0 + L * 0.3);   // menempel di sisi bawah badan
+  }
+
+  const light = new THREE.PointLight(0x66ddff, 0, 24, 2);
+  light.position.set(0, 0, zTail + 1.2);
+  root.add(light);
+
+  const state = { spread: P.spread, twist: 0, thrL: 0, thrR: 0 };
+  // Sayap dinamis: merapat saat nitro, melebar saat melambat (rem udara), puntir berlawanan saat belok
+  const animate = (dt, ctx) => {
+    let target = P.spread;
+    if (ctx.nitro > 0.05) target = lerp(P.spread, 0.2, ctx.nitro);
+    else if (ctx.brake > 0) target = lerp(P.spread, 0.85, ctx.brake);
+    state.spread = damp(state.spread, target, 5, dt);
+    state.twist = damp(state.twist, clamp(ctx.turn, -1, 1) * 0.22, 6, dt);
+    // Thruster menyala di sisi luar belokan
+    state.thrL = damp(state.thrL, ctx.turn < -0.1 ? 1 : 0, 10, dt);
+    state.thrR = damp(state.thrR, ctx.turn > 0.1 ? 1 : 0, 10, dt);
+    for (const w of wings) {
+      w.pivot.rotation.z = w.side * w.up * state.spread;
+      w.twist.rotation.x = w.side * state.twist;
+    }
+    matThrL.color.setRGB(0.1 + 0.9 * state.thrR, 0.25 + 0.75 * state.thrR, 0.3 + 0.7 * state.thrR);
+    matThrR.color.setRGB(0.1 + 0.9 * state.thrL, 0.25 + 0.75 * state.thrL, 0.3 + 0.7 * state.thrL);
+  };
+  animate(1, { nitro: 0, brake: 0, turn: 0 });
+
+  const tipX = W * 0.45 + wp.span;
+  return {
+    root, body, flames: [flame], light, matGlow, matFlame, animate, wings, pikoMount, state,
+    glowBase: new THREE.Color(P.ring), glowHot: new THREE.Color(0xe8ffff),
+    wingtips: [new THREE.Vector3(-tipX, 0, plan.tipLE + 0.5), new THREE.Vector3(tipX, 0, plan.tipLE + 0.5)],
+  };
+}
 const _AX_X = new THREE.Vector3(1, 0, 0), _AX_Y = new THREE.Vector3(0, 1, 0), _AX_Z = new THREE.Vector3(0, 0, 1);
 const _qb = new THREE.Quaternion();
 
@@ -1727,29 +1903,32 @@ const SHIPS = {
   starfighter: {
     id: 'starfighter', name: 'Starfighter', worlds: ['space'], cost: 0,
     desc: 'Kapal tempur angkasa satu pilot bersayap empat yang bisa berputar. Serba bisa.',
-    build: buildJetRaptor,
+    build: buildStarfighter,
+    params: {},
     stats: { speed: 1.0, agility: 1.1, hp: 100, damage: 10, nitro: 1.0 },
-    muzzles: [[-1.25, -0.12, -1.2], [1.25, -0.12, -1.2]],
-    engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
+    muzzles: [[-0.75, -0.05, -1.6], [0.75, -0.05, -1.6]],
+    engines: [[0, 0, 4.1]],
     radius: 2.6,
   },
   // Varian dari pembuat model yang sama dengan parameter berbeda (model dibuat di A3)
   interceptor: {
     id: 'interceptor', name: 'Interceptor', worlds: ['space'], cost: 500,
     desc: 'Varian ramping dan sangat lincah. Cepat menutup jarak, tetapi lapisannya tipis.',
-    build: buildJetRaptor,
+    build: buildStarfighter,
+    params: { length: 9.0, width: 0.5, height: 0.42, wing: { span: 3.1, rootChord: 2.2, tipChord: 0.7, sweep: 1.7, rootZ: 0.9 }, spread: 0.38, color: 0x3c4450, accent: 0x46e8ff, ring: 0x9cf6ff },
     stats: { speed: 1.18, agility: 1.35, hp: 75, damage: 9, nitro: 1.25 },
-    muzzles: [[-1.25, -0.12, -1.2], [1.25, -0.12, -1.2]],
-    engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
+    muzzles: [[-0.62, -0.05, -2.0], [0.62, -0.05, -2.0]],
+    engines: [[0, 0, 4.4]],
     radius: 2.3,
   },
   gunship: {
     id: 'gunship', name: 'Gunship', worlds: ['space'], cost: 1200,
     desc: 'Varian berat berlapis tebal dengan empat laras. Lambat berbelok, tetapi pukulannya keras.',
-    build: buildJetRaptor,
+    build: buildStarfighter,
+    params: { length: 8.0, width: 0.86, height: 0.66, wing: { span: 3.0, rootChord: 3.0, tipChord: 1.4, sweep: 0.8, rootZ: 0.5 }, spread: 0.6, color: 0x2c2f35, accent: 0xff4a3a, ring: 0xffa64a, guns: 4 },
     stats: { speed: 0.88, agility: 0.8, hp: 160, damage: 14, nitro: 0.85 },
-    muzzles: [[-1.6, -0.12, -1.0], [1.6, -0.12, -1.0], [-0.9, -0.3, -1.6], [0.9, -0.3, -1.6]],
-    engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
+    muzzles: [[-1.03, -0.26, -2.2], [1.03, -0.26, -2.2], [-0.9, -0.05, -1.4], [0.9, -0.05, -1.4]],
+    engines: [[0, 0, 4.05]],
     radius: 3.0,
   },
 };
@@ -2119,8 +2298,15 @@ const Player = {
     for (const f of m.flames) f.scale.set(1 + nf * 0.5, 1 + nf * 0.5, (0.45 + nf * 2.0) * flicker);
     m.matFlame.opacity = 0.1 + 0.8 * nf;
     m.light.intensity = nf * CONFIG.light.nitroLightIntensity * flicker;
-    m.matGlow.color.lerpColors(this._glowBase, this._glowHot, nf);
+    m.matGlow.color.lerpColors(m.glowBase || this._glowBase, m.glowHot || this._glowHot, nf);
+    // Kapal dengan sayap dinamis: nitro, rem (melambat di bawah kecepatan dasar), belok
+    if (m.animate) {
+      const brake = clamp((CONFIG.player.baseSpeed * this.ship.stats.speed - this.speed) / 15, 0, 1);
+      this._anim.nitro = nf; this._anim.brake = brake; this._anim.turn = -Controls.yaw;
+      m.animate(dt, this._anim);
+    }
   },
+  _anim: { nitro: 0, brake: 0, turn: 0 },
   _glowBase: new THREE.Color(0xff9a40),
   _glowHot: new THREE.Color(0xfff0c0),
 
@@ -6548,7 +6734,17 @@ window.__game = {
    PRATINJAU JET - alat kerja, aktif hanya dengan ?jetpreview=1
    Menampilkan jet saja di latar polos dengan cahaya netral dan kamera orbit.
    ===================================================================== */
-const JET_PREVIEW = (() => { try { return new URLSearchParams(location.search).get('jetpreview') === '1'; } catch (err) { return false; } })();
+// ?jetpreview=1 (jet Raptor-J) atau ?shippreview=starfighter|interceptor|gunship|jet|piko
+const PREVIEW_ID = (() => {
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.get('jetpreview') === '1') return 'raptor-j';
+    const id = q.get('shippreview');
+    if (!id) return null;
+    return id === 'jet' ? 'raptor-j' : id;
+  } catch (err) { return null; }
+})();
+const JET_PREVIEW = PREVIEW_ID !== null;
 const JetPreview = {
   group: null, jet: null, view: 'orbit', angle: 0.6, hidden: [],
   // Posisi kamera per sudut pandang (pesawat di titik asal, hidung ke -Z)
@@ -6567,7 +6763,8 @@ const JetPreview = {
     key.position.set(8, 12, 6);
     const rim = new THREE.DirectionalLight(0xcfe0ff, 0.9);
     rim.position.set(-8, 4, -10);
-    this.jet = createPlayerJet();
+    this.jet = PREVIEW_ID === 'piko' ? buildPiko() : SHIPS[PREVIEW_ID] ? SHIPS[PREVIEW_ID].build(SHIPS[PREVIEW_ID].params) : createPlayerJet();
+    this.anim = { nitro: 0, brake: 0, turn: 0 };
     this.group.add(hemi, key, rim, this.jet.root);
     scene.add(this.group);
     camera.fov = 35;
@@ -6584,9 +6781,14 @@ const JetPreview = {
       setView: (name) => { this.view = this.views[name] ? name : 'orbit'; return this.view; },
       orbit: () => { this.view = 'orbit'; },
       setNitro: (v) => { this.jet.flames.forEach((f) => f.scale.set(1 + v * 0.5, 1 + v * 0.5, 0.45 + v * 2)); this.jet.matFlame.opacity = 0.1 + 0.8 * v; },
+      // Keadaan sayap dinamis: nitro 0..1, brake 0..1, turn -1..1
+      setState: (st) => { Object.assign(this.anim, st); for (let i = 0; i < 60; i++) if (this.jet.animate) this.jet.animate(0.05, this.anim); return this.jet.state || null; },
+      id: PREVIEW_ID,
     };
+    window.__shipPreview = window.__jetPreview;
   },
   update(dt) {
+    if (this.jet.animate) this.jet.animate(dt, this.anim);
     if (this.view === 'orbit') {
       if (camera.fov !== 35) { camera.fov = 35; camera.updateProjectionMatrix(); }
       this.angle += dt * 0.35;

@@ -812,3 +812,33 @@ test('pratinjau jet: 6 sudut, gameplay bank penuh, dan jumlah segitiga di bawah 
   await page.keyboard.up('KeyD');
   await page.keyboard.up('Space');
 });
+
+for (const id of ['starfighter', 'interceptor', 'gunship']) {
+  test(`A3: pratinjau ${id} di bawah 9000 segitiga dengan sayap dinamis`, async ({ page }) => {
+    await page.setViewportSize({ width: 960, height: 600 });
+    await page.goto(`/index.html?shippreview=${id}`);
+    await page.waitForFunction(() => window.__shipPreview);
+    expect(await page.evaluate(() => window.__shipPreview.triangles)).toBeLessThan(9000);
+    const normal = await page.evaluate(() => window.__shipPreview.setState({ nitro: 0, brake: 0, turn: 0 }));
+    const nitro = await page.evaluate(() => window.__shipPreview.setState({ nitro: 1, brake: 0, turn: 0 }));
+    const brake = await page.evaluate(() => window.__shipPreview.setState({ nitro: 0, brake: 1, turn: 0 }));
+    const turn = await page.evaluate(() => window.__shipPreview.setState({ nitro: 0, brake: 0, turn: 1 }));
+    expect(nitro.spread).toBeLessThan(normal.spread);    // merapat saat nitro
+    expect(brake.spread).toBeGreaterThan(normal.spread); // melebar sebagai rem udara
+    expect(turn.twist).toBeGreaterThan(0.1);             // puntir saat belok
+    expect(turn.thrR).toBeGreaterThan(0.5);              // thruster sisi luar menyala
+    if (id === 'starfighter') {
+      await page.evaluate(() => window.__shipPreview.setState({ nitro: 0, brake: 0, turn: 0 }));
+      for (const view of ['side', 'top', 'front', 'three_quarter_front', 'three_quarter_rear', 'chase']) {
+        await page.evaluate((v) => window.__shipPreview.setView(v), view);
+        await page.waitForTimeout(120);
+        await page.screenshot({ path: `${SHOT_DIR}ship-starfighter-${view.replace(/_/g, '-')}.png` });
+      }
+      for (const [name, st] of [['nitro', { nitro: 1, brake: 0, turn: 0 }], ['rem', { nitro: 0, brake: 1, turn: 0 }], ['belok', { nitro: 0, brake: 0, turn: 1 }]]) {
+        await page.evaluate(([s]) => { window.__shipPreview.setView('three_quarter_rear'); window.__shipPreview.setState(s); }, [st]);
+        await page.waitForTimeout(120);
+        await page.screenshot({ path: `${SHOT_DIR}ship-starfighter-${name}.png` });
+      }
+    }
+  });
+}

@@ -30,6 +30,7 @@ Berkas ini adalah catatan kerja agar pengerjaan bisa dilanjutkan otomatis setela
 - Fase 0 (B1 sampai B7) selesai.
 - A2 hangar (alur MULAI, Pilih Medan, Pilih Kapal, dan tombol HANGAR di menu), kredit dari loot dan 50 persen dibawa pulang saat game over, save v3 dengan migrasi. Interceptor dan Gunship terdaftar dengan statistik akhir tetapi model masih jet sementara sampai A3.
 - S3 langit angkasa (nebula fbm, bintang tiga lapis, debu, garis warp, matahari jauh, lens flare DOM, rim light) dan bloom UnrealBloomPass hanya di angkasa sesuai preset, opsi Bloom, kualitas Rendah bawaan di perangkat sentuh.
+- A3 buildStarfighter (loft, bahu menyatu, empat bilah X dinamis, thruster manuver, cincin mesin, kanopi, soket Piko di pikoMount, livery kanvas dengan 13), varian Interceptor dan Gunship lewat params, ?shippreview=. Segitiga: Starfighter 3724, Gunship 4036. Tiga putaran visual. buildPiko belum ada (A4).
 
 ## Urutan task berikutnya (blok terakhir menang bila bertentangan)
 
@@ -45,7 +46,7 @@ Fase 0, rasa main (paling awal):
 Fase berikutnya:
 8. (SELESAI) A2 Hangar Pilih Kapal (alur MULAI, Pilih Medan, Pilih Kapal), kredit, buka kapal, save v3 dengan migrasi.
 9. (SELESAI) S3 Skybox angkasa (bintang paralaks 3 lapis, nebula, debu dekat kamera, warp streak saat nitro), matahari dan lens flare, EffectComposer dan UnrealBloomPass sesuai preset kualitas.
-10. A3 Starfighter bersayap empat konfigurasi X dengan sayap dinamis dan thruster manuver, varian Interceptor (500 kredit) dan Gunship (1200 kredit), `?shippreview=` (starfighter, jet, interceptor, gunship, piko), minimal 3 putaran iterasi visual.
+10. (SELESAI) A3 Starfighter bersayap empat konfigurasi X dengan sayap dinamis dan thruster manuver, varian Interceptor (500 kredit) dan Gunship (1200 kredit), `?shippreview=` (starfighter, jet, interceptor, gunship, piko), minimal 3 putaran iterasi visual.
 11. A4 Robot Piko (model loft, ekspresi mata, bip, panel HUD bersubtitle, batas frekuensi, opsi Bantuan robot, 3 kartu upgrade).
 12. S6 Asteroid angkasa ukuran kontinu dan 4 jenis (batu, es, logam, kristal) serta komet berekor.
 13. S8 Pickup bintang warna (merah ultimate, hijau HP, biru nitro, emas XP dan skor, ungu nyawa) dan ultimate laser E.
