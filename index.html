@@ -986,9 +986,9 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
    CONFIG - semua konstanta gameplay dan kualitas ada di sini
    ===================================================================== */
 const QUALITY_PRESETS = {
-  rendah: { shadows: false, shadowMapSize: 1024, maxParticles: 900,  particleDensity: 0.5,  chunkRadius: 2, pixelRatioMax: 1,   antialias: false, clouds: 18, bloom: 0, stars: 0.5 },
-  sedang: { shadows: true,  shadowMapSize: 1024, maxParticles: 1800, particleDensity: 0.8,  chunkRadius: 3, pixelRatioMax: 1.5, antialias: true,  clouds: 32, bloom: 0.5, stars: 0.8 },
-  tinggi: { shadows: true,  shadowMapSize: 2048, maxParticles: 3200, particleDensity: 1.0,  chunkRadius: 4, pixelRatioMax: 2,   antialias: true,  clouds: 48, bloom: 1, stars: 1 },
+  rendah: { shadows: false, shadowMapSize: 1024, maxParticles: 900,  particleDensity: 0.5,  chunkRadius: 2, pixelRatioMax: 1,   antialias: false, clouds: 18, bloom: 0, stars: 0.5, planetTex: 512, rocks: 0.45, loadRange: 0.75 },
+  sedang: { shadows: true,  shadowMapSize: 1024, maxParticles: 1800, particleDensity: 0.8,  chunkRadius: 3, pixelRatioMax: 1.5, antialias: true,  clouds: 32, bloom: 0.5, stars: 0.8, planetTex: 512, rocks: 0.8, loadRange: 0.9 },
+  tinggi: { shadows: true,  shadowMapSize: 2048, maxParticles: 3200, particleDensity: 1.0,  chunkRadius: 4, pixelRatioMax: 2,   antialias: true,  clouds: 48, bloom: 1, stars: 1, planetTex: 1024, rocks: 1, loadRange: 1 },
 };
 
 const CONFIG = {
@@ -6092,7 +6092,7 @@ const SolarSystem = {
   sunPos: new THREE.Vector3(0, 0, 0),
   _t: new THREE.Vector3(), _d: new THREE.Vector3(), _q: new THREE.Quaternion(), _qi: new THREE.Quaternion(),
 
-  texSize() { return Q.bloom >= 1 ? 1024 : 512; },
+  texSize() { return Q.planetTex; },
 
   makeMaterial(def, size) {
     const recipe = PLANET_RECIPES[def.tex];
@@ -6108,8 +6108,9 @@ const SolarSystem = {
       uAtmoStr: { value: def.atmo ? def.atmo[3] : 0 }, uTexel: { value: new THREE.Vector2(1 / w, 1 / h) },
     };
     if (def.tex === 'earth') {
-      u.uNight.value = PlanetTex.paint(w, h, PLANET_RECIPES.earthNight()).map; u.uHasNight.value = 1;
-      u.uClouds.value = PlanetTex.paint(w, h, PLANET_RECIPES.earthClouds()).map; u.uHasClouds.value = 1;
+      // Peta malam dan awan cukup setengah resolusi (lebih lembut, lebih cepat dibangun)
+      u.uNight.value = PlanetTex.paint(w / 2, h / 2, PLANET_RECIPES.earthNight()).map; u.uHasNight.value = 1;
+      u.uClouds.value = PlanetTex.paint(w / 2, h / 2, PLANET_RECIPES.earthClouds()).map; u.uHasClouds.value = 1;
       u.uClouds.value.wrapS = THREE.RepeatWrapping;
     }
     return new THREE.ShaderMaterial({ uniforms: u, vertexShader: PLANET_VERT, fragmentShader: PLANET_FRAG });
@@ -6360,7 +6361,7 @@ const RockFields = {
     for (const b of SolarSystem.bodies) {
       const rc = b.def.ring ? F.rings[b.id] : null;
       if (!rc) continue;
-      const count = Math.round(rc.count * Math.max(0.4, Q.stars));
+      const count = Math.round(rc.count * Q.rocks);
       const rnd = makeRng(b.id.length * 7919 + 11);
       const mesh = new THREE.InstancedMesh(this.geoLow, this.makeMaterial(), count);
       const local = new Float32Array(count * 4), kinds = [];
@@ -6393,7 +6394,7 @@ const RockFields = {
       this.rings.push({ body: b, mesh, count, local, kinds, hidden: new Uint8Array(count), id: b.id });
     }
     // Batu sabuk di sekitar kamera
-    const max = Math.round(F.beltMaxInstances * Math.max(0.5, Q.stars));
+    const max = Math.round(F.beltMaxInstances * Q.rocks);
     this.belt = new THREE.InstancedMesh(this.geo, this.makeMaterial(), max);
     this.belt.count = 0;
     this.belt.frustumCulled = false;
@@ -6408,7 +6409,7 @@ const RockFields = {
     this.built = true;
   },
   makeBand(belt) {
-    const n = Math.round(belt.points * Math.max(0.5, Q.stars)), rnd = makeRng(belt.inner);
+    const n = Math.round(belt.points * Math.max(0.5, Q.rocks)), rnd = makeRng(belt.inner);
     const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), size = new Float32Array(n);
     const c = new THREE.Color();
     for (let i = 0; i < n; i++) {
@@ -6425,7 +6426,7 @@ const RockFields = {
     g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
     const S = CONFIG.solar;
     const m = new THREE.ShaderMaterial({
-      uniforms: { uCam: { value: new THREE.Vector3() }, uD: { value: S.proxyDistance }, uM: { value: S.maxDraw }, uF: { value: S.proxyFalloff }, uPR: { value: renderer.getPixelRatio() }, uNear: { value: CONFIG.fields.beltRange * 0.8 } },
+      uniforms: { uCam: { value: new THREE.Vector3() }, uD: { value: S.proxyDistance }, uM: { value: S.maxDraw }, uF: { value: S.proxyFalloff }, uPR: { value: renderer.getPixelRatio() }, uNear: { value: CONFIG.fields.beltRange * Q.loadRange * 0.8 } },
       vertexShader: FAR_POINTS_VERT, fragmentShader: FAR_POINTS_FRAG, transparent: true, depthWrite: false,
     });
     const pts = new THREE.Points(g, m);
@@ -6451,7 +6452,7 @@ const RockFields = {
 
   // Bangun ulang batu sabuk ketika kamera berpindah sel
   rebuildBelt(cam) {
-    const F = CONFIG.fields, C = F.beltCell, R = Math.ceil(F.beltRange / C);
+    const F = CONFIG.fields, C = F.beltCell, range = F.beltRange * Q.loadRange, R = Math.ceil(range / C);
     const ccx = Math.floor(cam.x / C), ccy = Math.floor(cam.y / C), ccz = Math.floor(cam.z / C);
     const key = ccx + ',' + ccy + ',' + ccz;
     if (key === this.beltCell) return;
@@ -6461,7 +6462,7 @@ const RockFields = {
     // Cepat: lewati bila jauh dari semua sabuk
     const rad = Math.hypot(cam.x, cam.z);
     let near = false;
-    for (const b of F.belts) { if (rad > b.inner - F.beltRange ? rad < b.outer + F.beltRange : false) near = Math.abs(cam.y) < b.thick * 3 + F.beltRange; if (near) break; }
+    for (const b of F.belts) { if (rad > b.inner - range ? rad < b.outer + range : false) near = Math.abs(cam.y) < b.thick * 3 + range; if (near) break; }
     if (near) {
       for (let cx = ccx - R; cx <= ccx + R; cx++) for (let cz = ccz - R; cz <= ccz + R; cz++) for (let cy = ccy - 1; cy <= ccy + 1; cy++) {
         const ox = cx * C, oy = cy * C, oz = cz * C;
@@ -6565,7 +6566,7 @@ const RockFields = {
     const cam = camera.position, P = Player.pos, F = CONFIG.fields;
     for (const band of this.bands) band.material.uniforms.uCam.value.copy(cam);
     // Batu cincin hanya digambar saat cukup dekat (jauh: tekstur cincin sudah cukup)
-    for (const ring of this.rings) ring.mesh.visible = ring.body.pos.distanceTo(cam) < F.ringDrawDistance;
+    for (const ring of this.rings) ring.mesh.visible = ring.body.pos.distanceTo(cam) < F.ringDrawDistance * Q.loadRange;
     this.rebuildBelt(cam);
     this.lodTimer -= dt;
     if (this.lodTimer > 0) return;
@@ -7588,7 +7589,7 @@ const BOSS_DEFS = {
         Events.emit('enemyTelegraph', m.drill.getWorldPosition(_vd));
         if (b.modeT <= 0) { b.mode = 'charge'; b.modeT = 2.2; b.chargeTarget.copy(Player.pos); }
       } else {
-        Bosses.steer(b, b.chargeTarget.clone().addScaledVector(b.dir, 400), CONFIG.player.nitroSpeed * 0.8, 0.15, dt);
+        Bosses.steer(b, _vd.copy(b.chargeTarget).addScaledVector(b.dir, 400), CONFIG.player.nitroSpeed * 0.8, 0.15, dt);
         if (b.modeT <= 0) { b.mode = 'orbit'; b.modeT = b.phase === 2 ? 4 : 6; }
       }
     };
@@ -7644,7 +7645,8 @@ const BOSS_DEFS = {
           const a = b.angle + d.off;
           Bosses.orbitPoint(a, 300 + Math.sin(b.time * 0.7 + d.off) * 80, Math.sin(b.time * 0.5 + d.off) * 40, _vc);
           d.obj.position.lerp(_vc, clamp(dt * 1.5, 0, 1));
-          d.obj.lookAt(_vd.copy(d.obj.position).add(_vd.copy(d.obj.position).sub(_vc).normalize()));
+          _va.subVectors(d.obj.position, _vc).normalize();
+          d.obj.lookAt(_vd.copy(d.obj.position).add(_va));
         }
       }
     };
@@ -11638,6 +11640,7 @@ window.__game = {
     spawnStar(kind, dist = 60) { const P = Player.pos, f = Player.forward; return Stars.spawn(kind, P.x + f.x * dist, P.y + f.y * dist, P.z + f.z * dist) >= 0; },
     stars() { return { alive: Stars.alive, collected: { ...Stars.collected }, xp: Game.xp }; },
     // Tata Surya
+    quality() { return { name: Save.settings.quality, ...Q, buildMs: SolarSystem.buildMs, rings: Object.fromEntries(RockFields.rings.map((r) => [r.id, r.count])), beltMax: RockFields.beltMax }; },
     solar() {
       return {
         built: SolarSystem.built, buildMs: SolarSystem.buildMs, area: SpaceWorld.area, far: camera.far,

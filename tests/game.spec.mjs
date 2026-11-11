@@ -1608,3 +1608,20 @@ test('A7: dialog pembuka tiap stage antara Raptor 13 dan Piko, 1 sampai 3 baris,
   await page.keyboard.press('Enter');
   await expect.poll(async () => (await snap(page)).state).toBe('contract');
 });
+
+test('S16: preset kualitas menskalakan tekstur planet, kepadatan batu, dan jarak muat', async ({ page }) => {
+  const r = {};
+  for (const q of ['rendah', 'sedang', 'tinggi']) {
+    await open(page, `?kualitas=${q}`);
+    r[q] = await dbg(page, 'quality');
+  }
+  expect(r.rendah.rings.saturnus).toBeLessThan(r.sedang.rings.saturnus);
+  expect(r.sedang.rings.saturnus).toBeLessThan(r.tinggi.rings.saturnus);
+  expect(r.rendah.beltMax).toBeLessThan(r.tinggi.beltMax);
+  expect(r.rendah.planetTex).toBeLessThanOrEqual(r.tinggi.planetTex);
+  expect(r.rendah.loadRange).toBeLessThan(r.tinggi.loadRange);
+  expect(r.rendah.bloom).toBe(0);
+  expect(r.rendah.maxParticles).toBeLessThan(r.tinggi.maxParticles);
+  test.info().annotations.push({ type: 'bangun-tata-surya', description: ['rendah', 'sedang', 'tinggi'].map((q) => q + ' ' + r[q].buildMs + ' ms').join(', ') });
+  for (const q of ['rendah', 'sedang']) expect(r[q].buildMs).toBeLessThan(1500);
+});
