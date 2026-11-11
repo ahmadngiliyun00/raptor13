@@ -48,7 +48,7 @@ async function open(page, query = '') {
 }
 
 // Mulai sesi lewat klik tombol MULAI (sekaligus membuka AudioContext)
-async function start(page, { seed = 1234, enemies = false, god = true, world = 'earth' } = {}) {
+async function start(page, { seed = 1234, enemies = false, god = true, world = 'earth', mode = 'free' } = {}) {
   await open(page);
   await page.evaluate(([s, e, g]) => {
     window.__game.setSeed(s);
@@ -57,6 +57,7 @@ async function start(page, { seed = 1234, enemies = false, god = true, world = '
   }, [seed, enemies, god]);
   await page.click('#btn-start');                         // MULAI membuka PILIH MEDAN
   await page.click(`.tcard[data-world="${world}"]`);
+  if (world === 'space') await page.click(`.mcard[data-mode="${mode}"]`);   // PILIH MODE
   await page.click('#hangar-pick');                     // PILIH KAPAL
   await page.evaluate(() => window.__game.skipTransition());
   await expect.poll(async () => (await snap(page)).state).toBe('playing');
@@ -101,6 +102,7 @@ test('S1: Enter menembak lewat alur nyata, peluru bertambah, bergerak dan terlih
   await page.evaluate(() => { window.__game.setSeed(77); window.__game.debug.setGod(true); window.__game.debug.setEnemiesEnabled(false); });
   await page.click('#btn-start');                       // klik mouse seperti pemain sungguhan
   await page.keyboard.press('Enter');                   // kartu Luar Angkasa sudah tersorot
+  await page.keyboard.press('Enter');                   // PILIH MODE: mode tersimpan sudah tersorot
   await page.keyboard.press('Enter');                   // PILIH KAPAL: kapal terpilih sudah tersorot
   await expect.poll(async () => (await snap(page)).state, { timeout: 4000 }).toBe('playing');
   expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);   // tombol tidak lagi fokus
@@ -391,6 +393,7 @@ test('A2: hangar hanya menampilkan kapal yang cocok medan, kapal terkunci butuh 
   await open(page);
   await page.click('#btn-start');
   await page.click('.tcard[data-world="space"]');
+  await page.click('.mcard[data-mode="free"]');
   await expect(page.locator('#screen-hangar')).toBeVisible();
   const spaceList = await page.evaluate(() => window.__game.debug.hangarList());
   expect(spaceList).toEqual(['starfighter', 'interceptor', 'gunship']);
@@ -847,6 +850,7 @@ for (const id of ['starfighter', 'interceptor', 'gunship']) {
 test('A4: Piko berbicara dengan batas frekuensi, opsi Bantuan robot dihormati', async ({ page }) => {
   await start(page, { world: 'space' });
   await page.waitForTimeout(400);
+  await dbg(page, 'pikoReset');                                     // abaikan sapaan Penemuan saat tiba
   expect(await dbg(page, 'pikoSay', 'combo')).toBe(true);
   expect(await dbg(page, 'pikoSay', 'rarePickup')).toBe(true);      // prioritas lebih tinggi boleh menyela
   expect(await dbg(page, 'pikoSay', 'waveStart')).toBe(false);      // prioritas rendah dalam jeda minimum ditolak
@@ -1112,4 +1116,69 @@ test('B10: panel data fakta muncul saat mendekat dan Penemuan tersimpan setelah 
   await expect(page.locator('.acard[data-id="neptunus"]')).toHaveClass(/locked/);
   await page.click('#btn-atlas-back');
   await expect(page.locator('#screen-atlas')).toBeHidden();
+});
+
+test('B11: Kampanye 10 stage, gerbang loncat setelah gelombang bersih, warp ke stage berikutnya, progres tersimpan', async ({ page }) => {
+  test.setTimeout(60000);
+  await start(page, { world: 'space', mode: 'campaign' });
+  let c = await dbg(page, 'campaign');
+  expect(c.active).toBe(true);
+  expect(c.stage).toBe(1);
+  expect(c.area).toBe('merkurius');
+  await expect(page.locator('#stage-label')).toHaveText('STAGE 1/10 MERKURIUS');
+  // Gelombang stage selesai: gerbang loncat muncul, peta tidak bisa dipakai untuk warp bebas
+  await dbg(page, 'finishStage');
+  await expect.poll(async () => (await dbg(page, 'campaign')).gate, { timeout: 3000 }).toBe(true);
+  c = await dbg(page, 'campaign');
+  expect(c.cleared).toBe(true);
+  expect(c.saved.stage).toBe(2);
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#screen-map')).toBeVisible();
+  for (const b of (await dbg(page, 'mapState')).buttons) expect(b.disabled).toBe(true);
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#screen-map')).toBeHidden();
+  // Kapal terbang lurus melewati gerbang di depannya: warp ke Venus
+  await page.screenshot({ path: 'docs/screenshots/gerbang-loncat.jpg', type: 'jpeg', quality: 82 });
+  await expect.poll(async () => (await dbg(page, 'campaign')).area, { timeout: 15000 }).toBe('venus');
+  await expect.poll(async () => (await dbg(page, 'campaign')).warp, { timeout: 5000 }).toBe(false);
+  c = await dbg(page, 'campaign');
+  expect(c.stage).toBe(2);
+  await expect(page.locator('#stage-label')).toHaveText('STAGE 2/10 VENUS');
+  // Hook setStage langsung ke stage 10 (area Pluto)
+  await dbg(page, 'setStage', 10);
+  await expect.poll(async () => (await dbg(page, 'campaign')).area, { timeout: 5000 }).toBe('pluto');
+  // Progres tersimpan: setelah reload, kartu mode menawarkan lanjut stage 2
+  await open(page);
+  await page.click('#btn-start');
+  await page.click('.tcard[data-world="space"]');
+  await expect(page.locator('#mode-progress')).toHaveText('Lanjut stage 2 dari 10');
+});
+
+test('B11: Jelajah Bebas, peta Tab menampilkan orbit dan warp sinematik ke area pilihan', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await start(page, { world: 'space', mode: 'free' });
+  const c = await dbg(page, 'campaign');
+  expect(c.active).toBe(false);
+  expect(c.label).toBe('JELAJAH BEBAS');
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#screen-map')).toBeVisible();
+  expect((await snap(page)).state).toBe('map');
+  const m = await dbg(page, 'mapState');
+  expect(m.buttons.length).toBe(11);
+  for (const b of m.buttons) expect(b.disabled).toBe(false);
+  await page.screenshot({ path: 'docs/screenshots/peta-tata-surya.jpg', type: 'jpeg', quality: 82 });
+  await page.click('.map-btn[data-area="saturnus"]');
+  await expect(page.locator('#screen-map')).toBeHidden();
+  await expect.poll(async () => (await dbg(page, 'campaign')).warp, { timeout: 2000 }).toBe(true);
+  await expect.poll(async () => (await dbg(page, 'campaign')).area, { timeout: 3000 }).toBe('saturnus');
+  await expect.poll(async () => (await dbg(page, 'campaign')).warp, { timeout: 4000 }).toBe(false);
+  // Tiba di dekat Saturnus: panel data muncul dan area tersimpan untuk sesi berikutnya
+  await expect.poll(async () => (await dbg(page, 'dataPanel')).title, { timeout: 4000 }).toBe('Saturnus');
+  expect((await dbg(page, 'campaign')).saved.freeArea).toBe('saturnus');
+  // Esc juga menutup peta
+  await page.keyboard.press('Tab');
+  await expect(page.locator('#screen-map')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#screen-map')).toBeHidden();
+  expect((await snap(page)).state).toBe('playing');
 });

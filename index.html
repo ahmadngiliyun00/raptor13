@@ -218,6 +218,18 @@
   #data-facts li + li { margin-top: 3px; }
   #data-tag { display: inline-block; margin-bottom: 4px; padding: 2px 6px; font-size: 10px; font-weight: 800; letter-spacing: 0.16em; color: #0a1420; background: #ffd24a; border-radius: 3px; }
   #data-tag.hidden { display: none; }
+  .stage-label { color: #ffd24a; margin-bottom: 2px; }
+  .stage-label:empty { display: none; }
+  .map-wrap { display: flex; gap: 18px; align-items: center; justify-content: center; max-width: 100%; }
+  #map-canvas { width: min(640px, 84vh, 58vw); height: auto; aspect-ratio: 1; border: 1px solid var(--ui-line); border-radius: 8px; }
+  .map-side { max-width: 320px; gap: 10px; }
+  .map-side h2 { margin: 0; font-size: 22px; letter-spacing: 0.12em; }
+  .map-side .hint { margin: 0; }
+  .map-dest { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; }
+  .map-btn { padding: 8px 10px; font-size: 13px; }
+  .map-btn.here { border-color: #5dff9a; }
+  .map-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  @media (max-width: 760px) { .map-wrap { flex-direction: column; } #map-canvas { width: min(92vw, 46vh); } }
   .atlas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; width: 100%; max-height: 58vh; overflow: auto; text-align: left; }
   .acard { padding: 10px 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--ui-line); border-radius: 6px; }
   .acard h3 { margin: 0; font-size: 15px; letter-spacing: 0.06em; }
@@ -503,6 +515,7 @@
     <div class="bar" id="ult-bar"><i id="ult-fill"></i></div>
   </div>
   <div class="hud-block tc">
+    <div id="stage-label" class="label stage-label"></div>
     <div class="label">GELOMBANG</div>
     <div id="wave" class="num big">-</div>
     <div id="mult" class="off">x1</div>
@@ -564,6 +577,9 @@
   <button id="btn-mode" class="tool" type="button" aria-label="Mode kontrol" title="Mode kontrol: keyboard atau HP">
     <svg class="ic-kb" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h1M9 10h1M12 10h1M15 10h1M18 10h1M7 14h10"/></svg>
     <svg class="ic-hp" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18h2"/></svg>
+  </button>
+  <button id="btn-map" class="tool hidden" type="button" aria-label="Peta Tata Surya" title="Peta Tata Surya (Tab)">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="6.5" fill="none"/><circle cx="12" cy="12" r="10" fill="none"/><circle cx="18.5" cy="12" r="1.6"/></svg>
   </button>
   <button id="btn-pause" class="tool hidden" type="button" aria-label="Jeda" title="Jeda (P)">
     <svg viewBox="0 0 24 24"><path d="M7 5h3v14H7zM14 5h3v14h-3z"/></svg>
@@ -719,6 +735,39 @@
     <p class="hint">Seluruh visual dan suara dibuat secara prosedural: geometri, tekstur, langit dan suara
       disusun oleh kode saat game berjalan, tanpa file model, gambar, atau audio.</p>
     <button id="btn-about-back" class="btn" type="button">KEMBALI</button>
+  </div>
+</div>
+
+<!-- Pilih mode Angkasa -->
+<div id="screen-mode" class="screen hidden">
+  <div class="card wide">
+    <h2>PILIH MODE</h2>
+    <div class="terrain-cards">
+      <button class="tcard mcard" data-mode="campaign" type="button">
+        <b>Kampanye Tata Surya</b>
+        <span class="tdesc">Sepuluh stage dari Merkurius sampai Pluto dan Sabuk Kuiper. Bersihkan gelombang lalu terbang melewati gerbang loncat.</span>
+        <small id="mode-progress">Stage 1 dari 10</small>
+      </button>
+      <button class="tcard mcard" data-mode="free" type="button">
+        <b>Jelajah Bebas</b>
+        <span class="tdesc">Seluruh Tata Surya terbuka dengan patroli musuh acak. Buka peta (Tab) untuk warp ke area mana pun.</span>
+        <small>Peta dan warp terbuka</small>
+      </button>
+    </div>
+    <button id="btn-mode-back" class="btn secondary" type="button">KEMBALI</button>
+  </div>
+</div>
+
+<!-- Peta Tata Surya (Tab) -->
+<div id="screen-map" class="screen hidden">
+  <div class="map-wrap">
+    <canvas id="map-canvas" width="640" height="640"></canvas>
+    <div class="card map-side">
+      <h2>PETA TATA SURYA</h2>
+      <p id="map-mode" class="hint"></p>
+      <div id="map-dest" class="map-dest"></div>
+      <button id="btn-map-close" class="btn" type="button">TUTUP (TAB)</button>
+    </div>
   </div>
 </div>
 
@@ -989,7 +1038,7 @@ const CONFIG = {
     boundaryTurn: 1.1,         // laju putar balik otomatis di zona tepi (rad per detik)
     boundaryPush: 40,          // dorongan balik saat menyentuh dinding
     blackHoleFrom: [17000, 25000],   // black hole mulai terlihat dari jarak ini ke Matahari
-    discoverMin: 220,          // panel data muncul bila permukaan sedekat ini (atau 1,6 kali radius)
+    discoverMin: 500,          // panel data muncul bila permukaan sedekat ini (atau 2,6 kali radius)
     panelHold: 2.5,
     bodies: [
       { id: 'matahari', name: 'Matahari', kind: 'sun', orbit: 0, angle: 0, radius: 900, spin: 0.01 },
@@ -1034,6 +1083,28 @@ const CONFIG = {
       { id: 'kuiper', name: 'Sabuk Kuiper', inner: 35500, outer: 42000, thick: 900, perCell: 3, giantChance: 0.006, points: 7000, pointColor: 0x9fb8d0, angle: 5.6, kinds: { ice: 0.7, rock: 0.25, crystal: 0.05 } },
     ],
   },
+  // Kampanye Tata Surya (medan Angkasa): sepuluh stage berurutan
+  campaign: {
+    stages: [
+      { area: 'merkurius', name: 'Merkurius', waves: 2 },
+      { area: 'venus', name: 'Venus', waves: 2 },
+      { area: 'bumi', name: 'Bumi dan Bulan', waves: 3 },
+      { area: 'mars', name: 'Mars', waves: 3 },
+      { area: 'sabuk', name: 'Sabuk Asteroid', waves: 3, boss: 'Penambang Raksasa' },
+      { area: 'jupiter', name: 'Jupiter', waves: 3 },
+      { area: 'saturnus', name: 'Saturnus', waves: 4 },
+      { area: 'uranus', name: 'Uranus', waves: 4, boss: 'Pemburu Agung' },
+      { area: 'neptunus', name: 'Neptunus', waves: 4 },
+      { area: 'pluto', name: 'Pluto dan Sabuk Kuiper', waves: 4, boss: 'Sang Naga Vanta' },
+    ],
+    difficultyPerStage: 1.3,   // gelombang stage ke-n setara gelombang n x 1,3 lebih berat
+    stageCredits: 40,          // bonus kredit tiap stage selesai
+    gateDistance: 420, gateRadius: 34, gateRespawn: 25,
+    arrivalDelay: 3,           // jeda sebelum gelombang pertama setelah warp
+    freeStart: 'bumi',
+  },
+  // Lompatan warp sinematik (peta Tab dan gerbang loncat)
+  warp: { duration: 2.6, flashAt: 1.0, fovBoost: 38 },
   // Pickup bintang bercahaya
   stars: {
     max: 48,
@@ -1225,6 +1296,7 @@ const SHIP_IDS = ['raptor-j', 'starfighter', 'interceptor', 'gunship'];
 const SETTING_DEFAULTS = {
   difficulty: 'normal',        // mudah | normal | sulit
   terrain: 'space',            // medan default: space | earth
+  spaceMode: 'campaign',       // mode Angkasa: campaign (Kampanye) | free (Jelajah Bebas)
   asteroidDensity: 1,          // 0 Sedikit, 1 Normal, 2 Banyak
   volMaster: 80, volSfx: 80, volEngine: 60,   // 0..100
   muted: false,
@@ -1248,6 +1320,7 @@ const SETTING_ENUMS = {
   quality: ['rendah', 'sedang', 'tinggi'],
   controlMode: ['keyboard', 'hp'],
   terrain: ['space', 'earth'],
+  spaceMode: ['campaign', 'free'],
   aimAssist: ['mati', 'rendah', 'sedang'],
   robotHelp: ['penuh', 'tanpa-teks', 'tanpa-suara', 'mati'],
 };
@@ -1263,6 +1336,7 @@ const Save = {
       ships: { selected: { earth: 'raptor-j', space: 'starfighter' }, unlocked: ['raptor-j', 'starfighter'], credits: 0 },
       stats: { playTime: 0, enemiesDestroyed: 0, asteroidsDestroyed: 0, gamesPlayed: 0 },
       discoveries: [],   // id benda angkasa yang pernah didekati (atlas Penemuan)
+      campaign: { stage: 1, completed: false, freeArea: 'bumi' },   // stage tertinggi yang terbuka
     };
   },
   // Terima hanya field yang dikenal dengan tipe dan rentang yang benar
@@ -1295,6 +1369,10 @@ const Save = {
     if (Number.isFinite(raw.highScore)) d.highScores.earth = Math.max(d.highScores.earth, Math.floor(raw.highScore));
     const st = isObj(raw.stats) ? raw.stats : {};
     for (const k of Object.keys(d.stats)) if (Number.isFinite(st[k])) d.stats[k] = Math.max(0, st[k]);
+    const cp = isObj(raw.campaign) ? raw.campaign : {};
+    if (Number.isFinite(cp.stage)) d.campaign.stage = Math.min(10, Math.max(1, Math.floor(cp.stage)));
+    if (cp.completed === true) d.campaign.completed = true;
+    if (DISCOVERY_IDS.includes(cp.freeArea)) d.campaign.freeArea = cp.freeArea;
     if (Array.isArray(raw.discoveries)) for (const id of raw.discoveries) { if (DISCOVERY_IDS.includes(id) ? !d.discoveries.includes(id) : false) d.discoveries.push(id); }
     return d;
   },
@@ -3791,12 +3869,13 @@ const Waves = {
     this.phase = 'active';
     // Jumlah musuh per gelombang dikalikan laju spawn dari tabel kesulitan
     const rate = Game.diff.spawnRate;
+    n += Campaign.waveOffset();   // stage kampanye yang lebih jauh lebih berat
     this.remDrones = Math.max(1, Math.round(Math.min(3 + 2 * (n - 1), 14) * rate));
     this.remGunships = Math.max(1, Math.round(Math.min(1 + Math.floor((n - 1) / 2), 7) * rate));
     this.spawnTimer = 0.4;
     this.waveTime = 0;
     this.difficulty = Math.min(1 + W.difficultyStep * (n - 1), W.maxDifficulty);
-    Events.emit('waveStart', n);
+    Events.emit('waveStart', this.wave);
   },
 
   // Musuh yang dipindah karena tertinggal akan muncul lagi di depan pemain
@@ -3806,6 +3885,8 @@ const Waves = {
   },
 
   update(dt) {
+    // Kampanye: stage selesai menahan gelombang berikutnya (dan memunculkan gerbang)
+    if (this.phase === 'break' ? Campaign.blockNextWave() : false) return;
     if (!Debug.enemiesEnabled) return;
     const W = CONFIG.waves;
     if (this.phase === 'break') {
@@ -4619,8 +4700,8 @@ const SpaceSky = {
     this.wrapPoints(this.near, cam.x, cam.y, cam.z, 1400);
     this.wrapPoints(this.dust, cam.x, cam.y, cam.z, 90);
     // Garis warp: memanjang searah gerak, terlihat sesuai intensitas nitro
-    const nf = Player.nitroFx, mat = this.streaks.material;
-    mat.opacity = Math.max(0, nf - 0.05) * 0.38;
+    const nf = Math.max(Player.nitroFx, Warp.fx * 1.6), mat = this.streaks.material;
+    mat.opacity = Math.min(0.75, Math.max(0, nf - 0.05) * 0.38);
     if (mat.opacity > 0.01) {
       const f = Player.forward, up = Player._up, right = Player._right, arr = this.streakPos.array;
       const len = 4 + nf * 16, adv = Player.speed * dt * 2.2;
@@ -5954,7 +6035,7 @@ const Discovery = {
     const belt = RockFields.built ? RockFields.beltAt(P.x, P.y, P.z) : null;
     const n = SolarSystem.nearest(P);
     if (n.body) {
-      const R = n.body.radius, near = n.body.def.kind === 'sun' ? 1800 : Math.max(CONFIG.solar.discoverMin, R * 1.6);
+      const R = n.body.radius, near = n.body.def.kind === 'sun' ? 1800 : Math.max(CONFIG.solar.discoverMin, R * 2.6);
       if (n.dist < near) return n.body.id;
     }
     return belt ? belt.id : null;
@@ -6007,6 +6088,252 @@ const Atlas = {
     grid.replaceChildren(...items);
     document.getElementById('atlas-count').textContent = found.length + ' dari ' + DISCOVERY_IDS.length + ' ditemukan';
     UI.openOverlay(document.getElementById('screen-atlas'));
+  },
+};
+
+/* =====================================================================
+   KAMPANYE DAN JELAJAH BEBAS - mode medan Angkasa. Kampanye: 10 stage berurutan,
+   tiap stage beberapa gelombang di satu area; setelah bersih muncul gerbang loncat yang
+   memicu warp ke stage berikutnya. Progres disimpan. Jelajah Bebas: gelombang tanpa
+   akhir, peta Tata Surya (Tab) untuk warp ke area mana pun.
+   ===================================================================== */
+const Campaign = {
+  mode: 'free',
+  stageIdx: 0,
+  cleared: false,
+  get active() { return Worlds.active === SpaceWorld ? this.mode === 'campaign' : false; },
+  get stage() { return CONFIG.campaign.stages[this.stageIdx]; },
+  get count() { return CONFIG.campaign.stages.length; },
+  // Area awal sesuai mode: stage tersimpan untuk Kampanye, area terakhir untuk Jelajah Bebas
+  prepareArea() {
+    if (this.mode === 'campaign') {
+      this.stageIdx = clamp(Save.data.campaign.stage - 1, 0, this.count - 1);
+      SpaceWorld.area = this.stage.area;
+    } else SpaceWorld.area = Save.data.campaign.freeArea;
+    this.cleared = false;
+  },
+  beginSession() {
+    this.cleared = false;
+    WarpGate.hide();
+    Warp.cancel();
+  },
+  // Jumlah gelombang tambahan agar stage akhir lebih berat
+  waveOffset() { return this.active ? Math.round(this.stageIdx * CONFIG.campaign.difficultyPerStage) : 0; },
+  // Dipanggil Waves sebelum memulai gelombang berikutnya; true = tahan (stage selesai)
+  blockNextWave() {
+    if (!this.active) return false;
+    if (Waves.wave < this.stage.waves) return false;
+    if (!this.cleared) this.stageClear();
+    return true;
+  },
+  stageClear() {
+    this.cleared = true;
+    const n = this.stageIdx + 1, C = Save.data.campaign;
+    C.stage = Math.max(C.stage, Math.min(this.count, n + 1));
+    if (n === this.count) C.completed = true;
+    Save.save();
+    showBanner('STAGE ' + n + ' SELESAI', 1800);
+    Game.credits += CONFIG.campaign.stageCredits;
+    WarpGate.spawnAhead();
+    Piko.say('gate');
+    Events.emit('stageClear', n);
+  },
+  // Melewati gerbang: warp ke stage berikutnya, atau ke Jelajah Bebas setelah stage terakhir
+  gatePassed() {
+    WarpGate.hide();
+    if (this.stageIdx >= this.count - 1) {
+      this.mode = 'free';
+      Settings.set('spaceMode', 'free');
+      showBanner('KAMPANYE SELESAI', 2400);
+      Warp.start(CONFIG.campaign.freeStart, () => { Waves.reset(); });
+      return;
+    }
+    const next = this.stageIdx + 1;
+    Warp.start(CONFIG.campaign.stages[next].area, () => {
+      this.stageIdx = next;
+      this.cleared = false;
+      Waves.reset();
+      Waves.timer = CONFIG.campaign.arrivalDelay;
+    });
+  },
+  label() { return this.active ? 'STAGE ' + (this.stageIdx + 1) + '/' + this.count + ' ' + this.stage.name.toUpperCase() : Worlds.active === SpaceWorld ? 'JELAJAH BEBAS' : ''; },
+};
+
+// Gerbang loncat: cincin bercahaya dengan pusaran; terbang melewatinya memicu warp
+const GATE_FRAG = /* glsl */`
+  uniform float uTime; varying vec2 vUv;
+  void main() {
+    vec2 p = (vUv - 0.5) * 2.0;
+    float r = length(p);
+    if (r > 1.0) discard;
+    float a = atan(p.y, p.x);
+    float sw = 0.5 + 0.5 * sin(a * 5.0 + r * 12.0 - uTime * 4.0);
+    float I = (0.25 + sw * 0.6) * smoothstep(1.0, 0.2, r) + exp(-r * 6.0) * 0.8;
+    gl_FragColor = vec4(vec3(0.35, 0.85, 1.0) * I, 1.0);
+    #include <colorspace_fragment>
+  }`;
+const WarpGate = {
+  active: false, time: 0, prevSide: 0, normal: new THREE.Vector3(), lifetime: 0,
+  init() {
+    const R = CONFIG.campaign.gateRadius;
+    this.group = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(R, 2.4, 10, 64), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 1.6, 2.2) }));
+    this.disc = new THREE.Mesh(new THREE.CircleGeometry(R - 1.5, 48), new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } }, vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+      fragmentShader: GATE_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+    }));
+    this.group.add(ring, this.disc);
+    this.group.visible = false;
+    scene.add(this.group);
+  },
+  spawnAhead() {
+    if (!this.group) this.init();
+    const P = Player.pos, f = Player.forward, d = CONFIG.campaign.gateDistance;
+    this.group.position.set(P.x + f.x * d, P.y + f.y * d, P.z + f.z * d);
+    this.normal.copy(f);
+    this.group.lookAt(_va.copy(this.group.position).add(f));
+    this.group.visible = true;
+    this.active = true;
+    this.lifetime = 0;
+    this.prevSide = -1;
+  },
+  hide() { this.active = false; if (this.group) this.group.visible = false; },
+  update(dt) {
+    if (!this.active) return;
+    this.time += dt;
+    this.lifetime += dt;
+    this.disc.material.uniforms.uTime.value = this.time;
+    this.group.rotation.z += dt * 0.3;
+    const P = Player.pos, G = this.group.position;
+    const rel = _va.copy(P).sub(G);
+    const side = rel.dot(this.normal);
+    const lateral = rel.addScaledVector(this.normal, -side).length();
+    if (this.prevSide < 0 ? side >= 0 : false) {
+      if (lateral < CONFIG.campaign.gateRadius) { Campaign.gatePassed(); return; }
+    }
+    this.prevSide = side < 0 ? -1 : 1;
+    // Terlewat jauh atau tertinggal: pindahkan lagi ke depan pemain
+    if (this.lifetime > CONFIG.campaign.gateRespawn ? true : P.distanceTo(G) > CONFIG.campaign.gateDistance * 3) this.spawnAhead();
+  },
+};
+
+// Lompatan warp sinematik: percepat, kilat putih, pindah area, melambat
+const Warp = {
+  active: false, t: 0, fx: 0, target: null, onArrive: null, jumped: false,
+  flash: document.getElementById('flash'),
+  start(area, onArrive) {
+    if (this.active) return false;
+    this.active = true; this.t = 0; this.target = area; this.onArrive = onArrive || null; this.jumped = false;
+    Player.spawnInvuln = Math.max(Player.spawnInvuln, CONFIG.warp.duration + 1.5);
+    Player.maneuver = null;
+    Sfx.nitroStart();
+    Events.emit('warp', area);
+    return true;
+  },
+  cancel() { this.active = false; this.fx = 0; if (this.flash) this.flash.style.opacity = 0; },
+  teleport() {
+    SpaceWorld.area = this.target;
+    if (Campaign.mode === 'free') { Save.data.campaign.freeArea = this.target; Save.save(); }
+    RockFields.reset();
+    Asteroids.reset();
+    Comets.reset();
+    Enemies.reset();
+    Weapons.reset();
+    const pose = SpaceWorld.startPose();
+    Player.pos.copy(pose.pos);
+    Player.setHeading(pose.yaw);
+    CamRig.reset();
+    if (this.onArrive) this.onArrive();
+    const name = BODY_FACTS[this.target] ? BODY_FACTS[this.target].name : this.target;
+    showBanner(Campaign.active ? 'STAGE ' + (Campaign.stageIdx + 1) + ': ' + Campaign.stage.name.toUpperCase() : name.toUpperCase(), 2000);
+  },
+  update(dt) {
+    if (!this.active) return;
+    const W = CONFIG.warp;
+    this.t += dt;
+    this.fx = this.t < W.flashAt ? smoothstep(0, W.flashAt, this.t) : 1 - smoothstep(W.flashAt, W.duration, this.t);
+    const fl = Math.exp(-Math.pow((this.t - W.flashAt) / 0.18, 2));
+    if (this.flash) this.flash.style.opacity = fl.toFixed(2);
+    if (this.jumped ? false : this.t >= W.flashAt) { this.jumped = true; this.teleport(); }
+    if (this.t >= W.duration) this.cancel();
+  },
+  idle: { pitch: 0, yaw: 0, fire: false, nitro: false },
+};
+
+// Peta Tata Surya: orbit, sabuk, batas, posisi dan arah kapal, daftar tujuan warp
+const SolarMap = {
+  screen: document.getElementById('screen-map'),
+  canvas: document.getElementById('map-canvas'),
+  dest: document.getElementById('map-dest'),
+  colors: { matahari: '#ffd27a', merkurius: '#a9a39b', venus: '#e8c27a', bumi: '#4f8fe0', mars: '#d0643a', jupiter: '#d8b48a', saturnus: '#e6d09a', uranus: '#9fe0e8', neptunus: '#3f66e0', pluto: '#c8a888' },
+  areas() { return [...CONFIG.campaign.stages.map((s) => s.area), 'kuiper']; },
+  open() {
+    if (Game.state !== 'playing' ? true : Worlds.active !== SpaceWorld) return false;
+    if (Warp.active) return false;
+    const free = !Campaign.active;
+    document.getElementById('map-mode').textContent = free ? 'Pilih tujuan untuk melompat warp.' : 'Mode Kampanye: warp lewat gerbang loncat. Warp bebas terbuka di Jelajah Bebas.';
+    const btns = this.areas().map((id) => {
+      const b = document.createElement('button');
+      b.className = 'btn secondary map-btn'; b.type = 'button'; b.dataset.area = id;
+      b.textContent = BODY_FACTS[id] ? BODY_FACTS[id].name : id;
+      b.disabled = !free;
+      if (id === SpaceWorld.area) b.classList.add('here');
+      b.addEventListener('click', () => this.choose(id));
+      b.addEventListener('focus', () => { this.sel = id; this.draw(); });
+      return b;
+    });
+    this.dest.replaceChildren(...btns);
+    this.sel = SpaceWorld.area;
+    setState('map');
+    this.draw();
+    return true;
+  },
+  close() { if (Game.state === 'map') setState('playing'); },
+  toggle() { if (Game.state === 'map') this.close(); else this.open(); },
+  choose(id) {
+    if (Campaign.active) return false;
+    this.close();
+    return Warp.start(id);
+  },
+  // Skala akar: orbit dalam tetap terbaca walau batas jelajah jauh lebih besar
+  project(x, z, cx, R) {
+    const r = Math.hypot(x, z), k = Math.sqrt(r / CONFIG.solar.boundary) * R / Math.max(r, 1);
+    return [cx + x * k, cx + z * k];
+  },
+  draw() {
+    const cv = this.canvas, ctx = cv.getContext('2d'), W = cv.width, cx = W / 2, R = W / 2 - 24;
+    ctx.clearRect(0, 0, W, W);
+    ctx.fillStyle = 'rgba(4, 8, 16, 0.9)'; ctx.fillRect(0, 0, W, W);
+    const ring = (rad, style, width) => { const rr = Math.sqrt(rad / CONFIG.solar.boundary) * R; ctx.beginPath(); ctx.arc(cx, cx, rr, 0, Math.PI * 2); ctx.strokeStyle = style; ctx.lineWidth = width; ctx.stroke(); };
+    // Batas jelajah dan sabuk
+    ring(CONFIG.solar.boundary, 'rgba(180, 90, 255, 0.7)', 2);
+    for (const b of CONFIG.fields.belts) {
+      const r0 = Math.sqrt(b.inner / CONFIG.solar.boundary) * R, r1 = Math.sqrt(b.outer / CONFIG.solar.boundary) * R;
+      ctx.beginPath(); ctx.arc(cx, cx, (r0 + r1) / 2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(160, 150, 130, 0.25)'; ctx.lineWidth = r1 - r0; ctx.stroke();
+    }
+    ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'center';
+    for (const b of SolarSystem.bodies) {
+      if (b.def.orbit) ring(b.def.orbit, 'rgba(120, 170, 255, 0.22)', 1);
+      const [x, y] = this.project(b.pos.x, b.pos.z, cx, R);
+      const size = b.def.kind === 'sun' ? 9 : clamp(Math.log(b.radius) * 1.3, 2.5, 8);
+      ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fillStyle = this.colors[b.id] || '#ccc'; ctx.fill();
+      if (b.id === this.sel ? true : b.id === SpaceWorld.area) { ctx.beginPath(); ctx.arc(x, y, size + 6, 0, Math.PI * 2); ctx.strokeStyle = b.id === this.sel ? '#ffd24a' : 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2; ctx.stroke(); }
+      ctx.fillStyle = 'rgba(230, 240, 255, 0.85)';
+      ctx.fillText(b.name, x, y - size - 6);
+    }
+    // Area sabuk yang bisa dituju
+    for (const bl of CONFIG.fields.belts) {
+      const rad = (bl.inner + bl.outer) / 2, [x, y] = this.project(Math.cos(bl.angle) * rad, Math.sin(bl.angle) * rad, cx, R);
+      ctx.fillStyle = bl.id === this.sel ? '#ffd24a' : 'rgba(200, 190, 170, 0.8)';
+      ctx.fillRect(x - 3, y - 3, 6, 6);
+      ctx.fillText(bl.name, x, y + 16);
+    }
+    // Kapal: segitiga searah heading
+    const [px, py] = this.project(Player.pos.x, Player.pos.z, cx, R), f = Player.forward, a = Math.atan2(f.z, f.x);
+    ctx.save(); ctx.translate(px, py); ctx.rotate(a);
+    ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-7, 6); ctx.lineTo(-4, 0); ctx.lineTo(-7, -6); ctx.closePath();
+    ctx.fillStyle = '#5dff9a'; ctx.fill(); ctx.restore();
   },
 };
 
@@ -7068,7 +7395,7 @@ const CamRig = {
       camera.rotateZ(Math.sin(t * 29.3) * s * 0.02);
     }
 
-    const targetFov = lerp(C.cinematicFov, lerp(C.fov, C.nitroFov, nf), this.blend);
+    const targetFov = lerp(C.cinematicFov, lerp(C.fov, C.nitroFov, nf), this.blend) + Warp.fx * CONFIG.warp.fovBoost;
     if (Math.abs(targetFov - camera.fov) > 0.01) {
       camera.fov = targetFov;
       camera.updateProjectionMatrix();
@@ -7556,8 +7883,10 @@ function updateHud(dt) {
   if (changed('nitroLock', v)) hud.nitroBar.classList.toggle('locked', v);
   v = Player.nitroLock > 0 ? 'TERKUNCI' : Player.nitroActive ? 'AKTIF' : '';
   if (changed('nitroTag', v)) hud.nitroTag.textContent = v;
-  v = Waves.wave > 0 ? Waves.wave : '-';
+  v = Waves.wave > 0 ? (Campaign.active ? Waves.wave + '/' + Campaign.stage.waves : Waves.wave) : '-';
   if (changed('wave', v)) hud.wave.textContent = v;
+  v = Campaign.label();
+  if (changed('stage', v)) $('stage-label').textContent = v;
   v = Combo.multiplier;
   if (changed('mult', v)) { hud.mult.textContent = 'x' + v; hud.mult.className = v > 1 ? '' : 'off'; }
   v = Math.max(0, Math.round((Combo.timer / CONFIG.combo.window) * 50) / 50);
@@ -7821,6 +8150,8 @@ function setState(next) {
   if (next === 'menu') ui.btnContinue.classList.toggle('hidden', !Game.hasSession);
   ui.pause.classList.toggle('hidden', next !== 'paused');
   ui.over.classList.toggle('hidden', next !== 'gameover');
+  SolarMap.screen.classList.toggle('hidden', next !== 'map');
+  document.getElementById('btn-map').classList.toggle('hidden', !(next === 'playing' ? Worlds.active === SpaceWorld : false));
   const hudOn = next === 'playing' || next === 'paused' || next === 'countdown' || next === 'starting';
   document.getElementById('hud').classList.toggle('hidden', !hudOn);
   ui.toolbar.classList.toggle('hidden', next === 'boot' || next === 'preview');
@@ -7857,7 +8188,7 @@ const UI = {
     this.openOverlay(ui.confirm);
     if (this.usingKeyboard) ui.confirmNo.focus();
   },
-  base() { return Game.state === 'menu' ? ui.title : Game.state === 'paused' ? ui.pause : null; },
+  base() { return Game.state === 'menu' ? ui.title : Game.state === 'paused' ? ui.pause : Game.state === 'map' ? SolarMap.screen : null; },
   openOverlay(el) {
     if (this.overlay) this.overlay.classList.add('hidden');
     this.overlay = el;
@@ -7880,6 +8211,7 @@ const UI = {
     if (this.overlay) return this.overlay;
     if (Game.state === 'menu') return ui.title;
     if (Game.state === 'paused') return ui.pause;
+    if (Game.state === 'map') return SolarMap.screen;
     if (Game.state === 'gameover') return ui.over;
     return null;
   },
@@ -7926,6 +8258,7 @@ function resetWorld(seed) {
 // Statistik dan sistem sesi. keepWorld = true dipakai saat mulai dari attract mode
 // agar posisi pesawat dan dunia tidak melompat.
 function resetSession(keepWorld = false) {
+  Campaign.beginSession();
   Game.time = 0;
   Game.score = 0;
   Game.kills = 0;
@@ -8012,10 +8345,40 @@ function openTerrainSelect() {
 function chooseTerrain(id, direct = false) {
   Settings.set('terrain', id);            // pilihan diingat sebagai medan default
   UI.closeOverlay(true);
+  // Angkasa: pilih mode dulu (Kampanye atau Jelajah Bebas)
+  if (id === 'space') {
+    if (direct) { chooseMode(Save.settings.spaceMode, true); return; }
+    const sp = Save.data.campaign;
+    document.getElementById('mode-progress').textContent = sp.completed ? 'Kampanye tamat, ulangi stage mana pun' : 'Lanjut stage ' + sp.stage + ' dari ' + CONFIG.campaign.stages.length;
+    UI.openOverlay(modeScreen);
+    const pick = modeScreen.querySelector(`.mcard[data-mode="${Save.settings.spaceMode}"]`);
+    for (const c of modeScreen.querySelectorAll('.mcard')) c.classList.toggle('selected', c === pick);
+    pick.focus();
+    return;
+  }
   if (Worlds.active.id !== id) { Game.hasSession = false; setActiveWorld(id, chooseSeed()); resetWorld(chooseSeed()); }
   if (direct) startGame();                // jalan pintas uji: kapal terpilih langsung dipakai
   else Hangar.open(id, 'start');          // lanjut ke PILIH KAPAL
 }
+const modeScreen = document.getElementById('screen-mode');
+function chooseMode(mode, direct = false) {
+  Settings.set('spaceMode', mode);
+  Campaign.mode = mode;
+  UI.closeOverlay(true);
+  Game.hasSession = false;
+  if (Worlds.active.id !== 'space') setActiveWorld('space', chooseSeed());
+  Campaign.prepareArea();
+  resetWorld(chooseSeed());
+  if (direct) startGame();
+  else Hangar.open('space', 'start');
+}
+for (const c of modeScreen.querySelectorAll('.mcard')) {
+  onButton(c, () => chooseMode(c.dataset.mode));
+  c.addEventListener('focus', () => { for (const o of modeScreen.querySelectorAll('.mcard')) o.classList.toggle('selected', o === c); });
+}
+onButton(document.getElementById('btn-mode-back'), () => { UI.closeOverlay(true); openTerrainSelect(); });
+onButton(document.getElementById('btn-map-close'), () => SolarMap.close());
+onButton(document.getElementById('btn-map'), () => SolarMap.toggle());
 for (const c of terrainScreen.querySelectorAll('.tcard')) {
   onButton(c, () => chooseTerrain(c.dataset.world));
   c.addEventListener('focus', () => { for (const o of terrainScreen.querySelectorAll('.tcard')) o.classList.toggle('selected', o === c); });
@@ -8262,9 +8625,9 @@ const Keyboard = {
 Controls.addSource(Keyboard);
 
 // Tombol yang aksi bawaan browsernya harus dicegah (scroll, klik tombol yang sedang fokus)
-const PREVENT_CODES = new Set(['Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+const PREVENT_CODES = new Set(['Tab', 'Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM',
-  'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC', 'KeyE',
+  'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC', 'KeyE', 'Tab',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 // Navigasi menu dengan keyboard: panah atas dan bawah memilih, Enter menekan, Esc menutup overlay.
 // Mengembalikan true bila tombol sudah ditangani.
@@ -8288,6 +8651,7 @@ function menuKeyHandler(code) {
     if (UI.overlay) { UI.closeOverlay(); return true; }
     return false;
   }
+  if (code === 'Tab') return false;
   if (code === 'Enter' || code === 'NumpadEnter') {
     if (Game.state === 'gameover') { if (Game.stateTime < 1.0) return true; }   // cegah tembakan ikut menekan
     const list = UI.buttons(root);
@@ -8324,7 +8688,11 @@ function onKeyDown(e) {
   switch (code) {
     case 'KeyP':
     case 'Escape':
-      if (!UI.overlay) togglePause();
+      if (Game.state === 'map') SolarMap.close();
+      else if (!UI.overlay) togglePause();
+      break;
+    case 'Tab':
+      if (!UI.overlay) SolarMap.toggle();
       break;
     case 'KeyR':
       if (Game.state === 'paused') ui.btnPauseRestart.click();
@@ -8695,6 +9063,9 @@ function update(dt) {
     Game.time += dt;
     let ctl = Controls;
     if (Debug.autoInput) { AutoInput.update(Game.time); ctl = AutoInput; }
+    Warp.update(dt);
+    if (Warp.active) ctl = Warp.idle;   // warp sinematik: kendali dilepas sebentar
+    WarpGate.update(dt);
     if (Player.alive) {
       Player.updateNitro(dt, ctl.nitro);
       Player.update(dt, ctl.pitch, ctl.yaw);
@@ -8830,7 +9201,7 @@ window.__game = {
   },
   start() { if (Game.state === 'menu') startGame(); },
   // Mulai di medan tertentu tanpa melewati layar pilih medan (untuk uji)
-  startIn(worldId) { if (Game.state === 'menu') chooseTerrain(worldId, true); },
+  startIn(worldId, mode) { if (Game.state !== 'menu') return; if (worldId === 'space') { Settings.set('spaceMode', mode || 'free'); } chooseTerrain(worldId, true); },
   world() { return Worlds.active.id; },
   // Lewati transisi mulai (untuk uji): langsung ke state playing
   skipTransition() {
@@ -9013,6 +9384,22 @@ window.__game = {
     dataPanel() { return { visible: !Discovery.el.classList.contains('hidden'), title: Discovery.title.textContent, facts: Discovery.list.children.length, isNew: !Discovery.tag.classList.contains('hidden') }; },
     // Arahkan kamera ke black hole (untuk screenshot)
     lookBlackHole() { const d = DeepSky.bhDir; Player.setHeading(Math.atan2(-d.x, -d.z)); Player.rotateLocal(_AX_X, Math.asin(d.y)); Player.basis(); Player.syncEuler(); Player.rig.quaternion.copy(Player.quat); CamRig.reset(); return true; },
+    campaign() { return { mode: Campaign.mode, active: Campaign.active, stage: Campaign.stageIdx + 1, area: SpaceWorld.area, cleared: Campaign.cleared, gate: WarpGate.active, warp: Warp.active, wave: Waves.wave, saved: { ...Save.data.campaign }, label: Campaign.label() }; },
+    // Pindah ke stage n (1..10) di sesi kampanye berjalan
+    setStage(n) {
+      Campaign.mode = 'campaign';
+      Campaign.stageIdx = clamp(n - 1, 0, Campaign.count - 1);
+      Campaign.cleared = false;
+      Waves.reset();
+      Warp.start(Campaign.stage.area);
+      return true;
+    },
+    // Selesaikan gelombang stage saat ini (musuh dibersihkan)
+    finishStage() { Enemies.reset(); Waves.wave = Campaign.stage.waves; Waves.phase = 'break'; Waves.timer = 0; return true; },
+    passGate() { if (!WarpGate.active) return false; Campaign.gatePassed(); return true; },
+    warpTo(id) { return Warp.start(id); },
+    openMap() { return SolarMap.open(); },
+    mapState() { return { open: Game.state === 'map', buttons: [...SolarMap.dest.querySelectorAll('button')].map((b) => ({ area: b.dataset.area, disabled: b.disabled })) }; },
     // Pindah ke pose awal sebuah area (planet atau sabuk)
     viewArea(id) {
       const pose = SpaceWorld.startPose.call({ area: id });
@@ -9035,6 +9422,7 @@ window.__game = {
     },
     grantUpgrade(name) { if (name in Player.upgrades) { Player.upgrades[name] = typeof Player.upgrades[name] === 'boolean' ? true : Player.upgrades[name] * 1.2; } return { ...Player.upgrades }; },
     pikoSay(key) { return Piko.say(key); },
+    pikoReset() { Piko.reset(); return true; },
     piko() { return { mood: Piko.mood, said: [...Piko.said], panel: !Piko.panel.classList.contains('hidden'), text: Piko.textEl.textContent }; },
     forceManeuver(type, dir = 1) { return Player.startManeuver(type, dir, true); },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
