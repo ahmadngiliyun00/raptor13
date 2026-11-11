@@ -1005,3 +1005,51 @@ test('B8: screenshot tiap area Tata Surya', async ({ page }) => {
     await page.screenshot({ path: `docs/screenshots/tata-surya-${id}.jpg`, type: 'jpeg', quality: 82 });
   }
 });
+
+test('B9: cincin Saturnus berisi ribuan batu, LOD ke asteroid ber-HP, batu yang hancur tetap hilang', async ({ page }) => {
+  test.setTimeout(60000);
+  await page.setViewportSize({ width: 960, height: 540 });
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.setEnemiesEnabled(false); d.clearAsteroids(); d.setAsteroidDensity(0); });
+  const f0 = await dbg(page, 'fields');
+  expect(f0.rings.saturnus).toBeGreaterThanOrEqual(2000);
+  expect(f0.rings.jupiter).toBeGreaterThan(0);
+  expect(f0.rings.uranus).toBeGreaterThan(0);
+  expect(await dbg(page, 'enterRing', 'saturnus', 0.45)).toBe(true);
+  await expect.poll(async () => (await dbg(page, 'fields')).linkedList.filter((a) => a.src === 'ring').length, { timeout: 4000 }).toBeGreaterThan(3);
+  await page.screenshot({ path: 'docs/screenshots/cincin-saturnus.jpg', type: 'jpeg', quality: 82 });
+  // Batu tertaut adalah asteroid sungguhan: bisa dihancurkan dengan ultimate
+  await dbg(page, 'fillUltimate');
+  await dbg(page, 'fireUltimate');
+  await expect.poll(async () => (await dbg(page, 'fields')).destroyed, { timeout: 5000 }).toBeGreaterThan(1);
+  const destroyed = (await dbg(page, 'fields')).destroyed;
+  // Pergi jauh: tautan dilepas; kembali: yang hancur tidak muncul lagi
+  await dbg(page, 'viewBody', 'bumi', 3);
+  await expect.poll(async () => (await dbg(page, 'fields')).linkedList.filter((a) => a.src === 'ring').length, { timeout: 4000 }).toBe(0);
+  await dbg(page, 'enterRing', 'saturnus', 0.45);
+  await page.waitForTimeout(800);
+  expect((await dbg(page, 'fields')).destroyed).toBeGreaterThanOrEqual(destroyed);
+});
+
+test('B9: Sabuk Asteroid dan Sabuk Kuiper padat dengan LOD dan awal yang aman', async ({ page }) => {
+  await page.setViewportSize({ width: 960, height: 540 });
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.setEnemiesEnabled(false); d.clearAsteroids(); d.setAsteroidDensity(0); });
+  await dbg(page, 'viewArea', 'sabuk');
+  await expect.poll(async () => (await dbg(page, 'fields')).linked, { timeout: 4000 }).toBeGreaterThan(3);
+  const s = await dbg(page, 'fields');
+  expect(s.beltHere).toBe('sabuk');
+  expect(s.belt).toBeGreaterThan(300);
+  for (const a of s.linkedList) expect(a.src).toBe('belt');
+  await page.screenshot({ path: 'docs/screenshots/sabuk-asteroid.jpg', type: 'jpeg', quality: 82 });
+  await dbg(page, 'viewArea', 'kuiper');
+  await expect.poll(async () => (await dbg(page, 'fields')).beltHere, { timeout: 3000 }).toBe('kuiper');
+  expect((await dbg(page, 'fields')).belt).toBeGreaterThan(100);
+  // Mulai di area sabuk tanpa langsung menabrak (gelembung aman di titik mulai)
+  await dbg(page, 'setArea', 'sabuk');
+  await page.evaluate(() => { window.__game.debug.setGod(false); window.__game.restart(); window.__game.skipTransition(); });
+  await page.waitForTimeout(1500);
+  const after = await page.evaluate(() => ({ s: window.__game.snapshot(), f: window.__game.debug.fields() }));
+  expect(after.f.beltHere).toBe('sabuk');
+  expect(after.s.deathCause).toBe('');
+});

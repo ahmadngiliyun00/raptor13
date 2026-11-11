@@ -35,6 +35,7 @@ Berkas ini adalah catatan kerja agar pengerjaan bisa dilanjutkan otomatis setela
 - Penyetelan B4: maxTailTime 1,2 detik, droneMaxTailTime 0,6 detik; metrik dipisah collisionsPerMin (non-kamikaze, ambang 2) dan ramsPerMin (drone, ambang 6).
 - S6 asteroid angkasa ukuran kontinu (spaceRadius per kelas) dan empat jenis (batu, es, logam, kristal; kristal lebih sering menjatuhkan pickup), komet (Comets) dengan koma, ekor menjauhi matahari, peringatan KOMET MENDEKAT dan Piko, bisa dihancurkan. Asteroid Bumi tidak berubah.
 - B8 Tata Surya (SolarSystem): Matahari bergranulasi, 8 planet, Pluto, 9 bulan (Bulan, Phobos, Deimos, Io, Europa, Ganymede, Callisto, Titan, Charon), tekstur kanvas noise 3D tanpa sambungan, bump kawah, lampu kota sisi malam Bumi, awan berputar, atmosfer, cincin Saturnus dengan celah Cassini dan bayangan planet, cincin tipis Jupiter dan Uranus, cahaya dari posisi Matahari (termasuk gerhana pada kapal), proksi berskala untuk benda jauh (camera.far 10000), tabrakan fatal planet, bulan, Matahari, peringatan TARIK NAIK, ketinggian HUD = jarak ke permukaan terdekat, pose awal per area (`SpaceWorld.area`), hook `solar`, `setArea`, `viewBody`. Jarak dipadatkan, bukan skala asli.
+- B9 RockFields: cincin Saturnus (6000 batu es pada kualitas tinggi), Jupiter dan Uranus berisi batu InstancedMesh di ruang lokal cincin; Sabuk Asteroid (10200 sampai 12600) dan Sabuk Kuiper (35500 sampai 42000) dibangkitkan per sel di sekitar kamera secara deterministik ditambah pita titik jauh berjarak dipadatkan; LOD: batu terdekat (radius 170, maksimal 14) diganti Asteroid ber-HP, yang hancur tetap hilang selama sesi; tekstur cincin memudar dari dekat; area awal 'sabuk' dan 'kuiper' dengan gelembung aman; hook `fields`, `enterRing`, `viewArea`.
 - S8 pickup bintang lima warna (merah ultimate, hijau HP, biru nitro, emas XP dan skor, ungu nyawa) dengan magnet, jatuh dari musuh, asteroid kristal, komet dan kluster angkasa; ultimate laser E (meter dari bintang merah dan kill, sinar 2,5 detik), tombol ULTIMATE di mode HP, bar HUD. Game.xp disiapkan untuk S11.
 
 ## Urutan task berikutnya (blok terakhir menang bila bertentangan)
@@ -56,7 +57,7 @@ Fase berikutnya:
 12. (SELESAI) S6 Asteroid angkasa ukuran kontinu dan 4 jenis (batu, es, logam, kristal) serta komet berekor.
 13. (SELESAI) S8 Pickup bintang warna (merah ultimate, hijau HP, biru nitro, emas XP dan skor, ungu nyawa) dan ultimate laser E.
 14. (SELESAI) B8 Tata Surya (Matahari, 8 planet, Pluto, bulan, tekstur prosedural, cahaya dari Matahari). Menggantikan S5 dan S7.
-15. B9 Cincin berisi asteroid instanced dengan LOD ke objek ber-HP, Sabuk Asteroid, Sabuk Kuiper.
+15. (SELESAI) B9 Cincin berisi asteroid instanced dengan LOD ke objek ber-HP, Sabuk Asteroid, Sabuk Kuiper.
 16. B10 Latar Bima Sakti, galaksi, black hole; batas jelajah dan dinding energi; panel data fakta akurat dan daftar Penemuan.
 17. B11 Mode Kampanye 10 stage dan Jelajah Bebas, peta Tab dan warp. Menggantikan S12.
 18. S9 dan A5 Roster musuh (8 jenis ditambah 6 kapal Sindikat Vanta), tembakan adil, `?gallery=1`.

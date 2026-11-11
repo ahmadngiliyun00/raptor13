@@ -872,10 +872,10 @@ const CONFIG = {
   },
   asteroids: {
     sizes: {
-      small:  { radius: 3,  hp: 20,  damage: 10, score: 50,  splitInto: null,     pool: 36, color: 0x8f8376 },
-      medium: { radius: 6,  hp: 50,  damage: 20, score: 100, splitInto: 'small',  pool: 18, color: 0x7d736a },
-      large:  { radius: 11, hp: 100, damage: 35, score: 200, splitInto: 'medium', pool: 8,  color: 0x6f665e },
-      giant:  { radius: 24, hp: 300, damage: 0,  score: 500, splitInto: 'large',  pool: 3,  color: 0x625a53 },   // fatal bila ditabrak
+      small:  { radius: 3,  hp: 20,  damage: 10, score: 50,  splitInto: null,     pool: 44, color: 0x8f8376 },
+      medium: { radius: 6,  hp: 50,  damage: 20, score: 100, splitInto: 'small',  pool: 24, color: 0x7d736a },
+      large:  { radius: 11, hp: 100, damage: 35, score: 200, splitInto: 'medium', pool: 12, color: 0x6f665e },
+      giant:  { radius: 24, hp: 300, damage: 0,  score: 500, splitInto: 'large',  pool: 4,  color: 0x625a53 },   // fatal bila ditabrak
     },
     split: [2, 3],             // jumlah pecahan saat hancur
     variants: 3,               // varian bentuk per ukuran
@@ -974,6 +974,23 @@ const CONFIG = {
       { id: 'neptunus', name: 'Neptunus', cls: 'planet', orbit: 32500, angle: 0.05, y: -250, radius: 210, tilt: 0.494, spin: 0.032, tex: 'neptune', atmo: [0.3, 0.5, 1.0, 0.85] },
       { id: 'pluto', name: 'Pluto', cls: 'planet katai', orbit: 37000, angle: 5.85, y: 2600, radius: 24, tilt: 2.138, spin: -0.01, tex: 'pluto', bump: 0.8,
         moons: [{ id: 'charon', name: 'Charon', dist: 110, radius: 12, tex: 'charon', bump: 1.0, period: 70 }] },
+    ],
+  },
+  // Medan batu: cincin planet berisi batu, Sabuk Asteroid dan Sabuk Kuiper, LOD ke asteroid ber-HP
+  fields: {
+    lodRadius: 170,            // batu sedekat ini menjadi asteroid sungguhan
+    lodMax: 14,                // batas asteroid tertaut sekaligus
+    lodInterval: 0.2,
+    ringDrawDistance: 6000,    // batu cincin digambar bila planet sedekat ini
+    beltCell: 260, beltRange: 1100, beltMaxInstances: 2400,
+    rings: {
+      saturnus: { count: 6000, size: [0.6, 3.6], thick: 2.5, kinds: { ice: 0.85, rock: 0.15 } },
+      jupiter: { count: 1200, size: [0.6, 3], thick: 3, kinds: { rock: 0.8, metal: 0.2 } },
+      uranus: { count: 1200, size: [0.6, 3], thick: 2, kinds: { ice: 0.5, rock: 0.5 } },
+    },
+    belts: [
+      { id: 'sabuk', name: 'Sabuk Asteroid', inner: 10200, outer: 12600, thick: 320, perCell: 7, giantChance: 0.012, points: 9000, pointColor: 0x9a8a78, angle: 0.4, kinds: { rock: 0.6, metal: 0.25, ice: 0.08, crystal: 0.07 } },
+      { id: 'kuiper', name: 'Sabuk Kuiper', inner: 35500, outer: 42000, thick: 900, perCell: 3, giantChance: 0.006, points: 7000, pointColor: 0x9fb8d0, angle: 5.6, kinds: { ice: 0.7, rock: 0.25, crystal: 0.05 } },
     ],
   },
   // Pickup bintang bercahaya
@@ -3775,11 +3792,12 @@ const Asteroids = {
     for (const [k, t] of Object.entries(T)) { r -= t.weight; if (r <= 0) return k; }
     return 'rock';
   },
-  spawn(size, x, y, z, kind) {
+  spawn(size, x, y, z, kind, radius, still) {
     if (Worlds.active.blocked ? Worlds.active.blocked(x, y, z, 40) : false) return null;
     const a = findFree(this.list, size);
     if (!a) return null;
     a.active = true;
+    a.lodRef = null;
     a.mesh.visible = true;
     a.pos.set(x, y, z);
     // Angkasa: ukuran kontinu dan empat jenis; Bumi: ukuran tetap berwarna batu
@@ -3789,7 +3807,7 @@ const Asteroids = {
     const T = A.types[a.kind];
     if (space) {
       const rr = A.spaceRadius[size];
-      a.radius = randRange(rr[0], rr[1]);
+      a.radius = radius || randRange(rr[0], rr[1]);
     } else a.radius = a.cfg.radius;
     a.mesh.scale.setScalar(a.radius);
     a.material.color.setHex(space ? T.color : a.cfg.color);
@@ -3835,6 +3853,7 @@ const Asteroids = {
 
   remove(a) {
     if (!a.active) return;
+    if (a.lodRef) RockFields.release(a);
     a.active = false;
     a.mesh.visible = false;
     a.hpBarTimer = 0;
@@ -3844,6 +3863,7 @@ const Asteroids = {
   // Hancur: pecah menjadi ukuran lebih kecil, skor bila oleh pemain, kadang menjatuhkan pickup
   destroy(a, source) {
     if (!a.active) return;
+    RockFields.markDestroyed(a);
     this.remove(a);
     const A = CONFIG.asteroids;
     if (a.cfg.splitInto) {
@@ -3889,6 +3909,7 @@ const Asteroids = {
         a.material.emissive.setRGB(v, v, v).lerp(a.baseEmissive, 1 - v);   // kilatan putih singkat saat kena tembakan
       }
       if (a.hpBarTimer > 0) a.hpBarTimer -= dt;
+      if (a.lodRef) continue;   // batu medan: dilepas oleh RockFields saat jauh
       const dx = a.pos.x - P.x, dz = a.pos.z - P.z;
       const ahead = dx * f.x + dz * f.z;
       if (ahead < -A.recycleBehind || dx * dx + dz * dz > A.recycleDistance * A.recycleDistance) this.remove(a);
@@ -4990,7 +5011,7 @@ const RING_VERT = /* glsl */`
     gl_Position = projectionMatrix * viewMatrix * w;
   }`;
 const RING_FRAG = /* glsl */`
-  uniform sampler2D uMap; uniform float uInner; uniform float uOuter; uniform vec3 uLightLocal; uniform float uOpacity; uniform float uSunI;
+  uniform sampler2D uMap; uniform float uInner; uniform float uOuter; uniform vec3 uLightLocal; uniform float uOpacity; uniform float uSunI; uniform float uFadeNear;
   varying vec3 vLocal; varying vec3 vW;
   void main() {
     float r = length(vLocal.xy);
@@ -5004,7 +5025,9 @@ const RING_FRAG = /* glsl */`
     float shadow = (b < 0.0 ? (b * b - cc > 0.0 ? 1.0 : 0.0) : 0.0);
     float lit = 0.35 + 0.65 * abs(L.z);
     vec3 col = c.rgb * (uSunI * lit * (1.0 - shadow * 0.9) + 0.03);
-    gl_FragColor = vec4(col, c.a * uOpacity);
+    // Dari dekat cincin adalah kumpulan batu: tekstur memudar sehingga batu instanced yang terlihat
+    float fade = smoothstep(uFadeNear, uFadeNear * 6.0, distance(cameraPosition, vW));
+    gl_FragColor = vec4(col, c.a * uOpacity * fade);
     #include <colorspace_fragment>
   }`;
 // Matahari: granulasi noise 3D beranimasi, penggelapan tepi, sangat terang agar ikut bloom
@@ -5091,7 +5114,7 @@ const SolarSystem = {
     const R = def.ring;
     const g = new THREE.RingGeometry(R.inner, R.outer, 160, 1);
     const m = new THREE.ShaderMaterial({
-      uniforms: { uMap: { value: ringTexture(R.tex) }, uInner: { value: R.inner }, uOuter: { value: R.outer }, uLightLocal: { value: new THREE.Vector3(1, 0, 0) }, uOpacity: { value: R.opacity || 1 }, uSunI: { value: 1.25 } },
+      uniforms: { uMap: { value: ringTexture(R.tex) }, uInner: { value: R.inner }, uOuter: { value: R.outer }, uLightLocal: { value: new THREE.Vector3(1, 0, 0) }, uOpacity: { value: R.opacity || 1 }, uSunI: { value: 1.25 }, uFadeNear: { value: 70 } },
       vertexShader: RING_VERT, fragmentShader: RING_FRAG,
       side: THREE.DoubleSide, transparent: true, depthWrite: false,
     });
@@ -5238,6 +5261,12 @@ const SolarSystem = {
   },
   // Pose awal di dekat sebuah area: dari sisi siang, planet terlihat di depan agak ke kanan
   startPose(id) {
+    // Area sabuk: di tengah sabuk, terbang searah orbit
+    const belt = CONFIG.fields.belts.find((x) => x.id === id);
+    if (belt) {
+      const rad = (belt.inner + belt.outer) / 2, a = belt.angle;
+      return { pos: new THREE.Vector3(Math.cos(a) * rad, 0, Math.sin(a) * rad), yaw: Math.atan2(Math.sin(a), -Math.cos(a)), body: null };
+    }
     const b = this.byId[id] || this.byId[CONFIG.solar.startArea];
     const toSun = _va.copy(this.sunPos).sub(b.pos).setY(0).normalize();
     const ang = Math.atan2(toSun.z, toSun.x) - 0.9;
@@ -5247,6 +5276,330 @@ const SolarSystem = {
     const fx = b.pos.x - pos.x, fz = b.pos.z - pos.z;
     const yaw = Math.atan2(-fx, -fz) + 0.45;
     return { pos, yaw, body: b };
+  },
+};
+
+/* =====================================================================
+   MEDAN BATU - cincin planet berisi ribuan batu es (InstancedMesh di ruang lokal
+   cincin), Sabuk Asteroid dan Sabuk Kuiper (batu instanced dibangkitkan per sel
+   di sekitar kamera secara deterministik, ditambah pita titik jauh). LOD: batu di
+   dekat pemain diganti objek Asteroid sungguhan yang punya HP, bisa ditembak dan
+   pecah; batu yang hancur tetap hilang selama sesi, yang ditinggalkan dikembalikan.
+   ===================================================================== */
+// Titik jauh dengan jarak dipadatkan seperti proksi Tata Surya (tetap di dalam camera.far)
+const FAR_POINTS_VERT = /* glsl */`
+  attribute vec3 aColor; attribute float aSize;
+  uniform vec3 uCam; uniform float uD; uniform float uM; uniform float uF; uniform float uPR; uniform float uNear;
+  varying vec3 vColor; varying float vA;
+  void main() {
+    vec3 d = position - uCam;
+    float L = max(length(d), 0.001);
+    float L2 = L > uD ? uD + (uM - uD) * (1.0 - exp(-(L - uD) / uF)) : L;
+    vec4 mv = viewMatrix * vec4(uCam + d * (L2 / L), 1.0);
+    gl_Position = projectionMatrix * mv;
+    gl_PointSize = clamp(aSize * 900.0 / L, 0.8, 3.0) * uPR;
+    vA = smoothstep(uNear, uNear * 1.6, L);
+    vColor = aColor;
+  }`;
+const FAR_POINTS_FRAG = /* glsl */`
+  varying vec3 vColor; varying float vA;
+  void main() {
+    vec2 c = gl_PointCoord - 0.5;
+    float a = smoothstep(0.5, 0.15, length(c)) * vA;
+    if (a < 0.02) discard;
+    gl_FragColor = vec4(vColor, a);
+    #include <colorspace_fragment>
+  }`;
+
+const RockFields = {
+  built: false,
+  rings: [],          // { body, mesh, count, local: Float32Array(x,y,z,r), kind, hidden: Uint8Array }
+  belt: null,         // InstancedMesh batu sabuk di sekitar kamera
+  beltCell: '',
+  beltRocks: { n: 0, x: null, y: null, z: null, r: null, kind: null, key: [], idx: null },
+  destroyed: new Set(),
+  linked: [],         // asteroid sungguhan yang berasal dari batu medan
+  lodTimer: 0,
+  _m: new THREE.Matrix4(), _inv: new THREE.Matrix4(), _lp: new THREE.Vector3(), _w: new THREE.Vector3(), _p: new THREE.Vector3(), _q: new THREE.Quaternion(), _s: new THREE.Vector3(), _c: new THREE.Color(),
+  kinds: ['rock', 'ice', 'metal', 'crystal'],
+
+  // Material sama dengan Asteroid agar pergantian LOD tidak terlihat
+  makeMaterial() { return new THREE.MeshLambertMaterial({ flatShading: true }); },
+  kindColor(kind, rnd, out) {
+    out.setHex(CONFIG.asteroids.types[kind].color);
+    const v = 0.85 + rnd() * 0.3;
+    return out.multiplyScalar(v);
+  },
+  pickKind(weights, rnd) {
+    let r = rnd();
+    for (const k of this.kinds) { r -= weights[k] || 0; if (r <= 0) return k; }
+    return 'rock';
+  },
+
+  build() {
+    if (this.built) return;
+    const F = CONFIG.fields;
+    this.geo = buildAsteroidGeometry(4242);
+    this.geoLow = new THREE.IcosahedronGeometry(1, 0);
+    // Cincin planet
+    for (const b of SolarSystem.bodies) {
+      const rc = b.def.ring ? F.rings[b.id] : null;
+      if (!rc) continue;
+      const count = Math.round(rc.count * Math.max(0.4, Q.stars));
+      const rnd = makeRng(b.id.length * 7919 + 11);
+      const mesh = new THREE.InstancedMesh(this.geoLow, this.makeMaterial(), count);
+      const local = new Float32Array(count * 4), kinds = [];
+      const R = b.radius, inner = b.def.ring.inner * R, outer = b.def.ring.outer * R;
+      for (let i = 0; i < count; i++) {
+        // Distribusi mengikuti kepadatan cincin (celah dihindari lewat tekstur yang sama)
+        let rad = 0, tries = 0;
+        do {
+          rad = inner + rnd() * (outer - inner);
+          const t = (rad - inner) / (outer - inner);
+          const dens = RING_RECIPES[b.def.ring.tex](t, 0.5)[3];
+          if (rnd() < dens * 1.2) break;
+        } while (++tries < 12);
+        const a = rnd() * Math.PI * 2;
+        const r = rc.size[0] + Math.pow(rnd(), 3) * (rc.size[1] - rc.size[0]);
+        const x = Math.cos(a) * rad, z = Math.sin(a) * rad, y = (rnd() * 2 - 1) * rc.thick;
+        local[i * 4] = x; local[i * 4 + 1] = y; local[i * 4 + 2] = z; local[i * 4 + 3] = r;
+        const kind = this.pickKind(rc.kinds, rnd);
+        kinds.push(kind);
+        this._q.setFromEuler(new THREE.Euler(rnd() * 6.28, rnd() * 6.28, rnd() * 6.28));
+        this._m.compose(this._p.set(x, y, z), this._q, this._s.set(r, r * (0.7 + rnd() * 0.3), r * (0.8 + rnd() * 0.4)));
+        mesh.setMatrixAt(i, this._m);
+        mesh.setColorAt(i, this.kindColor(kind, rnd, this._c));
+      }
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      mesh.frustumCulled = false;
+      mesh.visible = false;
+      b.tilt.add(mesh);
+      this.rings.push({ body: b, mesh, count, local, kinds, hidden: new Uint8Array(count), id: b.id });
+    }
+    // Batu sabuk di sekitar kamera
+    const max = Math.round(F.beltMaxInstances * Math.max(0.5, Q.stars));
+    this.belt = new THREE.InstancedMesh(this.geo, this.makeMaterial(), max);
+    this.belt.count = 0;
+    this.belt.frustumCulled = false;
+    this.beltMax = max;
+    const BR = this.beltRocks;
+    BR.x = new Float32Array(max); BR.y = new Float32Array(max); BR.z = new Float32Array(max); BR.r = new Float32Array(max);
+    BR.kind = new Array(max); BR.key = new Array(max);
+    SolarSystem.root.add(this.belt);
+    // Pita titik jauh untuk setiap sabuk
+    this.bands = [];
+    for (const belt of F.belts) this.bands.push(this.makeBand(belt));
+    this.built = true;
+  },
+  makeBand(belt) {
+    const n = Math.round(belt.points * Math.max(0.5, Q.stars)), rnd = makeRng(belt.inner);
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), size = new Float32Array(n);
+    const c = new THREE.Color();
+    for (let i = 0; i < n; i++) {
+      const t = rnd(), rad = belt.inner + (belt.outer - belt.inner) * (0.5 + (t - 0.5) * (0.6 + rnd() * 0.4) * 2) * 1;
+      const a = rnd() * Math.PI * 2, y = (rnd() + rnd() + rnd() - 1.5) * belt.thick * 1.2;
+      pos[i * 3] = Math.cos(a) * rad; pos[i * 3 + 1] = y; pos[i * 3 + 2] = Math.sin(a) * rad;
+      c.setHex(belt.pointColor).multiplyScalar(0.6 + rnd() * 0.6);
+      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      size[i] = 1 + rnd() * 2.5;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    g.setAttribute('aColor', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('aSize', new THREE.BufferAttribute(size, 1));
+    const S = CONFIG.solar;
+    const m = new THREE.ShaderMaterial({
+      uniforms: { uCam: { value: new THREE.Vector3() }, uD: { value: S.proxyDistance }, uM: { value: S.maxDraw }, uF: { value: S.proxyFalloff }, uPR: { value: renderer.getPixelRatio() }, uNear: { value: CONFIG.fields.beltRange * 0.8 } },
+      vertexShader: FAR_POINTS_VERT, fragmentShader: FAR_POINTS_FRAG, transparent: true, depthWrite: false,
+    });
+    const pts = new THREE.Points(g, m);
+    pts.frustumCulled = false;
+    SolarSystem.root.add(pts);
+    return pts;
+  },
+
+  // Kepadatan sabuk di sebuah titik (0 di luar sabuk)
+  beltDensity(x, y, z) {
+    const rad = Math.hypot(x, z);
+    for (const b of CONFIG.fields.belts) {
+      if (rad < b.inner ? true : rad > b.outer) continue;
+      const t = (rad - b.inner) / (b.outer - b.inner);
+      const edge = smoothstep(0, 0.15, t) * smoothstep(1, 0.85, t);
+      const vert = Math.exp(-Math.pow(y / b.thick, 2));
+      const clump = 0.35 + 0.95 * PlanetTex.n3(x / 700 + 3, y / 700, z / 700);
+      return { belt: b, d: edge * vert * clump };
+    }
+    return null;
+  },
+  beltAt(x, y, z) { const r = this.beltDensity(x, y, z); return r ? r.belt : null; },
+
+  // Bangun ulang batu sabuk ketika kamera berpindah sel
+  rebuildBelt(cam) {
+    const F = CONFIG.fields, C = F.beltCell, R = Math.ceil(F.beltRange / C);
+    const ccx = Math.floor(cam.x / C), ccy = Math.floor(cam.y / C), ccz = Math.floor(cam.z / C);
+    const key = ccx + ',' + ccy + ',' + ccz;
+    if (key === this.beltCell) return;
+    this.beltCell = key;
+    const BR = this.beltRocks, mesh = this.belt;
+    let n = 0;
+    // Cepat: lewati bila jauh dari semua sabuk
+    const rad = Math.hypot(cam.x, cam.z);
+    let near = false;
+    for (const b of F.belts) { if (rad > b.inner - F.beltRange ? rad < b.outer + F.beltRange : false) near = Math.abs(cam.y) < b.thick * 3 + F.beltRange; if (near) break; }
+    if (near) {
+      for (let cx = ccx - R; cx <= ccx + R; cx++) for (let cz = ccz - R; cz <= ccz + R; cz++) for (let cy = ccy - 1; cy <= ccy + 1; cy++) {
+        const ox = cx * C, oy = cy * C, oz = cz * C;
+        const info = this.beltDensity(ox + C / 2, oy + C / 2, oz + C / 2);
+        if (!info) continue;
+        const rnd = makeRng(Math.imul(cx, 73856093) ^ Math.imul(cy, 19349663) ^ Math.imul(cz, 83492791));
+        const cnt = Math.floor(info.belt.perCell * info.d + rnd());
+        for (let i = 0; i < cnt; i++) {
+          if (n >= this.beltMax) break;
+          const x = ox + rnd() * C, y = oy + rnd() * C, z = oz + rnd() * C;
+          const big = rnd() < info.belt.giantChance;
+          const r = big ? 18 + rnd() * 8 : 1.6 + Math.pow(rnd(), 3.2) * 12;
+          const kind = this.pickKind(info.belt.kinds, rnd);
+          const k = cx + ',' + cy + ',' + cz + ',' + i;
+          const rx = rnd() * 6.28, ry = rnd() * 6.28, sy = 0.7 + rnd() * 0.3;
+          if (this.destroyed.has(k)) continue;
+          BR.x[n] = x; BR.y[n] = y; BR.z[n] = z; BR.r[n] = r; BR.kind[n] = kind; BR.key[n] = k;
+          this._q.setFromEuler(new THREE.Euler(rx, ry, 0));
+          this._m.compose(this._p.set(x, y, z), this._q, this._s.set(r, r * sy, r));
+          mesh.setMatrixAt(n, this._m);
+          mesh.setColorAt(n, this.kindColor(kind, rnd, this._c));
+          n++;
+        }
+      }
+    }
+    BR.n = n;
+    mesh.count = n;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    // Asteroid sungguhan yang sedang tertaut ke sabuk: sembunyikan lagi instansnya
+    for (const a of this.linked) if (a.lodRef.src === 'belt') this.hideBeltKey(a.lodRef.key);
+  },
+  hideBeltKey(key) {
+    const BR = this.beltRocks;
+    for (let i = 0; i < BR.n; i++) if (BR.key[i] === key) { this.setBeltScale(i, 0); return i; }
+    return -1;
+  },
+  setBeltScale(i, s) {
+    const BR = this.beltRocks;
+    this.belt.getMatrixAt(i, this._m);
+    this._m.decompose(this._p, this._q, this._s);
+    const r = BR.r[i] * s;
+    this._m.compose(this._p, this._q, this._s.set(r, r * 0.85, r));
+    this.belt.setMatrixAt(i, this._m);
+    this.belt.instanceMatrix.needsUpdate = true;
+  },
+  setRingScale(ring, i, s) {
+    const L = ring.local, r = L[i * 4 + 3] * s;
+    ring.mesh.getMatrixAt(i, this._m);
+    this._m.decompose(this._p, this._q, this._s);
+    this._m.compose(this._p, this._q, this._s.set(r, r * 0.85, r));
+    ring.mesh.setMatrixAt(i, this._m);
+    ring.mesh.instanceMatrix.needsUpdate = true;
+  },
+  sizeClass(r) { return r >= 16 ? 'giant' : r >= 8 ? 'large' : r >= 4.5 ? 'medium' : 'small'; },
+
+  // Ganti batu terdekat menjadi Asteroid ber-HP
+  link(src, idx, key, x, y, z, r, kind, ring) {
+    if (this.linked.length >= CONFIG.fields.lodMax) return false;
+    const a = Asteroids.spawn(this.sizeClass(r), x, y, z, kind, r, true);
+    if (!a) return false;
+    a.vel.set(0, 0, 0);
+    a.spin.multiplyScalar(0.3);
+    a.lodRef = { src, idx, key, ring: ring || null };
+    this.linked.push(a);
+    return true;
+  },
+  // Dipanggil Asteroids.remove: batu dikembalikan bila belum hancur
+  release(a) {
+    const ref = a.lodRef;
+    a.lodRef = null;
+    const k = this.linked.indexOf(a);
+    if (k >= 0) this.linked.splice(k, 1);
+    if (this.destroyed.has(ref.key)) return;
+    if (ref.src === 'ring') { ref.ring.hidden[ref.idx] = 0; this.setRingScale(ref.ring, ref.idx, 1); }
+    else { const BR = this.beltRocks; for (let i = 0; i < BR.n; i++) if (BR.key[i] === ref.key) { this.setBeltScale(i, 1); break; } }
+  },
+  markDestroyed(a) { if (a.lodRef) this.destroyed.add(a.lodRef.key); },
+
+  reset() {
+    for (const a of [...this.linked]) Asteroids.remove(a);
+    this.linked.length = 0;
+    this.destroyed.clear();
+    this.beltCell = '';
+    for (const ring of this.rings) {
+      for (let i = 0; i < ring.count; i++) if (ring.hidden[i]) { ring.hidden[i] = 0; this.setRingScale(ring, i, 1); }
+    }
+  },
+  // Kosongkan gelembung kecil di sekitar titik mulai agar tidak langsung menabrak
+  clearBubble(p, r) {
+    const BR = this.beltRocks;
+    this.rebuildBelt(p);
+    for (let i = 0; i < BR.n; i++) {
+      const dx = BR.x[i] - p.x, dy = BR.y[i] - p.y, dz = BR.z[i] - p.z, rr = r + BR.r[i];
+      if (dx * dx + dy * dy + dz * dz < rr * rr) { this.destroyed.add(BR.key[i]); this.setBeltScale(i, 0); }
+    }
+  },
+
+  update(dt) {
+    if (!this.built) return;
+    const cam = camera.position, P = Player.pos, F = CONFIG.fields;
+    for (const band of this.bands) band.material.uniforms.uCam.value.copy(cam);
+    // Batu cincin hanya digambar saat cukup dekat (jauh: tekstur cincin sudah cukup)
+    for (const ring of this.rings) ring.mesh.visible = ring.body.pos.distanceTo(cam) < F.ringDrawDistance;
+    this.rebuildBelt(cam);
+    this.lodTimer -= dt;
+    if (this.lodTimer > 0) return;
+    this.lodTimer = F.lodInterval;
+    // Lepas asteroid tertaut yang sudah jauh
+    for (const a of [...this.linked]) if (a.pos.distanceTo(P) > F.lodRadius * 1.8) Asteroids.remove(a);
+    const lr2 = F.lodRadius * F.lodRadius;
+    // Kumpulkan kandidat (sabuk dan cincin), lalu tautkan yang terdekat lebih dulu
+    const cand = this._cand || (this._cand = []);
+    cand.length = 0;
+    const BR = this.beltRocks;
+    for (let i = 0; i < BR.n; i++) {
+      const dx = BR.x[i] - P.x, dy = BR.y[i] - P.y, dz = BR.z[i] - P.z, d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 > lr2) continue;
+      if (this.destroyed.has(BR.key[i])) continue;
+      if (this.linked.some((a) => a.lodRef.key === BR.key[i])) continue;
+      cand.push({ d2, src: 'belt', i, key: BR.key[i], x: BR.x[i], y: BR.y[i], z: BR.z[i], r: BR.r[i], kind: BR.kind[i], ring: null });
+    }
+    for (const ring of this.rings) {
+      const b = ring.body;
+      if (b.proxyScale < 0.999) continue;
+      const outer = b.def.ring.outer * b.radius;
+      if (b.pos.distanceTo(P) > outer + F.lodRadius) continue;
+      b.tilt.updateWorldMatrix(true, false);
+      this._inv.copy(b.tilt.matrixWorld).invert();
+      const lp = this._lp.copy(P).applyMatrix4(this._inv);
+      const L = ring.local;
+      for (let i = 0; i < ring.count; i++) {
+        if (ring.hidden[i]) continue;
+        const dx = L[i * 4] - lp.x, dy = L[i * 4 + 1] - lp.y, dz = L[i * 4 + 2] - lp.z, d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 > lr2) continue;
+        const key = b.id + ':' + i;
+        if (this.destroyed.has(key)) continue;
+        const w = this._w.set(L[i * 4], L[i * 4 + 1], L[i * 4 + 2]).applyMatrix4(b.tilt.matrixWorld);
+        cand.push({ d2, src: 'ring', i, key, x: w.x, y: w.y, z: w.z, r: L[i * 4 + 3], kind: ring.kinds[i], ring });
+      }
+    }
+    cand.sort((p, q) => p.d2 - q.d2);
+    for (const c of cand) {
+      // Penuh: lepas asteroid tertaut terjauh bila kandidat ini jelas lebih dekat
+      if (this.linked.length >= F.lodMax) {
+        let far = null, fd = 0;
+        for (const a of this.linked) { const d = a.pos.distanceToSquared(P); if (d > fd) { fd = d; far = a; } }
+        if (far ? fd > c.d2 * 1.6 : false) Asteroids.remove(far); else break;
+      }
+      if (!this.link(c.src, c.i, c.key, c.x, c.y, c.z, c.r, c.kind, c.ring)) continue;
+      if (c.src === 'ring') { c.ring.hidden[c.i] = 1; this.setRingScale(c.ring, c.i, 0); }
+      else this.setBeltScale(c.i, 0);
+    }
   },
 };
 
@@ -5299,6 +5652,7 @@ const SpaceWorld = {
   objects() { return [...SpaceSky.objects(), SolarSystem.root]; },
   activate() {
     SolarSystem.build();
+    RockFields.build();
     for (const o of this.objects()) o.visible = true;
     scene.background = new THREE.Color(0x02030a);
     scene.fog = null;
@@ -5312,7 +5666,7 @@ const SpaceWorld = {
     for (const o of this.objects()) o.visible = false;
     if (SpaceSky.flare) SpaceSky.flare.style.opacity = 0;
   },
-  reset() {},
+  reset() { RockFields.reset(); },
   // Musuh, asteroid dan pesawat attract mode tidak menembus planet: didorong ke permukaan
   update() {
     const push = (p, r) => {
@@ -5330,6 +5684,7 @@ const SpaceWorld = {
   },
   follow() {
     SolarSystem.update(lastDt || 0.016);
+    RockFields.update(lastDt || 0.016);
     // Cahaya kapal dari arah Matahari yang sebenarnya; redup saat berada di bayangan planet
     this.lightDir.copy(SolarSystem.sunPos).sub(Player.pos).normalize();
     this.eclipse = damp(this.eclipse, SolarSystem.sunBlocked(Player.pos) ? 0.12 : 1, 4, lastDt || 0.016);
@@ -5369,7 +5724,11 @@ const SpaceWorld = {
     Player.warning = warn;
   },
   safeStartAltitude() { return 0; },
-  startPose() { return SolarSystem.startPose(this.area); },
+  startPose() {
+    const pose = SolarSystem.startPose(this.area);
+    if (RockFields.built) RockFields.clearBubble(pose.pos, 90);
+    return pose;
+  },
   autopilotTargetY(x, z, yaw, t) { return this.startY + Math.sin(t * 0.12) * 40; },
   startY: 0,
 };
@@ -8209,7 +8568,34 @@ window.__game = {
       };
     },
     solarDebug(o = {}) { for (const b of SolarSystem.solids) { if (b.atmo) b.atmo.visible = o.atmo !== false; if (b.mat.uniforms.uAmbient) b.mat.uniforms.uAmbient.value = o.ambient ?? 0.006; } return true; },
-    setArea(id) { if (!SolarSystem.byId[id]) return false; SpaceWorld.area = id; return true; },
+    fields() {
+      return {
+        rings: Object.fromEntries(RockFields.rings.map((r) => [r.id, r.count])),
+        belt: RockFields.beltRocks.n, linked: RockFields.linked.length, destroyed: RockFields.destroyed.size,
+        beltHere: RockFields.beltAt(Player.pos.x, Player.pos.y, Player.pos.z)?.id ?? null,
+        linkedList: RockFields.linked.map((a) => ({ src: a.lodRef.src, radius: round2(a.radius), kind: a.kind, dist: round2(a.pos.distanceTo(Player.pos)) })),
+      };
+    },
+    // Masuk ke bidang cincin sebuah planet (t 0..1 dari tepi dalam ke luar), terbang searah orbit cincin
+    enterRing(id, t = 0.5) {
+      const b = SolarSystem.byId[id];
+      if (b ? !b.ring : true) return false;
+      const rad = (b.def.ring.inner + (b.def.ring.outer - b.def.ring.inner) * t) * b.radius;
+      const q = new THREE.Quaternion().setFromEuler(b.tilt.rotation);
+      Player.pos.set(rad, 0, 0).applyQuaternion(q).add(b.pos);
+      const f = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
+      Player.setHeading(Math.atan2(-f.x, -f.z));
+      Player.rotateLocal(_AX_X, Math.asin(clamp(f.y, -1, 1))); Player.basis(); Player.syncEuler(); Player.rig.quaternion.copy(Player.quat);
+      CamRig.reset();
+      return true;
+    },
+    // Pindah ke pose awal sebuah area (planet atau sabuk)
+    viewArea(id) {
+      const pose = SpaceWorld.startPose.call({ area: id });
+      Player.pos.copy(pose.pos); Player.setHeading(pose.yaw); CamRig.reset();
+      return true;
+    },
+    setArea(id) { if (SolarSystem.byId[id] ? false : !CONFIG.fields.belts.some((b) => b.id === id)) return false; SpaceWorld.area = id; return true; },
     // Letakkan pemain menghadap sebuah benda dari sisi siang (untuk screenshot dan uji tabrakan)
     viewBody(id, distMul = 3, side = 0.9, elev = 0.15) {
       const b = SolarSystem.byId[id];
