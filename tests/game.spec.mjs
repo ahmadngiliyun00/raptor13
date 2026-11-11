@@ -1250,7 +1250,8 @@ test('S9 dan A5: rudal Pemburu bisa ditembak jatuh, ranjau meledak bila didekati
   await expect.poll(async () => (await dbg(page, 'enemyInfo')).some((e) => e.type === 'missile'), { timeout: 4000 }).toBe(false);
   await page.keyboard.up('Enter');
   expect((await snap(page)).health).toBe(100);
-  // Ranjau tepat di jalur: menyala lalu meledak dan memberi damage
+  // Ranjau tepat di jalur: menyala lalu meledak dan memberi damage (tunggu peluru sebelumnya habis)
+  await page.waitForTimeout(1000);
   await dbg(page, 'spawnEnemy', 'mine', 50, 0, 0);
   await expect.poll(async () => (await snap(page)).health, { timeout: 5000 }).toBeLessThan(100);
 });
@@ -1558,4 +1559,26 @@ test('S14: pemetaan tombol final tampil di layar judul dan Pengaturan, Tentang d
   await page.click('#btn-about-back');
   expect(await page.evaluate(() => window.__game.world())).toBe('space');
   expect((await dbg(page, 'campaign')).area).toBe('saturnus');
+});
+
+test('S15: musik ambient generatif berjalan, bisa dimatikan lewat opsi Musik, audio tetap sehat', async ({ page }) => {
+  await start(page, { world: 'space' });
+  await expect.poll(async () => (await dbg(page, 'music')).notes, { timeout: 8000 }).toBeGreaterThan(0);
+  let m = await dbg(page, 'music');
+  expect(m.ready).toBe(true);
+  expect(m.chord.length).toBeGreaterThanOrEqual(3);
+  await expect.poll(async () => (await dbg(page, 'music')).gain, { timeout: 4000 }).toBeGreaterThan(0.02);
+  const a = await dbg(page, 'audioCheck');
+  expect(a.finite).toBe(true);
+  expect(a.master).toBeLessThan(1);
+  // Matikan lewat Pengaturan (menu jeda)
+  await page.keyboard.press('KeyP');
+  await page.click('#btn-pause-settings');
+  await page.locator('#screen-settings input[data-key="music"]').uncheck();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('raptor13.v3')).settings.music)).toBe(false);
+  // Saat jeda AudioContext ditangguhkan; setelah lanjut, musik memudar ke senyap
+  await page.click('#btn-settings-back');
+  await page.keyboard.press('KeyP');
+  await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).toBe('playing');
+  await expect.poll(async () => (await dbg(page, 'music')).gain, { timeout: 8000 }).toBeLessThan(0.002);
 });

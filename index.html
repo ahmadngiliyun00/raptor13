@@ -760,8 +760,13 @@
       <div class="range-wrap"><input type="range" min="0" max="100" step="5" data-key="volSfx" aria-label="Volume efek"><output data-for="volSfx"></output></div>
       <span class="set-label">Volume mesin</span>
       <div class="range-wrap"><input type="range" min="0" max="100" step="5" data-key="volEngine" aria-label="Volume mesin"><output data-for="volEngine"></output></div>
+      <span class="set-label">Volume musik</span>
+      <div class="range-wrap"><input type="range" min="0" max="100" step="5" data-key="volMusic" aria-label="Volume musik"><output data-for="volMusic"></output></div>
       <span class="set-label">Suara</span>
-      <label class="tog"><input type="checkbox" data-key="muted"> Bisukan</label>
+      <div class="tog-list">
+        <label class="tog"><input type="checkbox" data-key="music"> Musik</label>
+        <label class="tog"><input type="checkbox" data-key="muted"> Bisukan</label>
+      </div>
       <span class="set-label">Kualitas grafis</span>
       <div>
         <div class="seg" data-key="quality">
@@ -1356,6 +1361,7 @@ const CONFIG = {
     warnAhead: 150,            // jarak cek peringatan medan di depan
   },
   audio: {
+    musicVolume: 0.32,         // musik ambient di bawah efek dan mesin
     masterVolume: 0.7,
     engineVolume: 0.06,        // mesin lebih pelan dari tembakan dan ledakan
     nitroVolume: 0.07,
@@ -1496,7 +1502,8 @@ const SETTING_DEFAULTS = {
   terrain: 'space',            // medan default: space | earth
   spaceMode: 'campaign',       // mode Angkasa: campaign (Kampanye) | free (Jelajah Bebas)
   asteroidDensity: 1,          // 0 Sedikit, 1 Normal, 2 Banyak
-  volMaster: 80, volSfx: 80, volEngine: 60,   // 0..100
+  volMaster: 80, volSfx: 80, volEngine: 60, volMusic: 50,   // 0..100
+  music: true,                 // musik ambient generatif
   muted: false,
   quality: 'sedang',           // rendah | sedang | tinggi
   controlMode: 'keyboard',     // keyboard | hp
@@ -1522,7 +1529,7 @@ const SETTING_ENUMS = {
   aimAssist: ['mati', 'rendah', 'sedang'],
   robotHelp: ['penuh', 'tanpa-teks', 'tanpa-suara', 'mati'],
 };
-const SETTING_RANGES = { asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100] };
+const SETTING_RANGES = { asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100], volMusic: [0, 100] };
 
 const Save = {
   data: null,
@@ -9577,6 +9584,7 @@ const Sfx = {
 
   update(dt) {
     if (!this.ready) return;
+    Music.update();
     const A = CONFIG.audio, on = Game.state === 'playing' ? Player.alive : false;
     const nf = Player.nitroFx;
     const sn = clamp((Player.speed - 40) / 100, 0, 1);
@@ -9647,7 +9655,7 @@ const Sfx = {
   check() {
     if (!this.ready) return { ready: false };
     const vals = [this.master.gain.value, this.sfxBus.gain.value, this.engineBus.gain.value, this.engine.gain.gain.value,
-      this.engine.e1.frequency.value, this.engine.e2.frequency.value, this.engine.filter.frequency.value, this.nitro.gain.gain.value];
+      this.engine.e1.frequency.value, this.engine.e2.frequency.value, this.engine.filter.frequency.value, this.nitro.gain.gain.value, Music.bus ? Music.bus.gain.value : 0];
     return { ready: true, finite: vals.every((v) => Number.isFinite(v)), master: this.master.gain.value, engine: this.engine.gain.gain.value, values: vals };
   },
 
@@ -9754,6 +9762,95 @@ Events.on('pickup', () => Sfx.pickup());
 Events.on('waveStart', () => Sfx.wave());
 Events.on('ultimate', () => Sfx.laser());
 Events.on('starCollected', (kind) => Sfx.star(kind));
+
+/* =====================================================================
+   MUSIK AMBIENT GENERATIF - komposisi orisinal yang disusun saat berjalan: pad akor
+   lembut (dua osilator sedikit berbeda nada per suara) yang berganti perlahan,
+   petikan nada akor acak dengan gema delay, dan denyut bass halus saat ada bos.
+   Palet Angkasa lebih gelap (minor), Bumi lebih terang (mayor). Opsi Musik.
+   ===================================================================== */
+const Music = {
+  bus: null, nextChord: 0, nextNote: 0, nextPulse: 0, chordIdx: 0, chord: null, notes: 0,
+  palettes: {
+    // Interval semitone dari nada dasar; progresi buatan sendiri
+    space: { root: 146.83, chordLen: 9, chords: [[0, 7, 10, 14], [-2, 5, 9, 12], [-4, 3, 10, 14], [-7, 0, 5, 9], [-5, 2, 7, 10]] },
+    earth: { root: 130.81, chordLen: 7, chords: [[0, 4, 7, 11], [5, 9, 12, 16], [-3, 4, 9, 12], [2, 7, 11, 14]] },
+  },
+  init() {
+    if (this.bus ? true : !Sfx.ready) return;
+    const ctx = Sfx.ctx;
+    this.bus = ctx.createGain(); this.bus.gain.value = 0;
+    this.tone = ctx.createBiquadFilter(); this.tone.type = 'lowpass'; this.tone.frequency.value = 2200; this.tone.Q.value = 0.3;
+    // Gema sederhana: delay dengan umpan balik
+    this.delay = ctx.createDelay(1.5); this.delay.delayTime.value = 0.42;
+    this.fb = ctx.createGain(); this.fb.gain.value = 0.38;
+    this.wet = ctx.createGain(); this.wet.gain.value = 0.35;
+    this.tone.connect(this.bus);
+    this.tone.connect(this.delay); this.delay.connect(this.fb); this.fb.connect(this.delay); this.delay.connect(this.wet); this.wet.connect(this.bus);
+    this.bus.connect(Sfx.master);
+    this.nextChord = ctx.currentTime + 0.5; this.nextNote = ctx.currentTime + 2;
+  },
+  palette() { return Worlds.active === EarthWorld ? this.palettes.earth : this.palettes.space; },
+  hz(semi) { return this.palette().root * Math.pow(2, semi / 12); },
+  // Satu suara pad: dua osilator berselisih nada sedikit, amplop serangan dan lepas pelan
+  pad(freq, when, len) {
+    const ctx = Sfx.ctx, g = ctx.createGain();
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(0.045, when + 2.4);
+    g.gain.setValueAtTime(0.045, when + len - 0.2);
+    g.gain.linearRampToValueAtTime(0, when + len + 2.2);
+    g.connect(this.tone);
+    for (const [type, det] of [['triangle', -5], ['sine', 6]]) {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq; o.detune.value = det;
+      o.connect(g); o.start(when); o.stop(when + len + 2.4);
+    }
+  },
+  pluck(freq, when, vol) {
+    const ctx = Sfx.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0, when);
+    g.gain.linearRampToValueAtTime(vol, when + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0005, when + 1.6);
+    o.connect(g); g.connect(this.tone);
+    o.start(when); o.stop(when + 1.7);
+    this.notes++;
+  },
+  pulse(when) {
+    const ctx = Sfx.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(70, when); o.frequency.exponentialRampToValueAtTime(42, when + 0.25);
+    g.gain.setValueAtTime(0.09, when); g.gain.exponentialRampToValueAtTime(0.0005, when + 0.35);
+    o.connect(g); g.connect(this.bus);
+    o.start(when); o.stop(when + 0.4);
+  },
+  update() {
+    if (!Sfx.ready ? true : Game.state === 'boot') return;
+    this.init();
+    const ctx = Sfx.ctx, s = Save.settings, t = ctx.currentTime;
+    const on = s.music ? !Game.muted : false;
+    // Lebih pelan saat jeda dan cutscene
+    const stateMul = Game.state === 'paused' ? 0.5 : Game.state === 'cutscene' ? 0.8 : 1;
+    const target = on ? CONFIG.audio.musicVolume * (s.volMusic / 100) * stateMul : 0;
+    if (Math.abs((this.lastTarget ?? -1) - target) > 0.001) { this.lastTarget = target; this.bus.gain.setTargetAtTime(target, t, 0.6); }
+    if (!on) { this.nextChord = Math.max(this.nextChord, t + 0.5); this.nextNote = Math.max(this.nextNote, t + 1); return; }
+    const P = this.palette();
+    if (t + 0.25 >= this.nextChord) {
+      this.chordIdx = (this.chordIdx + 1 + (Math.random() < 0.25 ? 1 : 0)) % P.chords.length;
+      this.chord = P.chords[this.chordIdx];
+      const when = Math.max(t, this.nextChord);
+      for (const semi of this.chord) this.pad(this.hz(semi - 12), when, P.chordLen);
+      this.pad(this.hz(this.chord[0] - 24), when, P.chordLen);   // nada dasar oktaf rendah
+      this.nextChord = when + P.chordLen;
+    }
+    if (this.chord ? t + 0.15 >= this.nextNote : false) {
+      const when = Math.max(t, this.nextNote);
+      const semi = this.chord[Math.floor(Math.random() * this.chord.length)] + (Math.random() < 0.5 ? 12 : 24);
+      this.pluck(this.hz(semi), when, 0.035 + Math.random() * 0.02);
+      const busy = Bosses.active ? 0.5 : Game.state === 'playing' ? 1 : 1.6;
+      this.nextNote = when + busy * (Math.random() < 0.3 ? 0.5 : Math.random() < 0.6 ? 1 : 1.5);
+    }
+    if (Bosses.active ? t + 0.1 >= this.nextPulse : false) { const when = Math.max(t, this.nextPulse); this.pulse(when); this.nextPulse = when + 0.5; }
+  },
+};
 
 /* =====================================================================
    HUD - elemen DOM, ditulis hanya saat nilainya berubah
@@ -11497,6 +11594,7 @@ window.__game = {
     fireRate() { return round2(1 / Weapons.interval()); },
     bulletDamage() { return round2(Weapons.damage()); },
     audioCheck() { return Sfx.check(); },
+    music() { return { ready: !!Music.bus, gain: Music.bus ? round2(Music.bus.gain.value * 1000) / 1000 : 0, notes: Music.notes, chord: Music.chord ? Music.chord.slice() : null, setting: Save.settings.music }; },
     hangarList() { return Hangar.list.map((d) => d.id); },
     addCredits(n) { Save.data.ships.credits += n; Save.save(); return Save.data.ships.credits; },
     // Damage langsung dengan sumber tertentu (melewati masa kebal) untuk uji efek kartu
