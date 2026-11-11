@@ -195,7 +195,7 @@
   .buff[data-buff="destroyer"] { color: #d58bff; border-color: rgba(200, 100, 255, 0.6); }
   body.mode-hp #buffs { top: calc(200px + env(safe-area-inset-top)); }
   #piko-panel {
-    position: absolute; left: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px;
+    position: absolute; left: 16px; bottom: calc(184px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px;
     max-width: min(380px, 42vw); padding: 6px 12px 6px 6px; background: rgba(8, 14, 24, 0.72); border: 1px solid var(--ui-line); border-radius: 8px;
   }
   #piko-face { width: 40px; height: 40px; flex: none; }
@@ -224,6 +224,14 @@
   #boss-fill { display: block; height: 100%; background: linear-gradient(90deg, #ff2d6a, #ff9a3c); transform-origin: left center; }
   #screen-levelup .card, #screen-contract .card { max-width: 760px; }
   .mission { color: #9fe8ff; margin-top: 2px; }
+  #radar { position: absolute; right: 16px; top: calc(170px + env(safe-area-inset-top)); width: 150px; height: 150px; }
+  .instr { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--ui-line); }
+  #attitude { width: 56px; height: 56px; flex: none; }
+  .instr-txt { display: grid; gap: 2px; min-width: 120px; }
+  .instr-txt .stat { gap: 10px; }
+  .instr-txt .num { font-size: 13px; }
+  .dmgnum.score { color: #ffd24a; font-size: 22px; text-shadow: 0 0 10px rgba(255, 190, 60, 0.6), 0 1px 2px #000; }
+  .dmgnum.hurt { color: #ff5a4a; font-size: 26px; text-shadow: 0 0 10px rgba(255, 60, 40, 0.7), 0 1px 2px #000; }
   .mission:empty { display: none; }
   .ct-head { text-align: center; }
   .ct-head h2 { font-size: clamp(22px, 4vw, 34px); margin: 4px 0 0; }
@@ -581,9 +589,18 @@
     <div class="label">KREDIT <span id="credits" class="num">0</span></div>
   </div>
   <div class="hud-block bl">
+    <div class="instr">
+      <canvas id="attitude" width="56" height="56" aria-label="Horizon buatan"></canvas>
+      <div class="instr-txt">
+        <div class="stat"><span class="label">ARAH</span><span id="hdg" class="num">000</span></div>
+        <div class="stat"><span class="label">PITCH</span><span id="pitch" class="num">0</span></div>
+        <div class="stat"><span class="label">BANK</span><span id="bank" class="num">0</span></div>
+      </div>
+    </div>
     <div class="stat"><span class="label">KECEPATAN</span><span><span id="speed" class="num">0</span> <span class="unit">km/j</span></span></div>
     <div class="stat"><span class="label">KETINGGIAN</span><span><span id="alt" class="num">0</span> <span class="unit">m</span></span></div>
   </div>
+  <canvas id="radar" width="150" height="150" aria-label="Radar"></canvas>
   <div class="hud-block br">
     <div class="stat"><span class="label">MUSUH HANCUR</span><span id="kills" class="num">0</span></div>
     <div class="stat"><span class="label">MUSUH AKTIF</span><span id="enemies" class="num">0</span></div>
@@ -1262,6 +1279,8 @@ const CONFIG = {
       laserWarn: 1.0, laserTime: 1.6, laserLength: 420, laserWidth: 5, laserHit: 22, laserCooldown: 5,
     },
   },
+  // Radar minimap (atas = arah kapal)
+  radar: { rangeSpace: 900, rangeEarth: 700, elevationMark: 40 },
   // Kontrak stage kampanye (A6)
   contracts: { clearBase: 10, clearPerStage: 2, convoyDistance: 2600, convoySpeed: 42, convoyHp: 300, huntDelay: 6, starCredits: 20 },
   // XP dan level (S11): kebutuhan XP level n = base x growth^(n-1)
@@ -8197,6 +8216,155 @@ Events.on('enemyDestroyed', (e, byPlayer) => {
 Events.on('damage', (entity, dealt) => { if (entity === Player ? Contracts.stats : false) Contracts.stats.hpLost += dealt; });
 Events.on('playerDeath', () => { if (Contracts.stats) Contracts.stats.livesLost++; });
 
+/* =====================================================================
+   RADAR DAN INSTRUMEN (S13, permintaan pemain) - minimap melingkar yang berputar
+   mengikuti arah kapal (atas = depan): musuh, bos, pickup, planet, gerbang, kargo,
+   target kontrak, dan panah tujuan misi. Instrumen: kompas arah dalam derajat,
+   pitch dan bank (0 saat datar), dan horizon buatan kecil.
+   ===================================================================== */
+const Radar = {
+  cv: document.getElementById('radar'), ctx: null, size: 0, frame: 0, counts: {},
+  att: document.getElementById('attitude'), actx: null,
+  init() {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    this.size = this.cv.clientWidth || 150;
+    this.cv.width = this.size * dpr; this.cv.height = this.size * dpr;
+    this.ctx = this.cv.getContext('2d');
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const as = this.att.clientWidth || 56;
+    this.att.width = as * dpr; this.att.height = as * dpr;
+    this.actx = this.att.getContext('2d');
+    this.actx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.asize = as;
+  },
+  range() { return Worlds.active === SpaceWorld ? CONFIG.radar.rangeSpace : CONFIG.radar.rangeEarth; },
+  // Posisi relatif kapal di bidang horizontal: x ke kanan, y ke depan (atas radar)
+  rel(p, out) {
+    const P = Player.pos, f = Player.forward, hl = Math.hypot(f.x, f.z) || 1, fx = f.x / hl, fz = f.z / hl;
+    const dx = p.x - P.x, dz = p.z - P.z;
+    out.x = dx * -fz + dz * fx;
+    out.y = dx * fx + dz * fz;
+    out.dy = p.y - P.y;
+    return out;
+  },
+  // Objek tujuan misi saat ini (untuk panah penunjuk)
+  objective() {
+    if (WarpGate.active) return { pos: WarpGate.group.position, color: '#6fdcff' };
+    if (Bosses.active) return { pos: (Bosses.active.anchor || Bosses.active.group).position, color: '#ff4fc8' };
+    const k = Contracts.current;
+    if (k ? !k.done : false) {
+      if (k.type === 'kawal' ? Convoy.active : false) return { pos: Convoy.dest, color: '#5dff9a' };
+      if (k.type === 'buru' ? (k.target ? k.target.active : false) : false) return { pos: k.target.pos, color: '#ffd24a' };
+    }
+    return null;
+  },
+  update() {
+    if (!this.ctx) this.init();
+    this.frame++;
+    this.updateInstruments();
+    if (this.frame % 2) return;   // radar 30 kali per detik sudah cukup
+    const c = this.ctx, S = this.size, R = S / 2 - 6, cx = S / 2, cy = S / 2, range = this.range(), k = R / range;
+    const counts = { enemy: 0, boss: 0, pickup: 0, planet: 0, gate: 0, convoy: 0, target: 0 };
+    c.clearRect(0, 0, S, S);
+    c.fillStyle = 'rgba(6, 14, 24, 0.72)';
+    c.beginPath(); c.arc(cx, cy, R + 4, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = 'rgba(120, 200, 255, 0.35)'; c.lineWidth = 1;
+    for (const f of [1, 0.66, 0.33]) { c.beginPath(); c.arc(cx, cy, R * f, 0, Math.PI * 2); c.stroke(); }
+    c.beginPath(); c.moveTo(cx, cy - R); c.lineTo(cx, cy + R); c.moveTo(cx - R, cy); c.lineTo(cx + R, cy); c.strokeStyle = 'rgba(120, 200, 255, 0.15)'; c.stroke();
+    // Penanda utara (U) di tepi, ikut berputar sesuai arah kapal
+    const f = Player.forward, hd = Math.atan2(f.x, -f.z);
+    const nx = cx - Math.sin(hd) * (R - 8), ny = cy - Math.cos(hd) * (R - 8);
+    c.fillStyle = '#ffd24a'; c.font = 'bold 10px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('U', nx, ny);
+    const o = { x: 0, y: 0, dy: 0 };
+    const blip = (p, color, r, shape) => {
+      this.rel(p, o);
+      let x = o.x * k, y = o.y * k;
+      const d = Math.hypot(x, y), out = d > R;
+      if (out) { x *= R / d; y *= R / d; }
+      const px = cx + x, py = cy - y;
+      c.fillStyle = color; c.strokeStyle = color;
+      if (shape === 'diamond') { c.beginPath(); c.moveTo(px, py - r); c.lineTo(px + r, py); c.lineTo(px, py + r); c.lineTo(px - r, py); c.closePath(); c.fill(); }
+      else if (shape === 'square') c.fillRect(px - r, py - r, r * 2, r * 2);
+      else if (shape === 'ring') { c.lineWidth = 2; c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.stroke(); }
+      else { c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.fill(); }
+      // Penanda ketinggian relatif: segitiga kecil di atas atau bawah titik
+      if (out ? false : Math.abs(o.dy) > CONFIG.radar.elevationMark) {
+        c.beginPath(); const s = o.dy > 0 ? -1 : 1;
+        c.moveTo(px - 3, py + s * (r + 2)); c.lineTo(px + 3, py + s * (r + 2)); c.lineTo(px, py + s * (r + 6)); c.closePath(); c.fill();
+      }
+      return out;
+    };
+    // Planet dan bulan terdekat (angkasa)
+    if (Worlds.active === SpaceWorld ? SolarSystem.built : false) {
+      for (const b of SolarSystem.solids) {
+        const d = b.pos.distanceTo(Player.pos) - b.radius;
+        if (d > range * 4) continue;
+        this.rel(b.pos, o);
+        const col = SolarMap.colors[b.id] || SolarMap.colors[b.parent ? b.parent.id : ''] || '#9aa';
+        const inside = Math.hypot(o.x, o.y) * k < R;
+        if (inside) { c.globalAlpha = 0.5; c.fillStyle = col; c.beginPath(); c.arc(cx + o.x * k, cy - o.y * k, Math.max(3, b.radius * k), 0, Math.PI * 2); c.fill(); c.globalAlpha = 1; }
+        else blip(b.pos, col, 3);
+        counts.planet++;
+      }
+    }
+    const sp = { x: 0, y: 0, z: 0 };
+    for (let i = 0; i < CONFIG.stars.max; i++) { if (!Stars.active[i]) continue; sp.x = Stars.px[i * 3]; sp.y = Stars.px[i * 3 + 1]; sp.z = Stars.px[i * 3 + 2]; blip(sp, '#ffe066', 1.6); counts.pickup++; }
+    for (const p of Pickups.items) if (p.active) { blip(p.group.position, '#5dff9a', 2.2); counts.pickup++; }
+    for (const e of Enemies.list) {
+      if (!e.active) continue;
+      if (e.cfg.ambush ? e.cloak < 0.5 : false) continue;   // penyergap tersamar tidak terlihat di radar
+      const target = e.contractTarget;
+      blip(e.pos, target ? '#ffd24a' : e.cfg.minor ? '#ff9a7a' : '#ff4a4a', e.cfg.minor ? 1.5 : Math.min(5, 2 + e.radius * 0.3), target ? 'ring' : 'dot');
+      if (target) counts.target++; else counts.enemy++;
+    }
+    if (Bosses.active) { blip((Bosses.active.anchor || Bosses.active.group).position, '#ff4fc8', 6, 'diamond'); counts.boss++; }
+    if (WarpGate.active) { blip(WarpGate.group.position, '#6fdcff', 5, 'diamond'); counts.gate++; }
+    if (Convoy.active) { blip(Convoy.pos, '#5dff9a', 4, 'square'); blip(Convoy.dest, '#5dff9a', 5, 'ring'); counts.convoy++; }
+    // Panah tujuan misi di tepi radar
+    const obj = this.objective();
+    if (obj) {
+      this.rel(obj.pos, o);
+      const a = Math.atan2(o.x, o.y), ax = cx + Math.sin(a) * (R + 1), ay = cy - Math.cos(a) * (R + 1);
+      c.save(); c.translate(ax, ay); c.rotate(a);
+      c.fillStyle = obj.color; c.beginPath(); c.moveTo(0, -7); c.lineTo(6, 4); c.lineTo(-6, 4); c.closePath(); c.fill();
+      c.restore();
+    }
+    // Kapal pemain di tengah
+    c.fillStyle = '#e8f6ff'; c.beginPath(); c.moveTo(cx, cy - 7); c.lineTo(cx + 5, cy + 5); c.lineTo(cx, cy + 2); c.lineTo(cx - 5, cy + 5); c.closePath(); c.fill();
+    this.counts = counts;
+  },
+  // Arah kompas, pitch, bank dan horizon buatan
+  updateInstruments() {
+    const f = Player.forward, up = Player._up, right = Player._right;
+    const hdg = (Math.round(Math.atan2(f.x, -f.z) * 180 / Math.PI) + 360) % 360;
+    const pitch = Math.round(Math.asin(clamp(f.y, -1, 1)) * 180 / Math.PI);
+    const bankRad = Math.atan2(right.y, up.y), bank = Math.round(bankRad * 180 / Math.PI);
+    const dirs = ['U', 'TL', 'T', 'TG', 'S', 'BD', 'B', 'BL'];
+    this.values = { hdg, pitch, bank };
+    if (hdg !== this.lastHdg) { this.lastHdg = hdg; $('hdg').textContent = String(hdg).padStart(3, '0') + '° ' + dirs[Math.round(hdg / 45) % 8]; }
+    if (pitch !== this.lastPitch) { this.lastPitch = pitch; $('pitch').textContent = (pitch > 0 ? '+' : '') + pitch + '°'; }
+    if (bank !== this.lastBank) { this.lastBank = bank; $('bank').textContent = Math.abs(bank) + '°' + (bank > 1 ? ' KIRI' : bank < -1 ? ' KANAN' : ''); }
+    // Horizon buatan: langit di atas, bawah di bawah, miring sesuai bank dan bergeser sesuai pitch
+    const a = this.actx, S = this.asize, h = S / 2;
+    a.clearRect(0, 0, S, S);
+    a.save();
+    a.beginPath(); a.arc(h, h, h - 1, 0, Math.PI * 2); a.clip();
+    a.translate(h, h); a.rotate(bankRad);
+    const off = clamp(pitch / 90, -1, 1) * h * 1.6;
+    a.fillStyle = '#2f6fb0'; a.fillRect(-S, -S * 2 + off, S * 2, S * 2);
+    a.fillStyle = Worlds.active === SpaceWorld ? '#3a2a4a' : '#7a5a34'; a.fillRect(-S, off, S * 2, S * 2);
+    a.strokeStyle = '#fff'; a.lineWidth = 1.5; a.beginPath(); a.moveTo(-S, off); a.lineTo(S, off); a.stroke();
+    a.strokeStyle = 'rgba(255,255,255,0.5)'; a.lineWidth = 1;
+    for (const t of [-20, 20]) { const y = off - t / 90 * h * 1.6; a.beginPath(); a.moveTo(-8, y); a.lineTo(8, y); a.stroke(); }
+    a.restore();
+    // Simbol pesawat tetap di tengah
+    a.strokeStyle = '#ffd24a'; a.lineWidth = 2;
+    a.beginPath(); a.moveTo(h - 16, h); a.lineTo(h - 5, h); a.lineTo(h, h + 4); a.lineTo(h + 5, h); a.lineTo(h + 16, h); a.stroke();
+    a.strokeStyle = 'rgba(160, 210, 255, 0.6)'; a.beginPath(); a.arc(h, h, h - 1, 0, Math.PI * 2); a.stroke();
+  },
+};
+
 const EarthWorld = {
   id: 'earth',
   label: 'Atmosfer Bumi',
@@ -9626,6 +9794,24 @@ Events.on('damage', (entity, dealt, source, pos) => {
   d.el.className = entity.health.dead ? 'dmgnum kill' : 'dmgnum';
   d.el.style.color = '';
 });
+// Angka melayang besar: skor emas saat musuh hancur, damage merah saat kapal terkena
+function floatNumber(pos, text, cls, size) {
+  const d = hud.dmgNums[hud.dmgNext];
+  hud.dmgNext = (hud.dmgNext + 1) % hud.dmgNums.length;
+  d.pos.copy(pos);
+  d.ox = (frand() - 0.5) * 30;
+  d.t = 0.9;
+  d.el.textContent = text;
+  d.el.className = 'dmgnum ' + cls;
+  d.el.style.color = '';
+  d.el.style.fontSize = size ? size + 'px' : '';
+}
+Events.on('enemyDestroyed', (e, byPlayer) => {
+  if (!byPlayer ? true : e.cfg.minor) return;
+  const m = Combo.multiplier;
+  floatNumber(e.pos, '+' + Math.round(e.cfg.score * m), 'score', Math.min(40, 20 + (m - 1) * 4));   // combo besar makin mencolok
+});
+Events.on('playerHit', (amount) => { if (amount >= 1) floatNumber(_vd.copy(Player.pos).addScaledVector(Player._up, 4), '-' + Math.round(amount), 'hurt', Math.min(40, 22 + amount * 0.3)); });
 function updateDamageNumbers(dt) {
   for (let i = 0; i < hud.dmgNums.length; i++) {
     const d = hud.dmgNums[i];
@@ -9699,7 +9885,7 @@ Events.on('waveStart', (n) => showBanner(`GELOMBANG ${n}`));
 Events.on('waveCleared', (n) => showToast(`GELOMBANG ${n} SELESAI`));
 Events.on('score', (amount, label) => {
   const m = Combo.multiplier;
-  const isKill = label === 'DRONE' || label === 'PENEMBAK' || label === 'ASTEROID';
+  const isKill = label !== 'ULTIMATE' ? amount > 0 : false;
   const suffix = isKill ? (m > 1 ? `  x${m}` : '') : '';
   showToast(`+${amount} ${label}${suffix}`);
 });
@@ -9814,6 +10000,7 @@ function updateHud(dt) {
     }
   }
   updateDamageNumbers(dt);
+  if (Game.state === 'playing') Radar.update();
   v = Game.state === 'playing' ? (Player.alive ? hp < CONFIG.player.criticalHp : false) : false;
   if (changed('critical', v)) $('critical').classList.toggle('hidden', !v);
 
@@ -11341,6 +11528,7 @@ window.__game = {
     offerCards(ids) { Levels.open(ids); return Levels.offer.map((c) => c.id); },
     pickCard(id) { return Levels.choose(id); },
     companions() { return Companions.list.map((c) => ({ active: c.active, visible: c.group.visible, inScene: !!c.group.parent, d: round2(c.pos.distanceTo(Player.pos)) })); },
+    radar() { return { counts: { ...Radar.counts }, range: Radar.range(), instruments: Radar.values ? { ...Radar.values } : null, hdgText: $('hdg').textContent, pitchText: $('pitch').textContent, bankText: $('bank').textContent }; },
     startBoss(kind) { return Bosses.start(kind); },
     bossState() {
       const b = Bosses.active;

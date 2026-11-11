@@ -1499,3 +1499,47 @@ test('A6: Buru Target memunculkan Komandan bertanda, Kawal Konvoi gagal bila kar
   await expect(page.locator('#go-cause')).toHaveText('Kapal kargo hancur');
   await expect(page.locator('#go-stage')).toHaveText(/Stage terakhir: 1/);
 });
+
+test('S13: radar minimap menampilkan musuh, bos, pickup dan planet; instrumen arah, pitch, bank bernilai 0 saat datar', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await start(page, { world: 'space' });
+  await page.evaluate(() => { const d = window.__game.debug; d.clearAsteroids(); d.setAsteroidDensity(0); });
+  // Datar menghadap utara (yaw 0): arah 000, pitch 0, bank 0
+  await dbg(page, 'setPlayerState', { yaw: 0, pitch: 0 });
+  await page.waitForTimeout(150);
+  let r = await dbg(page, 'radar');
+  expect(r.instruments.hdg).toBe(0);
+  expect(r.instruments.pitch).toBe(0);
+  expect(r.instruments.bank).toBe(0);
+  expect(r.hdgText).toContain('000');
+  // Menghadap timur sambil menanjak 20 derajat
+  await dbg(page, 'setPlayerState', { yaw: -Math.PI / 2, pitch: 20 * Math.PI / 180 });
+  await page.waitForTimeout(150);
+  r = await dbg(page, 'radar');
+  expect(Math.abs(r.instruments.hdg - 90)).toBeLessThanOrEqual(1);
+  expect(Math.abs(r.instruments.pitch - 20)).toBeLessThanOrEqual(4);   // fisika terbang tetap berjalan sesaat
+  await expect(page.locator('#pitch')).toHaveText(/^\+(1[6-9]|2[0-4])\u00b0$/);
+  // Blip radar
+  await dbg(page, 'spawnEnemy', 'scout', 300, 0.4);
+  await dbg(page, 'spawnEnemy', 'gunship', 500, -0.6);
+  await dbg(page, 'spawnStar', 'gold', 120);
+  await dbg(page, 'startBoss', 'hunter');
+  await page.waitForTimeout(250);
+  r = await dbg(page, 'radar');
+  expect(r.counts.enemy).toBeGreaterThanOrEqual(2);
+  expect(r.counts.boss).toBe(1);
+  expect(r.counts.pickup).toBeGreaterThanOrEqual(1);
+  expect(r.counts.planet).toBeGreaterThanOrEqual(1);
+  await expect(page.locator('#radar')).toBeVisible();
+  await page.screenshot({ path: `${SHOT_DIR}hud-radar.png` });
+});
+
+test('S13: angka skor emas besar saat musuh hancur dan angka merah saat kapal terkena', async ({ page }) => {
+  await start(page, { world: 'space', god: false });
+  await page.waitForTimeout(2600);
+  await dbg(page, 'spawnEnemy', 'scout', 120, 0, 0);
+  await dbg(page, 'damageEnemy', 'scout', 999);
+  await expect(page.locator('.dmgnum.score').first()).toBeVisible();
+  await dbg(page, 'damageAs', 15, 'test');
+  await expect(page.locator('.dmgnum.hurt').first()).toBeVisible();
+});
