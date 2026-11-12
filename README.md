@@ -98,6 +98,25 @@ Sistem lain:
 - **Penemuan**: mendekati planet, bulan, atau sabuk memunculkan panel data berisi fakta dunia
   nyata; semua yang pernah didekati tersimpan di atlas **PENEMUAN** di menu.
 
+## Simpan dan muat
+
+Semua data disimpan di perangkat pemain lewat `localStorage` browser, tanpa server dan tanpa akun:
+
+| Kunci | Isi | Kapan ditulis |
+| --- | --- | --- |
+| `raptor13.v3` | profil permanen: pengaturan, skor tertinggi, kredit, kapal terbuka, progres dan rating kampanye, atlas Penemuan | setiap kali berubah |
+| `raptor13.session.v1` | sesi yang sedang dimainkan: medan, stage dan kontrak, skor, waktu, nyawa, integritas, nitro, ultimate, level dan kartu, gelombang, posisi di angkasa | otomatis tiap 10 detik, saat jeda, saat ke menu, saat tab disembunyikan atau halaman ditutup, dan lewat tombol **SIMPAN** di menu jeda |
+
+Setelah halaman dimuat ulang, menu menampilkan **LANJUTKAN** beserta ringkasan simpanan. Sesi
+dimuat lalu dilanjutkan dengan hitung mundur. Di medan Bumi kapal kembali ke titik aman (statistik
+tetap), di medan Angkasa posisi dan arah kapal dipulihkan. Simpanan sesi dihapus saat game over,
+saat menamatkan kampanye, dan saat keluar dari layar Stage Clear. MULAI saat ada simpanan meminta
+konfirmasi dulu. Data rusak diabaikan dengan aman.
+
+Semua akses penyimpanan sesi lewat adaptor `Store` (get, set, remove). Bila game nanti dibungkus
+menjadi aplikasi Android, `localStorage` tetap bekerja di dalam WebView aplikasi; bila ingin
+penyimpanan native yang lebih tahan terhadap pembersihan data, cukup adaptor itu yang diganti.
+
 ## Kapal
 
 | Kapal | Medan | Segitiga | Keterangan |

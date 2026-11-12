@@ -104,10 +104,12 @@
   .keymap kbd { min-width: 20px; padding: 2px 5px; font-size: 11px; }
   .menu-panel .keymap { max-width: 640px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px 14px; font-size: 11px; }
   .menu-panel .keymap kbd { font-size: 10px; padding: 1px 4px; min-width: 16px; }
-  @media (max-height: 700px) { .menu-panel { gap: 12px; } .menu-panel .keymap { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  @media (max-height: 780px) { .menu-panel { gap: 12px; } .menu-panel .keymap { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   @media (max-height: 560px) { .menu-panel .keymap { display: none; } }
   .set-sub { margin: 6px 0 0; font-size: 13px; letter-spacing: 0.16em; color: var(--ui-accent); }
   .about-line { margin: 0; text-align: center; }
+  .continue-info { margin: -4px 0 2px; font-size: 11px; color: var(--ui-dim); }
+  .save-info { margin: 0; color: #9fe8ff; min-height: 1em; }
   /* Kartu (Tentang, Pengaturan, dialog) */
   .card {
     display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 520px; width: 100%;
@@ -708,6 +710,7 @@
     <nav class="menu-list" aria-label="Menu utama">
       <button id="btn-start" class="btn btn-big" type="button">MULAI</button>
       <button id="btn-continue" class="btn hidden" type="button">LANJUTKAN</button>
+      <small id="continue-info" class="continue-info hidden"></small>
       <button id="btn-hangar" class="btn secondary" type="button">HANGAR</button>
       <button id="btn-atlas" class="btn secondary" type="button">PENEMUAN</button>
       <button id="btn-settings" class="btn secondary" type="button">PENGATURAN</button>
@@ -960,10 +963,12 @@
     <h2>DIJEDA</h2>
     <nav class="menu-list" aria-label="Menu jeda">
       <button id="btn-resume" class="btn" type="button">LANJUTKAN</button>
+      <button id="btn-save" class="btn secondary" type="button">SIMPAN</button>
       <button id="btn-pause-restart" class="btn secondary" type="button">MULAI ULANG</button>
       <button id="btn-pause-settings" class="btn secondary" type="button">PENGATURAN</button>
       <button id="btn-pause-menu" class="btn secondary" type="button">MENU UTAMA</button>
     </nav>
+    <p id="save-info" class="hint save-info"></p>
     <p class="hint"><kbd>P</kbd> atau <kbd>Esc</kbd> lanjut, <kbd>M</kbd> suara</p>
   </div>
 </div>
@@ -1328,6 +1333,8 @@ const CONFIG = {
   },
   // Radar minimap (atas = arah kapal)
   radar: { rangeSpace: 900, rangeEarth: 700, elevationMark: 40 },
+  // Simpan sesi otomatis (detik) selama bermain; juga saat jeda, ke menu, dan saat halaman ditutup
+  save: { autosaveSeconds: 10 },
   // Kontrak stage kampanye (A6)
   contracts: { clearBase: 10, clearPerStage: 2, convoyDistance: 2600, convoySpeed: 42, convoyHp: 300, huntDelay: 6, starCredits: 20 },
   // XP dan level (S11): kebutuhan XP level n = base x growth^(n-1)
@@ -7916,6 +7923,7 @@ const FinalScreen = {
     Save.data.campaign.completed = true;
     Save.save();
     Game.credits = 0;   // sudah disimpan penuh; tidak dihitung lagi saat game over nanti
+    SessionSave.clear();
     setState('final');
   },
   hide() { this.el.classList.add('hidden'); },
@@ -8444,6 +8452,167 @@ const Radar = {
     a.strokeStyle = 'rgba(160, 210, 255, 0.6)'; a.beginPath(); a.arc(h, h, h - 1, 0, Math.PI * 2); a.stroke();
   },
 };
+
+/* =====================================================================
+   SIMPAN DAN MUAT SESI - sesi yang sedang dimainkan (skor, nyawa, level dan kartu,
+   gelombang, stage dan kontrak, posisi di angkasa) disimpan di perangkat lewat
+   adaptor Store, otomatis tiap beberapa detik, saat jeda, saat ke menu, dan saat
+   halaman ditutup atau dimuat ulang, serta lewat tombol SIMPAN di menu jeda.
+   Profil permanen (pengaturan, kredit, kapal, progres kampanye) tetap di Save.
+   ===================================================================== */
+// Adaptor penyimpanan: satu-satunya tempat yang perlu diganti bila game dibungkus menjadi
+// aplikasi (misalnya memakai penyimpanan native). Di browser memakai localStorage.
+const Store = {
+  get(key) { try { const t = window.localStorage.getItem(key); return t ? JSON.parse(t) : null; } catch (err) { return null; } },
+  set(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (err) { return false; } },
+  remove(key) { try { window.localStorage.removeItem(key); } catch (err) { /* penyimpanan tidak tersedia */ } },
+};
+const SESSION_KEY = 'raptor13.session.v1';
+
+const SessionSave = {
+  timer: 0,
+  lastSavedAt: 0,
+  // Sesi bisa disimpan bila sedang berjalan dan kapal belum habis nyawa
+  savable() {
+    if (!Game.hasSession ? true : Player.lives <= 0) return false;
+    return ['playing', 'paused', 'countdown', 'levelup', 'contract', 'map', 'stageclear', 'menu', 'cutscene'].includes(Game.state);
+  },
+  snapshot() {
+    const P = Player.pos, q = Player.quat, k = Contracts.current;
+    return {
+      v: 1, savedAt: Date.now(), world: Worlds.active.id, seed: Game.seed,
+      spaceMode: Campaign.mode, stageIdx: Campaign.stageIdx, bossDone: Campaign.bossDone, area: SpaceWorld.area,
+      score: Game.score, time: Game.time, kills: Game.kills, credits: Game.credits,
+      player: { pos: [P.x, P.y, P.z], quat: [q.x, q.y, q.z, q.w], hp: Player.health.hp, lives: Player.lives, nitro: Player.nitro, ult: Player.ult, shield: Player.shield },
+      upgrades: { ...Player.upgrades },
+      level: { level: Levels.level, xp: Levels.xp, pending: Levels.pending, picks: { ...Levels.picks } },
+      wave: Waves.wave,
+      contract: k ? { type: k.type, stage: k.stage, target: typeof k.target === 'number' ? k.target : null, progress: k.progress, done: k.done, distance: k.distance || 0, reward: k.reward } : null,
+      convoy: Convoy.active ? { pos: Convoy.pos.toArray(), dest: Convoy.dest.toArray(), hp: Convoy.health.hp } : null,
+      stats: Contracts.stats ? { ...Contracts.stats } : null,
+    };
+  },
+  save(manual = false) {
+    if (!this.savable()) return false;
+    const ok = Store.set(SESSION_KEY, this.snapshot());
+    if (ok) { this.lastSavedAt = Date.now(); this.timer = 0; Events.emit('sessionSaved', manual); }
+    return ok;
+  },
+  // Simpanan yang valid (bentuk dasar diperiksa agar data rusak tidak memecahkan game)
+  peek() {
+    const s = Store.get(SESSION_KEY);
+    const isObj = (v) => (v ? typeof v === 'object' : false);
+    if (!isObj(s) ? true : s.v !== 1) return null;
+    if (!(s.world === 'space' ? true : s.world === 'earth')) return null;
+    if (!isObj(s.player) ? true : !Array.isArray(s.player.pos)) return null;
+    if (!Number.isFinite(s.score) ? true : !Number.isFinite(s.player.lives)) return null;
+    return s;
+  },
+  has() { return this.peek() !== null; },
+  clear() { Store.remove(SESSION_KEY); },
+  // Ringkasan untuk layar judul
+  describe() {
+    const s = this.peek();
+    if (!s) return '';
+    const where = s.world === 'earth' ? 'Atmosfer Bumi, gelombang ' + s.wave
+      : s.spaceMode === 'campaign' ? 'Kampanye stage ' + (s.stageIdx + 1) + ' (' + CONFIG.campaign.stages[clamp(s.stageIdx, 0, 9)].name + ')' : 'Jelajah Bebas';
+    const min = Math.max(0, Math.round((Date.now() - s.savedAt) / 60000));
+    const ago = min < 1 ? 'baru saja' : min < 60 ? min + ' menit lalu' : Math.round(min / 60) + ' jam lalu';
+    return 'Tersimpan: ' + where + ', skor ' + fmtInt(Math.floor(s.score)) + ', ' + ago;
+  },
+  // Simpan otomatis berkala selama bermain
+  update(dt) {
+    if (Game.state !== 'playing') return;
+    this.timer += dt;
+    if (this.timer >= CONFIG.save.autosaveSeconds) this.save(false);
+  },
+  // Muat sesi dari perangkat dan lanjutkan dengan hitung mundur
+  load() {
+    const s = this.peek();
+    if (!s) return false;
+    const fin = (v, d) => (Number.isFinite(v) ? v : d);
+    Settings.set('terrain', s.world);
+    if (s.world === 'space') {
+      const mode = s.spaceMode === 'campaign' ? 'campaign' : 'free';
+      Settings.set('spaceMode', mode);
+      Campaign.mode = mode;
+      if (SolarSystem.byId[s.area] ? true : CONFIG.fields.belts.some((b) => b.id === s.area)) SpaceWorld.area = s.area;
+    }
+    Game.hasSession = false;
+    if (Worlds.active.id !== s.world) setActiveWorld(s.world, fin(s.seed, CONFIG.seed));
+    resetWorld(fin(s.seed, CONFIG.seed));
+    resetSession(true);
+    // Stage dan statistik sesi
+    Campaign.stageIdx = clamp(Math.floor(fin(s.stageIdx, 0)), 0, Campaign.count - 1);
+    Campaign.bossDone = s.bossDone === true;
+    Campaign.cleared = false;
+    Game.score = Math.max(0, fin(s.score, 0));
+    Game.time = Math.max(0, fin(s.time, 0));
+    Game.kills = Math.max(0, Math.floor(fin(s.kills, 0)));
+    Game.credits = Math.max(0, Math.floor(fin(s.credits, 0)));
+    // Kartu upgrade dan level
+    const U = s.upgrades || {};
+    for (const key of Object.keys(Player.upgrades)) { if (typeof U[key] === typeof Player.upgrades[key]) Player.upgrades[key] = U[key]; }
+    Player.upgrades.companions = clamp(Math.floor(Player.upgrades.companions || 0), 0, 2);
+    const L = s.level || {};
+    Levels.level = Math.max(1, Math.floor(fin(L.level, 1)));
+    Levels.xp = Math.max(0, fin(L.xp, 0));
+    Levels.pending = clamp(Math.floor(fin(L.pending, 0)), 0, 5);
+    Levels.picks = { ...(L.picks || {}) };
+    Game.xp = Levels.xp;
+    Companions.sync();
+    // Kapal
+    const p = s.player;
+    Player.health.reset(Player.ship.stats.hp + (Player.upgrades.hpBonus || 0));
+    Player.health.hp = clamp(fin(p.hp, Player.health.maxHp), 1, Player.health.maxHp);
+    Player.lives = clamp(Math.floor(fin(p.lives, 3)), 1, CONFIG.difficulty.maxLives);
+    Player.nitro = clamp(fin(p.nitro, 1), 0, 1);
+    Player.ult = clamp(fin(p.ult, 0), 0, 1);
+    Player.shield = clamp(fin(p.shield, 0), 0, Player.upgrades.shieldMax || 0);
+    // Di angkasa posisi dan arah dipulihkan; di Bumi kapal mulai di titik aman (medan dimuat di sekitar titik awal)
+    if (s.world === 'space' ? p.pos.every(Number.isFinite) : false) {
+      Player.pos.set(p.pos[0], p.pos[1], p.pos[2]);
+      if (Array.isArray(p.quat) ? p.quat.every(Number.isFinite) : false) { Player.quat.set(p.quat[0], p.quat[1], p.quat[2], p.quat[3]).normalize(); Player.rig.quaternion.copy(Player.quat); }
+      Player.basis(); Player.syncEuler();
+      if (SolarSystem.inside(Player.pos.x, Player.pos.y, Player.pos.z, 60)) { const pose = SpaceWorld.startPose(); Player.pos.copy(pose.pos); Player.setHeading(pose.yaw); }
+    }
+    // Gelombang dilanjutkan dari jeda sebelum gelombang berikutnya
+    Waves.wave = Math.max(0, Math.floor(fin(s.wave, 0)));
+    Waves.phase = 'break';
+    Waves.timer = CONFIG.campaign.arrivalDelay;
+    // Kontrak kampanye
+    let needContract = false;
+    if (Campaign.active) {
+      const k = s.contract;
+      if (k ? CONTRACT_TYPES[k.type] : false) {
+        Contracts.current = { type: k.type, stage: k.stage, target: k.type === 'bersihkan' ? fin(k.target, 10) : null, progress: Math.max(0, fin(k.progress, 0)), done: k.done === true, distance: fin(k.distance, CONFIG.contracts.convoyDistance), reward: k.reward || CONTRACT_TYPES[k.type].reward(Campaign.stageIdx), t: 0, failed: false };
+        const cur = Contracts.current;
+        if (k.type === 'buru' ? !cur.done : false) { cur.spawnIn = 3; cur.killed = false; }
+        if (k.type === 'kawal' ? (s.convoy ? !cur.done : false) : false) {
+          Convoy.start(cur);
+          if (s.convoy.pos.every(Number.isFinite)) Convoy.pos.fromArray(s.convoy.pos);
+          if (s.convoy.dest.every(Number.isFinite)) Convoy.dest.fromArray(s.convoy.dest);
+          Convoy.health.hp = clamp(fin(s.convoy.hp, CONFIG.contracts.convoyHp), 1, Convoy.health.maxHp);
+          Convoy.beacon.position.copy(Convoy.dest);
+        }
+      } else needContract = true;
+      Contracts.stats = s.stats ? { score: fin(s.stats.score, 0), time: fin(s.stats.time, 0), kills: fin(s.stats.kills, 0), hpLost: fin(s.stats.hpLost, 0), livesLost: fin(s.stats.livesLost, 0) } : null;
+      if (!Contracts.stats) Contracts.beginStats();
+    }
+    Player.spawnInvuln = CONFIG.player.startInvuln;
+    CamRig.reset();
+    CamRig.setMode('chase');
+    if (needContract) Contracts.offer(); else setState('countdown');
+    showBanner('SESI DIMUAT', 1400);
+    Events.emit('sessionLoaded');
+    return true;
+  },
+};
+
+// Kapan sesi disimpan atau dihapus
+Events.on('state', (next) => { if (next === 'paused' ? true : next === 'menu') SessionSave.save(false); });
+Events.on('gameover', () => SessionSave.clear());
+window.addEventListener('pagehide', () => SessionSave.save(false));
 
 const EarthWorld = {
   id: 'earth',
@@ -10397,7 +10566,14 @@ function setState(next) {
   document.getElementById('screen-boot').classList.toggle('hidden', next !== 'boot');
   // Saat starting, menu tetap tampil sambil memudar lalu disembunyikan oleh update
   if (next !== 'starting') { ui.title.classList.toggle('hidden', next !== 'menu'); ui.title.classList.remove('fade-out'); }
-  if (next === 'menu') ui.btnContinue.classList.toggle('hidden', !Game.hasSession);
+  if (next === 'menu') {
+    const saved = Game.hasSession ? '' : SessionSave.describe();
+    ui.btnContinue.classList.toggle('hidden', Game.hasSession ? false : !saved);
+    const info = document.getElementById('continue-info');
+    info.textContent = saved;
+    info.classList.toggle('hidden', !saved);
+  }
+  if (next === 'paused') document.getElementById('save-info').textContent = SessionSave.lastSavedAt ? 'Tersimpan otomatis pukul ' + new Date(SessionSave.lastSavedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
   ui.pause.classList.toggle('hidden', next !== 'paused');
   ui.over.classList.toggle('hidden', next !== 'gameover');
   SolarMap.screen.classList.toggle('hidden', next !== 'map');
@@ -10559,7 +10735,8 @@ function startGame() {
 
 // LANJUTKAN dari menu: kamera kembali ke chase sambil hitung mundur
 function continueGame() {
-  if (!Game.hasSession) return;
+  // Setelah halaman dimuat ulang: muat simpanan dari perangkat
+  if (!Game.hasSession) { SessionSave.load(); return; }
   CamRig.setMode('chase', 1.2);
   setState('countdown');
 }
@@ -10655,6 +10832,7 @@ onButton(document.getElementById('btn-sc-exit'), () => {
   Save.data.ships.credits += Game.credits;
   Game.credits = 0;
   Save.save();
+  SessionSave.clear();
   Game.hasSession = false;
   resetWorld(chooseSeed());
   CamRig.setMode('cinematic');
@@ -10680,7 +10858,16 @@ for (const c of terrainScreen.querySelectorAll('.tcard')) {
   c.addEventListener('focus', () => { for (const o of terrainScreen.querySelectorAll('.tcard')) o.classList.toggle('selected', o === c); });
 }
 onButton(document.getElementById('btn-terrain-back'), () => UI.closeOverlay());
-onButton(ui.btnStart, openTerrainSelect);
+// MULAI saat ada simpanan sesi: minta konfirmasi agar simpanan tidak tertimpa tanpa sengaja
+onButton(ui.btnStart, () => {
+  if (Game.hasSession ? false : SessionSave.has()) UI.confirm('MULAI SESI BARU?', 'Ada sesi tersimpan. Sesi baru akan menimpanya saat tersimpan. Pilih LANJUTKAN di menu untuk melanjutkan sesi lama.', openTerrainSelect);
+  else openTerrainSelect();
+});
+onButton(document.getElementById('btn-save'), () => {
+  const ok = SessionSave.save(true);
+  document.getElementById('save-info').textContent = ok ? 'Tersimpan pukul ' + new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : 'Gagal menyimpan: penyimpanan perangkat tidak tersedia';
+  if (ok) showToast('SESI TERSIMPAN');
+});
 onButton(ui.btnContinue, continueGame);
 onButton(ui.btnAbout, () => UI.openOverlay(ui.about));
 onButton(document.getElementById('btn-atlas'), () => Atlas.open());
@@ -10692,7 +10879,7 @@ onButton(ui.btnOverMenu, goToMenu);
 onButton(ui.btnMute, toggleMute);
 onButton(ui.btnPause, () => { if (Game.state === 'playing') togglePause(); });
 onButton(ui.btnPauseRestart, () => UI.confirm('MULAI ULANG?', 'Progres sesi ini akan hilang dan dunia baru dibuat.', restartGame));
-onButton(ui.btnPauseMenu, () => UI.confirm('KE MENU UTAMA?', 'Sesi ini tetap tersimpan selama halaman terbuka dan bisa dilanjutkan dari menu.', goToMenu));
+onButton(ui.btnPauseMenu, () => UI.confirm('KE MENU UTAMA?', 'Sesi ini disimpan dan bisa dilanjutkan dari menu, juga setelah halaman dimuat ulang.', goToMenu));
 onButton(ui.confirmNo, () => UI.closeOverlay());
 onButton(ui.confirmYes, () => { const fn = UI.confirmAction; UI.confirmAction = null; UI.closeOverlay(true); if (fn) fn(); });
 document.getElementById('about-version').textContent = CONFIG.version;
@@ -10784,6 +10971,7 @@ const Settings = {
     onButton(document.getElementById('btn-reset-data'), () => UI.confirm('RESET DATA?',
       'Skor tertinggi, statistik dan semua pengaturan akan dihapus. Tindakan ini tidak bisa dibatalkan.', () => {
         Save.reset();
+        SessionSave.clear();
         this.apply();
         this.render();
         renderTitleBest();
@@ -11052,7 +11240,7 @@ function onBlur() {
 }
 function onVisibility() {
   Controls.reset();
-  if (document.hidden) { if (Game.state === 'playing') setState('paused'); }
+  if (document.hidden) { if (Game.state === 'playing') setState('paused'); SessionSave.save(false); }
 }
 
 window.addEventListener('keydown', onKeyDown);
@@ -11396,6 +11584,7 @@ function update(dt) {
     if (Player.upgrades.shieldMax > 0) { if (Player.shieldWait > 0) Player.shieldWait -= dt; else Player.shield = Math.min(Player.upgrades.shieldMax, Player.shield + CONFIG.player.shieldRegen * dt); }
     Levels.update();
     Contracts.update(dt);
+    SessionSave.update(dt);
     updateCombat();
     Combo.update(dt);
     Buffs.update(dt);
@@ -11745,6 +11934,9 @@ window.__game = {
       return { count: items.length, touch: items.filter((x) => x.touch).length, hits, small };
     },
     radar() { return { counts: { ...Radar.counts }, range: Radar.range(), instruments: Radar.values ? { ...Radar.values } : null, hdgText: $('hdg').textContent, pitchText: $('pitch').textContent, bankText: $('bank').textContent }; },
+    saveSession() { return SessionSave.save(true); },
+    savedSession() { return SessionSave.peek(); },
+    clearSession() { SessionSave.clear(); return true; },
     startBoss(kind) { return Bosses.start(kind); },
     bossState() {
       const b = Bosses.active;

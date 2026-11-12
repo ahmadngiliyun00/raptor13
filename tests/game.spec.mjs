@@ -55,7 +55,7 @@ async function start(page, { seed = 1234, enemies = false, god = true, world = '
     window.__game.debug.setEnemiesEnabled(e);
     window.__game.debug.setGod(g);
   }, [seed, enemies, god]);
-  await page.click('#btn-start');                         // MULAI membuka PILIH MEDAN
+  await clickStart(page);                                 // MULAI membuka PILIH MEDAN
   await page.click(`.tcard[data-world="${world}"]`);
   if (world === 'space') await page.click(`.mcard[data-mode="${mode}"]`);   // PILIH MODE
   await page.click('#hangar-pick');                     // PILIH KAPAL
@@ -72,6 +72,12 @@ const settle = (page) => page.evaluate(() => {
   if (lv.state === 'levelup') d.pickCard(lv.offer[0].split(':')[0]);
   return window.__game.snapshot().state;
 });
+
+// Klik MULAI; bila ada sesi tersimpan, konfirmasi mulai sesi baru
+async function clickStart(page) {
+  await page.click('#btn-start');
+  if (await page.locator('#screen-confirm').isVisible()) await page.click('#confirm-yes');
+}
 
 async function hold(page, keys, ms) {
   for (const k of keys) await page.keyboard.down(k);
@@ -110,7 +116,7 @@ test('klik MULAI memulai game dan membuka audio', async ({ page }) => {
 test('S1: Enter menembak lewat alur nyata, peluru bertambah, bergerak dan terlihat', async ({ page }) => {
   await open(page);
   await page.evaluate(() => { window.__game.setSeed(77); window.__game.debug.setGod(true); window.__game.debug.setEnemiesEnabled(false); });
-  await page.click('#btn-start');                       // klik mouse seperti pemain sungguhan
+  await clickStart(page);                       // klik mouse seperti pemain sungguhan
   await page.keyboard.press('Enter');                   // kartu Luar Angkasa sudah tersorot
   await page.keyboard.press('Enter');                   // PILIH MODE: mode tersimpan sudah tersorot
   await page.keyboard.press('Enter');                   // PILIH KAPAL: kapal terpilih sudah tersorot
@@ -159,7 +165,7 @@ test('S1: Enter dengan e.code kosong tetap terbaca dan di-preventDefault', async
 test('S2: medan angkasa jadi default, pilihan medan tersimpan setelah reload, skor per medan', async ({ page }) => {
   await open(page);
   expect((await snap(page)).world).toBe('space');                       // attract mode berlatar angkasa
-  await page.click('#btn-start');
+  await clickStart(page);
   await expect(page.locator('#screen-terrain')).toBeVisible();
   expect(await page.evaluate(() => document.activeElement.dataset.world)).toBe('space');
   await page.click('.tcard[data-world="earth"]');
@@ -182,7 +188,7 @@ test('S2: medan Bumi tetap berfungsi dan data save v1 lama termigrasi', async ({
   await open(page);
   const s = await snap(page);
   expect(s.settings.difficulty).toBe('sulit');
-  await page.click('#btn-start');
+  await clickStart(page);
   await expect(page.locator('[data-best="earth"]')).toHaveText('4.321');   // skor v1 dimigrasikan ke medan Bumi
   await page.click('.tcard[data-world="earth"]');
   await page.click('#hangar-pick');                     // PILIH KAPAL
@@ -309,7 +315,7 @@ test('B3: opsi Tabrakan fatal mati memberi damage besar dan pantulan', async ({ 
   await page.click('input[data-key="fatalCrash"]');
   await page.click('#btn-settings-back');
   await page.evaluate(() => { window.__game.setSeed(5); window.__game.debug.setGod(false); window.__game.debug.setEnemiesEnabled(false); });
-  await page.click('#btn-start');
+  await clickStart(page);
   await page.click('.tcard[data-world="earth"]');
   await page.click('#hangar-pick');                     // PILIH KAPAL
   await page.evaluate(() => window.__game.skipTransition());
@@ -404,7 +410,7 @@ test('B7: sanity audio mesin dan nitro (tanpa NaN, master di bawah 1, frekuensi 
 
 test('A2: hangar hanya menampilkan kapal yang cocok medan, kapal terkunci butuh kredit, pilihan tersimpan', async ({ page }) => {
   await open(page);
-  await page.click('#btn-start');
+  await clickStart(page);
   await page.click('.tcard[data-world="space"]');
   await page.click('.mcard[data-mode="free"]');
   await expect(page.locator('#screen-hangar')).toBeVisible();
@@ -427,7 +433,7 @@ test('A2: hangar hanya menampilkan kapal yang cocok medan, kapal terkunci butuh 
   const s = await snap(page);
   expect(s.unlocked).toContain('interceptor');
   expect(s.bank).toBe(200);
-  await page.click('#btn-start');
+  await clickStart(page);
   await page.click('.tcard[data-world="earth"]');
   expect(await page.evaluate(() => window.__game.debug.hangarList())).toEqual(['raptor-j']);   // kapal angkasa tidak tampil
   await expect(page.locator('#hangar-name')).toHaveText('Raptor-J');
@@ -760,7 +766,7 @@ for (const q of ['rendah', 'tinggi']) {
   test(`preset kualitas ${q} termuat dan bisa dimainkan`, async ({ page }) => {
     await open(page, `?kualitas=${q}`);
     expect((await page.evaluate(() => window.__game.quality())).preset).toBe(q);
-    await page.click('#btn-start');
+    await clickStart(page);
     await page.click('.tcard[data-world="earth"]');
     await page.click('#hangar-pick');                     // PILIH KAPAL
     await page.waitForTimeout(2000);
@@ -776,7 +782,7 @@ test('screenshot menu, gameplay dan game over', async ({ page }) => {
 
   // Gameplay: nitro, tembakan, musuh di depan, dan cincin
   await page.evaluate(() => { window.__game.setSeed(2024); window.__game.debug.setEnemiesEnabled(true); window.__game.debug.setGod(true); });
-  await page.click('#btn-start');
+  await clickStart(page);
   await page.click('.tcard[data-world="earth"]');
   await page.click('#hangar-pick');                     // PILIH KAPAL
   await page.evaluate(() => window.__game.skipTransition());
@@ -1166,7 +1172,7 @@ test('B11: Kampanye 10 stage, gerbang loncat setelah gelombang bersih, warp ke s
   await expect.poll(async () => (await dbg(page, 'campaign')).area, { timeout: 5000 }).toBe('pluto');
   // Progres tersimpan: setelah reload, kartu mode menawarkan lanjut stage 2
   await open(page);
-  await page.click('#btn-start');
+  await clickStart(page);
   await page.click('.tcard[data-world="space"]');
   await expect(page.locator('#mode-progress')).toHaveText('Lanjut stage 2 dari 10');
 });
@@ -1333,8 +1339,7 @@ test('B13: mini-boss stage 5 dan 8 muncul setelah gelombang, bar HP, dua fase, s
     await skipCs(page);
     await dbg(page, 'finishStage');
     await expect.poll(async () => (await dbg(page, 'bossState'))?.kind, { timeout: 4000 }).toBe(kind);
-    await expect.poll(() => settle(page)).toBe('playing');
-    await expect(page.locator('#boss-bar')).toBeVisible();
+    await expect.poll(async () => (await settle(page)) === 'playing' ? page.locator('#boss-bar').isVisible() : false, { timeout: 6000 }).toBe(true);
     expect((await dbg(page, 'campaign')).gate).toBe(false);          // gerbang belum terbuka selama bos hidup
     const hp = (await dbg(page, 'damageBoss', 0)).max;
     await dbg(page, 'damageBoss', hp * 0.6);
@@ -1679,4 +1684,71 @@ test.describe('27a: kontrol sentuh mode HP', () => {
     await startHp(page, 390, 844, 'paused');                     // posisi tegak menjeda permainan
     await expect(page.locator('#rotate-hint')).toBeVisible();
   });
+});
+
+// ---------- Simpan dan muat sesi (bertahan setelah halaman dimuat ulang) ----------
+test('Simpan: tombol SIMPAN di menu jeda, sesi kampanye pulih setelah reload lewat LANJUTKAN', async ({ page }) => {
+  await start(page, { world: 'space', mode: 'campaign' });
+  // Bangun keadaan sesi: skor, level, kartu, nyawa, stage 3
+  await dbg(page, 'setStage', 3);
+  await expect.poll(async () => { await settle(page); return (await dbg(page, 'campaign')).area; }, { timeout: 8000 }).toBe('bumi');
+  await expect.poll(async () => { await settle(page); return (await dbg(page, 'campaign')).warp; }, { timeout: 6000 }).toBe(false);
+  await expect.poll(async () => { await settle(page); return (await dbg(page, 'contract')).type; }, { timeout: 6000 }).not.toBe(null);
+  await expect.poll(() => settle(page), { timeout: 6000 }).toBe('playing');
+  await dbg(page, 'offerCards', ['damage']); await dbg(page, 'pickCard', 'damage');
+  await dbg(page, 'setLives', 2);
+  await page.evaluate(() => { window.__game.debug.addCredits(0); });
+  const before = await page.evaluate(() => ({ s: window.__game.snapshot(), lv: window.__game.debug.levelState(), c: window.__game.debug.contract() }));
+  await page.keyboard.press('KeyP');
+  await page.click('#btn-save');
+  await expect(page.locator('#save-info')).toContainText('Tersimpan');
+  const saved = await dbg(page, 'savedSession');
+  expect(saved.stageIdx).toBe(2);
+  // Muat ulang halaman: menu menawarkan LANJUTKAN dengan ringkasan simpanan
+  await open(page);
+  await expect(page.locator('#btn-continue')).toBeVisible();
+  await expect(page.locator('#continue-info')).toContainText('Kampanye stage 3');
+  await page.screenshot({ path: `${SHOT_DIR}menu-lanjutkan.png` });
+  await page.click('#btn-continue');
+  await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).toBe('playing');
+  const after = await page.evaluate(() => ({ s: window.__game.snapshot(), lv: window.__game.debug.levelState(), c: window.__game.debug.campaign(), k: window.__game.debug.contract() }));
+  expect(after.c.stage).toBe(3);
+  expect(after.c.area).toBe('bumi');
+  expect(after.s.lives).toBe(2);
+  expect(after.s.score).toBeGreaterThanOrEqual(before.s.score);
+  expect(after.lv.level).toBe(before.lv.level);
+  expect(after.lv.upgrades.damage).toBeCloseTo(before.lv.upgrades.damage, 3);
+  expect(after.k.type).toBe(before.c.type);
+});
+
+test('Simpan: sesi tersimpan otomatis saat halaman dimuat ulang tanpa menekan SIMPAN (Bumi)', async ({ page }) => {
+  await start(page, { world: 'earth', enemies: true });
+  await dbg(page, 'startWave', 3);
+  await page.waitForTimeout(1500);
+  const before = await snap(page);
+  await open(page);                                                       // reload: pagehide menyimpan sesi
+  await expect(page.locator('#btn-continue')).toBeVisible();
+  await expect(page.locator('#continue-info')).toContainText('Atmosfer Bumi, gelombang 3');
+  await page.click('#btn-continue');
+  await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).toBe('playing');
+  const after = await snap(page);
+  expect(after.wave).toBeGreaterThanOrEqual(3);
+  expect(after.score).toBeGreaterThanOrEqual(before.score);
+  expect(await page.evaluate(() => window.__game.world())).toBe('earth');
+});
+
+test('Simpan: game over menghapus simpanan sesi, data rusak diabaikan dengan aman', async ({ page }) => {
+  await start(page, { world: 'space', god: false });
+  await dbg(page, 'saveSession');
+  expect(await dbg(page, 'savedSession')).not.toBe(null);
+  await page.evaluate(() => { const d = window.__game.debug; d.setLives(1); d.damageAs(9999, 'test'); });
+  await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).toBe('gameover');
+  expect(await dbg(page, 'savedSession')).toBe(null);
+  await open(page);
+  await expect(page.locator('#btn-continue')).toBeHidden();
+  // Simpanan rusak: tidak memunculkan LANJUTKAN dan tidak membuat error
+  await page.evaluate(() => localStorage.setItem('raptor13.session.v1', '{"v":1,"world":"mars","player":5'));
+  await open(page);
+  await expect(page.locator('#btn-continue')).toBeHidden();
+  expect((await snap(page)).state).toBe('menu');
 });
