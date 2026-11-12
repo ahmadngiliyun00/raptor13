@@ -86,9 +86,37 @@ async function hold(page, keys, ms) {
 }
 
 // ---------- uji ----------
+test('SEO: meta penulis, deskripsi, ikon halaman, dan manifest tersedia', async ({ page }) => {
+  await open(page);
+  const meta = await page.evaluate(() => {
+    const m = (sel) => document.querySelector(sel)?.getAttribute('content') || '';
+    let ld = null;
+    try { ld = JSON.parse(document.querySelector('script[type="application/ld+json"]').textContent); } catch (err) { ld = null; }
+    return {
+      author: m('meta[name="author"]'), desc: m('meta[name="description"]'), keywords: m('meta[name="keywords"]'),
+      ogImage: m('meta[property="og:image"]'), card: m('meta[name="twitter:card"]'),
+      icons: [...document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"], link[rel="manifest"]')].map((l) => l.href),
+      ld,
+    };
+  });
+  expect(meta.author).toBe('Ahmad Ngiliyun');
+  expect(meta.desc.length).toBeGreaterThan(80);
+  expect(meta.desc.length).toBeLessThanOrEqual(170);
+  expect(meta.keywords).toContain('game pesawat');
+  expect(meta.card).toBe('summary_large_image');
+  expect(meta.ld?.author?.name).toBe('Ahmad Ngiliyun');
+  expect(meta.icons.length).toBe(4);
+  // Semua berkas ikon, gambar pratinjau, dan manifest benar-benar ada
+  const urls = [...meta.icons, new URL(meta.ogImage, page.url()).href];
+  for (const u of urls) expect((await page.request.get(u)).status(), u).toBe(200);
+  const mf = await (await page.request.get(new URL('manifest.webmanifest', page.url()).href)).json();
+  expect(mf.short_name).toBe('RAPTOR13');
+  for (const ic of mf.icons) expect((await page.request.get(new URL(ic.src, page.url()).href)).status(), ic.src).toBe(200);
+});
+
 test('halaman termuat tanpa console error dan menampilkan layar judul', async ({ page }) => {
   await open(page);
-  await expect(page).toHaveTitle('RAPTOR13');
+  await expect(page).toHaveTitle('RAPTOR13 - Game Pesawat Tempur 3D di Browser');
   await expect(page.locator('#screen-title')).toBeVisible();
   await expect(page.locator('.logo')).toHaveText('RAPTOR13');
   await expect(page.locator('.tagline')).toHaveText('Superioritas udara dimulai dari sini.');

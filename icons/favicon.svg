@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>RAPTOR13</title>
+  <!-- Logo RAPTOR13: siluet pesawat tempur dari atas yang melesat dari orbit, karya Ahmad Ngiliyun -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+      <stop offset="0" stop-color="#1d3a57"/>
+      <stop offset="0.6" stop-color="#0f2033"/>
+      <stop offset="1" stop-color="#070e17"/>
+    </radialGradient>
+    <linearGradient id="hull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.55" stop-color="#dfe8f2"/>
+      <stop offset="1" stop-color="#93a6ba"/>
+    </linearGradient>
+    <linearGradient id="orbit" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff9a3c" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#ff9a3c" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ffcf7a" stop-opacity="0.2"/>
+    </linearGradient>
+    <radialGradient id="flame" cx="50%" cy="20%" r="70%">
+      <stop offset="0" stop-color="#fff4d6"/>
+      <stop offset="0.45" stop-color="#ffb04a"/>
+      <stop offset="1" stop-color="#ff6a1a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- bintang -->
+  <g fill="#cfe3ff">
+    <circle cx="96" cy="104" r="5"/>
+    <circle cx="410" cy="92" r="4"/>
+    <circle cx="438" cy="214" r="3"/>
+    <circle cx="70" cy="300" r="3"/>
+    <circle cx="150" cy="430" r="4"/>
+  </g>
+
+  <!-- lintasan orbit miring di belakang pesawat -->
+  <ellipse cx="256" cy="300" rx="214" ry="62" fill="none" stroke="url(#orbit)" stroke-width="16" transform="rotate(-18 256 300)"/>
+
+  <!-- nyala mesin -->
+  <path d="M232 410 L280 410 L256 492 Z" fill="url(#flame)"/>
+
+  <!-- badan pesawat -->
+  <path fill="url(#hull)" stroke="#0a1420" stroke-width="6" stroke-linejoin="round"
+        d="M256 46
+           L276 140 L286 196 L446 312 L446 346 L300 330
+           L298 362 L368 414 L368 440 L290 428 L256 420
+           L222 428 L144 440 L144 414 L214 362
+           L212 330 L66 346 L66 312 L226 196 L236 140 Z"/>
+
+  <!-- garis aksen jingga di sayap -->
+  <path d="M292 214 L430 316 L430 330 L300 250 Z" fill="#ff9a3c"/>
+  <path d="M220 214 L82 316 L82 330 L212 250 Z" fill="#ff9a3c"/>
+
+  <!-- kokpit -->
+  <path d="M256 120 C270 140 272 196 256 232 C240 196 242 140 256 120 Z" fill="#1aa3d9" stroke="#0a1420" stroke-width="4"/>
+  <path d="M252 140 C248 160 248 180 251 196" stroke="#bff0ff" stroke-width="5" fill="none" stroke-linecap="round"/>
+</svg>

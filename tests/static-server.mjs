@@ -15,6 +15,9 @@ const TYPES = {
   '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.svg': 'image/svg+xml',
+  '.jpg': 'image/jpeg',
+  '.ico': 'image/x-icon',
+  '.webmanifest': 'application/manifest+json',
   '.md': 'text/markdown; charset=utf-8',
 };
 

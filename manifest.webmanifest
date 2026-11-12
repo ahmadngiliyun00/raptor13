@@ -1,0 +1,19 @@
+{
+  "name": "RAPTOR13 - Game Pesawat Tempur 3D",
+  "short_name": "RAPTOR13",
+  "description": "Game pesawat tempur 3D di browser. Jelajahi Tata Surya, tuntaskan 10 stage kampanye, dan tumbangkan Sindikat Vanta.",
+  "lang": "id",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b1622",
+  "theme_color": "#0b1622",
+  "categories": ["games", "entertainment", "education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

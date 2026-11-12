@@ -96,3 +96,4 @@ Fase berikutnya:
 - Dunia aktif lewat `Worlds.active` (EarthWorld, SpaceWorld). Kapal lewat `SHIPS` dan `Player.setShip`.
 - Hook debug di `window.__game` (snapshot, setSeed, startIn, skipTransition, debug.*).
 - Uji: `tests/game.spec.mjs`, helper `start(page, { world })` memakai medan Bumi secara bawaan.
+- SEO dan ikon (permintaan pemain 13 Nov): meta deskripsi, kata kunci, penulis dan hak cipta Ahmad Ngiliyun, Open Graph dan kartu X, data terstruktur VideoGame, `manifest.webmanifest`, logo SVG di `icons/` yang diekspor ke ICO dan PNG, serta gambar pratinjau `icons/og-image.jpg`. Setelah dihosting, ganti alamat og:image dengan alamat lengkap.
