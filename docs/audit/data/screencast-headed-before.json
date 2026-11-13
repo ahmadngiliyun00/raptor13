@@ -1,0 +1,22 @@
+{
+  "frames": 401,
+  "flagged": 1,
+  "events": [
+    {
+      "frame": 331,
+      "blocks": 6,
+      "rect": [
+        1216,
+        144,
+        192,
+        144
+      ]
+    }
+  ],
+  "per1000": 2.5,
+  "label": "headed-before",
+  "size": "1512x860",
+  "dpr": 2,
+  "uncapped": false,
+  "query": ""
+}

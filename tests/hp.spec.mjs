@@ -275,6 +275,9 @@ test('H9 notifikasi: satu toast, antrean prioritas, kedaluwarsa, prioritas tingg
   expect(n.text).toBe('');
   // Ringkas: teks pendek tanpa petunjuk tombol keyboard
   await dbg(page, 'setSetting', 'robotHelp', 'ringkas');
+  // Kapal tanpa kendali bisa melayang dekat permukaan dan memicu peringatan prioritas lebih tinggi:
+  // pindahkan ke titik aman jauh dari benda mana pun agar yang diuji hanya antrean notifikasi
+  await dbg(page, 'setPlayerState', { x: 0, y: 8000, z: 0 });
   await dbg(page, 'pikoReset');
   await dbg(page, 'pikoSay', 'enemyBehind');                          // prioritas lebih rendah dari HP kritis: tampil setelahnya
   await expect.poll(async () => (await dbg(page, 'notify')).text, { timeout: 6000 }).toBe('Musuh di belakang! Balik Arah!');

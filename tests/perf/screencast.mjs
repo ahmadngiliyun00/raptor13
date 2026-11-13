@@ -22,7 +22,7 @@ const extra = opt.uncapped ? ['--disable-frame-rate-limit', '--disable-gpu-vsync
 
 const server = spawn(process.execPath, ['tests/static-server.mjs', String(PORT)], { cwd: process.env.PERF_SITE || ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
 await new Promise((r) => server.stdout.once('data', r));
-const browser = await chromium.launch({ args: [...gpuArgs, ...extra] });
+const browser = await chromium.launch({ headless: !opt.headed, args: [...gpuArgs, ...extra] });
 let result;
 try {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR });

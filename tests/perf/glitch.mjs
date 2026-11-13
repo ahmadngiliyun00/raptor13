@@ -46,6 +46,7 @@ try {
     const lost = await page.evaluate(() => { window.__lost = 0; document.querySelector('canvas').addEventListener('webglcontextlost', () => { window.__lost++; }); return 0; });
     if (OFF.length) await page.evaluate((list) => { for (const f of list) window.__game.debug.feature?.(f, false); }, OFF);
     await page.keyboard.press('Shift');
+    if (opt.fps) await page.evaluate((f) => window.__game.debug.fpsOverride?.(Number(f)), opt.fps);   // jarak waktu antar frame setara kode lama
     await page.evaluate(() => window.__game.debug.glitchProbe('start', { nanEvery: 10, shots: 6 }));
     if (scene === 'menu') {
       await collect(page, FRAMES);
@@ -60,9 +61,9 @@ try {
       await page.keyboard.press('Escape');
       await collect(page, FRAMES);
     } else if (scene === 'terrain') {
-      await page.evaluate(() => window.__game.debug.setTerrain?.('earth'));
+      await page.evaluate(() => window.__game.debug.setSetting('terrain', 'earth'));
       await collect(page, Math.floor(FRAMES / 2));
-      await page.evaluate(() => window.__game.debug.setTerrain?.('space'));
+      await page.evaluate(() => window.__game.debug.setSetting('terrain', 'space'));
       await collect(page, FRAMES);
     } else if (scene === 'quality') {
       for (const m of ['hemat', 'seimbang', 'kualitas', 'otomatis']) { await page.evaluate((v) => window.__game.debug.setPerfMode?.(v), m); await page.waitForTimeout(600); }

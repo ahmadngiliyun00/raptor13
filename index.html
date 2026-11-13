@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-O9+/SKMIAHrAal2RV50cSU6/BBSCCYWxvA6bx+8FR3c='; style-src 'self' 'sha256-brrVMxIPX2S4QhLQxdyWa0QsIPrTFHX75sD8oAVnF64='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-igw5LnbNMmgm3Nprm3CIzawvahkW3K4DiRDFM7COJIw='; style-src 'self' 'sha256-TtZW5AC+Oa2fxSZ7Mu1GwSzRCO3Z6Wv4lhZhftqmhsc='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -141,7 +141,10 @@
   .btn:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
   .btn.secondary { background: transparent; color: var(--ui-fg); border: 1px solid var(--ui-line); box-shadow: none; font-size: 14px; padding: 12px 26px; }
   .btn-big { font-size: 22px; padding: 18px 56px; }
-  .boot-text { letter-spacing: 0.4em; color: var(--ui-dim); font-weight: 700; animation: blink 0.8s steps(2) infinite; }
+  .boot-text { letter-spacing: 0.4em; color: var(--ui-dim); font-weight: 700; }
+  .boot-bar { width: min(320px, 70vw); height: 4px; margin-top: 14px; border-radius: 2px; background: rgba(120, 200, 255, 0.15); overflow: hidden; }
+  #boot-fill { display: block; width: 100%; height: 100%; background: #ff9d3a; transform-origin: 0 50%; transform: scaleX(0.05); transition: transform 0.2s ease-out; }
+  .boot-step { margin-top: 8px; font-size: 12px; letter-spacing: 0.12em; color: var(--ui-dim); }
   .hint { margin: 0; color: var(--ui-dim); font-size: 13px; letter-spacing: 0.04em; }
   kbd {
     display: inline-block; min-width: 26px; padding: 4px 7px; margin-right: 4px;
@@ -187,7 +190,7 @@
   .screen.menu {
     align-items: flex-start; justify-content: center; padding: 24px 6vw;
     background: linear-gradient(90deg, rgba(8, 14, 24, 0.82) 0%, rgba(8, 14, 24, 0.45) 42%, rgba(8, 14, 24, 0) 70%);
-    transition: opacity 0.8s ease;
+    transition: opacity 0.4s ease;
   }
   .screen.menu.fade-out { opacity: 0; pointer-events: none; }
   .menu-panel { display: flex; flex-direction: column; align-items: flex-start; gap: 18px; text-align: left; max-width: 560px; }
@@ -368,7 +371,7 @@
   @media (max-width: 640px) { .lv-cards { grid-template-columns: 1fr; } .lvcard { min-height: 0; } }
   .final-rating { font-size: 34px; letter-spacing: 0.2em; color: #ffd24a; }
   #cutscene { position: fixed; inset: 0; z-index: 40; pointer-events: auto; }
-  #cutscene .lb { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.45s ease-out; }
+  #cutscene .lb { position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height 0.4s ease-out; }
   #cutscene .lb-top { top: 0; } #cutscene .lb-bot { bottom: 0; }
   #cutscene.on .lb { height: 11vh; }
   .cs-sub { position: absolute; left: 50%; bottom: calc(11vh + 18px); transform: translateX(-50%); max-width: min(720px, 86vw); padding: 6px 14px;
@@ -406,11 +409,48 @@
   .man.ready { border-color: rgba(255, 154, 60, 0.7); }
   .man.active { background: rgba(255, 154, 60, 0.45); }
   body.mode-hp #maneuvers { display: none; }
+  #diag { position: fixed; right: max(var(--sa-r, 8px), 8px); top: 50%; transform: translateY(-50%); z-index: 95; padding: 8px; border-radius: 6px;
+    background: rgba(4, 8, 14, 0.85); border: 1px solid rgba(255, 140, 60, 0.5); display: flex; flex-direction: column; gap: 6px; max-width: min(520px, 90vw); }
+  #diag pre { margin: 0; font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #ffe0c8; white-space: pre-wrap; }
   #gl-lost { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 90; padding: 12px 18px; border-radius: 8px;
     background: rgba(6, 10, 18, 0.9); color: #e8f6ff; border: 1px solid rgba(120, 200, 255, 0.4); font-weight: 700; letter-spacing: 0.06em; }
   #gl-lost.hidden { display: none; }
   .card.fatal { max-width: 520px; text-align: left; }
   .card.fatal p { line-height: 1.5; margin: 8px 0 0; }
+
+  /* A4: kontras panel HUD cukup di atas latar terang, fokus terlihat, umpan balik tekan */
+  :root { --ui-panel: rgba(8, 14, 22, 0.8); --ui-dim: #b4c3d2; }
+  /* Kenyamanan sentuh: tanpa pull-to-refresh, gulir pantul, menu tekan lama, dan seleksi; saat bermain
+     kanvas tidak meneruskan gestur ke browser (tanpa gulir atau zoom cubit) */
+  html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  body.in-play, body.in-play #game, body.in-play #game canvas { touch-action: none; }
+  button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .btn:active:not(:disabled), .seg button:active, .set-tab:active, .tool:active { transform: scale(0.96); }
+  .btn { transition: transform 0.08s ease-out, filter 0.12s; }
+  .btn.small { min-height: 32px; padding: 6px 12px; font-size: 12px; }
+  /* Tutorial (desktop di atas chip manuver; mode HP lewat pusat notifikasi) */
+  #tutorial { position: fixed; left: 50%; bottom: calc(var(--ed-b) + 64px); transform: translateX(-50%); z-index: 30; display: flex; align-items: center; gap: 12px;
+    max-width: min(640px, 92vw); padding: 8px 10px 8px 16px; border-radius: 8px; background: rgba(8, 14, 22, 0.86); border: 1px solid rgba(255, 154, 60, 0.6);
+    color: var(--ui-fg); font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+  #tutorial .tut-skip { flex: none; min-height: 32px; padding: 4px 10px; font: 700 12px/1 system-ui, sans-serif; letter-spacing: 0.1em; color: var(--ui-fg);
+    background: transparent; border: 1px solid var(--ui-line); border-radius: 6px; cursor: pointer; }
+  #audio-unlock { position: fixed; left: 50%; top: calc(var(--ed-t) + 54px); transform: translateX(-50%); z-index: 70; min-height: 44px; padding: 8px 16px;
+    font: 800 13px/1 system-ui, sans-serif; letter-spacing: 0.12em; color: #1a0e04; background: var(--ui-accent); border: 0; border-radius: 8px; cursor: pointer; }
+  /* Ukuran teks antarmuka: kartu menu dan layar sela; HUD desktop ikut (mode HP dijaga anggaran tata letak) */
+  body[data-text="besar"] .card, body[data-text="besar"] .menu-panel { zoom: 1.15; }
+  body[data-text="sangat"] .card, body[data-text="sangat"] .menu-panel { zoom: 1.3; }
+  /* Hanya panel HUD yang di-zoom: elemen yang diposisikan JavaScript dengan translate (reticle, penanda
+     tepi, angka damage, bar HP melayang) tidak boleh ikut, agar posisinya tetap tepat di layar */
+  body[data-text="besar"]:not(.mode-hp) #hud .hud-block, body[data-text="besar"]:not(.mode-hp) #hud #radar, body[data-text="besar"]:not(.mode-hp) #hud #piko-panel, body[data-text="besar"]:not(.mode-hp) #hud #buffs, body[data-text="besar"]:not(.mode-hp) #hud #data-panel, body[data-text="besar"]:not(.mode-hp) #hud #maneuvers, body[data-text="besar"]:not(.mode-hp) #hud #toasts, body[data-text="besar"]:not(.mode-hp) #hud #warning, body[data-text="besar"]:not(.mode-hp) #hud #rear-warn, body[data-text="besar"]:not(.mode-hp) #hud #comet-warn, body[data-text="besar"]:not(.mode-hp) #hud #boss-bar { zoom: 1.12; }
+  body[data-text="sangat"]:not(.mode-hp) #hud .hud-block, body[data-text="sangat"]:not(.mode-hp) #hud #radar, body[data-text="sangat"]:not(.mode-hp) #hud #piko-panel, body[data-text="sangat"]:not(.mode-hp) #hud #buffs, body[data-text="sangat"]:not(.mode-hp) #hud #data-panel, body[data-text="sangat"]:not(.mode-hp) #hud #maneuvers, body[data-text="sangat"]:not(.mode-hp) #hud #toasts, body[data-text="sangat"]:not(.mode-hp) #hud #warning, body[data-text="sangat"]:not(.mode-hp) #hud #rear-warn, body[data-text="sangat"]:not(.mode-hp) #hud #comet-warn, body[data-text="sangat"]:not(.mode-hp) #hud #boss-bar { zoom: 1.25; }
+  /* Layar desktop besar (2560x1440 ke atas): HUD dan kartu ikut membesar agar teks tetap terbaca */
+  @media (min-width: 2200px) and (min-height: 1200px) {
+    body:not(.mode-hp)[data-text="normal"] #hud .hud-block, body:not(.mode-hp)[data-text="normal"] #hud #radar, body:not(.mode-hp)[data-text="normal"] #hud #piko-panel, body:not(.mode-hp)[data-text="normal"] #hud #buffs, body:not(.mode-hp)[data-text="normal"] #hud #data-panel, body:not(.mode-hp)[data-text="normal"] #hud #maneuvers, body:not(.mode-hp)[data-text="normal"] #hud #toasts, body:not(.mode-hp)[data-text="normal"] #hud #warning, body:not(.mode-hp)[data-text="normal"] #hud #rear-warn, body:not(.mode-hp)[data-text="normal"] #hud #comet-warn, body:not(.mode-hp)[data-text="normal"] #hud #boss-bar { zoom: 1.3; }
+    body[data-text="normal"] .card, body[data-text="normal"] .menu-panel { zoom: 1.2; }
+  }
+  /* Kurangi gerakan: tanpa kedip dan animasi berulang, transisi seketika */
+  body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
   #perf-overlay { position: fixed; left: max(var(--sa-l, 8px), 8px); top: 50%; transform: translateY(-50%); z-index: 60; margin: 0; padding: 6px 8px;
     font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #cfe8ff; background: rgba(4, 8, 14, 0.78);
     border: 1px solid rgba(120, 200, 255, 0.3); border-radius: 6px; pointer-events: none; white-space: pre; }
@@ -613,7 +653,9 @@
   }
 
   /* Lens flare */
-  #flare { position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0; mix-blend-mode: screen; }
+  /* Tanpa mix-blend-mode: lapisan layar penuh dengan mode campur di atas kanvas WebGL memaksa compositor
+     membuat permukaan render tambahan setiap frame (A7). Di atas langit gelap hasilnya hampir sama. */
+  #flare { position: fixed; inset: 0; pointer-events: none; z-index: 5; opacity: 0; contain: strict; }
   #flare i { position: absolute; left: 0; top: 0; border-radius: 50%; }
   #flare .f0 { width: 90px; height: 90px; margin: -45px 0 0 -45px; background: radial-gradient(circle, rgba(255, 245, 225, 0.95) 0 6%, rgba(255, 210, 150, 0.35) 22%, rgba(255, 190, 120, 0) 70%); }
   #flare .f1 { width: 46px; height: 46px; margin: -23px 0 0 -23px; background: radial-gradient(circle, rgba(140, 200, 255, 0.18), rgba(140, 200, 255, 0) 70%); }
@@ -825,6 +867,7 @@
     .card.settings[data-tab="suara"] [data-sec]:not([data-sec="suara"]),
     .card.settings[data-tab="kontrol"] [data-sec]:not([data-sec="kontrol"]),
     .card.settings[data-tab="grafis"] [data-sec]:not([data-sec="grafis"]),
+    .card.settings[data-tab="akses"] [data-sec]:not([data-sec="akses"]),
     .card.settings[data-tab="lainnya"] [data-sec]:not([data-sec="lainnya"]) { display: none !important; }
     .set-grid { gap: 6px 14px; }
     .set-label { font-size: 12px; }
@@ -892,7 +935,11 @@
 <div id="game"></div>
 
 <!-- Layar boot: tampil sampai modul dan dunia siap -->
-<div id="screen-boot" class="screen"><div class="boot-text">MEMUAT RAPTOR13...</div></div>
+<div id="screen-boot" class="screen" role="status" aria-live="polite">
+  <div class="boot-text">MEMUAT RAPTOR13</div>
+  <div class="boot-bar" role="progressbar" aria-label="Kemajuan memuat" aria-valuemin="0" aria-valuemax="100" aria-valuenow="5"><i id="boot-fill"></i></div>
+  <div id="boot-step" class="boot-step">Memuat modul</div>
+</div>
 
 <!-- HUD (elemen DOM di atas canvas) -->
 <div id="flash"></div>
@@ -1142,6 +1189,7 @@
       <button type="button" class="set-tab" data-tab="suara" role="tab">Suara</button>
       <button type="button" class="set-tab" data-tab="kontrol" role="tab">Kontrol</button>
       <button type="button" class="set-tab" data-tab="grafis" role="tab">Grafis</button>
+      <button type="button" class="set-tab" data-tab="akses" role="tab">Akses</button>
       <button type="button" class="set-tab" data-tab="lainnya" role="tab">Lainnya</button>
     </div>
     <button id="btn-settings-back-top" class="btn set-back-top" type="button">KEMBALI</button>
@@ -1230,6 +1278,20 @@
         <label class="tog"><input type="checkbox" data-key="perfOverlay"> Overlay performa<small class="tog-note kb-only"> (F3)</small></label>
         <label class="tog"><input type="checkbox" data-key="bloom"> Bloom<small class="tog-note"> (angkasa, mati di kualitas Rendah)</small></label>
       </div>
+    </div>
+    <div class="set-grid" data-sec="akses">
+      <span class="set-label">Ukuran teks</span>
+      <div class="seg" data-key="textSize">
+        <button type="button" data-v="normal">Normal</button><button type="button" data-v="besar">Besar</button><button type="button" data-v="sangat">Sangat besar</button>
+      </div>
+      <span class="set-label">Kenyamanan</span>
+      <div class="tog-list">
+        <label class="tog"><input type="checkbox" data-key="reduceMotion"> Kurangi gerakan<small class="tog-note"> (tanpa getar kamera, kilatan diredam, tanpa kedip)</small></label>
+        <label class="tog"><input type="checkbox" data-key="colorBlind"> Mode buta warna<small class="tog-note"> (warna bintang mudah dibedakan)</small></label>
+        <label class="tog hp-only"><input type="checkbox" data-key="haptics"> Getar<small class="tog-note"> (tembak, kena, ledakan, pickup)</small></label>
+      </div>
+      <span class="set-label">Tutorial</span>
+      <div><button id="btn-tutorial" class="btn secondary small" type="button">ULANGI TUTORIAL</button></div>
     </div>
     <h3 class="set-sub kb-only" data-sec="lainnya">Kontrol keyboard</h3>
     <div class="keymap kb-only" data-keymap data-sec="lainnya"></div>
@@ -1368,6 +1430,7 @@
         <button id="btn-pause-restart" class="btn secondary" type="button">MULAI ULANG</button>
         <button id="btn-pause-settings" class="btn secondary" type="button">PENGATURAN</button>
         <button id="btn-pause-menu" class="btn secondary" type="button">MENU UTAMA</button>
+        <button id="btn-pause-tutorial" class="btn secondary hidden" type="button">LEWATI TUTORIAL</button>
       </nav>
       <div class="pause-side hp-only">
         <button id="btn-pause-map" class="btn secondary" type="button">PETA</button>
@@ -1982,6 +2045,12 @@ const SETTING_DEFAULTS = {
   fpsCap: 'otomatis',          // batas FPS: otomatis (60, turun di perangkat sentuh saat panas) | 30 | 60 | tanpa
   resolution: 'otomatis',      // pixel ratio maksimum: otomatis (sesuai kualitas, 1,25 di perangkat sentuh) | 1 | 1.5 | 2
   perfOverlay: false,          // overlay performa (F3)
+  tutorialDone: false,         // tutorial singkat pertama kali main sudah selesai atau dilewati (A4)
+  haptics: true,               // getar singkat di mode HP (tembak, kena, ledakan, pickup)
+  textSize: 'normal',          // ukuran teks antarmuka: normal | besar | sangat
+  reduceMotion: false,         // kurangi gerakan: tanpa getar kamera, kilatan diredam, tanpa kedip, menu diam
+  colorBlind: false,           // mode buta warna: palet bintang yang mudah dibedakan
+  flashWarned: false,          // peringatan kilatan sudah ditampilkan sekali
 };
 const SETTING_ENUMS = {
   difficulty: ['mudah', 'normal', 'sulit'],
@@ -1996,11 +2065,13 @@ const SETTING_ENUMS = {
   perfMode: ['otomatis', 'hemat', 'seimbang', 'kualitas'],
   fpsCap: ['otomatis', '30', '60', 'tanpa'],
   resolution: ['otomatis', '1', '1.5', '2'],
+  textSize: ['normal', 'besar', 'sangat'],
 };
 const SETTING_RANGES = { controlSize: [70, 130], controlTransparency: [0, 80], asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100], volMusic: [0, 100] };
 
 const Save = {
   data: null,
+  corrupt: false,   // simpanan tidak bisa dibaca: pemain diberi tahu sekali di menu (A4)
   defaults() {
     return {
       version: 3,
@@ -2058,7 +2129,12 @@ const Save = {
   },
   load() {
     let raw = null;
-    const read = (key) => { try { const txt = window.localStorage.getItem(key); return txt ? (txt.length <= 200000 ? JSON.parse(txt) : null) : null; } catch (err) { return null; } };
+    const read = (key) => {
+      let txt = null;
+      try { txt = window.localStorage.getItem(key); } catch (err) { return null; }
+      if (!txt) return null;
+      try { const v = txt.length <= 200000 ? JSON.parse(txt) : null; if (!v ? true : typeof v !== 'object') this.corrupt = true; return v; } catch (err) { this.corrupt = true; return null; }
+    };
     raw = read(SAVE_KEY);
     if (!raw) for (const k of SAVE_KEYS_OLD) { raw = read(k); if (raw) break; }   // migrasi dari skema lama
     this.data = this.sanitize(raw);
@@ -2097,6 +2173,8 @@ Save.load();
   try { fresh = !window.localStorage.getItem(SAVE_KEY); } catch (err) { fresh = true; }
   const touch = (window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false) || (navigator.maxTouchPoints || 0) > 0;
   if (fresh ? touch : false) { Save.settings.quality = 'rendah'; Save.settings.bloom = false; Save.settings.robotHelp = 'ringkas'; }
+  // Preferensi sistem Kurangi gerakan dipakai sebagai nilai awal (A4)
+  if (fresh ? (window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false) : false) Save.settings.reduceMotion = true;
 })();
 CONFIG.qualityPreset = Save.settings.quality;
 
@@ -2230,6 +2308,13 @@ function fatalScreen(title, lines) {
   boot.replaceChildren(card);
   boot.classList.remove('hidden');
 }
+// Kemajuan layar muat (A7): tiap tahap memberi browser satu kesempatan menggambar sebelum lanjut
+async function bootStep(pct, label) {
+  const fill = document.getElementById('boot-fill'), step = document.getElementById('boot-step');
+  if (fill) { fill.style.transform = 'scaleX(' + (pct / 100) + ')'; fill.parentElement.setAttribute('aria-valuenow', String(pct)); }
+  if (step) step.textContent = label;
+  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
+}
 // Three.js r187 membutuhkan WebGL2. Tanpa itu game berhenti dengan pesan, bukan layar muat yang menggantung.
 const renderer = (() => {
   try {
@@ -2251,6 +2336,7 @@ container.appendChild(renderer.domElement);
 
 renderer.shadowMap.enabled = Q.shadows;
 renderer.shadowMap.type = THREE.PCFShadowMap;
+await bootStep(15, 'Menyiapkan grafis');
 
 // Konteks WebGL hilang (GPU direset, memori GPU habis, tab di latar terlalu lama) dan pulih (A3, A7).
 // preventDefault mengizinkan browser memulihkan; Three.js membangun ulang state GL dan mengunggah ulang
@@ -3829,10 +3915,18 @@ const Env = {
     }
   },
   // Shadow camera berpusat pada pemain: frustum kecil sehingga tajam dan murah
+  // Pusat kamera bayangan dibulatkan ke kisi texel peta bayangan (A7): kamera bayangan tidak bergeser
+  // pecahan texel setiap frame, sehingga tepi bayangan tidak berkedip atau berenang saat kapal bergerak
+  _lu: new THREE.Vector3(), _lv: new THREE.Vector3(), _snap: new THREE.Vector3(),
   followLight(dir = this.sunDir) {
-    const p = Player.pos;
-    this.sun.position.copy(p).addScaledVector(dir, 300);
-    this.sun.target.position.copy(p);
+    const p = Player.pos, ts = CONFIG.light.shadowFrustum / Q.shadowMapSize;
+    const u = this._lu.set(0, 1, 0).cross(dir);
+    if (u.lengthSq() < 1e-6) u.set(1, 0, 0); else u.normalize();
+    const v = this._lv.copy(dir).cross(u).normalize();
+    const a = Math.round(p.dot(u) / ts) * ts, b = Math.round(p.dot(v) / ts) * ts, c = p.dot(dir);
+    const q = this._snap.copy(u).multiplyScalar(a).addScaledVector(v, b).addScaledVector(dir, c);
+    this.sun.position.copy(q).addScaledVector(dir, 300);
+    this.sun.target.position.copy(q);
     // Rim light tipis dari arah berlawanan matahari (hanya terang di angkasa)
     this.rim.position.copy(p).addScaledVector(dir, -300);
     this.rim.target.position.copy(p);
@@ -4673,7 +4767,7 @@ const VANTA = {
 // Kulit perisai: pendar fresnel additive, opasitas per instans
 const SHIELD_VERT = /* glsl */`varying vec3 vN; varying vec3 vV; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vN = normalize(mat3(modelMatrix) * normal); vV = cameraPosition - w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 const SHIELD_FRAG = /* glsl */`uniform float uI; uniform vec3 uC; varying vec3 vN; varying vec3 vV;
-  void main() { float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.5); gl_FragColor = vec4(uC * (f * 1.4 + 0.08) * uI, 1.0);
+  void main() { float f = pow(clamp(1.0 - abs(dot(normalize(vN), normalize(vV))), 0.0, 1.0), 2.5); gl_FragColor = vec4(uC * (f * 1.4 + 0.08) * uI, 1.0);
   #include <colorspace_fragment>
   }`;
 function shieldMaterial(color) {
@@ -6539,7 +6633,7 @@ const PLANET_FRAG = /* glsl */`
       float night = 1.0 - smoothstep(-0.2, 0.05, ndlG);
       col += texture2D(uNight, vUv).rgb * night * (1.0 - cl * 0.85) * 1.4;
     }
-    float rim = pow(1.0 - max(dot(Ng, V), 0.0), 2.6);
+    float rim = pow(clamp(1.0 - dot(Ng, V), 0.0, 1.0), 2.6);
     col += uAtmo * rim * uAtmoStr * 0.45 * clamp(ndlG * 0.9 + 0.2, 0.0, 1.0);
     gl_FragColor = vec4(col, 1.0);
     #include <colorspace_fragment>
@@ -6608,7 +6702,7 @@ const SUN_SPHERE_FRAG = /* glsl */`
     float mu = max(dot(normalize(vN), V), 0.0);
     vec3 col = mix(vec3(1.0, 0.42, 0.08), vec3(1.0, 0.86, 0.55), g);
     col *= (1.0 - spots * 0.45);
-    col *= 0.5 + 0.5 * pow(mu, 0.45);
+    col *= 0.5 + 0.5 * pow(clamp(mu, 0.0, 1.0), 0.45);
     col *= 1.25;
     gl_FragColor = vec4(col, 1.0);
     #include <colorspace_fragment>
@@ -7207,8 +7301,8 @@ const GALAXY_FRAG = /* glsl */`
     p.y /= uTilt;
     float r = length(p);
     if (r > 1.0) discard;
-    float th = atan(p.y, p.x);
-    float arm = pow(0.5 + 0.5 * cos(uArms * (th - log(r + 0.02) * 2.4)), 3.0);
+    float th = r > 1e-5 ? atan(p.y, p.x) : 0.0;
+    float arm = pow(max(0.5 + 0.5 * cos(uArms * (th - log(r + 0.02) * 2.4)), 0.0), 3.0);
     float n = bn3(vec3(p * 6.0, uRot * 3.0));
     float I = exp(-r * 9.0) * 2.2 + arm * exp(-r * 3.2) * (0.5 + n * 0.6);
     I *= smoothstep(1.0, 0.7, r);
@@ -7229,7 +7323,8 @@ const BLACKHOLE_FRAG = /* glsl */`
     // Piringan dilihat hampir dari samping
     vec2 dp = vec2(p.x, p.y / 0.22);
     float rd = length(dp);
-    float ang = atan(dp.y, dp.x);
+    // atan(0, 0) menghasilkan NaN di GPU Apple (ANGLE Metal); NaN yang lolos ke bloom menyebar menjadi kotak hitam
+    float ang = rd > 1e-5 ? atan(dp.y, dp.x) : 0.0;
     float swirl = bn3(vec3(rd * 14.0 - uTime * 0.6, ang * 3.0, 1.0));
     float disk = smoothstep(0.28, 0.34, rd) * smoothstep(0.95, 0.5, rd) * (0.55 + swirl * 0.7);
     float doppler = 1.0 + 0.75 * clamp(-p.x / max(rd, 0.001), -1.0, 1.0);
@@ -7617,7 +7712,7 @@ const Warp = {
     this.t += dt;
     this.fx = this.t < W.flashAt ? smoothstep(0, W.flashAt, this.t) : 1 - smoothstep(W.flashAt, W.duration, this.t);
     const fl = Math.exp(-Math.pow((this.t - W.flashAt) / 0.18, 2));
-    if (this.flash) this.flash.style.opacity = fl.toFixed(2);
+    if (this.flash) this.flash.style.opacity = (Save.settings.reduceMotion ? fl * 0.25 : fl).toFixed(2);   // kilatan warp diredam saat Kurangi gerakan
     if (this.jumped ? false : this.t >= W.flashAt) { this.jumped = true; this.teleport(); }
     if (this.t >= W.duration) { const done = this.onDone; this.onDone = null; this.cancel(); if (done) done(); }
   },
@@ -9578,12 +9673,30 @@ const Stars = {
       this.rgb[k] = [o.r, o.g, o.b];                                    // komponen sRGB untuk pendar partikel
     }
     this.mesh.setColorAt(0, this.colors.gold);
+    this.base = {};
+    for (const [k, v] of Object.entries(S.kinds)) this.base[k] = v.color;
     this.px = new Float32Array(S.max * 3); this.vx = new Float32Array(S.max * 3);
     this.life = new Float32Array(S.max); this.active = new Uint8Array(S.max); this.phase = new Float32Array(S.max);
     this.kind = new Array(S.max).fill('gold');
     scene.add(this.mesh);
   },
   reset() { this.active.fill(0); this.mesh.count = 0; this.timer = randRange(12, 20); for (const k in this.collected) this.collected[k] = 0; },
+  // Mode buta warna (A4): palet Okabe-Ito yang tetap terbedakan pada deuteranopia dan protanopia
+  CB: { red: 0xff6a00, green: 0x00c08a, blue: 0x56b4e9, gold: 0xf0e442, purple: 0xcc79a7 },
+  hex(kind) { return this.cb ? this.CB[kind] : this.base[kind]; },
+  setPalette(cb) {
+    if (this.cb === cb) return;
+    this.cb = cb;
+    for (const k of Object.keys(this.base)) {
+      const c = cb ? this.CB[k] : this.base[k];
+      this.colors[k].set(c).multiplyScalar(1.6);
+      const o = { r: 0, g: 0, b: 0 };
+      new THREE.Color(c).getRGB(o, THREE.SRGBColorSpace);
+      this.rgb[k] = [o.r, o.g, o.b];
+    }
+    for (let i = 0; i < this.mesh.count; i++) this.mesh.setColorAt(i, this.colors[this.kind[i]] || this.colors.gold);
+    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+  },
   spawn(kind, x, y, z, vx = 0, vy = 0, vz = 0) {
     const S = CONFIG.stars;
     let i = -1;
@@ -10117,7 +10230,9 @@ const SkyBake = {
   },
   get background() { return this.baked ? (Debug.off.has('sky') ? SPACE_BG : this.rt.texture) : SPACE_BG; },
 };
+await bootStep(35, 'Membangun langit dan model');
 SkyBake.bake();
+await bootStep(50, 'Membangun dunia');
 Stars.init();
 Companions.init();
 Ultimate.init();
@@ -10140,6 +10255,7 @@ for (const box of document.querySelectorAll('[data-keymap]')) {
 // Latar menu angkasa memakai area Saturnus agar cincin dan planet terlihat di belakang menu.
 SpaceWorld.area = CONFIG.solar.attractArea;
 setActiveWorld(Save.settings.terrain, CONFIG.seed);
+await bootStep(70, 'Menyiapkan antarmuka');
 Player.reset();
 
 /* =====================================================================
@@ -11006,7 +11122,7 @@ Events.on('playerRespawn', (lives) => showBanner(`NYAWA TERSISA ${lives}`, 1500)
 Events.on('buff', (type) => showBanner(CONFIG.buffs[type].label + '!', 1100));
 Events.on('ultimate', () => {
   showBanner('ULTIMATE!', 1200);
-  $('flash').animate([{ opacity: 0.85 }, { opacity: 0 }], { duration: 450, easing: 'ease-out' });
+  $('flash').animate([{ opacity: Save.settings.reduceMotion ? 0.2 : 0.85 }, { opacity: 0 }], { duration: Save.settings.reduceMotion ? 300 : 450, easing: 'ease-out' });
 });
 // Teks melayang saat mengambil bintang, berwarna sesuai jenis
 Events.on('starCollected', (kind, x, y, z) => {
@@ -11015,7 +11131,7 @@ Events.on('starCollected', (kind, x, y, z) => {
   d.pos.set(x, y, z); d.ox = (frand() - 0.5) * 40; d.t = 0.9;
   d.el.textContent = CONFIG.stars.kinds[kind].label;
   d.el.className = 'dmgnum star';
-  d.el.style.color = '#' + CONFIG.stars.kinds[kind].color.toString(16).padStart(6, '0');
+  d.el.style.color = '#' + Stars.hex(kind).toString(16).padStart(6, '0');
 });
 // Teks misi ringkas untuk baris tengah atas mode HP: bos, kontrak kampanye, atau gelombang
 function hpxMission() {
@@ -11359,6 +11475,8 @@ function setState(next) {
     const info = document.getElementById('continue-info');
     info.textContent = saved;
     info.classList.toggle('hidden', !saved);
+    // Simpanan rusak (A4): beri tahu sekali bahwa data diatur ulang, bukan diam-diam
+    if (Save.corrupt) { Save.corrupt = false; info.textContent = 'Data simpanan tidak terbaca dan sudah diatur ulang ke bawaan.'; info.classList.remove('hidden'); }
   }
   if (next === 'paused') document.getElementById('save-info').textContent = SessionSave.lastSavedAt ? 'Tersimpan otomatis pukul ' + new Date(SessionSave.lastSavedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
   ui.pause.classList.toggle('hidden', next !== 'paused');
@@ -11771,7 +11889,8 @@ const Settings = {
     for (const label of this.el.querySelectorAll('.set-grid > .set-label')) {
       const ctl = label.nextElementSibling;
       const keyEl = ctl ? ctl.querySelector('[data-key]') || (ctl.dataset.key ? ctl : null) : null;
-      const sec = keyEl ? this.SECTIONS[keyEl.dataset.key] || 'lainnya' : 'lainnya';
+      const grid = label.parentElement;
+      const sec = grid.dataset.sec ? grid.dataset.sec : keyEl ? this.SECTIONS[keyEl.dataset.key] || 'lainnya' : 'lainnya';
       label.dataset.sec = sec;
       if (ctl) ctl.dataset.sec = sec;
     }
@@ -12803,7 +12922,8 @@ const GlitchProbe = {
     const w = this.gw, h = this.gh, n = w * h;
     if (!this.mask || this.mask.length !== n) { this.mask = new Uint8Array(n); this.stack = new Int32Array(n); }
     const M = this.mask;
-    for (let i = 0; i < n; i++) { const ref = Math.min(a[i], c[i]); M[i] = (ref > 0.08 ? b[i] < ref * 0.4 : false) ? 1 : 0; }
+    // Kotak hitam sungguhan hampir nol (NaN atau tile kosong), bukan sekadar lebih gelap karena gerakan
+    for (let i = 0; i < n; i++) { const ref = Math.min(a[i], c[i]); M[i] = (ref > 0.1 ? b[i] < 0.03 : false) ? 1 : 0; }
     let best = null;
     for (let i = 0; i < n; i++) {
       if (M[i] !== 1) continue;
@@ -13455,6 +13575,8 @@ const GameHooks = {
     // Uji: abaikan status baterai perangkat penguji (Chromium membaca baterai asli laptop)
     ignoreBattery(v = true) { Pacer.batteryIgnored = !!v; Pacer.lowBattery = false; Pacer.applyQuality(); return Pacer.saver; },
     enemyPool() { return Enemies.list.length; },
+    renderTargets() { const c = Post.composer; return { composer: c ? c.renderTarget1.width + 'x' + c.renderTarget1.height : null, bloomMip0: Post.bloom ? Post.bloom.renderTargetsHorizontal[0].width : null, warmupMs: Warmup.ms, warmupTextures: Warmup.textures }; },
+    tutorial(cmd) { if (cmd === 'start') Tutorial.start(); if (cmd === 'skip') Tutorial.finish(true); return { active: Tutorial.active, step: Tutorial.cur, done: Save.settings.tutorialDone, text: Tutorial.active ? Tutorial.text() : '' }; },
     // Simulasi konteks WebGL hilang dan pulih (uji ketahanan)
     loseContext() { const x = renderer.getContext().getExtension('WEBGL_lose_context'); if (!x) return false; GLState.ext = x; x.loseContext(); return true; },
     restoreContext() { if (!GLState.ext) return false; GLState.ext.restoreContext(); return true; },
@@ -13738,10 +13860,10 @@ const Pacer = {
     this.applyQuality();
   },
   // AudioContext hanya berjalan saat terdengar: berhenti saat tab tersembunyi, jendela tidak fokus di menu, jeda, dan bisu
+  audioWanted() { return document.hidden ? false : Game.muted ? false : Game.state === 'paused' ? false : (this.focused ? true : Game.state !== 'menu'); },
   audioPolicy() {
     if (!Sfx.ctx) return;
-    const run = document.hidden ? false : Game.muted ? false : Game.state === 'paused' ? false : (this.focused ? true : Game.state !== 'menu');
-    if (run) Sfx.resume(); else Sfx.suspend();
+    if (this.audioWanted()) Sfx.resume(); else Sfx.suspend();
   },
 };
 
@@ -13764,6 +13886,208 @@ const PerfOverlay = {
       + '\nresolusi ' + size.x + 'x' + size.y + '  skala ' + Pacer.scale.toFixed(2) + '  pr ' + renderer.getPixelRatio().toFixed(2)
       + '\nkualitas ' + CONFIG.qualityPreset + '  mode ' + Pacer.mode + (Pacer.level ? ' turun ' + Pacer.level : '') + (Pacer.saver ? ' hemat' : '')
       + '\nbloom ' + (Post.wanted ? 'ya' : 'tidak') + '  bayangan ' + (Env.sun.castShadow ? 'ya' : 'tidak');
+  },
+};
+
+
+/* =====================================================================
+   PENGALAMAN PEMAIN (A4) - tutorial kontekstual pertama kali main, getar (haptik), ukuran teks,
+   kurangi gerakan, mode buta warna, wake lock, peringatan sebelum menutup, tombol buka suara.
+   Tidak mengubah gameplay: semuanya hanya petunjuk, umpan balik, dan tampilan.
+   ===================================================================== */
+// Tutorial: empat langkah singkat yang selesai saat pemain benar-benar melakukannya (maksimal 10 detik
+// per langkah), teks per mode (keyboard atau sentuh), bisa dilewati, bisa diulang dari Pengaturan.
+const Tutorial = {
+  el: null, textEl: null, step: -1, t: 0, acc: 0, shots0: 0, active: false, refresh: 0,
+  STEPS: [
+    { id: 'gerak', kb: 'Terbang: W dan S naik turun, A dan D belok', hp: 'Terbang: geser jempol di separuh kiri layar' },
+    { id: 'tembak', kb: 'Tembak: tahan Enter', hp: 'Tembak: tahan tombol besar di kanan bawah' },
+    { id: 'nitro', kb: 'Nitro: tekan Spasi untuk melesat', hp: 'Nitro: ketuk tombol api di atas tombol tembak' },
+    { id: 'manuver', kb: 'Manuver: Z Gulung Tong, X Balik Arah, C Looping', hp: 'Manuver: coba salah satu tombol panah melingkar' },
+  ],
+  init() {
+    this.el = document.createElement('div');
+    this.el.id = 'tutorial';
+    this.el.className = 'hidden';
+    this.el.setAttribute('role', 'status');
+    this.el.setAttribute('aria-live', 'polite');
+    this.textEl = document.createElement('span');
+    const skip = document.createElement('button');
+    skip.type = 'button'; skip.className = 'tut-skip'; skip.textContent = 'LEWATI';
+    skip.setAttribute('aria-label', 'Lewati tutorial');
+    skip.addEventListener('click', () => this.finish(true));
+    onButton(document.getElementById('btn-tutorial'), () => { this.replay(); UI.closeOverlay(); });
+    const pauseSkip = document.getElementById('btn-pause-tutorial');
+    onButton(pauseSkip, () => { this.finish(true); pauseSkip.classList.add('hidden'); });
+    Events.on('state', (next) => { if (next === 'paused') pauseSkip.classList.toggle('hidden', !this.active); });
+    this.el.append(this.textEl, skip);
+    document.body.appendChild(this.el);
+    // Mulai otomatis pada permainan pertama (tidak di mode uji ?debug=1 kecuali dipanggil lewat hook)
+    Events.on('state', (next) => {
+      if (next === 'playing' ? (this.pending ? true : (!Save.settings.tutorialDone ? !DEBUG_ON : false)) : false) { if (!this.active) this.start(); }
+      // Peringatan kilatan sekali pada permainan pertama (fotosensitif)
+      if (next === 'playing' ? (!Save.settings.flashWarned ? !DEBUG_ON : false) : false) {
+        Settings.set('flashWarned', true);
+        const m = 'Game ini memuat kilatan cahaya. Kurangi gerakan ada di Pengaturan, tab Akses.';
+        setTimeout(() => { if (!Notify.push(m, { kind: 'info', prio: 1 })) showToast(m); }, 4000);
+      }
+      if (this.active) this.el.classList.toggle('hidden', next !== 'playing' ? true : Touch.enabled);
+    });
+    Events.on('maneuver', () => { if (this.cur === 'manuver') this.next(); });
+  },
+  get cur() { return this.active ? this.STEPS[this.step].id : null; },
+  pending: false,
+  start() { this.pending = false; this.active = true; this.step = -1; this.next(); },
+  // Tombol ULANGI TUTORIAL: langsung bila sedang bermain, selain itu pada permainan berikutnya
+  replay() { Settings.set('tutorialDone', false); if (Game.state === 'playing') this.start(); else this.pending = true; },
+  text() { const st = this.STEPS[this.step]; return Touch.enabled ? st.hp : st.kb; },
+  next() {
+    this.step++;
+    this.t = 0; this.acc = 0; this.shots0 = Weapons.shotsFired; this.refresh = 0;
+    if (this.step >= this.STEPS.length) { this.finish(false); return; }
+    this.show();
+  },
+  show() {
+    const txt = (this.step + 1) + '/' + this.STEPS.length + '  ' + this.text();
+    this.textEl.textContent = txt;
+    this.el.classList.toggle('hidden', Touch.enabled ? true : Game.state !== 'playing');
+    if (Touch.enabled) Notify.push(txt, { kind: 'info', prio: 2, key: 'tutorial' });   // mode HP: lewat pusat notifikasi
+  },
+  finish(skipped) {
+    this.active = false; this.step = -1;
+    this.el.classList.add('hidden');
+    Settings.set('tutorialDone', true);
+    if (!skipped) { const m = 'Siap terbang! Hancurkan musuh dan kumpulkan bintang.'; if (!Notify.push(m, { kind: 'info', prio: 2 })) showToast(m); }
+  },
+  update(dt) {
+    if (!this.active ? true : Game.state !== 'playing') return;
+    this.t += dt;
+    const id = this.cur;
+    if (id === 'gerak') { if (Math.abs(Controls.pitch) + Math.abs(Controls.yaw) > 0.2) this.acc += dt; if (this.acc > 0.8) { this.next(); return; } }
+    else if (id === 'tembak') { if (Weapons.shotsFired - this.shots0 >= 5) { this.next(); return; } }
+    else if (id === 'nitro') { if (Player.nitroActive) { this.next(); return; } }
+    if (this.t > 10) { this.next(); return; }   // tidak memaksa: langkah berikutnya setelah 10 detik
+    if (Touch.enabled) { this.refresh -= dt; if (this.refresh <= 0) { this.refresh = 3; this.show(); } }
+  },
+};
+
+// Getar singkat (mode HP, opsi Getar): dibatasi agar tidak terus bergetar saat menembak beruntun
+const Haptic = {
+  last: 0,
+  pulse(ms, gap = 0) {
+    if (!Touch.enabled ? true : !Save.settings.haptics) return;
+    const now = performance.now();
+    if (now - this.last < gap) return;
+    this.last = now;
+    try { if (navigator.vibrate) navigator.vibrate(ms); } catch (err) { /* tidak didukung */ }
+  },
+};
+Events.on('shot', () => Haptic.pulse(8, 160));
+Events.on('playerHit', () => Haptic.pulse(40));
+Events.on('enemyDestroyed', (e, byPlayer) => { if (byPlayer) Haptic.pulse(22, 60); });
+Events.on('pickup', () => Haptic.pulse(14, 60));
+Events.on('starCollected', () => Haptic.pulse(12, 80));
+Events.on('playerDeath', () => Haptic.pulse(140));
+
+// Ukuran teks, kurangi gerakan, mode buta warna: diterapkan setiap pengaturan berubah
+const A11y = {
+  apply(s) {
+    document.body.dataset.text = s.textSize;
+    document.body.classList.toggle('reduce-motion', !!s.reduceMotion);
+    Pacer.reducedMotion = !!s.reduceMotion;
+    CamRig.shakeEnabled = s.reduceMotion ? false : s.cameraShake;
+    Stars.setPalette(!!s.colorBlind);
+  },
+};
+Events.on('settings', (s) => A11y.apply(s));
+
+// Layar tetap menyala selama bermain (Screen Wake Lock), dilepas saat jeda atau menu
+const WakeLock = {
+  lock: null,
+  async sync() {
+    const want = Game.state === 'playing' ? !document.hidden : false;
+    try {
+      if (want ? !this.lock : false) {
+        if (!navigator.wakeLock) return;
+        this.lock = await navigator.wakeLock.request('screen');
+        this.lock.addEventListener('release', () => { this.lock = null; });
+      } else if (!want ? this.lock : false) { const l = this.lock; this.lock = null; await l.release(); }
+    } catch (err) { this.lock = null; }   // ditolak (baterai lemah, tidak didukung): abaikan
+  },
+};
+Events.on('state', () => WakeLock.sync());
+document.addEventListener('visibilitychange', () => WakeLock.sync());
+
+// Peringatan sebelum menutup atau memuat ulang saat sesi berjalan (sesi tetap disimpan otomatis).
+// Tidak aktif di mode uji ?debug=1 agar navigasi otomatis tidak tertahan dialog.
+window.addEventListener('beforeunload', (e) => {
+  if (DEBUG_ON ? true : !Game.hasSession) return;
+  if (['playing', 'paused', 'countdown', 'levelup', 'contract', 'map', 'cutscene'].includes(Game.state)) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// Audio diblokir browser (misalnya iOS sebelum ketukan yang sah): tombol kecil untuk menyalakan suara
+const AudioUnlock = {
+  el: null, t: 0,
+  init() {
+    this.el = document.createElement('button');
+    this.el.type = 'button'; this.el.id = 'audio-unlock'; this.el.className = 'hidden';
+    this.el.textContent = 'KETUK UNTUK MENYALAKAN SUARA';
+    this.el.addEventListener('click', () => { onAudioGesture(); Sfx.resume(); this.el.classList.add('hidden'); });
+    document.body.appendChild(this.el);
+  },
+  update(dt) {
+    this.t -= dt;
+    if (this.t > 0) return;
+    this.t = 1;
+    const wanted = Sfx.ctx ? (Pacer.audioWanted() ? Sfx.ctx.state !== 'running' : false) : false;
+    if (wanted) { this.stuck = (this.stuck || 0) + 1; } else this.stuck = 0;
+    this.el.classList.toggle('hidden', this.stuck < 2);   // tertahan lebih dari 1 detik
+  },
+};
+
+/* Diagnosis kotak hitam di perangkat asli (?diag=1, A7): GlitchProbe aktif terus, overlay kecil berisi
+   piksel NaN terakhir, status konteks WebGL, ukuran target render, pixel ratio, dan jumlah frame dengan
+   blok hitam; tombol mengunduh log JSON untuk dikirim ke pengembang. */
+const Diag = {
+  el: null, pre: null, t: 0,
+  init() {
+    if (!DIAG_ON) return;
+    this.el = document.createElement('div');
+    this.el.id = 'diag';
+    this.pre = document.createElement('pre');
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'btn secondary'; btn.textContent = 'UNDUH LOG';
+    btn.addEventListener('click', () => this.download());
+    this.el.append(this.pre, btn);
+    document.body.appendChild(this.el);
+    GlitchProbe.start({ nanEvery: 120 });
+  },
+  rtInfo() {
+    const c = Post.composer;
+    return { canvas: renderer.domElement.width + 'x' + renderer.domElement.height, pixelRatio: renderer.getPixelRatio(),
+      composer: c ? c.renderTarget1.width + 'x' + c.renderTarget1.height : 'belum', bloomMip0: Post.bloom ? Post.bloom.renderTargetsHorizontal[0].width + 'x' + Post.bloom.renderTargetsHorizontal[0].height : 'belum',
+      maxTexture: renderer.capabilities.maxTextureSize, sky: SkyBake.size };
+  },
+  update(dt) {
+    this.t -= dt;
+    if (this.t > 0) return;
+    this.t = 0.5;
+    const r = GlitchProbe.report(), i = this.rtInfo();
+    this.pre.textContent = 'DIAGNOSIS RAPTOR13 ' + GAME_VERSION
+      + '\nframe diperiksa ' + r.frames + '  blok hitam ' + r.flaggedFrames + ' (' + r.per1000 + ' per 1000)'
+      + '\nNaN: piksel terakhir ' + (GlitchProbe.lastNan || 0) + ', pindaian ber-NaN ' + r.nanScansWithNaN + '/' + r.nanScans + ', objek non-finite ' + r.nonFiniteObjects
+      + '\nkonteks ' + (GLState.lost ? 'HILANG' : 'aktif') + '  hilang ' + GLState.lostCount + '  pulih ' + GLState.restoredCount
+      + '\nkanvas ' + i.canvas + '  pr ' + i.pixelRatio.toFixed(2) + '  composer ' + i.composer + '  bloom mip0 ' + i.bloomMip0
+      + '\nstate ' + Game.state + '  dunia ' + Worlds.active.id + '  kualitas ' + CONFIG.qualityPreset + '  bloom ' + (Post.wanted ? 'ya' : 'tidak');
+  },
+  download() {
+    const data = { versi: GAME_VERSION, waktu: new Date().toISOString(), browser: navigator.userAgent, layar: { w: screen.width, h: screen.height, dpr: window.devicePixelRatio },
+      gl: { log: GLState.log, lostCount: GLState.lostCount, restoredCount: GLState.restoredCount }, renderTargets: this.rtInfo(), perf: GameHooks.debug.perf(), probe: GlitchProbe.report() };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'raptor13-diagnosis.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   },
 };
 
@@ -13819,6 +14143,7 @@ function frame(now) {
   } else Pacer.next = now;
   const raw = Math.max((now - lastTime) / 1000, 0);
   let dt = Math.min(raw, CONFIG.maxDelta);
+  if (!(dt >= 0)) dt = 0;   // NaN dari jam yang melompat tidak boleh masuk simulasi (A7)
   if (Game.slowMo > 0) { Game.slowMo -= dt; dt *= CONFIG.collision.slowMotionScale; }   // gerak lambat saat hancur
   lastTime = now;
   Game.frame++;
@@ -13839,9 +14164,46 @@ function frame(now) {
     if (!isStatic ? iv < 250 : false) { Perf.frameMs += (iv - Perf.frameMs) * 0.05; Perf.push(iv, work); Pacer.observe(iv, fps); }
   }
   PerfOverlay.update(raw);
+  if (Diag.el) Diag.update(raw);
+  Tutorial.update(dt);
+  AudioUnlock.update(raw);
 }
 Pacer.init();
 onResize();
+Diag.init();
+Tutorial.init();
+AudioUnlock.init();
+A11y.apply(Save.settings);
+
+/* Pra-pemanasan (A7): semua material dikompilasi (termasuk objek dunia aktif yang sedang tersembunyi),
+   semua tekstur diunggah ke GPU, lalu satu frame penuh dirender di balik layar muat (termasuk pass bloom)
+   sebelum menu tampil. Tanpa ini material, tekstur kanvas, dan pass bloom pertama kali dibuat di tengah
+   animasi menu, sehingga ada frame dengan tekstur kosong atau tersendat. */
+const Warmup = {
+  ms: 0, textures: 0,
+  run() {
+    const t0 = performance.now(), hidden = [];
+    scene.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
+    try { renderer.compile(scene, camera); } catch (err) { /* dikompilasi saat dipakai */ }
+    for (const o of hidden) o.visible = false;
+    const seen = new Set();
+    const tex = (v) => { if (v ? (v.isTexture ? !seen.has(v) : false) : false) { seen.add(v); try { renderer.initTexture(v); } catch (err) { /* abaikan */ } } };
+    scene.traverse((o) => {
+      if (!o.material) return;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
+        for (const k of ['map', 'emissiveMap', 'normalMap', 'bumpMap', 'envMap', 'alphaMap', 'roughnessMap', 'metalnessMap']) tex(m[k]);
+        if (m.uniforms) for (const u of Object.values(m.uniforms)) tex(u ? u.value : null);
+      }
+    });
+    this.textures = seen.size;
+    renderer.info.reset();
+    render();   // satu frame penuh di balik layar muat (bloom ikut dibuat dan dikompilasi bila dipakai)
+    this.ms = Math.round(performance.now() - t0);
+  },
+};
+await bootStep(85, 'Mengompilasi shader');
+Warmup.run();
+await bootStep(100, 'Siap');
 // Setiap pemanggilan hook uji menandai frame kotor agar layar statis ikut digambar ulang
 for (const obj of [GameHooks, GameHooks.debug]) {
   for (const k of Object.keys(obj)) {

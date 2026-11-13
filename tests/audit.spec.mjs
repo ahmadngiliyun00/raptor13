@@ -261,3 +261,72 @@ test('A2: jendela kehilangan fokus di menu menghentikan render dan audio', async
   expect(p.audioState).toBe('suspended');
   await dbg(page, 'setFocus', true);
 });
+
+// ---------- UI/UX (A4) ----------
+test('A4: tutorial keyboard per langkah selesai lewat aksi nyata, bisa dilewati dan diulang', async ({ page }) => {
+  await play(page);
+  let t = await dbg(page, 'tutorial', 'start');
+  expect(t.step).toBe('gerak');
+  await expect(page.locator('#tutorial')).toBeVisible();
+  await expect(page.locator('#tutorial')).toContainText('W dan S');
+  await page.keyboard.down('KeyW'); await page.waitForTimeout(1200); await page.keyboard.up('KeyW');
+  await expect.poll(async () => (await dbg(page, 'tutorial')).step).toBe('tembak');
+  await page.keyboard.down('Enter'); await page.waitForTimeout(900); await page.keyboard.up('Enter');
+  await expect.poll(async () => (await dbg(page, 'tutorial')).step).toBe('nitro');
+  await page.keyboard.down('Space'); await page.waitForTimeout(400); await page.keyboard.up('Space');
+  await expect.poll(async () => (await dbg(page, 'tutorial')).step).toBe('manuver');
+  await page.keyboard.press('KeyX');
+  await expect.poll(async () => (await dbg(page, 'tutorial')).active).toBe(false);
+  expect((await dbg(page, 'tutorial')).done).toBe(true);
+  // Lewati
+  await dbg(page, 'tutorial', 'start');
+  await page.click('#tutorial .tut-skip');
+  expect((await dbg(page, 'tutorial')).active).toBe(false);
+  await expect(page.locator('#tutorial')).toBeHidden();
+});
+
+test('A4: getar di mode HP, ukuran teks, kurangi gerakan, mode buta warna, anti gulir', async ({ page }) => {
+  await page.addInitScript(() => { window.__vib = []; navigator.vibrate = (ms) => { window.__vib.push(ms); return true; }; });
+  await page.setViewportSize({ width: 844, height: 390 });
+  await play(page);
+  await dbg(page, 'setSetting', 'controlMode', 'hp');
+  await dbg(page, 'setGod', false);
+  await dbg(page, 'forceDamagePlayer', 1);
+  await expect.poll(() => page.evaluate(() => window.__vib.length)).toBeGreaterThan(0);
+  await dbg(page, 'setSetting', 'haptics', false);
+  const n = await page.evaluate(() => window.__vib.length);
+  await page.waitForTimeout(1200);
+  await dbg(page, 'forceDamagePlayer', 1);
+  expect(await page.evaluate(() => window.__vib.length)).toBe(n);
+  await dbg(page, 'setSetting', 'textSize', 'sangat');
+  expect(await page.evaluate(() => document.body.dataset.text)).toBe('sangat');
+  await dbg(page, 'setSetting', 'reduceMotion', true);
+  expect(await page.evaluate(() => document.body.classList.contains('reduce-motion'))).toBe(true);
+  await dbg(page, 'setSetting', 'colorBlind', true);
+  const css = await page.evaluate(() => { const cs = getComputedStyle(document.body); return { ob: cs.overscrollBehaviorY, ta: getComputedStyle(document.querySelector('#game canvas')).touchAction, us: cs.userSelect || cs.webkitUserSelect }; });
+  expect(css.ob).toBe('none');
+  expect(css.ta).toBe('none');
+  expect(css.us).toBe('none');
+  // Kurangi gerakan: menu attract diam (tidak merender ulang)
+  await page.evaluate(() => window.__game.pause());
+  await page.click('#btn-pause-menu');
+  if (await page.locator('#screen-confirm').isVisible()) await page.click('#confirm-yes');
+  await page.waitForTimeout(800);
+  expect((await dbg(page, 'perf')).isStatic).toBe(true);
+});
+
+test('A7: satu fungsi resize menyinkronkan kanvas, composer, dan bloom saat jendela diubah ukurannya', async ({ page }) => {
+  await play(page);
+  for (const [w, h] of [[1600, 900], [900, 600], [1280, 720]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.waitForTimeout(400);
+    const p = await dbg(page, 'perf');
+    expect(p.cssW).toBe(w);
+    expect(Math.abs(p.bufferW - Math.round(w * p.pixelRatio))).toBeLessThanOrEqual(1);
+    const rt = await page.evaluate(() => window.__game.debug.renderTargets?.());
+    if (rt ? rt.composer : false) expect(rt.composer).toBe(`${p.bufferW}x${p.bufferH}`);
+  }
+  const g = await dbg(page, 'glitchProbe', 'nan');
+  expect(g.nanPixels).toBe(0);
+  expect(g.objects).toEqual([]);
+});
