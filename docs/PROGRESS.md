@@ -103,7 +103,7 @@ y 20 sampai 80 persen) bebas UI.
 - H3 (SELESAI) HUD kompak (kiri atas 150x48, baris misi tengah atas, kanan atas hanya Jeda dan Suara), radar 48 sampai 56 px dengan ikon peta, teks minimum 11 px.
 - H4 (SELESAI) Pusat notifikasi tunggal dengan antrean prioritas (Piko, area, pickup, level, kontrak), indikator tepi untuk peringatan kritis, Bantuan robot: Penuh, Ringkas, Hanya ikon, Mati.
 - H5 (SELESAI) Kamera mode HP: jarak dan offset agar pesawat maksimal 18 persen tinggi di sepertiga bawah, opsi Jarak kamera.
-- H6 (BELUM) Menu dua kolom, jeda dua kolom, pengaturan bertab, kartu kontrak dan level, game over, stage clear, peta, hangar, atlas muat di 320 px; teks petunjuk per mode; overlay menyembunyikan HUD.
+- H6 (SELESAI) Menu dua kolom, jeda dua kolom, pengaturan bertab, kartu kontrak dan level, game over, stage clear, peta, hangar, atlas muat di 320 px; teks petunjuk per mode; overlay menyembunyikan HUD.
 - H7 (BELUM) Deteksi perangkat sentuh otomatis, layar penuh dan kunci orientasi, petunjuk Tambahkan ke Layar Utama di iOS, overlay putar layar.
 - H8 (BELUM) willReadFrequently, Enter di Pilih Mode, kualitas Rendah dan bloom mati di perangkat sentuh.
 - H9 (BELUM) Uji Playwright matriks penuh, debug.stressHud, layoutOverlaps diperluas, screenshot docs/screenshots/hp/, dua putaran perbaikan.
