@@ -83,3 +83,45 @@ server).
 
 Bila zoom masih terjadi di salah satu langkah, catat langkahnya, versi iOS, dan browsernya. Ganti mode
 kontrol dan ukuran teks tidak diperlukan untuk uji ini.
+
+## Pembaruan 2.3.1: game tetap utuh walau zoom lolos, dan uji terukur dengan ?diag=1
+
+Bug di screenshot pemilik (canvas menyusut ke kiri atas) sudah ditemukan penyebabnya dan diperbaiki: ukuran
+canvas dulu diambil dari `window.innerWidth`, yang di iOS ikut mengecil saat zoom. Rinciannya ada di
+`docs/bug/zoom-viewport.md`. Sekarang, walau iOS tetap memperbesar halaman, ukuran render, kamera, kapal, dan
+tombol tetap sama.
+
+### Langkah uji terukur (iPhone 12, Chrome iOS lalu Safari)
+
+1. Buka `https://raptor13.ngiliyun.my.id/?diag=1`. Overlay diagnosis tampil di atas game.
+2. Di menu: ketuk dua kali cepat di tengah, lalu di tombol MULAI. Catat baris "zoom dicegah" dan "skala".
+3. Mulai bermain. Ketuk dua kali cepat di langit, di zona joystick, di tombol tembak, dan di pojok kanan atas.
+4. Tahan joystick dengan jempol kiri sambil menahan tembak.
+5. Cubit dengan dua jari di tengah layar. Lihat apakah game tetap penuh layar dan kapal di tengah.
+6. Bila halaman membesar, tekan **Reset tampilan** pada tip di atas, lalu cubit untuk memperkecil bila perlu.
+7. Tekan **UNDUH LOG** pada overlay. Berkas JSON berisi bagian `zoom` dengan semua angka di bawah.
+
+### Templat laporan
+
+```text
+Perangkat dan versi iOS        :
+Browser dan versinya           : (Chrome iOS / Safari)
+Versi game (layar Tentang)     :
+Langkah 2 menu                 : halaman membesar? ya/tidak, skala:
+Langkah 3 gameplay             : halaman membesar? ya/tidak, skala:
+Langkah 4 joystick dan tembak  : berfungsi? ya/tidak
+Langkah 5 cubit                : game tetap penuh layar? ya/tidak, kapal di tengah? ya/tidak
+Langkah 6 Reset tampilan       : kembali normal? ya/tidak
+Dari overlay ?diag=1:
+  layout                       : (contoh 844x390)
+  visualViewport dan skala     :
+  skala tertinggi dan jam      :
+  canvas CSS dan buffer        :
+  resolusi                     :
+  resize diabaikan karena zoom :
+  zoom dicegah (dblclick, gesture, ketuk ganda, cubit):
+```
+
+Arti angka: "canvas CSS" harus selalu sama dengan "layout", walau "skala" lebih dari 1. Bila "skala tertinggi"
+pernah lebih dari 1,01, berarti iOS sempat memperbesar halaman. Itu dibatasi iOS (zoom aksesibilitas tidak
+bisa dimatikan sepenuhnya oleh situs), tetapi game tidak boleh rusak.

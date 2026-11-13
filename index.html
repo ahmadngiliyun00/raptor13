@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-+ofho+pszuzYrHGbrUFUVtkjlbgnhgvqb7L6nVYkGRg='; style-src 'self' 'sha256-d7Vn/dPeFRp6Gb72fSwJtw2v1RLnI8eMR66a6wEwvRI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-Mchxmj8zrQzEiu0zcQtaAW4bPASzn7xdh0MF82vfuCY='; style-src 'self' 'sha256-d7Vn/dPeFRp6Gb72fSwJtw2v1RLnI8eMR66a6wEwvRI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -2443,8 +2443,33 @@ if (!renderer) {
   ]);
   await new Promise(() => {});   // hentikan modul tanpa galat beruntun
 }
+/* Ukuran tata letak (E2, bug zoom iOS): satu sumber ukuran untuk canvas, renderer, composer dan bloom, kamera,
+   resolusi dinamis, posisi penanda HUD, dan satuan CSS. Diambil dari LAYOUT viewport
+   (documentElement.clientWidth dan clientHeight), BUKAN window.innerWidth atau innerHeight dan BUKAN
+   visualViewport: di iOS (Safari dan Chrome iOS) keduanya ikut mengecil saat halaman dicubit atau di-zoom,
+   sehingga dulu canvas menyusut menjadi kotak kecil di kiri atas (docs/bug/zoom-viewport.md). */
+const Layout = {
+  w: 0, h: 0, applied: '', resizes: 0, ignoredZoom: 0, rejected: 0, lastZoomScale: 1, lastZoomAt: '', maxScale: 1,
+  zoomScale() { const vv = window.visualViewport; return vv ? vv.scale : 1; },
+  update() {
+    const de = document.documentElement;
+    let w = de.clientWidth, h = de.clientHeight;
+    // Penjaga kewarasan: ukuran tidak masuk akal ditolak (pakai ukuran terakhir yang sah, dicatat untuk ?diag=1)
+    if (!(Number.isFinite(w) ? (Number.isFinite(h) ? (w >= 100 ? h >= 60 : false) : false) : false)) {
+      this.rejected++;
+      if (this.w > 0) return false;
+      w = Math.max(320, screen.width || 320); h = Math.max(180, screen.height || 180);
+    }
+    const sc = this.zoomScale();
+    if (sc > 1.01) { this.ignoredZoom++; this.lastZoomScale = Math.round(sc * 100) / 100; this.lastZoomAt = new Date().toISOString(); this.maxScale = Math.max(this.maxScale, this.lastZoomScale); }
+    const changed = w !== this.w ? true : h !== this.h;
+    this.w = w; this.h = h;
+    return changed;
+  },
+};
+Layout.update();
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pixelRatioMax, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(Layout.w, Layout.h);
 container.appendChild(renderer.domElement);
 
 renderer.shadowMap.enabled = Q.shadows;
@@ -2474,7 +2499,7 @@ renderer.domElement.addEventListener('webglcontextrestored', () => {
 }, false);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, window.innerWidth / window.innerHeight, CONFIG.camera.near, 2000);
+const camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, Layout.w / Layout.h, CONFIG.camera.near, 2000);
 camera.position.set(0, 3, 10);
 
 /* Post-processing: bloom hanya di medan angkasa (glow mesin, laser, bintang), mengikuti preset kualitas */
@@ -2488,7 +2513,7 @@ const Post = {
     if (this.composer) return;
     this.composer = new EffectComposer(renderer);
     this.composer.addPass(new RenderPass(scene, camera));
-    const w = window.innerWidth, h = window.innerHeight, scale = Q.bloom >= 1 ? 1 : 0.5;
+    const w = Layout.w, h = Layout.h, scale = Q.bloom >= 1 ? 1 : 0.5;
     // Threshold tinggi: hanya sumber cahaya (mesin, laser, bintang, matahari) yang berpendar
     this.bloom = new UnrealBloomPass(new THREE.Vector2(w * scale, h * scale), 0.55, 0.35, 0.86);
     this.composer.addPass(this.bloom);
@@ -2499,7 +2524,7 @@ const Post = {
   // ukuran penuh x pixel ratio, jadi bloom diatur ulang sesudahnya: setengah resolusi di bawah Tinggi.
   resize() {
     if (!this.composer) return;
-    const w = window.innerWidth, h = window.innerHeight, pr = renderer.getPixelRatio();
+    const w = Layout.w, h = Layout.h, pr = renderer.getPixelRatio();
     this.composer.setPixelRatio(pr);
     this.composer.setSize(w, h);
     const k = Q.bloom >= 1 ? 1 : 0.5;
@@ -2515,8 +2540,13 @@ const Post = {
 // resolusi dinamis), kamera, composer dan bloom, ukuran titik partikel dan bintang. Dipanggil saat
 // jendela berubah ukuran, saat skala resolusi dinamis berubah, dan setelah konteks WebGL pulih.
 function onResize() {
-  const w = window.innerWidth, h = window.innerHeight;
+  Layout.update();
+  const w = Layout.w, h = Layout.h;
   const pr = typeof Pacer !== 'undefined' ? Pacer.pixelRatio() : Math.min(window.devicePixelRatio || 1, Q.pixelRatioMax, 2);
+  // Resize karena zoom atau bar browser yang tidak mengubah layout tidak menyentuh renderer sama sekali
+  const key = w + 'x' + h + '@' + pr;
+  if (key === Layout.applied) return;
+  Layout.applied = key; Layout.resizes++;
   if (Math.abs(renderer.getPixelRatio() - pr) > 0.001) renderer.setPixelRatio(pr);
   renderer.setSize(w, h);
   camera.aspect = w / h;
@@ -2526,7 +2556,9 @@ function onResize() {
   if (typeof SpaceSky !== 'undefined') SpaceSky.setPixelRatio(renderer.getPixelRatio());
   if (typeof Pacer !== 'undefined') Pacer.dirty = true;
 }
-window.addEventListener('resize', onResize);
+// Resize langsung, lalu sekali lagi 120 ms kemudian (iOS memperbarui ukuran layout sedikit terlambat setelah rotasi)
+let _resizeTimer = 0;
+window.addEventListener('resize', () => { onResize(); clearTimeout(_resizeTimer); _resizeTimer = setTimeout(onResize, 120); });
 
 /* =====================================================================
    GEOMETRI PROSEDURAL - pembantu untuk model low-poly flat-shaded
@@ -6375,7 +6407,7 @@ const SpaceSky = {
     if (!this.flare) return;
     if (vis <= 0.01) { if (this.flareOn) { this.flare.style.opacity = 0; this.flareOn = false; } return; }
     this.flareOn = true;
-    const w = window.innerWidth, h = window.innerHeight;
+    const w = Layout.w, h = Layout.h;
     const sx = (_vc.x + 1) * 0.5 * w, sy = (1 - _vc.y) * 0.5 * h, cx = w / 2, cy = h / 2;
     this.flare.style.opacity = (vis * 0.85).toFixed(2);
     const kids = this.flare.children, ts = [0, 0.45, 0.8, 1.35];
@@ -8365,7 +8397,7 @@ const BossStats = {
     // Ukuran bos di layar (piksel): diameter sudut bola bos dibanding tinggi layar
     const p = this._p.copy(A).project(camera);
     if (p.z > 1 ? true : Math.max(Math.abs(p.x), Math.abs(p.y)) > 1) this.offscreen += dt;
-    const px = (b.size * 2) / (camera.position.distanceTo(A) * 2 * Math.tan(camera.fov * Math.PI / 360)) * window.innerHeight;
+    const px = (b.size * 2) / (camera.position.distanceTo(A) * 2 * Math.tan(camera.fov * Math.PI / 360)) * Layout.h;
     this.pxSum += px * dt; if (px < this.minPx) this.minPx = px;
   },
   summary() {
@@ -9157,7 +9189,7 @@ const BossFX = {
     // Latar Bumi terang (langit dan kabut): kontur lebih gelap dan pekat agar kontras luminans tetap tinggi
     const earth = Worlds.active === EarthWorld;
     u.uPx.value = H.px * (earth ? 1.3 : 1);
-    u.uPxWorld.value = 2 * Math.tan(camera.fov * Math.PI / 360) / Math.max(1, window.innerHeight);
+    u.uPxWorld.value = 2 * Math.tan(camera.fov * Math.PI / 360) / Math.max(1, Layout.h);
     const pulse = Save.settings.reduceMotion ? 1 : 0.82 + 0.18 * Math.sin(b.time * 3.2);
     const gold = b.vuln > 0 ? 0.5 + 0.5 * Math.sin(b.time * 14) : 0;
     u.uColor.value.setRGB(st.line[0], st.line[1], st.line[2]).lerp(this._c.setRGB(2.4, 1.9, 0.4), gold).multiplyScalar(earth ? 0.32 * pulse : H.k * pulse);
@@ -9169,11 +9201,11 @@ const BossFX = {
     // Penanda piksel minimum: bos di layar tetapi lebih kecil dari sekitar 14 piksel diberi titik bercahaya
     const A = (b.anchor || b.group).position, p = this._p.copy(A).project(camera);
     const onScreen = p.z < 1 ? Math.max(Math.abs(p.x), Math.abs(p.y)) <= 1 : false;
-    const px = (b.size * 2) / (Math.max(1, camera.position.distanceTo(A)) * 2 * Math.tan(camera.fov * Math.PI / 360)) * window.innerHeight;
+    const px = (b.size * 2) / (Math.max(1, camera.position.distanceTo(A)) * 2 * Math.tan(camera.fov * Math.PI / 360)) * Layout.h;
     const show = onScreen ? (px < 14 ? Game.state === 'playing' : false) : false;
     this.showDot(show);
     if (show) {
-      const x = Math.round((p.x + 1) * 0.5 * window.innerWidth), y = Math.round((1 - p.y) * 0.5 * window.innerHeight);
+      const x = Math.round((p.x + 1) * 0.5 * Layout.w), y = Math.round((1 - p.y) * 0.5 * Layout.h);
       if (changed('bossDot', x * 100000 + y)) this.dot.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
       if (changed('bossDotColor', b.kind)) this.dot.style.setProperty('--bc', st.css);
     }
@@ -9278,7 +9310,7 @@ const BossHud = {
     this.ed = Viewport.edges();
   },
   free(x, y, w, h) {
-    const W = window.innerWidth, H = window.innerHeight, m = 4;
+    const W = Layout.w, H = Layout.h, m = 4;
     const x0 = x - w / 2 - m, x1 = x + w / 2 + m, y0 = y - h / 2 - m, y1 = y + h / 2 + m;
     for (const r of this.rects) if (x0 < r.right ? (x1 > r.left ? (y0 < r.bottom ? y1 > r.top : false) : false) : false) return false;
     // Mode HP: zona tengah (x 30 sampai 70 persen, y 20 sampai 80 persen) selalu bebas
@@ -9288,7 +9320,7 @@ const BossHud = {
   // Titik pada lintasan tepi (persegi panjang di dalam tepi aman) terdekat dari (px, py), digeser sepanjang
   // keliling sampai tidak menimpa elemen HUD
   placeEdge(px, py, w, h) {
-    const W = window.innerWidth, H = window.innerHeight, e = this.ed;
+    const W = Layout.w, H = Layout.h, e = this.ed;
     const L = e.l + w / 2 + 2, R = W - e.r - w / 2 - 2, T = e.t + h / 2 + 2, B = H - e.b - h / 2 - 2;
     if (R <= L ? true : B <= T) return null;
     let x = clamp(px, L, R), y = clamp(py, T, B);
@@ -9315,7 +9347,7 @@ const BossHud = {
     this.updateIntro(dt);
     this.rectT -= dt;
     if (this.rectT <= 0) { this.rectT = 0.3; this.refreshRects(); }
-    const W = window.innerWidth, H = window.innerHeight, A = (b.anchor || b.group).position, P = Player.pos;
+    const W = Layout.w, H = Layout.h, A = (b.anchor || b.group).position, P = Player.pos;
     const d = this._d.copy(A).sub(P), dist = d.length() || 1;
     const lx = d.dot(Player._right), ly = d.dot(Player._up), lz = d.dot(Player.forward);
     this.rear = lz / dist < -0.5;   // kerucut 120 derajat di belakang
@@ -11907,8 +11939,8 @@ function updateDamageNumbers(dt) {
     _vc.copy(d.pos).project(camera);
     if (_vc.z > 1 || d.t <= 0) { if (d.shown) { d.shown = false; d.el.style.display = 'none'; } continue; }
     if (!d.shown) { d.shown = true; d.el.style.display = 'block'; }
-    const x = ((_vc.x + 1) * 0.5 * window.innerWidth + d.ox).toFixed(1);
-    const y = ((1 - _vc.y) * 0.5 * window.innerHeight - (0.8 - d.t) * 40 - 18).toFixed(1);
+    const x = ((_vc.x + 1) * 0.5 * Layout.w + d.ox).toFixed(1);
+    const y = ((1 - _vc.y) * 0.5 * Layout.h - (0.8 - d.t) * 40 - 18).toFixed(1);
     d.el.style.transform = 'translate(' + x + 'px, ' + y + 'px) translate(-50%, -50%)';
     d.el.style.opacity = Math.min(1, d.t * 3).toFixed(2);
   }
@@ -12239,8 +12271,8 @@ function updateHud(dt) {
   _vc.copy(Player.pos).addScaledVector(Player.forward, CONFIG.weapons.convergeDistance).project(camera);
   v = Player.alive ? _vc.z < 1 : false;
   if (changed('reticleVis', v)) hud.reticle.style.visibility = v ? 'visible' : 'hidden';
-  const x = Math.round((_vc.x + 1) * 0.5 * window.innerWidth);
-  const y = Math.round((1 - _vc.y) * 0.5 * window.innerHeight);
+  const x = Math.round((_vc.x + 1) * 0.5 * Layout.w);
+  const y = Math.round((1 - _vc.y) * 0.5 * Layout.h);
   if (changed('reticle', x * 100000 + y)) hud.reticle.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
 }
 
@@ -12253,7 +12285,7 @@ function placeHpBar(ent) {
   _vc.project(camera);
   if (_vc.z > 1 || Math.abs(_vc.x) > 1.05 || Math.abs(_vc.y) > 1.05) return;
   const b = hud.hpBars[hpBarCount++];
-  const x = ((_vc.x + 1) * 0.5 * window.innerWidth).toFixed(1), y = ((1 - _vc.y) * 0.5 * window.innerHeight).toFixed(1);
+  const x = ((_vc.x + 1) * 0.5 * Layout.w).toFixed(1), y = ((1 - _vc.y) * 0.5 * Layout.h).toFixed(1);
   if (!b.shown) { b.shown = true; b.el.style.display = 'block'; }
   b.el.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
   b.el.style.opacity = Math.min(1, ent.hpBarTimer * 2).toFixed(2);
@@ -12298,7 +12330,7 @@ function updateLeadMarker() {
     _vc.copy(best.vel).multiplyScalar(t).add(best.pos).project(camera);
     if (_vc.z < 1) {
       show = true;
-      leadEl.style.transform = 'translate(' + ((_vc.x + 1) * 0.5 * window.innerWidth).toFixed(1) + 'px, ' + ((1 - _vc.y) * 0.5 * window.innerHeight).toFixed(1) + 'px) rotate(45deg)';
+      leadEl.style.transform = 'translate(' + ((_vc.x + 1) * 0.5 * Layout.w).toFixed(1) + 'px, ' + ((1 - _vc.y) * 0.5 * Layout.h).toFixed(1) + 'px) rotate(45deg)';
     }
   }
   if (changed('lead', show)) leadEl.classList.toggle('hidden', !show);
@@ -12331,7 +12363,7 @@ function placeIndicator(n, px, py, ang) {
   hud.indicators[n].style.transform = 'translate(' + x + 'px, ' + y + 'px) rotate(' + a + 'rad)';
 }
 function updateIndicators() {
-  const w = window.innerWidth, h = window.innerHeight, margin = 28;
+  const w = Layout.w, h = Layout.h, margin = 28;
   let n = 0;
   for (let k = 0; k < Enemies.list.length; k++) {
     if (n >= hud.indicators.length) break;
@@ -13201,7 +13233,7 @@ const Viewport = {
   root: document.documentElement,
   override: null,   // [kiri, atas, kanan, bawah] dalam px dari query string
   probe: null,
-  w: window.innerWidth, h: window.innerHeight,
+  w: Layout.w, h: Layout.h,
   init() {
     try {
       const q = URLQ.get('safearea');
@@ -13220,12 +13252,12 @@ const Viewport = {
     window.addEventListener('orientationchange', () => setTimeout(() => this.update(), 120));
     this.update();
   },
-  // Ukuran tampak: visualViewport bila tidak sedang di-zoom, selain itu ukuran jendela
+  // Ukuran dari layout viewport (E2): tidak ikut berubah saat halaman di-zoom, sehingga --u, kontrol sentuh, dan
+  // HUD tetap di posisi dan ukuran yang sama walau iOS memperbesar halaman
   update() {
-    const vv = window.visualViewport;
-    const useVv = vv ? Math.abs(vv.scale - 1) < 0.01 : false;
-    this.w = Math.round(useVv ? vv.width : window.innerWidth);
-    this.h = Math.round(useVv ? vv.height : window.innerHeight);
+    Layout.update();
+    this.w = Layout.w;
+    this.h = Layout.h;
     this.root.style.setProperty('--vh1', (this.h / 100).toFixed(2) + 'px');
     this.root.style.setProperty('--app-h', this.h + 'px');
     Events.emit('viewport', this.w, this.h);
@@ -13278,6 +13310,7 @@ const ZoomGuard = {
   scale() { const vv = window.visualViewport; return vv ? vv.scale : 1; },
   check() {
     const vv = window.visualViewport, zoomed = vv ? vv.scale > 1.01 : false;
+    if (zoomed) { Layout.lastZoomScale = Math.round(vv.scale * 100) / 100; Layout.lastZoomAt = new Date().toISOString(); Layout.maxScale = Math.max(Layout.maxScale, Layout.lastZoomScale); }
     this.tip.classList.toggle('hidden', !zoomed);
     if (!zoomed) return;
     // Tip menempel di tepi atas area yang terlihat, tidak ikut membesar
@@ -13290,11 +13323,15 @@ const ZoomGuard = {
     this.meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1');
     this.meta.setAttribute('content', this.CONTENT);
   },
+  // Perbaikan terbaik yang tersedia: meta viewport disetel ulang, gulir ke pojok, ukuran render disinkronkan ulang.
+  // iOS tidak selalu mengizinkan zoom direset lewat kode; game tetap penuh layar berkat ukuran layout (E2).
   reset() {
     this.resets++;
     this.nudge();
     try { window.scrollTo(0, 0); } catch (err) { /* abaikan */ }
-    setTimeout(() => this.check(), 300);
+    Layout.applied = '';
+    onResize();
+    setTimeout(() => { this.nudge(); this.check(); }, 300);
   },
 };
 ZoomGuard.init();
@@ -13981,7 +14018,7 @@ const GlitchProbe = {
     }
     if (!best) return;
     this.flagged++;
-    const sx = window.innerWidth / w, sy = window.innerHeight / h;
+    const sx = Layout.w / w, sy = Layout.h / h;
     const entry = { t: Math.round(performance.now()), frame: Game.frame, cells: best.cnt,
       rect: [Math.round(best.x0 * sx), Math.round(best.y0 * sy), Math.round((best.x1 - best.x0 + 1) * sx), Math.round((best.y1 - best.y0 + 1) * sy)],
       state: Game.state, world: Worlds.active.id, quality: CONFIG.qualityPreset, dpr: window.devicePixelRatio || 1,
@@ -14143,7 +14180,7 @@ const GameHooks = {
         _vc.set(pb.p[i * 3], pb.p[i * 3 + 1], pb.p[i * 3 + 2]);
         const world = { x: round2(_vc.x), y: round2(_vc.y), z: round2(_vc.z) };
         _vc.project(camera);
-        out.push({ id: i, world, screen: { x: round2((_vc.x + 1) * 0.5 * window.innerWidth), y: round2((1 - _vc.y) * 0.5 * window.innerHeight) }, onScreen: _vc.z < 1 ? Math.max(Math.abs(_vc.x), Math.abs(_vc.y)) <= 1 : false });
+        out.push({ id: i, world, screen: { x: round2((_vc.x + 1) * 0.5 * Layout.w), y: round2((1 - _vc.y) * 0.5 * Layout.h) }, onScreen: _vc.z < 1 ? Math.max(Math.abs(_vc.x), Math.abs(_vc.y)) <= 1 : false });
       }
       return { instances: pb.mesh.count, visible: pb.mesh.visible, list: out };
     },
@@ -14487,7 +14524,7 @@ const GameHooks = {
         if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
       }
       const pr = renderer.getPixelRatio(), d = camera.position.distanceTo(A);
-      const expectPx = (b.size * 2) / (d * 2 * Math.tan(camera.fov * Math.PI / 360)) * window.innerHeight;
+      const expectPx = (b.size * 2) / (d * 2 * Math.tan(camera.fov * Math.PI / 360)) * Layout.h;
       const proj = _vc.copy(A).project(camera);
       return { kind, dist, world: Worlds.active.id, area: Worlds.active === SpaceWorld ? SpaceWorld.area : 'bumi', bloom: Post.wanted, quality: CONFIG.qualityPreset,
         pixels: Math.round(n / (pr * pr)), meanContrast: n ? round2(sum / n / 255) : 0, maxContrast: round2(max / 255),
@@ -14497,6 +14534,13 @@ const GameHooks = {
         fogged: scene.fog ? round2(clamp((d - scene.fog.near) / Math.max(1, scene.fog.far - scene.fog.near), 0, 1)) : 0 };
     },
     bossMetrics() { return BossStats.summary(); },
+    // Ukuran tata letak dan render (E2): layout viewport, visualViewport, canvas CSS dan buffer, kamera, resolusi dinamis
+    layout() {
+      const vv = window.visualViewport, cv = renderer.domElement, r = cv.getBoundingClientRect();
+      return { w: Layout.w, h: Layout.h, vv: vv ? { w: round2(vv.width), h: round2(vv.height), scale: round2(vv.scale) } : null, inner: { w: window['inner' + 'Width'], h: window['inner' + 'Height'] },
+        canvasCss: { w: Math.round(r.width), h: Math.round(r.height), left: Math.round(r.left), top: Math.round(r.top) }, buffer: { w: cv.width, h: cv.height },
+        aspect: round2(camera.aspect), pixelRatio: renderer.getPixelRatio(), dynScale: Pacer.scale, resizes: Layout.resizes, ignoredZoom: Layout.ignoredZoom, rejected: Layout.rejected, maxScale: Layout.maxScale };
+    },
     // Penjaga zoom (B7): isi meta viewport, gaya touch-action, dan jumlah event yang dicegah
     zoomGuard() {
       const cs = (sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).touchAction : null; };
@@ -14760,7 +14804,7 @@ const GameHooks = {
         calls: Perf.calls, triangles: Perf.triangles, points: Perf.points, lines: Perf.lines,
         geometries: m.geometries, textures: m.textures, programs: renderer.info.programs ? renderer.info.programs.length : 0,
         bufferW: size.x, bufferH: size.y, pixelRatio: round2(renderer.getPixelRatio()), megapixels: round2(size.x * size.y / 1e6),
-        cssW: window.innerWidth, cssH: window.innerHeight, dpr: window.devicePixelRatio || 1,
+        cssW: Layout.w, cssH: Layout.h, dpr: window.devicePixelRatio || 1,
         meshes, meshesVisible, instances, pointsObjects: pointsObjs, lights, shadowCasters,
         shadows: renderer.shadowMap.enabled ? Env.sun.castShadow : false, shadowMapSize: Q.shadows ? Q.shadowMapSize : 0,
         targetFps: Pacer.targetFps(), isStatic: Pacer.isStatic(), scale: Pacer.scale, perfMode: Pacer.mode, perfLevel: Pacer.level,
@@ -14997,11 +15041,12 @@ const Pacer = {
     let cap = r === '1' ? 1 : r === '1.5' ? 1.5 : r === '2' ? 2 : Q.pixelRatioMax;
     if (TOUCH_DEVICE) cap = Math.min(cap, 1.25);
     let pr = Math.min(dpr, cap);
-    if (CONFIG.qualityPreset !== 'tinggi') pr = Math.min(pr, Math.sqrt(2e6 / Math.max(1, window.innerWidth * window.innerHeight)));
+    if (CONFIG.qualityPreset !== 'tinggi') pr = Math.min(pr, Math.sqrt(2e6 / Math.max(1, Layout.w * Layout.h)));
     return Math.max(0.5, pr);
   },
   maxScale() { return this.saver ? 0.75 : 1; },
-  pixelRatio() { return Math.round(this.basePixelRatio() * Math.min(this.scale, this.maxScale()) * 1000) / 1000; },
+  // Lantai (E2): gambar tidak boleh tampak kasar; di perangkat sentuh minimal 0,7 piksel buffer per piksel CSS
+  pixelRatio() { return Math.max(TOUCH_DEVICE ? Math.min(0.7, this.basePixelRatio()) : 0.5, Math.round(this.basePixelRatio() * Math.min(this.scale, this.maxScale()) * 1000) / 1000); },
   setScale(v) {
     v = clamp(Math.round(v * 100) / 100, 0.6, 1);
     if (v === this.scale) return;
@@ -15306,10 +15351,22 @@ const Diag = {
       + '\nkonteks ' + (GLState.lost ? 'HILANG' : 'aktif') + '  hilang ' + GLState.lostCount + '  pulih ' + GLState.restoredCount
       + '\nkanvas ' + i.canvas + '  pr ' + i.pixelRatio.toFixed(2) + '  composer ' + i.composer + '  bloom mip0 ' + i.bloomMip0
       + '\nstate ' + Game.state + '  dunia ' + Worlds.active.id + '  kualitas ' + CONFIG.qualityPreset + '  bloom ' + (Post.wanted ? 'ya' : 'tidak');
+    const z = this.zoomInfo();
+    this.pre.textContent += '\nlayout ' + z.layout + '  visualViewport ' + z.vv + '  skala ' + z.scale + '  tertinggi ' + z.maxScale + (z.lastZoomAt ? ' (' + z.lastZoomAt.slice(11, 19) + ')' : '')
+      + '\ncanvas CSS ' + z.canvasCss + '  buffer ' + z.buffer + '  resolusi ' + z.dynScale + '  resize ' + z.resizes + '  diabaikan karena zoom ' + z.ignoredZoom
+      + '\nzoom dicegah: dblclick ' + z.blocked.dblclick + '  gesture ' + z.blocked.gesture + '  ketuk ganda ' + z.blocked.doubleTap + '  cubit ' + z.blocked.pinch;
+  },
+  // Pembacaan zoom dan ukuran (E2, D7) untuk uji manual di iPhone: layout viewport, visualViewport, canvas, event dicegah
+  zoomInfo() {
+    const vv = window.visualViewport, r = renderer.domElement.getBoundingClientRect();
+    return { layout: Layout.w + 'x' + Layout.h, vv: vv ? Math.round(vv.width) + 'x' + Math.round(vv.height) : '-', scale: vv ? vv.scale.toFixed(2) : '1.00',
+      maxScale: Layout.maxScale.toFixed(2), lastZoomAt: Layout.lastZoomAt, canvasCss: Math.round(r.width) + 'x' + Math.round(r.height),
+      buffer: renderer.domElement.width + 'x' + renderer.domElement.height, dynScale: Pacer.scale.toFixed(2), resizes: Layout.resizes, ignoredZoom: Layout.ignoredZoom,
+      rejected: Layout.rejected, blocked: { ...ZoomGuard.blocked }, resets: ZoomGuard.resets };
   },
   download() {
     const data = { versi: GAME_VERSION, waktu: new Date().toISOString(), browser: navigator.userAgent, layar: { w: screen.width, h: screen.height, dpr: window.devicePixelRatio },
-      gl: { log: GLState.log, lostCount: GLState.lostCount, restoredCount: GLState.restoredCount }, renderTargets: this.rtInfo(), perf: GameHooks.debug.perf(), probe: GlitchProbe.report() };
+      gl: { log: GLState.log, lostCount: GLState.lostCount, restoredCount: GLState.restoredCount }, renderTargets: this.rtInfo(), perf: GameHooks.debug.perf(), probe: GlitchProbe.report(), zoom: this.zoomInfo() };
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url; a.download = 'raptor13-diagnosis.json';
