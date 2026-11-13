@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-XQ+c4yW0i4Py8QLBkdX7EPecSxWMKBdshe3sk3UG5jo='; style-src 'self' 'sha256-+afmhOR+SwX69+MwANikDnEt61a+yHbQRQkMLe7k0mI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-lIOZhoEsm61CbDtHtEABusA615q4BZPSk7jduDP60eg='; style-src 'self' 'sha256-d7Vn/dPeFRp6Gb72fSwJtw2v1RLnI8eMR66a6wEwvRI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
 <!-- SEO dasar -->
@@ -499,6 +499,16 @@
      kanvas tidak meneruskan gestur ke browser (tanpa gulir atau zoom cubit) */
   html, body { overscroll-behavior: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   body.in-play, body.in-play #game, body.in-play #game canvas { touch-action: none; }
+  /* Cegah zoom tidak sengaja (B7): dua ketukan dan cubit. iOS (Safari dan Chrome iOS, keduanya WebKit) bisa
+     mengabaikan user-scalable=no, jadi lapisan CSS dan JS (ZoomGuard) tetap dipakai. Kanvas dan kontrol sentuh
+     tanpa gestur browser sama sekali; halaman dan layar menu hanya manipulation (tanpa zoom dua ketukan). */
+  html, body { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; -webkit-user-select: none; user-select: none; }
+  #game, #game canvas, #touch, #touch * { touch-action: none; }
+  .screen, .card, .screen button, .seg button { touch-action: manipulation; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea { font-size: max(16px, 1em); -webkit-user-select: text; user-select: text; }
+  #zoom-tip { position: fixed; left: 0; top: 0; z-index: 60; transform-origin: 0 0; display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px; margin: 8px;
+    border-radius: 12px; background: rgba(8, 14, 22, 0.94); border: 1px solid #ffd24a; color: #fff; font-size: 14px; font-weight: 700; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5); }
+  #zoom-tip button { font: inherit; font-size: 13px; padding: 8px 12px; min-height: 44px; border-radius: 8px; border: 0; background: #ffd24a; color: #14100a; font-weight: 900; }
   button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .btn:active:not(:disabled), .seg button:active, .set-tab:active, .tool:active { transform: scale(0.96); }
   .btn { transition: transform 0.08s ease-out, filter 0.12s; }
@@ -1037,6 +1047,7 @@
   <div id="lead" class="hidden"></div>
   <div id="boss-dot" class="hidden"></div>
   <div id="hit-side" class="hidden" aria-hidden="true"><span></span></div>
+  <div id="zoom-tip" class="hidden" role="status"><span>Zoom terdeteksi. Cubit untuk memperkecil</span><button type="button" id="zoom-reset">Reset tampilan</button></div>
   <!-- Pelacakan bos (B3, B4): penanda di atas bos, panah tepi layar, indikator di belakang, pengenalan, titik bidik -->
   <div id="boss-mark" class="hidden" aria-hidden="true">
     <i class="bm-c tl"></i><i class="bm-c tr"></i><i class="bm-c bl"></i><i class="bm-c br"></i>
@@ -1379,7 +1390,7 @@
       </div>
     </div>
     <div class="set-grid" data-sec="akses">
-      <span class="set-label">Ukuran teks</span>
+      <span class="set-label">Ukuran teks <small class="tog-note">(pengganti zoom browser)</small></span>
       <div class="seg" data-key="textSize">
         <button type="button" data-v="normal">Normal</button><button type="button" data-v="besar">Besar</button><button type="button" data-v="sangat">Sangat besar</button>
       </div>
@@ -13230,6 +13241,60 @@ const Viewport = {
 };
 Viewport.init();
 
+/* Penjaga zoom (B7): iOS (Safari dan Chrome iOS) memicu zoom browser saat halaman diketuk dua kali atau
+   dicubit, sehingga game tampak terpotong. Lapisan: meta viewport (bisa diabaikan iOS), CSS touch-action,
+   lalu JS di sini: gesturestart, gesturechange, gestureend (khusus WebKit), dblclick, touchend kedua dalam
+   350 ms, dan touchmove dua jari di luar kontrol sentuh dicegah (passive false, hanya di tempat itu, input
+   teks dikecualikan). Bila zoom tetap terjadi (visualViewport.scale di atas 1,01), meta viewport disetel
+   ulang dan tip kecil di tepi atas menawarkan Reset tampilan. iOS tidak selalu mengizinkan zoom direset
+   lewat kode; dalam kasus itu pemain perlu mencubit untuk memperkecil. */
+const ZoomGuard = {
+  lastEnd: 0, blocked: { gesture: 0, dblclick: 0, doubleTap: 0, pinch: 0 }, resets: 0,
+  tip: document.getElementById('zoom-tip'), meta: document.querySelector('meta[name="viewport"]'),
+  CONTENT: 'width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
+  editable(t) { return t ? (t.closest ? !!t.closest('input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select, [contenteditable="true"]') : false) : false; },
+  init() {
+    const opt = { passive: false };
+    for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => { e.preventDefault(); this.blocked.gesture++; }, opt);
+    document.addEventListener('dblclick', (e) => { if (!this.editable(e.target)) { e.preventDefault(); this.blocked.dblclick++; } }, opt);
+    document.addEventListener('touchend', (e) => {
+      const now = performance.now();
+      if (now - this.lastEnd < 350 ? !this.editable(e.target) : false) { e.preventDefault(); this.blocked.doubleTap++; }
+      this.lastEnd = now;
+    }, opt);
+    // Cubit dua jari di luar kontrol sentuh; multi-touch joystick, tembak, dan nitro (di dalam #touch) tidak diganggu
+    document.addEventListener('touchmove', (e) => {
+      if (e.touches.length < 2) return;
+      for (const t of e.touches) if (!(t.target ? (t.target.closest ? t.target.closest('#touch') : null) : null)) { e.preventDefault(); this.blocked.pinch++; return; }
+    }, opt);
+    const vv = window.visualViewport;
+    if (vv) { vv.addEventListener('resize', () => this.check()); vv.addEventListener('scroll', () => this.check()); }
+    document.getElementById('zoom-reset').addEventListener('click', () => this.reset());
+  },
+  scale() { const vv = window.visualViewport; return vv ? vv.scale : 1; },
+  check() {
+    const vv = window.visualViewport, zoomed = vv ? vv.scale > 1.01 : false;
+    this.tip.classList.toggle('hidden', !zoomed);
+    if (!zoomed) return;
+    // Tip menempel di tepi atas area yang terlihat, tidak ikut membesar
+    this.tip.style.transform = 'translate(' + Math.round(vv.offsetLeft) + 'px, ' + Math.round(vv.offsetTop) + 'px) scale(' + (1 / vv.scale).toFixed(3) + ')';
+    this.nudge();
+  },
+  // Pemulihan halus: meta viewport disetel ulang (iOS kadang kembali ke skala 1)
+  nudge() {
+    if (!this.meta) return;
+    this.meta.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1');
+    this.meta.setAttribute('content', this.CONTENT);
+  },
+  reset() {
+    this.resets++;
+    this.nudge();
+    try { window.scrollTo(0, 0); } catch (err) { /* abaikan */ }
+    setTimeout(() => this.check(), 300);
+  },
+};
+ZoomGuard.init();
+
 // Sumber sentuh (mode HP, H2): tiap pointerId dilacak terpisah sehingga multi-touch bekerja
 // (joystick, tembak, dan nitro bersamaan). Joystick analog melayang muncul di titik sentuh
 // pertama pada separuh kiri layar (kanan di mode kidal); gaya Tombol arah memakai cakram tetap.
@@ -14428,6 +14493,17 @@ const GameHooks = {
         fogged: scene.fog ? round2(clamp((d - scene.fog.near) / Math.max(1, scene.fog.far - scene.fog.near), 0, 1)) : 0 };
     },
     bossMetrics() { return BossStats.summary(); },
+    // Penjaga zoom (B7): isi meta viewport, gaya touch-action, dan jumlah event yang dicegah
+    zoomGuard() {
+      const cs = (sel) => { const el = document.querySelector(sel); return el ? getComputedStyle(el).touchAction : null; };
+      return { meta: ZoomGuard.meta ? ZoomGuard.meta.getAttribute('content') : '', scale: ZoomGuard.scale(), blocked: { ...ZoomGuard.blocked }, resets: ZoomGuard.resets,
+        touchAction: { html: cs('html'), body: cs('body'), canvas: cs('#game canvas'), touch: cs('#touch'), joyZone: cs('#joy-zone'), fire: cs('#touch .t-fire'), title: cs('#screen-title') },
+        textSizeAdjust: getComputedStyle(document.documentElement).webkitTextSizeAdjust || getComputedStyle(document.documentElement).textSizeAdjust || '',
+        // Aturan -webkit-text-size-adjust ada di stylesheet (properti khusus iOS, tidak selalu muncul di computed style desktop)
+        textSizeRule: [...document.styleSheets].some((sh) => { try { return [...sh.cssRules].some((r) => /text-size-adjust:\s*100%/.test(r.cssText)); } catch (err) { return false; } }) ? true : [...document.querySelectorAll('style')].some((st) => /-webkit-text-size-adjust:\s*100%/.test(st.textContent)),
+        callout: getComputedStyle(document.body).webkitTouchCallout || '', smallInputs: [...document.querySelectorAll('input, select, textarea')].filter((el) => !['checkbox', 'radio', 'range'].includes(el.type)).filter((el) => parseFloat(getComputedStyle(el).fontSize) < 16).length,
+        tipVisible: !ZoomGuard.tip.classList.contains('hidden') };
+    },
     // Tabrakan (B6). 'tabel': klasifikasi murni untuk daftar benda dan kecepatan (rendah 40, dasar 70, nitro 128,
     // ekstrem 600). Objek: uji nyata lewat jalur permainan, asteroid diletakkan tepat di jalur pemain lalu
     // disimulasikan frames langkah; mengembalikan tingkat, persen, HP sebelum dan sesudah, jumlah benturan

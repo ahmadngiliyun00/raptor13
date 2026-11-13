@@ -19,9 +19,12 @@ export default defineConfig({
   use: {
     baseURL: `http://localhost:${PORT}`,
     viewport: { width: 1280, height: 720 },
-    launchOptions: { args: [...gpuArgs, '--js-flags=--expose-gc'] },
   },
-  projects: [{ name: 'chromium', use: { browserName: 'chromium' } }],
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium', launchOptions: { args: [...gpuArgs, '--js-flags=--expose-gc'] } } },
+    // B7: pencegahan zoom iOS diuji di WebKit (mesin Safari dan Chrome iOS), hanya berkas zoom.spec.mjs
+    { name: 'webkit', testMatch: /zoom\.spec\.mjs$/, use: { browserName: 'webkit' } },
+  ],
   webServer: {
     command: `node tests/static-server.mjs ${PORT}`,
     url: `http://localhost:${PORT}/index.html`,
