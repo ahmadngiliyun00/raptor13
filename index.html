@@ -1019,6 +1019,10 @@
       <div class="range-wrap"><input type="range" min="70" max="130" step="5" data-key="controlSize" aria-label="Ukuran kontrol"><output data-for="controlSize"></output></div>
       <span class="set-label">Transparansi kontrol</span>
       <div class="range-wrap"><input type="range" min="0" max="80" step="5" data-key="controlTransparency" aria-label="Transparansi kontrol"><output data-for="controlTransparency"></output></div>
+      <span class="set-label">Jarak kamera</span>
+      <div class="seg" data-key="cameraDistance">
+        <button type="button" data-v="dekat">Dekat</button><button type="button" data-v="normal">Normal</button><button type="button" data-v="jauh">Jauh</button>
+      </div>
       <span class="set-label">Mode kidal</span>
       <label class="tog"><input type="checkbox" data-key="leftHanded"> Joystick di kanan, tombol aksi di kiri</label>
       <span class="set-label">Opsi</span>
@@ -1759,6 +1763,7 @@ const SETTING_DEFAULTS = {
   controlSize: 100,            // ukuran kontrol sentuh dalam persen (dibatasi anggaran layar)
   controlTransparency: 20,     // transparansi kontrol sentuh dalam persen (0 pekat)
   leftHanded: false,           // mode kidal: joystick di kanan, tombol aksi di kiri
+  cameraDistance: 'normal',    // jarak kamera chase: dekat | normal | jauh
   bloom: true,                 // efek bloom di medan angkasa (dimatikan oleh kualitas Rendah)
   robotHelp: 'penuh',          // bantuan robot Piko: penuh | ringkas (bawaan di perangkat sentuh) | ikon | mati
   touchPromptShown: false,
@@ -1772,6 +1777,7 @@ const SETTING_ENUMS = {
   aimAssist: ['mati', 'rendah', 'sedang'],
   robotHelp: ['penuh', 'ringkas', 'ikon', 'mati'],
   leftStyle: ['joystick', 'dpad'],
+  cameraDistance: ['dekat', 'normal', 'jauh'],
 };
 const SETTING_RANGES = { controlSize: [70, 130], controlTransparency: [0, 80], asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100], volMusic: [0, 100] };
 
@@ -9798,6 +9804,16 @@ const CamRig = {
   cinePos: new THREE.Vector3(), cineQuat: new THREE.Quaternion(),
   // Shot sinematik: 0 orbit lambat, 1 flyby (kamera diam, pesawat melintas)
   shot: 0, shotTime: 0, flyby: new THREE.Vector3(),
+  // Pembingkaian chase (H5): opsi Jarak kamera di semua mode, ditambah pembingkaian khusus mode HP
+  // di layar landscape pendek agar pesawat kecil di sepertiga bawah dan tidak tertutup kontrol.
+  frame: { dist: 1, height: 1, lookH: 0, fov: 0 },
+  HP_FRAME: { dist: 1.2, height: 1.05, lookH: 1.5, fov: 11 },
+  updateFraming() {
+    const opt = { dekat: 0.85, normal: 1, jauh: 1.25 }[Save.settings.cameraDistance] || 1;
+    const small = Save.settings.controlMode === 'hp' ? Viewport.h <= 520 : false;
+    const H = small ? this.HP_FRAME : { dist: 1, height: 1, lookH: 0, fov: 0 };
+    this.frame.dist = opt * H.dist; this.frame.height = opt * H.height; this.frame.lookH = H.lookH; this.frame.fov = H.fov;
+  },
 
   reset() {
     this.yaw = Player.yaw; this.pitch = 0; this.roll = 0; this.trauma = 0;
@@ -9837,12 +9853,13 @@ const CamRig = {
     // Lihat belakang (Shift): kamera di depan pesawat menghadap ke belakang
     this.lookBack = damp(this.lookBack, Controls.lookBack ? 1 : 0, 10, dt);
     const back = this.lookBack;
-    const dist = C.distance + Player.nitroFx * C.nitroPullBack;
-    this.offset.set(0, C.height, lerp(dist, -dist * 0.9, back)).applyQuaternion(this.q);
+    const F = this.frame;
+    const dist = C.distance * F.dist + Player.nitroFx * C.nitroPullBack;
+    this.offset.set(0, C.height * F.height, lerp(dist, -dist * 0.9, back)).applyQuaternion(this.q);
     camera.position.copy(Player.pos).add(this.offset);
     const minY = groundHeightAt(camera.position.x, camera.position.z) + 2.5;
     if (camera.position.y < minY) camera.position.y = minY;
-    this.look.set(0, C.lookHeight, lerp(-C.lookAhead, C.lookAhead, back)).applyQuaternion(this.q).add(Player.pos);
+    this.look.set(0, C.lookHeight + F.lookH, lerp(-C.lookAhead, C.lookAhead, back)).applyQuaternion(this.q).add(Player.pos);
     camera.up.set(0, 1, 0).applyQuaternion(this.q);
     camera.lookAt(this.look);
     camera.up.set(0, 1, 0);
@@ -9920,7 +9937,7 @@ const CamRig = {
       camera.rotateZ(Math.sin(t * 29.3) * s * 0.02);
     }
 
-    const targetFov = lerp(C.cinematicFov, lerp(C.fov, C.nitroFov, nf), this.blend) + Warp.fx * CONFIG.warp.fovBoost;
+    const targetFov = lerp(C.cinematicFov, lerp(C.fov, C.nitroFov, nf) + this.frame.fov, this.blend) + Warp.fx * CONFIG.warp.fovBoost;
     if (Math.abs(targetFov - camera.fov) > 0.01) {
       camera.fov = targetFov;
       camera.updateProjectionMatrix();
@@ -9929,6 +9946,8 @@ const CamRig = {
 };
 CamRig.reset();
 CamRig.setMode('cinematic');
+Events.on('settings', () => CamRig.updateFraming());
+Events.on('viewport', () => CamRig.updateFraming());
 // Menu memakai kamera sinematik, bermain memakai kamera chase
 Events.on('state', (next) => {
   if (next === 'menu') CamRig.setMode('cinematic');
@@ -12481,6 +12500,30 @@ window.__game = {
     },
     // Ubah satu pengaturan lewat jalur yang sama dengan panel Pengaturan
     setSetting(key, value) { if (!Object.hasOwn(SETTING_DEFAULTS, key)) return false; Settings.set(key, value); return Save.settings[key]; },
+    // Kotak pesawat pemain di layar dalam pecahan lebar dan tinggi (H5)
+    planeFrame() {
+      Player.rig.updateMatrixWorld(true);
+      camera.updateMatrixWorld();
+      // Hanya badan kapal: titik sudut mesh pekat yang tampil (nyala mesin, halo, efek transparan tidak dihitung)
+      const v = new THREE.Vector3();
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      Player.model.root.traverse((o) => {
+        if (!o.isMesh ? true : !o.visible) return;
+        const m = Array.isArray(o.material) ? o.material[0] : o.material;
+        if (m ? (m.transparent ? true : m.blending === THREE.AdditiveBlending) : true) return;
+        const pos = o.geometry.attributes.position;
+        if (!pos) return;
+        const step = Math.max(1, Math.floor(pos.count / 600));
+        for (let i = 0; i < pos.count; i += step) {
+          v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).project(camera);
+          if (v.z > 1) continue;
+          x0 = Math.min(x0, (v.x + 1) / 2); x1 = Math.max(x1, (v.x + 1) / 2); y0 = Math.min(y0, (1 - v.y) / 2); y1 = Math.max(y1, (1 - v.y) / 2);
+        }
+      });
+      return { left: round2(x0), right: round2(x1), top: round2(y0), bottom: round2(y1), h: round2(y1 - y0), w: round2(x1 - x0), cy: round2((y0 + y1) / 2), cx: round2((x0 + x1) / 2) };
+    },
+    // Pembingkaian kamera chase yang berlaku (H5); f menimpa parameter mode HP untuk penyetelan
+    framing(f) { if (f) { Object.assign(CamRig.HP_FRAME, f); CamRig.updateFraming(); } return { ...CamRig.frame, fovNow: round2(camera.fov) }; },
     // Uji tekanan HUD (H9): munculkan semua elemen sekaligus (bos, buff, semua peringatan, Piko panjang,
     // nama area, level, kombo, penemuan) lewat jalur yang sebenarnya; on = false mengembalikan normal
     stressHud(on = true) {
