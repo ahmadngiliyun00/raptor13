@@ -103,6 +103,23 @@ putaran tinjauan visual.
 | Mode keyboard desktop dan gameplay tidak berubah, semua tes lama lolos | Ya | `tests/game.spec.mjs` |
 | Tidak ada em dash dan ampersand di seluruh repo | Ya | `grep` 0 di seluruh berkas proyek di luar dependensi |
 
+## Blok BT: petunjuk bos, tabrakan berbasis ukuran, zoom iOS, rencana APK (B1 sampai B10)
+
+Bukti utama ada di `docs/bos/diagnosis.md`, `docs/bos/perilaku.md`, `docs/fisika/tabrakan.md`,
+`docs/zoom-ios.md`, dan `docs/apk/rencana-apk.md`. Uji: `tests/bos.spec.mjs` dan `tests/zoom.spec.mjs`.
+Screenshot sebelum dan sesudah ada di `docs/bos/screenshots/`.
+
+| Butir | Status | Bukti atau catatan |
+| --- | --- | --- |
+| Semua bos dan mini-bos terlihat jelas di semua dunia, dengan outline, ikon, panah tepi, jejak, arah gerak, dan blip radar | Ya, dengan catatan | Dari 576 pengukuran, yang tidak terlihat turun dari 84 menjadi 3, dan yang jelas naik dari 278 menjadi 498. Uji B2 lolos untuk 4 bos x 12 dunia x 4 jarak: minimal 20 piksel atau penanda tampil. Catatan: di jarak 1200 bos kecil hanya 7 sampai 14 piksel tinggi, jadi pelacakan bergantung pada penanda; Naga di medan Bumi kualitas Tinggi bisa tertutup awan |
+| Penyebab bos tidak terlihat teridentifikasi dengan bukti dan diperbaiki | Ya | Tabel butir a sampai j di diagnosis. Penyebab utama: material gelap tanpa emissive atau rim, far kamera Bumi (504 di Rendah) dan kabut, bos mengekor di luar layar, dan bos tidak masuk penanda tepi. Butir d, f, g, h, i, j terbukti bukan penyebab |
+| Siklus serang bos memberi jendela rentan di depan pemain, parameter per kesulitan bekerja, metrik terukur dan tertulis | Ya | Bot jelajah di kerucut depan: Mudah 68,6 persen, Normal 46,4 persen, Sulit 25,9 persen (sebelumnya 1 sampai 3 persen). Runtun ekor di bawah 4, 6, dan 9 detik. Sentuhan bos di bawah 1 per menit (sebelumnya sampai 10). Uji B5 lolos |
+| Tabrakan berbasis ukuran dan energi: benda kecil hanya mengurangi persen HP atau tidak berdampak; benda besar, planet, daratan, dan bos tetap fatal; tidak ada tabrakan tak terlihat atau hitung ganda | Ya | Tabel `collisionTest`: kerikil 0 persen, puing 1 sampai 3 persen, sedang 19 persen, raksasa, bulan, planet, daratan, dan bos fatal. Uji nyata mencatat tepat satu benturan, juga pada 100 satuan per frame. Bola tabrakan Phobos dan Deimos kini sama dengan permukaan yang terlihat |
+| Zoom dua kali ketuk dan cubit dicegah dengan semua lapisan B7, tes otomatis lolos, langkah uji manual iPhone tersedia | Ya, dengan catatan | 8 uji zoom lolos (WebKit iPhone 12 dan 14, iPhone 14 berponi, Chromium Pixel 7). Catatan: emulasi WebKit tidak menjalankan logika zoom iOS yang sebenarnya, jadi perilaku di iPhone asli belum terverifikasi. Langkah manual ada di `docs/zoom-ios.md` |
+| docs/apk/rencana-apk.md lengkap, spesifik, dengan rekomendasi tegas, tanpa implementasi di game | Ya | Rekomendasi: PWA, lalu TWA Bubblewrap, lalu Play Store. Tidak ada berkas Android, tombol, atau perubahan game untuk APK |
+| Tidak ada regresi gameplay, kontrol, performa, keamanan, atau tata letak HP | Ya | Suite lengkap 159 uji lolos (8 uji zoom dilewati karena khusus mesin lain), console bersih termasuk CSP. Metrik bot A5: 5 dari 6 kombinasi identik; satu menyimpang karena pantulan asteroid baru, tetap jauh di bawah ambang. Performa: frame 16,67 ms di 20 skenario, kerja JS 1,59 menjadi 1,51 ms. CSP berbasis hash diperbarui dan hook tetap hanya lewat `?debug=1` |
+| CHANGELOG, versi, tag, dan rilis diperbarui, tidak ada em dash dan ampersand | Ya | CHANGELOG 2.3.0, tag beranotasi `v2.3.0`, GitHub Release RAPTOR13 2.3.0. `GAME_VERSION` dan `package.json` 2.3.0. `git grep` tanpa em dash dan ampersand di berkas teks |
+
 ## Yang masih kurang menurut penilaian sendiri
 
 - Kinerja di perangkat HP sungguhan belum diukur; preset Tinggi butuh sekitar 1,3 detik untuk
@@ -118,3 +135,14 @@ putaran tinjauan visual.
   (mode Ringkas yang menjadi bawaan di perangkat sentuh muat).
 - Mode HP belum dicoba di perangkat sungguhan: Fullscreen API, kunci orientasi, safe area asli, dan
   rasa joystick hanya diuji lewat emulasi.
+- Bos (2.3.0): bot sederhana butuh lebih lama mengalahkan Pemburu Agung, Penambang, dan Naga karena bos tidak
+  lagi bisa ditempel dari belakang. Di Normal bot menghabiskan sekitar separuh HP dalam 3 menit. Rasa
+  pertarungan untuk pemain manusia belum diuji; parameter `BOSS_PILOT` mungkin perlu disetel setelah
+  dicoba pemilik.
+- Bos (2.3.0): penanda di atas bos menempel pada bos, jadi bisa berada di zona tengah atau menimpa panel HUD
+  saat bos melintas di sana. Panah tepi dan indikator di belakang yang dijaga dari tumpang tindih.
+- Zoom iOS (2.3.0): belum dicoba di iPhone asli. Bila iOS tetap memperbesar lewat cubit, hanya tip "Reset
+  tampilan" dan cubit manual yang tersedia; iOS tidak mengizinkan reset zoom lewat kode di semua kasus.
+- Tabrakan (2.3.0): ambang fatal ukuran sengaja 6,9 kali radius pesawat (R 18), bukan 2 kali seperti contoh
+  di spesifikasi, agar asteroid sedang dan besar tidak menjadi fatal. Bila pemilik ingin lebih ketat, cukup
+  ubah `fatalRatio`.
