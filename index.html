@@ -517,6 +517,32 @@
   body.mode-hp .buff { padding: 2px 6px; gap: 4px; font-size: 11px; }
   body.mode-hp .buff span { display: none; }
   body.mode-hp .buff svg { width: 13px; height: 13px; }
+  /* Pusat notifikasi mode HP (H4): elemen teks lama disembunyikan, diganti satu toast dan chip tepi */
+  body.mode-hp #piko-panel, body.mode-hp #data-panel, body.mode-hp #banner, body.mode-hp #toasts,
+  body.mode-hp #warning, body.mode-hp #rear-warn, body.mode-hp #comet-warn, body.mode-hp #critical { display: none !important; }
+  .notify, .alerts { display: none; }
+  body.mode-hp .notify { --eye: 24px; --nl: 2;
+    display: flex; position: absolute; left: 50%; top: calc(var(--sa-t) + 28px); transform: translateX(-50%); max-width: min(56vw, 340px);
+    align-items: center; gap: 6px; padding: 2px 10px 2px 4px; min-height: calc(var(--eye) + 4px); background: rgba(8, 14, 24, 0.8);
+    border: 1px solid var(--ui-line); border-radius: 14px; font-size: 12px; line-height: 13px; font-weight: 700; color: #eef4fa;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); pointer-events: none; opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0s linear 0.25s; }
+  body.mode-hp .notify.show { opacity: 1; visibility: visible; transition: opacity 0.2s; }
+  .notify:not(.piko) { padding-left: 10px; min-height: 0; padding-top: 3px; padding-bottom: 3px; }
+  #notify-eye { width: var(--eye); height: var(--eye); flex: none; display: none; }
+  .notify.piko #notify-eye { display: block; }
+  #notify-text { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--nl); line-clamp: var(--nl); overflow: hidden; }
+  #notify-text:empty { display: none; }
+  .notify.piko:has(#notify-text:empty) { padding-right: 4px; }
+  .notify.k-area { border-color: rgba(111, 220, 255, 0.7); }
+  .notify.k-new { border-color: #ffd24a; color: #fff3c4; }
+  .notify.k-alert { border-color: rgba(255, 77, 77, 0.7); }
+  body.mode-hp .alerts { display: flex; position: absolute; left: 50%; bottom: var(--sa-b); transform: translateX(-50%); gap: 6px; pointer-events: none; }
+  .alert { display: flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px 0 6px; border-radius: 12px; font-size: 11px; font-weight: 900;
+    letter-spacing: 0.06em; white-space: nowrap; color: #ffe0e0; background: rgba(120, 0, 0, 0.6); border: 1px solid var(--ui-bad); animation: alertBlink 0.7s steps(2) infinite; }
+  .alert svg { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .alert.comet { color: #d8f6ff; background: rgba(0, 70, 110, 0.6); border-color: #6fdcff; }
+  .alert.ic-only { padding: 0 4px; } .alert.ic-only span { display: none; }
+  @keyframes alertBlink { 50% { opacity: 0.5; } }
   body.mode-hp #warning, body.mode-hp #rear-warn, body.mode-hp #comet-warn, body.mode-hp #critical {
     top: auto; left: calc(50% - 33px); padding: 3px 7px; font-size: 10px; letter-spacing: 0.06em; white-space: nowrap; max-width: max(140px, calc(100vw - 520px)); overflow: hidden; text-overflow: ellipsis; }
   body.mode-hp #warning { bottom: calc(96px + var(--ed-b)); border-width: 1px; }
@@ -808,6 +834,14 @@
   <div id="fps" class="hidden">0 FPS</div>
   <div id="banner"></div>
   <div id="toasts"></div>
+  <!-- Mode HP (H4): satu toast notifikasi di tengah atas dan chip peringatan kritis di tepi bawah -->
+  <div id="notify" class="notify" aria-live="polite"><canvas id="notify-eye" width="48" height="48"></canvas><span id="notify-text"></span></div>
+  <div id="alerts" class="alerts">
+    <div class="alert hidden" data-alert="terrain"><svg viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg><span>TARIK NAIK</span></div>
+    <div class="alert hidden" data-alert="hp"><svg viewBox="0 0 24 24"><path d="M12 20.5C5 15 1.5 11.5 1.5 7 1.5 3.8 4 1.5 7 1.5c2.2 0 3.9 1.2 5 3 1.1-1.8 2.8-3 5-3 3 0 5.5 2.3 5.5 5.5 0 4.5-3.5 8-10.5 13.5z"/><path d="M12 8v5"/></svg><span>HP KRITIS</span></div>
+    <div class="alert hidden" data-alert="rear"><svg viewBox="0 0 24 24"><path d="M12 5v14M5.5 12.5L12 19l6.5-6.5"/></svg><span>MUSUH BELAKANG</span></div>
+    <div class="alert comet hidden" data-alert="comet"><svg viewBox="0 0 24 24"><circle cx="16" cy="8" r="3.5"/><path d="M13.5 10.5L4 20M11 8.5L5 14.5M15.5 12.5L9.5 18.5"/></svg><span>KOMET</span></div>
+  </div>
 </div>
 <!-- Kontrol sentuh (mode HP): joystick melayang atau tombol arah di kiri, cluster aksi di kanan (ditukar di mode kidal) -->
 <div id="touch" class="hidden" aria-hidden="true">
@@ -971,7 +1005,7 @@
       </div>
       <span class="set-label">Bantuan robot</span>
       <div class="seg" data-key="robotHelp">
-        <button type="button" data-v="penuh">Penuh</button><button type="button" data-v="tanpa-teks">Tanpa teks</button><button type="button" data-v="tanpa-suara">Tanpa suara</button><button type="button" data-v="mati">Mati</button>
+        <button type="button" data-v="penuh">Penuh</button><button type="button" data-v="ringkas">Ringkas</button><button type="button" data-v="ikon">Hanya ikon</button><button type="button" data-v="mati">Mati</button>
       </div>
       <span class="set-label">Mode kontrol</span>
       <div class="seg" data-key="controlMode">
@@ -1726,7 +1760,7 @@ const SETTING_DEFAULTS = {
   controlTransparency: 20,     // transparansi kontrol sentuh dalam persen (0 pekat)
   leftHanded: false,           // mode kidal: joystick di kanan, tombol aksi di kiri
   bloom: true,                 // efek bloom di medan angkasa (dimatikan oleh kualitas Rendah)
-  robotHelp: 'penuh',          // bantuan robot Piko: penuh | tanpa-teks | tanpa-suara | mati
+  robotHelp: 'penuh',          // bantuan robot Piko: penuh | ringkas (bawaan di perangkat sentuh) | ikon | mati
   touchPromptShown: false,
 };
 const SETTING_ENUMS = {
@@ -1736,7 +1770,7 @@ const SETTING_ENUMS = {
   terrain: ['space', 'earth'],
   spaceMode: ['campaign', 'free'],
   aimAssist: ['mati', 'rendah', 'sedang'],
-  robotHelp: ['penuh', 'tanpa-teks', 'tanpa-suara', 'mati'],
+  robotHelp: ['penuh', 'ringkas', 'ikon', 'mati'],
   leftStyle: ['joystick', 'dpad'],
 };
 const SETTING_RANGES = { controlSize: [70, 130], controlTransparency: [0, 80], asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100], volMusic: [0, 100] };
@@ -1759,7 +1793,10 @@ const Save = {
     const d = this.defaults();
     if (!raw || typeof raw !== 'object') return d;
     const isObj = (v) => (v ? typeof v === 'object' : false);
-    const rs = isObj(raw.settings) ? raw.settings : {};
+    const rs = isObj(raw.settings) ? { ...raw.settings } : {};
+    // Migrasi opsi Bantuan robot lama (H4): Tanpa teks menjadi Hanya ikon, Tanpa suara menjadi Ringkas
+    if (rs.robotHelp === 'tanpa-teks') rs.robotHelp = 'ikon';
+    if (rs.robotHelp === 'tanpa-suara') rs.robotHelp = 'ringkas';
     for (const k of Object.keys(SETTING_DEFAULTS)) {
       const v = rs[k], def = SETTING_DEFAULTS[k];
       if (typeof v !== typeof def) continue;
@@ -1823,7 +1860,7 @@ Save.load();
   let fresh = true;
   try { fresh = !window.localStorage.getItem(SAVE_KEY); } catch (err) { fresh = true; }
   const touch = (window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false) || (navigator.maxTouchPoints || 0) > 0;
-  if (fresh ? touch : false) Save.settings.quality = 'rendah';
+  if (fresh ? touch : false) { Save.settings.quality = 'rendah'; Save.settings.robotHelp = 'ringkas'; }
 })();
 CONFIG.qualityPreset = Save.settings.quality;
 
@@ -7076,6 +7113,8 @@ const Discovery = {
       Piko.say('discovery');
       Events.emit('discovery', id);
     }
+    // Mode HP: satu baris di pusat notifikasi (fakta lengkap ada di atlas Penemuan)
+    if (Notify.push(isNew ? 'PENEMUAN BARU: ' + F.name : F.name + ' · ' + F.cls, { kind: isNew ? 'new' : 'area', prio: 2, key: 'area-' + id })) return;
     this.el.classList.remove('hidden');
   },
   update(dt) {
@@ -10409,13 +10448,121 @@ function renderTitleBest() {
 }
 
 function showBanner(text, duration = 1800) {
+  if (Notify.push(text, { kind: 'info', prio: 2 })) return;   // mode HP: lewat pusat notifikasi
   hud.banner.textContent = text;
   hud.banner.animate(
     [{ opacity: 0, transform: 'scale(1.3)' }, { opacity: 1, transform: 'scale(1)', offset: 0.15 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }],
     { duration, easing: 'ease-out' }
   );
 }
-function showToast(text) {
+/* =====================================================================
+   PUSAT NOTIFIKASI MODE HP (H4) - satu antrean berprioritas untuk Piko, nama area, pickup, level,
+   kontrak, dan banner. Hanya satu toast tampil pada satu waktu di tengah atas, tepat di bawah baris
+   misi, dan tidak pernah masuk zona tengah (y di atas 20 persen tinggi). Pesan kedaluwarsa dibuang,
+   prioritas lebih tinggi menyela. Peringatan kritis tidak lewat sini, tetapi chip ikon di tepi bawah.
+   ===================================================================== */
+const Notify = {
+  el: $('notify'), textEl: $('notify-text'), eye: $('notify-eye'),
+  queue: [], cur: null, until: 0, gapUntil: 0, history: [],
+  get active() { return Touch.enabled; },
+  now() { return performance.now() / 1000; },
+  dur(item) { return clamp(2.5 + item.text.length * 0.02, 2.5, 3.5); },
+  push(text, opt = {}) {
+    if (!this.active) return false;
+    const now = this.now(), prio = opt.prio || 1;
+    const item = { text: String(text || ''), kind: opt.kind || 'info', prio, key: opt.key || String(text), born: now, expires: now + (prio >= 3 ? 6 : 4) };
+    if (this.cur ? this.cur.key === item.key : false) { this.cur = item; this.render(item); this.until = now + this.dur(item); return true; }
+    this.queue = this.queue.filter((q) => q.key !== item.key);
+    if (this.cur ? item.prio > this.cur.prio : now >= this.gapUntil) { this.show(item, now); return true; }
+    this.queue.push(item);
+    this.queue.sort((a, b) => (b.prio - a.prio) || (a.born - b.born));
+    if (this.queue.length > 4) this.queue.length = 4;   // antrean menumpuk: buang yang paling tidak penting
+    return true;
+  },
+  // Posisi dan jumlah baris: tepat di bawah baris misi (atau bar bos), tidak melewati 20 persen tinggi tampak
+  layout() {
+    const anchor = Bosses.active ? document.getElementById('boss-bar') : document.getElementById('hpx-top');
+    const r = anchor.getBoundingClientRect();
+    const top = Math.round((r.height > 0 ? r.bottom : Viewport.edges().t + 24) + 4);
+    const avail = Math.floor(Viewport.h * 0.2) - top - 1;
+    const lines = clamp(Math.floor((avail - 6) / 13), 1, 2);
+    const eye = clamp(avail - 6, 14, 24);
+    // Lebar dibatasi elemen tetangga pada pita tinggi yang sama (status kiri, buff, radar, ikon peta, toolbar)
+    const cx = Viewport.w / 2, band = lines * 13 + 8;
+    let half = Math.min(Viewport.w * 0.28, 170);
+    for (const el of document.querySelectorAll('#hpx-status, #buffs .buff, #toolbar .tool, #radar, #btn-radar-map')) {
+      const b = el.getBoundingClientRect();
+      if (b.width < 1 ? true : (b.bottom <= top ? true : b.top >= top + Math.max(band, eye + 4))) continue;
+      if (b.right <= cx) half = Math.min(half, cx - b.right - 6); else if (b.left >= cx) half = Math.min(half, b.left - cx - 6);
+    }
+    this.el.style.maxWidth = Math.max(120, Math.floor(half * 2)) + 'px';
+    this.el.style.top = top + 'px';
+    this.el.style.setProperty('--nl', String(lines));
+    this.el.style.setProperty('--eye', eye + 'px');
+  },
+  render(item) {
+    this.textEl.textContent = item.text;
+    this.el.className = 'notify show k-' + item.kind + (item.kind === 'piko' ? ' piko' : '');
+    if (item.kind === 'piko') { const g = this.eye.getContext('2d'); g.clearRect(0, 0, 48, 48); g.drawImage(Piko.face, 0, 0, 56, 56, 0, 0, 48, 48); }
+  },
+  show(item, now) {
+    this.cur = item;
+    this.bossAnchor = !!Bosses.active;
+    this.until = now + this.dur(item);
+    this.layout();
+    this.render(item);
+    this.history.push(item.text || '(ikon ' + item.kind + ')');
+    if (this.history.length > 30) this.history.shift();
+  },
+  hide() { this.cur = null; this.el.classList.remove('show'); },
+  update() {
+    if (!this.active) { if (this.cur) this.hide(); return; }
+    const now = this.now();
+    if (this.cur) {
+      if (now >= this.until) { this.hide(); this.gapUntil = now + 0.25; return; }
+      if (this.bossAnchor !== !!Bosses.active) { this.bossAnchor = !!Bosses.active; this.layout(); }   // bar bos muncul atau hilang
+      return;
+    }
+    if (now < this.gapUntil) return;
+    while (this.queue.length) { const next = this.queue.shift(); if (next.expires > now) { this.show(next, now); break; } }
+  },
+  reset() { this.queue.length = 0; this.hide(); this.gapUntil = 0; },
+};
+// Chip peringatan kritis di tepi bawah mode HP: urutan prioritas, teks hanya untuk yang paling penting bila ramai
+const ALERT_TEXT = { 'TARIK NAIK!': 'TARIK NAIK', 'TERLALU RENDAH': 'TERLALU RENDAH', 'TERLALU DEKAT': 'TERLALU DEKAT', 'KELUAR BATAS MISI': 'BATAS MISI' };
+hud.alertEls = {};
+for (const el of document.querySelectorAll('#alerts .alert')) hud.alertEls[el.dataset.alert] = el;
+function updateAlertsHp(hp) {
+  const play = Game.state === 'playing' ? Player.alive : false;
+  const F = Debug.forceAlerts;   // uji tekanan: semua peringatan dipaksa tampil
+  const warn = F ? 'TARIK NAIK!' : play ? (Player.warning || '') : '';
+  const on = F ? { terrain: true, hp: true, rear: true, comet: true }
+    : { terrain: !!warn, hp: play ? hp < CONFIG.player.criticalHp : false, rear: play ? Enemies.rearThreat : false, comet: Game.state === 'playing' ? Comets.threat !== null : false };
+  const key = Object.entries(on).map(([k, v]) => (v ? k : '')).join(',') + '|' + warn;
+  if (!changed('alerts', key)) return;
+  let shown = 0;
+  const count = Object.values(on).filter(Boolean).length;
+  for (const k of ['terrain', 'hp', 'rear', 'comet']) {
+    const el = hud.alertEls[k];
+    el.classList.toggle('hidden', !on[k]);
+    if (!on[k]) continue;
+    el.classList.toggle('ic-only', count >= 3 ? shown > 0 : false);
+    if (k === 'terrain') el.querySelector('span').textContent = ALERT_TEXT[warn] || 'AWAS';
+    shown++;
+  }
+  // Ruang di antara kontrol kiri dan cluster kanan: chip berteks diubah menjadi ikon saja dari belakang bila tidak muat
+  const box = $('alerts'), left = document.querySelector(Save.settings.leftStyle === 'dpad' ? '#dpad' : '#joy').getBoundingClientRect();
+  const act = Touch.actionsEl.getBoundingClientRect(), cx = Viewport.w / 2;
+  const limits = [left, act].filter((r) => r.width > 0).map((r) => (r.right <= cx ? cx - r.right : r.left - cx) - 8);
+  const maxW = Math.max(60, Math.floor(2 * Math.min(...limits, Viewport.w * 0.4)));
+  const list = ['comet', 'rear', 'hp', 'terrain'].map((k) => hud.alertEls[k]).filter((el) => !el.classList.contains('hidden'));
+  for (const el of list) { if (box.scrollWidth <= maxW) break; el.classList.add('ic-only'); }
+}
+
+// minor = popup skor; di mode HP dibuang karena angka emas melayang sudah menunjukkannya
+function showToast(text, minor = false) {
+  if (Touch.enabled ? minor : false) return;
+  if (Notify.push(text, { kind: 'info', prio: 1 })) return;
   const el = hud.toastPool[hud.toastNext];
   hud.toastNext = (hud.toastNext + 1) % hud.toastPool.length;
   el.textContent = text;
@@ -10433,7 +10580,7 @@ Events.on('score', (amount, label) => {
   const m = Combo.multiplier;
   const isKill = label !== 'ULTIMATE' ? amount > 0 : false;
   const suffix = isKill ? (m > 1 ? `  x${m}` : '') : '';
-  showToast(`+${amount} ${label}${suffix}`);
+  showToast(`+${amount} ${label}${suffix}`, true);
 });
 Events.on('playerHit', (amount) => { hud.vignetteLevel = Math.min(1, hud.vignetteLevel + amount / 20); });
 // Hit marker di reticle saat peluru pemain memberi damage (merah bila target hancur)
@@ -10581,7 +10728,8 @@ function updateHud(dt) {
   if (Game.state === 'playing') Radar.update();
   v = Game.state === 'playing' ? (Player.alive ? hp < CONFIG.player.criticalHp : false) : false;
   if (changed('critical', v)) $('critical').classList.toggle('hidden', !v);
-  if (Touch.enabled) updateHudHp(hp);
+  if (Touch.enabled) { updateHudHp(hp); updateAlertsHp(hp); }
+  Notify.update();
 
   hud.hitTimer = Math.max(0, hud.hitTimer - dt);
   v = hud.hitTimer > 0 ? (hud.hitKill ? 'on kill' : 'on') : '';
@@ -10943,6 +11091,7 @@ function resetSession(keepWorld = false) {
   Stars.reset();
   Ultimate.reset();
   Piko.reset();
+  Notify.reset();
   Metrics.reset();
   hud.vignetteLevel = 0;
   Game.hasSession = true;
@@ -11227,23 +11376,23 @@ Events.on('gameover', () => {
 
 /* Piko: peringatan bersubtitle dan bunyi bip, dengan jeda minimum, cooldown per pesan dan prioritas */
 const PIKO_LINES = {
-  enemyBehind: { text: 'Ada musuh di belakang kita! Coba Balik Arah dengan X.', mood: 'alert', prio: 3 },
-  hpLow: { text: 'Integritas kritis! Cari bintang perbaikan, cepat.', mood: 'danger', prio: 4 },
-  waveStart: { text: 'Gelombang baru datang. Siap, Raptor 13?', mood: 'calm', prio: 1 },
-  combo: { text: 'Mantap! Kombo terus naik, jangan berhenti!', mood: 'happy', prio: 1 },
-  rarePickup: { text: 'Sinyal langka terdeteksi di dekat kita. Kuberi tanda hijau.', mood: 'happy', prio: 2 },
-  comet: { text: 'Komet mendekat! Menyingkir atau hancurkan.', mood: 'alert', prio: 3 },
-  mine: { text: 'Ranjau di dekat sini. Jangan terlalu rapat.', mood: 'danger', prio: 3 },
-  gate: { text: 'Gerbang loncat terbuka. Ayo kita pergi!', mood: 'happy', prio: 2 },
-  terrain: { text: 'Terlalu dekat dengan permukaan! Tarik naik!', mood: 'danger', prio: 4 },
-  boundary: { text: 'Kita di tepi wilayah misi. Putar balik, Raptor 13!', mood: 'alert', prio: 3 },
-  discovery: { text: 'Penemuan baru! Datanya kusimpan di atlas.', mood: 'happy', prio: 2 },
-  boss: { text: 'Kapal besar mendekat! Cari titik lemahnya.', mood: 'alert', prio: 4 },
-  bossPhase: { text: 'Polanya berubah! Tetap bergerak.', mood: 'alert', prio: 3 },
-  target: { text: 'Komandan bertanda terdeteksi. Itu target kontrak kita!', mood: 'alert', prio: 3 },
-  contractburu: { text: 'Kontrak buruan diterima. Komandan bertanda akan muncul sebentar lagi.', mood: 'calm', prio: 2 },
-  contractkawal: { text: 'Kargo kawan bergantung pada kita. Jauhkan peluru Vanta darinya.', mood: 'calm', prio: 2 },
-  contractbersihkan: { text: 'Bersihkan sektor! Aku yang menghitung, kamu yang menembak.', mood: 'happy', prio: 2 },
+  enemyBehind: { text: 'Ada musuh di belakang kita! Coba Balik Arah dengan X.', mood: 'alert', prio: 3, short: 'Musuh di belakang! Balik Arah!', touch: 'Ada musuh di belakang kita! Coba tombol Balik Arah.' },
+  hpLow: { text: 'Integritas kritis! Cari bintang perbaikan, cepat.', mood: 'danger', prio: 4, short: 'Integritas kritis! Cari perbaikan.' },
+  waveStart: { text: 'Gelombang baru datang. Siap, Raptor 13?', mood: 'calm', prio: 1, short: 'Gelombang baru datang!' },
+  combo: { text: 'Mantap! Kombo terus naik, jangan berhenti!', mood: 'happy', prio: 1, short: 'Kombo naik terus!' },
+  rarePickup: { text: 'Sinyal langka terdeteksi di dekat kita. Kuberi tanda hijau.', mood: 'happy', prio: 2, short: 'Sinyal langka, kuberi tanda hijau.' },
+  comet: { text: 'Komet mendekat! Menyingkir atau hancurkan.', mood: 'alert', prio: 3, short: 'Komet mendekat! Menyingkir!' },
+  mine: { text: 'Ranjau di dekat sini. Jangan terlalu rapat.', mood: 'danger', prio: 3, short: 'Awas ranjau di dekat sini!' },
+  gate: { text: 'Gerbang loncat terbuka. Ayo kita pergi!', mood: 'happy', prio: 2, short: 'Gerbang loncat terbuka!' },
+  terrain: { text: 'Terlalu dekat dengan permukaan! Tarik naik!', mood: 'danger', prio: 4, short: 'Terlalu dekat! Tarik naik!' },
+  boundary: { text: 'Kita di tepi wilayah misi. Putar balik, Raptor 13!', mood: 'alert', prio: 3, short: 'Tepi wilayah misi, putar balik!' },
+  discovery: { text: 'Penemuan baru! Datanya kusimpan di atlas.', mood: 'happy', prio: 2, short: 'Penemuan baru tersimpan di atlas!' },
+  boss: { text: 'Kapal besar mendekat! Cari titik lemahnya.', mood: 'alert', prio: 4, short: 'Kapal besar! Cari titik lemahnya.' },
+  bossPhase: { text: 'Polanya berubah! Tetap bergerak.', mood: 'alert', prio: 3, short: 'Polanya berubah, tetap bergerak!' },
+  target: { text: 'Komandan bertanda terdeteksi. Itu target kontrak kita!', mood: 'alert', prio: 3, short: 'Target kontrak terdeteksi!' },
+  contractburu: { text: 'Kontrak buruan diterima. Komandan bertanda akan muncul sebentar lagi.', mood: 'calm', prio: 2, short: 'Komandan bertanda segera muncul.' },
+  contractkawal: { text: 'Kargo kawan bergantung pada kita. Jauhkan peluru Vanta darinya.', mood: 'calm', prio: 2, short: 'Lindungi kargo kawan!' },
+  contractbersihkan: { text: 'Bersihkan sektor! Aku yang menghitung, kamu yang menembak.', mood: 'happy', prio: 2, short: 'Bersihkan sektor, aku menghitung!' },
 };
 const Piko = {
   panel: document.getElementById('piko-panel'), face: document.getElementById('piko-face'), textEl: document.getElementById('piko-text'),
@@ -11267,6 +11416,12 @@ const Piko = {
     g.shadowBlur = 0;
   },
   // Ucapan: dibatasi jeda minimum dan cooldown per pesan; prioritas lebih tinggi boleh menyela
+  // Teks sesuai opsi Bantuan robot: penuh, ringkas, atau kosong (hanya ikon). Mode HP tanpa petunjuk tombol keyboard.
+  textFor(L) {
+    if (this.help === 'ikon') return '';
+    if (this.help === 'ringkas') return L.short || L.text;
+    return Touch.enabled ? (L.touch || L.text) : L.text;
+  },
   say(key) {
     const L = PIKO_LINES[key];
     if (!L || this.help === 'mati' || Game.state !== 'playing') return false;
@@ -11276,14 +11431,15 @@ const Piko = {
     this.last = t; this.lastByKey[key] = t; this.curPrio = L.prio;
     this.said.push(key);
     this.setMood(L.mood, this.showTime);
-    if (this.help !== 'tanpa-teks') {
+    const text = this.textFor(L);
+    if (Touch.enabled) Notify.push(text, { kind: 'piko', prio: L.prio + 1, key: 'piko-' + key });
+    else {
       this.textEl.innerHTML = '';
-      const b = document.createElement('b'); b.textContent = 'PIKO';
-      this.textEl.append(b, document.createTextNode(L.text));
+      if (text) { const b = document.createElement('b'); b.textContent = 'PIKO'; this.textEl.append(b, document.createTextNode(text)); }
       this.panel.classList.remove('hidden');
       this.showLeft = this.showTime;
     }
-    if (this.help !== 'tanpa-suara') Sfx.pikoBeep(L.mood);
+    Sfx.pikoBeep(L.mood);
     return true;
   },
   update(dt) {
@@ -12317,10 +12473,50 @@ window.__game = {
     offerCards(ids) { Levels.open(ids); return Levels.offer.map((c) => c.id); },
     pickCard(id) { return Levels.choose(id); },
     companions() { return Companions.list.map((c) => ({ active: c.active, visible: c.group.visible, inScene: !!c.group.parent, d: round2(c.pos.distanceTo(Player.pos)) })); },
+    // Ukuran tampak, satuan --u, skala kontrol, dan jarak tepi efektif (H1)
+    viewport() {
+      const px = (e) => round2(Viewport.px(e));
+      return { w: Viewport.w, h: Viewport.h, u: px('var(--u)'), cu: px('var(--cu)'), cs: Number(getComputedStyle(document.documentElement).getPropertyValue('--cs')) || 1,
+        sa: { l: px('var(--sa-l)'), t: px('var(--sa-t)'), r: px('var(--sa-r)'), b: px('var(--sa-b)') }, ed: Viewport.edges(), override: Viewport.override };
+    },
+    // Ubah satu pengaturan lewat jalur yang sama dengan panel Pengaturan
+    setSetting(key, value) { if (!Object.hasOwn(SETTING_DEFAULTS, key)) return false; Settings.set(key, value); return Save.settings[key]; },
+    // Uji tekanan HUD (H9): munculkan semua elemen sekaligus (bos, buff, semua peringatan, Piko panjang,
+    // nama area, level, kombo, penemuan) lewat jalur yang sebenarnya; on = false mengembalikan normal
+    stressHud(on = true) {
+      Debug.forceAlerts = !!on;
+      hud.last.alerts = null;
+      if (!on) return true;
+      if (!Bosses.active) Bosses.start('hunter');
+      Buffs.overdrive = 10; Buffs.destroyer = 10;
+      Combo.count = 12; Combo.timer = CONFIG.combo.window;
+      Player.ult = 1;
+      Piko.last = -100; Piko.lastByKey = {};
+      Piko.say('enemyBehind');
+      Notify.push('PENEMUAN BARU: Saturnus', { kind: 'new', prio: 2, key: 'stress-area' });
+      Notify.push('LEVEL ' + (Levels.level + 1) + ' TERCAPAI', { kind: 'info', prio: 2, key: 'stress-level' });
+      Notify.push('KOMBO x' + Combo.multiplier, { kind: 'info', prio: 1, key: 'stress-combo' });
+      if (!Touch.enabled) {
+        Discovery.show('saturnus');
+        showBanner('GELOMBANG 9', 4000);
+        for (const id of ['warning', 'rear-warn', 'comet-warn', 'critical']) $(id).classList.remove('hidden');
+      }
+      return { boss: !!Bosses.active, notify: Notify.cur ? Notify.cur.text : '', queue: Notify.queue.length };
+    },
+    // Pusat notifikasi mode HP (H4)
+    notify() { return { visible: Notify.el.classList.contains('show'), text: Notify.textEl.textContent, kind: Notify.cur ? Notify.cur.kind : null, queue: Notify.queue.length, history: [...Notify.history] }; },
+    notifyPush(text, kind = 'info', prio = 1) { return Notify.push(text, { kind, prio }); },
+    alerts() { return Object.fromEntries(Object.entries(hud.alertEls).map(([k, el]) => [k, !el.classList.contains('hidden')])); },
+    // Keadaan kontrol sentuh (H2): sumbu joystick, arah tombol arah, tombol tertahan, skala efektif
+    touchState() {
+      const J = Touch.joy, D = Touch.dpad.dir;
+      return { enabled: Touch.enabled, joyActive: J.id !== null, joy: { x: round2(J.x), y: round2(J.y) }, pitch: round2(Controls.pitch), yaw: round2(Controls.yaw),
+        fire: Controls.fire, nitro: Controls.nitro, dpad: { ...D }, counts: { ...Touch.counts }, scale: Touch.scale, style: Save.settings.leftStyle, kidal: Save.settings.leftHanded };
+    },
     // Periksa tumpang tindih tata letak HUD dan tombol sentuh (kotak batas elemen yang tampil).
     // Tombol sentuh diukur dengan area sentuh efektif (ukuran tampak ditambah hit slop ::before).
     layoutOverlaps() {
-      const sel = ['#touch .tbtn', '#joy', '#dpad', '.hud-block', '#radar', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical'];
+      const sel = ['#touch .tbtn', '#joy', '#dpad', '.hud-block', '.hpx-block', '#radar', '#btn-radar-map', '#notify.show', '#alerts .alert', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical'];
       const items = [];
       for (const q of sel) for (const el of document.querySelectorAll(q)) {
         if (el.offsetParent === null ? getComputedStyle(el).position !== 'fixed' : false) continue;
