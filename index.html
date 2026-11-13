@@ -499,7 +499,8 @@
   .hpx-num { font-size: 11px; font-weight: 800; min-width: 22px; text-align: right; }
   .hpx-ic { width: 11px; height: 11px; flex: none; }
   .hpx-ic.nitro { fill: #ffb04a; } .hpx-ic.ult { fill: #ff7ad8; }
-  #hpx-top { left: 50%; top: var(--sa-t); transform: translateX(-50%); max-width: min(220px, 40vw); height: 24px; align-items: center; gap: 6px; padding: 0 8px;
+  #hpx-top { left: 50%; top: var(--sa-t); transform: translateX(-50%); height: 24px;
+    max-width: min(220px, 40vw, calc(100vw - 2 * (max(var(--sa-l), var(--sa-r)) + 154px))); align-items: center; gap: 6px; padding: 0 8px;
     font-size: 11px; font-weight: 800; letter-spacing: 0.05em; white-space: nowrap; }
   .hpx-mis { overflow: hidden; text-overflow: ellipsis; color: #9fe8ff; min-width: 0; }
   .hpx-mult { color: #ffd24a; font-style: italic; } .hpx-mult:empty { display: none; }
@@ -511,7 +512,7 @@
   body.mode-hp.in-play #btn-mode, body.mode-hp.in-play #btn-map { display: none; }
   body.mode-hp #radar { width: 52px; height: 52px; top: calc(var(--sa-t) + 44px); right: var(--sa-r); }
   #btn-radar-map { position: fixed; z-index: 40; top: calc(var(--sa-t) + 52px); right: calc(var(--sa-r) + 60px); }
-  body.mode-hp #boss-bar { top: calc(var(--sa-t) + 26px); width: min(220px, 40vw); }
+  body.mode-hp #boss-bar { top: calc(var(--sa-t) + 26px); width: min(220px, 40vw, calc(100vw - 2 * (max(var(--sa-l), var(--sa-r)) + 154px))); }
   body.mode-hp #boss-bar .bb-head { display: none; }
   body.mode-hp #boss-bar .bb-track { height: 5px; }
   body.mode-hp #buffs { top: calc(var(--sa-t) + 52px) !important; left: var(--sa-l); flex-direction: row; gap: 6px; }
@@ -569,7 +570,7 @@
   #fs-tip { position: fixed; z-index: 45; top: var(--ed-t); left: 50%; transform: translateX(-50%); max-width: min(380px, calc(100vw - 200px));
     display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; background: rgba(10, 18, 28, 0.92); border: 1px solid var(--ui-line);
     border-radius: 20px; font-size: 12px; line-height: 1.25; }
-  #fs-tip.hidden { display: none; }
+  #fs-tip.hidden, body.overlay-open #fs-tip, body.overlay-open #touch-prompt { display: none; }
   #fs-tip .btn { padding: 8px 12px; font-size: 12px; letter-spacing: 0.1em; flex: none; }
   .fs-x { position: relative; flex: none; width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center;
     color: var(--ui-fg); background: transparent; border: 0; border-radius: 50%; cursor: pointer; }
@@ -838,7 +839,7 @@
     .map-side h2 { font-size: 16px; }
     .map-side .hint { font-size: 11px; }
     .map-dest { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-    .map-btn { padding: 6px 4px; font-size: 11px; letter-spacing: 0.02em; line-height: 1.1; }
+    .map-dest .map-btn { padding: 6px 2px; font-size: 11px; letter-spacing: 0; line-height: 1.1; }
     /* Penemuan, Tentang, Stage Clear, layar akhir, game over */
     .atlas-grid { max-height: calc(var(--app-h) - 130px); grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 6px; }
     .credits { gap: 2px 14px; font-size: 13px; }
@@ -12092,7 +12093,13 @@ const Touch = {
   // Skala efektif: pilihan pemain, dibatasi agar tiap cluster maksimal 30 persen tinggi dan 26 persen lebar
   fitScale() {
     const want = Save.settings.controlSize / 100;
-    const ok = (c) => { const m = this.measure(c); return m.actH <= Viewport.h * 0.3 ? (m.actW <= Viewport.w * 0.26 ? m.joy <= Math.min(Viewport.h * 0.3, Viewport.w * 0.26) : false) : false; };
+    // Juga: kedua cluster tetap di luar zona tengah (x 30 sampai 70 persen) setelah ditambah safe area tepi
+    const ed = Viewport.edges(), side = Viewport.w * 0.3 - Math.max(ed.l, ed.r);
+    const ok = (c) => {
+      const m = this.measure(c);
+      if (m.actH > Viewport.h * 0.3 ? true : m.actW > Math.min(Viewport.w * 0.26, side)) return false;
+      return m.joy <= Math.min(Viewport.h * 0.3, Viewport.w * 0.26, side);
+    };
     if (ok(want)) return want;
     let lo = 0.5, hi = want;
     for (let i = 0; i < 18; i++) { const mid = (lo + hi) / 2; if (ok(mid)) lo = mid; else hi = mid; }
