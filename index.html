@@ -472,30 +472,51 @@
   .dpad .d-up { left: 35%; top: 4%; } .dpad .d-down { left: 35%; bottom: 4%; } .dpad .d-left { left: 4%; top: 35%; } .dpad .d-right { right: 4%; top: 35%; }
   .dpad svg.on { stroke: #ffb45c; }
   .dpad.on { opacity: 1; }
-  /* HUD mode HP: blok bawah disembunyikan agar tidak bertabrakan dengan tombol */
-  body.mode-hp .hud-block.bl, body.mode-hp .hud-block.br { display: none; }
-  /* Baris atas mode HP: kiri (status ringkas), tengah (misi), kanan (skor), lalu bar bos dan panel data di tengah */
-  body.mode-hp .hud-block { padding: 5px 9px; }
-  body.mode-hp .hud-block.tl { width: 184px; }
-  body.mode-hp .hud-block.tl .lv-row, body.mode-hp #xp-bar { display: none; }
-  body.mode-hp .hud-block.tl .row { margin-top: 1px; }
-  body.mode-hp .hud-block.tl .bar { height: 5px; margin: 2px 0 3px; }
-  body.mode-hp .hud-block.tc { max-width: min(240px, 30vw); padding: 4px 8px; top: calc(-4px + var(--ed-t)) !important; }
-  body.mode-hp .hud-block.tc > .label:not(.mission) { display: none; }
-  body.mode-hp .hud-block.tc .big { font-size: 15px; }
-  body.mode-hp .mission { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 9px; }
-  body.mode-hp .hud-block.tr { top: calc(38px + var(--ed-t)) !important; }
-  body.mode-hp .hud-block.tr .label:not(:first-child) { display: none; }
-  body.mode-hp #radar { width: 72px; height: 72px; top: calc(102px + var(--ed-t)); }
-  body.mode-hp #boss-bar { top: calc(54px + var(--ed-t)); width: min(320px, 34vw); }
-  body.mode-hp #data-panel { right: auto; left: 50%; transform: translateX(-50%); top: calc(86px + var(--ed-t)); bottom: auto; width: min(240px, 30vw); padding: 4px 9px; }
-  body.mode-hp #data-panel h3 { font-size: 14px; }
-  body.mode-hp #data-facts, body.mode-hp #data-panel .dcls { display: none; }
-  body.mode-hp #piko-panel { left: calc(50% - 33px); transform: translateX(-50%); top: auto; bottom: calc(-2px + var(--ed-b)); width: max-content; max-width: max(150px, calc(100vw - 530px)); }
-  body.mode-hp #piko-text { font-size: 12px; }
-  body.mode-hp #buffs { top: auto !important; left: 50%; transform: translateX(-50%); bottom: calc(80px + var(--ed-b)); flex-direction: row; }
-  /* Peringatan mode HP: bertumpuk di celah tengah bawah di antara dua kelompok tombol */
-  /* Celah tengah bawah tidak simetris (kelompok kanan lebih lebar), jadi pusatnya digeser 33 px ke kiri */
+  /* HUD mode HP (H3): blok desktop disembunyikan, diganti status ringkas kiri atas (maks 150x48) dan satu
+     baris misi tengah atas (maks 220x26). Kanan atas hanya Jeda dan Suara, radar kecil di bawahnya. */
+  .hpx-block { display: none; }
+  body.mode-hp .hud-block { display: none; }
+  body.mode-hp .hpx-block { display: flex; position: absolute; background: rgba(8, 14, 24, 0.58); border: 1px solid var(--ui-line); border-radius: 6px; }
+  #hpx-status { left: var(--sa-l); top: var(--sa-t); width: 146px; flex-direction: column; gap: 3px; padding: 3px 7px; line-height: 1; }
+  #hpx-status .hpx-r { height: 11px; }
+  .hpx-r { display: flex; align-items: center; gap: 5px; min-height: 0; }
+  .hpx-hearts { display: flex; gap: 2px; }
+  .hpx-hearts svg { width: 12px; height: 11px; }
+  .hpx-hearts svg path { fill: rgba(255, 255, 255, 0.14); stroke: rgba(255, 255, 255, 0.4); stroke-width: 2; }
+  .hpx-hearts svg.on path { fill: #ff4f7a; stroke: #ffc0d0; }
+  .hpx-lv { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; color: #d9b8ff; }
+  .hpx-bar { position: relative; flex: 1; height: 7px; background: rgba(255, 255, 255, 0.14); border-radius: 3px; overflow: hidden; }
+  .hpx-bar > i { position: absolute; inset: 0; transform-origin: left center; display: block; }
+  .hpx-bar.thin { height: 4px; }
+  #hpx-hp { background: linear-gradient(90deg, #2fbf6a, #6ff09a); }
+  #hpx-hpbar.mid #hpx-hp { background: linear-gradient(90deg, #d9a21b, #ffd24a); }
+  #hpx-hpbar.low #hpx-hp { background: linear-gradient(90deg, #c22a2a, #ff5a4a); }
+  #hpx-nitro { background: linear-gradient(90deg, #ff7a1a, #ffd24a); }
+  #hpx-nitrobar.locked { background: rgba(255, 77, 77, 0.35); }
+  #hpx-ult { background: linear-gradient(90deg, #c4357a, #ff5ad0); transform: scaleX(0); }
+  #hpx-ultbar.ready { box-shadow: 0 0 6px rgba(255, 90, 208, 0.9); }
+  .hpx-num { font-size: 11px; font-weight: 800; min-width: 22px; text-align: right; }
+  .hpx-ic { width: 11px; height: 11px; flex: none; }
+  .hpx-ic.nitro { fill: #ffb04a; } .hpx-ic.ult { fill: #ff7ad8; }
+  #hpx-top { left: 50%; top: var(--sa-t); transform: translateX(-50%); max-width: min(220px, 40vw); height: 24px; align-items: center; gap: 6px; padding: 0 8px;
+    font-size: 11px; font-weight: 800; letter-spacing: 0.05em; white-space: nowrap; }
+  .hpx-mis { overflow: hidden; text-overflow: ellipsis; color: #9fe8ff; min-width: 0; }
+  .hpx-mult { color: #ffd24a; font-style: italic; } .hpx-mult:empty { display: none; }
+  .hpx-score { margin-left: auto; padding-left: 4px; color: #fff; font-size: 12px; font-variant-numeric: tabular-nums; }
+  body.mode-hp #toolbar { top: var(--sa-t); right: var(--sa-r); gap: 8px; }
+  body.mode-hp .tool { position: relative; min-width: 36px; height: 36px; padding: 0 6px; }
+  body.mode-hp .tool::before { content: ""; position: absolute; inset: -4px; }
+  body.mode-hp .tool svg { width: 20px; height: 20px; }
+  body.mode-hp.in-play #btn-mode, body.mode-hp.in-play #btn-map { display: none; }
+  body.mode-hp #radar { width: 52px; height: 52px; top: calc(var(--sa-t) + 44px); right: var(--sa-r); }
+  #btn-radar-map { position: fixed; z-index: 40; top: calc(var(--sa-t) + 52px); right: calc(var(--sa-r) + 60px); }
+  body.mode-hp #boss-bar { top: calc(var(--sa-t) + 26px); width: min(220px, 40vw); }
+  body.mode-hp #boss-bar .bb-head { display: none; }
+  body.mode-hp #boss-bar .bb-track { height: 5px; }
+  body.mode-hp #buffs { top: calc(var(--sa-t) + 52px) !important; left: var(--sa-l); flex-direction: row; gap: 6px; }
+  body.mode-hp .buff { padding: 2px 6px; gap: 4px; font-size: 11px; }
+  body.mode-hp .buff span { display: none; }
+  body.mode-hp .buff svg { width: 13px; height: 13px; }
   body.mode-hp #warning, body.mode-hp #rear-warn, body.mode-hp #comet-warn, body.mode-hp #critical {
     top: auto; left: calc(50% - 33px); padding: 3px 7px; font-size: 10px; letter-spacing: 0.06em; white-space: nowrap; max-width: max(140px, calc(100vw - 520px)); overflow: hidden; text-overflow: ellipsis; }
   body.mode-hp #warning { bottom: calc(96px + var(--ed-b)); border-width: 1px; }
@@ -529,7 +550,6 @@
     .big { font-size: 18px; }
     .label { font-size: 10px; }
     .stat .num { font-size: 14px; min-width: 44px; }
-    body.mode-hp #radar { width: 68px; height: 68px; top: calc(96px + var(--ed-t)); }
     .card { padding: 16px 18px; gap: 10px; }
     .screen h2 { font-size: 30px; }
   }
@@ -725,6 +745,18 @@
     <p id="data-class" class="dcls"></p>
     <ul id="data-facts"></ul>
   </div>
+  <!-- HUD ringkas mode HP (H3): status kiri atas dan satu baris misi di tengah atas -->
+  <div id="hpx-status" class="hpx-block">
+    <div class="hpx-r"><span id="hpx-hearts" class="hpx-hearts"></span><span id="hpx-lv" class="hpx-lv">LV 1</span></div>
+    <div class="hpx-r"><span class="hpx-bar" id="hpx-hpbar"><i id="hpx-hp"></i></span><span id="hpx-hptext" class="hpx-num">100</span></div>
+    <div class="hpx-r">
+      <svg class="hpx-ic nitro" viewBox="0 0 24 24" aria-label="Nitro"><path d="M12 2.5c1 3.5 5.5 6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.3 1-3.8 2.2-5 0 2 .9 3.3 2.3 3.3 0-3.4.8-6.2 1-9.3z"/></svg>
+      <span class="hpx-bar thin" id="hpx-nitrobar"><i id="hpx-nitro"></i></span>
+      <svg class="hpx-ic ult" viewBox="0 0 24 24" aria-label="Ultimate"><path d="M12 2.5l2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L12 16.8l-5.8 3.5 1.6-6.6-5.2-4.4 6.8-.5z"/></svg>
+      <span class="hpx-bar thin" id="hpx-ultbar"><i id="hpx-ult"></i></span>
+    </div>
+  </div>
+  <div id="hpx-top" class="hpx-block"><span id="hpx-mission" class="hpx-mis"></span><span id="hpx-mult" class="hpx-mult"></span><span id="hpx-score" class="hpx-score">0</span></div>
   <div class="hud-block tl">
     <div class="row"><span class="label">NYAWA</span><span id="hearts"></span></div>
     <div class="row"><span class="label">INTEGRITAS</span><span id="hp-text" class="num">100</span></div>
@@ -803,6 +835,9 @@
   <button id="prompt-no" class="btn secondary" type="button">TIDAK</button>
 </div>
 
+<button id="btn-radar-map" class="tool hidden" type="button" aria-label="Peta Tata Surya" title="Peta Tata Surya">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="6.5" fill="none"/><circle cx="12" cy="12" r="10" fill="none"/><circle cx="18.5" cy="12" r="1.6"/></svg>
+</button>
 <!-- Lens flare halus matahari angkasa -->
 <div id="flare"><i class="f0"></i><i class="f1"></i><i class="f2"></i><i class="f3"></i></div>
 
@@ -8329,6 +8364,15 @@ const Contracts = {
     Events.emit('contractDone', k.type);
   },
   // Teks misi di HUD
+  // Versi ringkas untuk baris misi mode HP
+  shortLabel() {
+    const k = this.current;
+    if (!k) return '';
+    if (k.done) return 'KONTRAK SELESAI';
+    if (k.type === 'bersihkan') return 'BERSIHKAN ' + Math.min(k.progress, k.target) + '/' + k.target;
+    if (k.type === 'buru') return k.spawnIn > 0 ? 'BURU: tunggu sinyal' : k.target ? 'BURU ' + Math.round(k.target.pos.distanceTo(Player.pos)) + ' m' : 'BURU TARGET';
+    return 'KAWAL ' + Math.ceil(Convoy.health.hp) + '/' + Convoy.health.maxHp + ' ' + Math.round(Convoy.remaining()) + ' m';
+  },
   label() {
     const k = this.current;
     if (!k) return '';
@@ -8486,7 +8530,8 @@ const Radar = {
     return null;
   },
   update() {
-    if (!this.ctx) this.init();
+    if (!this.ctx ? true : this.cv.clientWidth !== this.size) { if (this.cv.clientWidth > 0) this.init(); }
+    if (!this.ctx) return;
     this.frame++;
     this.updateInstruments();
     if (this.frame % 2) return;   // radar 30 kali per detik sudah cukup
@@ -10248,8 +10293,9 @@ for (let i = 0; i < 8; i++) {
   hud.indicators.push(el);
   hud.indicatorType.push('');
 }
-// Ikon hati untuk nyawa (SVG inline, maksimum sesuai CONFIG)
+// Ikon hati untuk nyawa (SVG inline, maksimum sesuai CONFIG); salinan kecil untuk HUD mode HP
 hud.hearts = [];
+hud.heartsHp = [];
 for (let i = 0; i < CONFIG.difficulty.maxLives; i++) {
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
@@ -10259,12 +10305,17 @@ for (let i = 0; i < CONFIG.difficulty.maxLives; i++) {
   svg.appendChild(path);
   $('hearts').appendChild(svg);
   hud.hearts.push(svg);
+  const small = svg.cloneNode(true);
+  $('hpx-hearts').appendChild(small);
+  hud.heartsHp.push(small);
 }
 function renderHearts(lives) {
   for (let i = 0; i < hud.hearts.length; i++) {
     const on = i < lives;
     const was = hud.hearts[i].classList.contains('on');
     hud.hearts[i].setAttribute('class', on ? 'on' : (was ? 'lost' : ''));
+    hud.heartsHp[i].setAttribute('class', on ? 'on' : '');
+    hud.heartsHp[i].style.display = i < Math.max(lives, Game.diff ? Game.diff.lives : 3) ? '' : 'none';
   }
 }
 
@@ -10407,6 +10458,38 @@ Events.on('starCollected', (kind, x, y, z) => {
   d.el.className = 'dmgnum star';
   d.el.style.color = '#' + CONFIG.stars.kinds[kind].color.toString(16).padStart(6, '0');
 });
+// Teks misi ringkas untuk baris tengah atas mode HP: bos, kontrak kampanye, atau gelombang
+function hpxMission() {
+  const B = Bosses.active;
+  if (B) return (B.name || 'BOS').toUpperCase() + (B.phaseLabel ? ' ' + B.phaseLabel() : '');
+  const w = Waves.wave > 0 ? 'G' + Waves.wave + (Campaign.active ? '/' + Campaign.stage.waves : '') : '';
+  if (Campaign.active) { const c = Contracts.shortLabel(); return 'S' + (Campaign.stageIdx + 1) + ' ' + (c || w) + (c ? (w ? ' · ' + w : '') : ''); }
+  if (Worlds.active === SpaceWorld) return 'JELAJAH' + (w ? ' · ' + w : '');
+  return Waves.wave > 0 ? 'GELOMBANG ' + Waves.wave : 'SIAP';
+}
+// HUD ringkas mode HP (H3): status kiri atas dan baris misi tengah atas
+function updateHudHp(hp) {
+  let v = Math.round(hp * 200) / 200;
+  if (changed('hpx-hp', v)) $('hpx-hp').style.transform = 'scaleX(' + v + ')';
+  v = Math.ceil(Player.hp);
+  if (changed('hpx-hptext', v)) $('hpx-hptext').textContent = v;
+  v = hp < 0.3 ? 'hpx-bar low' : hp < 0.6 ? 'hpx-bar mid' : 'hpx-bar';
+  if (changed('hpx-hpclass', v)) $('hpx-hpbar').className = v;
+  v = Math.round(Player.nitro * 100) / 100;
+  if (changed('hpx-nitro', v)) $('hpx-nitro').style.transform = 'scaleX(' + v + ')';
+  v = Player.nitroLock > 0;
+  if (changed('hpx-nlock', v)) $('hpx-nitrobar').classList.toggle('locked', v);
+  v = Math.round(Player.ult * 100) / 100;
+  if (changed('hpx-ult', v)) { $('hpx-ult').style.transform = 'scaleX(' + v + ')'; $('hpx-ultbar').classList.toggle('ready', v >= 1); }
+  v = 'LV ' + (Levels.level + Levels.pending);
+  if (changed('hpx-lv', v)) $('hpx-lv').textContent = v;
+  v = hpxMission();
+  if (changed('hpx-mis', v)) $('hpx-mission').textContent = v;
+  v = Combo.multiplier > 1 ? 'x' + Combo.multiplier : '';
+  if (changed('hpx-mult', v)) $('hpx-mult').textContent = v;
+  v = Math.floor(Game.score);
+  if (changed('hpx-score', v)) $('hpx-score').textContent = fmtInt(v);
+}
 // Tulis ke DOM hanya bila nilainya berubah (tanpa closure per frame, tanpa layout berulang)
 function changed(key, value) {
   if (hud.last[key] === value) return false;
@@ -10498,6 +10581,7 @@ function updateHud(dt) {
   if (Game.state === 'playing') Radar.update();
   v = Game.state === 'playing' ? (Player.alive ? hp < CONFIG.player.criticalHp : false) : false;
   if (changed('critical', v)) $('critical').classList.toggle('hidden', !v);
+  if (Touch.enabled) updateHudHp(hp);
 
   hud.hitTimer = Math.max(0, hud.hitTimer - dt);
   v = hud.hitTimer > 0 ? (hud.hitKill ? 'on kill' : 'on') : '';
@@ -10721,6 +10805,8 @@ function setState(next) {
   Contracts.el.classList.toggle('hidden', next !== 'contract');
   document.getElementById('screen-stageclear').classList.toggle('hidden', next !== 'stageclear');
   document.getElementById('btn-map').classList.toggle('hidden', !(next === 'playing' ? Worlds.active === SpaceWorld : false));
+  document.getElementById('btn-radar-map').classList.toggle('hidden', !(next === 'playing' ? Worlds.active === SpaceWorld : false));
+  document.body.classList.toggle('in-play', !(next === 'menu' || next === 'boot' || next === 'gameover' || next === 'final' || next === 'preview'));
   const hudOn = next === 'playing' || next === 'paused' || next === 'countdown' || next === 'starting';
   document.getElementById('hud').classList.toggle('hidden', !hudOn);
   ui.toolbar.classList.toggle('hidden', next === 'boot' || next === 'preview');
@@ -10957,6 +11043,7 @@ for (const c of modeScreen.querySelectorAll('.mcard')) {
 onButton(document.getElementById('btn-mode-back'), () => { UI.closeOverlay(true); openTerrainSelect(); });
 onButton(document.getElementById('btn-map-close'), () => SolarMap.close());
 onButton(document.getElementById('btn-map'), () => SolarMap.toggle());
+onButton(document.getElementById('btn-radar-map'), () => SolarMap.toggle());
 document.getElementById('cs-skip').addEventListener('click', () => Cutscene.skip());
 // Stage clear: LANJUT membuka gerbang loncat di depan; KELUAR membawa pulang kredit penuh
 onButton(document.getElementById('btn-sc-next'), () => {
@@ -11503,9 +11590,12 @@ const Touch = {
   },
   // Batas atas cakram joystick: di bawah blok HUD kiri atas agar tidak menimpanya
   topLimit() {
-    const tl = document.querySelector('.hud-block.tl');
-    const r = tl ? tl.getBoundingClientRect() : null;
-    return r ? (r.height > 0 ? r.bottom + 6 : 60) : 60;
+    let y = 60;
+    for (const el of [document.getElementById('hpx-status'), document.getElementById('buffs')]) {
+      const r = el.getBoundingClientRect();
+      if (r.height > 0) y = Math.max(y, r.bottom + 6);
+    }
+    return y;
   },
   startJoy(e) {
     const J = this.joy, rect = this.joyEl.getBoundingClientRect();
