@@ -171,3 +171,32 @@ test('B6: benturan nyata lewat jalur permainan tercatat sekali, tidak tembus pad
   const fastRock = await t({ radius: 3, kind: 'rock' }, 2000);
   expect(fastRock.hits).toBe(1);
 });
+
+// ---------- D3: penanda bos ringkas, jarak aman dari crosshair, tidak menutupi siluet ----------
+const ptRectDist = (px, py, r) => { const dx = Math.max(r.x - px, 0, px - (r.x + r.w)), dy = Math.max(r.y - py, 0, py - (r.y + r.h)); return Math.hypot(dx, dy); };
+for (const [w, h, hp] of [[568, 320, true], [844, 390, true], [932, 430, true], [1440, 900, false]]) {
+  test(`D3: penanda bos ringkas di tengah, bar tipis saat besar, lengkap saat jauh di ${w}x${h}`, async ({ page }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await play(page, 'saturnus', { hp });
+    await dbg(page, 'startBoss', 'hunter');
+    await page.waitForTimeout(2600);
+    const at = async (l) => { await dbg(page, 'placeBoss', ...l); await page.waitForTimeout(650); await dbg(page, 'placeBoss', ...l); await page.waitForTimeout(120); return dbg(page, 'bossHud'); };
+    // Di dekat crosshair (sedang dibidik)
+    const c = await at([0, 3, 320]);
+    expect(c.state).toBe('mark');
+    expect(c.form).toBe('ringkas');
+    expect(c.markInfo, 'tanpa nama dan jarak').toBeNull();
+    for (const k of c.corners) expect(ptRectDist(c.ret[0], c.ret[1], k), 'sudut braket jauh dari crosshair').toBeGreaterThanOrEqual(28);
+    expect(ptRectDist(c.ret[0], c.ret[1], c.hpBar)).toBeGreaterThanOrEqual(28);
+    for (const k of c.corners) expect(ptRectDist(c.bossBox.x, c.bossBox.y, k), 'braket di luar siluet').toBeGreaterThanOrEqual(c.bossBox.r * 0.9);
+    // Dekat sekali: bos besar di layar, hanya bar HP tipis di atas siluet
+    const b = await at([0, 2, 30]);
+    expect(b.form).toBe('besar');
+    expect(b.corners.length).toBe(0);
+    expect(b.hpBar.y + b.hpBar.h).toBeLessThanOrEqual(b.bossBox.y);
+    // Jauh dari tengah: bentuk lengkap dengan nama dan jarak
+    const f = await at([-380, 150, 520]);
+    if (f.state === 'mark') { expect(f.form).toBe('lengkap'); expect(f.markInfo).not.toBeNull(); }
+  });
+}
+

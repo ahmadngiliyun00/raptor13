@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-Lj08SBPwXxuNhl9wVF8W0jjHddGeTbNkEuurbRQmzEI='; style-src 'self' 'sha256-d7Vn/dPeFRp6Gb72fSwJtw2v1RLnI8eMR66a6wEwvRI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-+JWlomj1AjHSe3t7pcoyM6AZ9Ju8MG5q5fzxntTLjWE='; style-src 'self' 'sha256-lTS2Y0DLNWWpopxLVuNaYS6Bd5GQUscJ+dKgkP30h6M='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -346,6 +346,14 @@
   #boss-mark .bm-vel { position: absolute; left: 0; top: 0; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 12px solid var(--bc);
     margin: -6px 0 0 -7px; transform-origin: 7px 6px; filter: drop-shadow(0 0 3px #000); }
   #boss-mark.near .bm-info { display: none; }
+  /* D3: bentuk ringkas (bos di zona tengah atau dekat crosshair) dan bentuk besar (bos di atas 120 px: hanya bar HP tipis) */
+  #boss-mark .bm-c, #boss-mark .bm-info, #boss-mark .bm-hp, #boss-mark .bm-vel { transition: opacity 0.2s; }
+  #boss-mark[data-form="ringkas"] .bm-info { opacity: 0; }
+  #boss-mark[data-form="ringkas"] .bm-c { opacity: 0.6; border-width: 1px; width: 8px; height: 8px; }
+  #boss-mark[data-form="ringkas"] .bm-hp { top: calc(var(--s) / 2 + 8px); width: 22px; height: 3px; opacity: 0.8; }
+  #boss-mark[data-form="ringkas"] .bm-vel { opacity: 0.6; }
+  #boss-mark[data-form="besar"] .bm-c, #boss-mark[data-form="besar"] .bm-info, #boss-mark[data-form="besar"] .bm-vel { opacity: 0; }
+  #boss-mark[data-form="besar"] .bm-hp { top: calc(var(--s) / -2 - 10px); width: clamp(60px, calc(var(--s) * 0.45), 140px); height: 3px; opacity: 0.85; }
   #boss-mark.novel .bm-vel { display: none; }
   #boss-lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid var(--bc); border-radius: 50%; opacity: 0.75; box-shadow: 0 0 4px var(--bc); }
   #boss-lead.full { width: 20px; height: 20px; margin: -10px 0 0 -10px; opacity: 1; }
@@ -9325,7 +9333,7 @@ const BossIcons = {
 const BOSS_HUD_SEL = ['#touch .tbtn', '#joy', '#dpad', '.hud-block', '.hpx-block', '#radar', '#btn-radar-map', '#notify.show', '#alerts .alert', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical', '#boss-rear', '#hpx-status', '#hpx-buffs'];
 const BossHud = {
   mark: document.getElementById('boss-mark'), edge: document.getElementById('boss-edge'), rearEl: document.getElementById('boss-rear'), intro: document.getElementById('boss-intro'), lead: document.getElementById('boss-lead'),
-  kind: null, rear: false, rects: [], rectT: 0, ed: { l: 16, t: 16, r: 16, b: 16 }, introT: 0, introStage: 0, state: 'none', edgePos: null,
+  kind: null, rear: false, rects: [], rectT: 0, form: '', formT: 0, ed: { l: 16, t: 16, r: 16, b: 16 }, introT: 0, introStage: 0, state: 'none', edgePos: null,
   _p: new THREE.Vector3(), _d: new THREE.Vector3(), _q: new THREE.Vector3(),
   q(sel) { return document.querySelectorAll(sel); },
   begin(b) {
@@ -9336,7 +9344,7 @@ const BossHud = {
     this.mark.querySelector('.bm-name').textContent = st.short;
     this.intro.querySelector('.bi-name').textContent = b.name.toUpperCase();
     $('hpx-bico').classList.remove('hidden');
-    this.rectT = 0; this.state = 'none'; this.rear = false;
+    this.rectT = 0; this.state = 'none'; this.rear = false; this.form = ''; this.formT = 0;
     // Pengenalan: ikon besar di tepi atas sekitar 1,5 detik lalu mengecil ke baris misi
     this.intro.classList.remove('hidden', 'shrink'); this.intro.style.transform = '';
     this.introT = 1.5; this.introStage = 1;
@@ -9408,11 +9416,27 @@ const BossHud = {
       this.show(this.edge, false); this.show(this.mark, true);
       const x = (p.x + 1) * 0.5 * W, y = (1 - p.y) * 0.5 * H;
       const px = (b.size * 2) / (Math.max(1, camera.position.distanceTo(A)) * 2 * Math.tan(camera.fov * Math.PI / 360)) * H;
-      const size = Math.round(clamp(px * 0.9, 26, 150) / 2) * 2;
+      // D3: penanda yang ditambatkan pada bos adalah satu-satunya pengecualian zona tengah, jadi dibuat minimal.
+      // Bentuk lengkap (ikon, nama, jarak) hanya saat bos jauh dari tengah dan dari crosshair; bentuk ringkas (braket
+      // tipis dan indikator HP kecil) saat di zona tengah atau dekat crosshair; bentuk besar (bar HP tipis di atas
+      // siluet) saat bos lebih besar dari 120 px. Braket mengelilingi siluet (tidak menutupinya), minimal 56 px
+      // sehingga titik terdekat sudutnya sekitar 34 px dari titik bidik. Pergantian bentuk memakai histeresis 0,35 detik.
+      const inCenter = x > W * 0.3 ? (x < W * 0.7 ? (y > H * 0.2 ? y < H * 0.8 : false) : false) : false;
+      const nearRet = Math.hypot(x - hud.retX, y - hud.retY) < px * 0.6 + 70;
+      const want = px > 120 ? 'besar' : (inCenter ? true : nearRet) ? 'ringkas' : 'lengkap';
+      if (want !== this.form) { this.formT += dt; if (this.formT > 0.35 ? true : this.form === '') { this.form = want; this.formT = 0; this.mark.dataset.form = want; } } else this.formT = 0;
+      let size = Math.round(clamp(px * 1.1 + 10, this.form === 'ringkas' ? 56 : 26, 170) / 2) * 2;
+      // Bentuk ringkas: braket melebar menjauhi crosshair sampai tiap sudut minimal 30 px darinya
+      if (this.form === 'ringkas') {
+        const rx = hud.retX - x, ry = hud.retY - y;
+        // Jarak crosshair ke kotak tiap sudut braket (kotak 8 px di keempat pojok)
+        const ok = (sz) => { const i = sz / 2 - 8; for (const sx of [-1, 1]) for (const sy of [-1, 1]) { const x0 = sx > 0 ? i : -i - 8, y0 = sy > 0 ? i : -i - 8; const dx = Math.max(x0 - rx, 0, rx - x0 - 8), dy = Math.max(y0 - ry, 0, ry - y0 - 8); if (Math.hypot(dx, dy) < 30) return false; } return true; };
+        while (size < 170 ? !ok(size) : false) size += 6;
+      }
       if (changed('bmPos', Math.round(x) * 100000 + Math.round(y))) this.mark.style.transform = 'translate(' + Math.round(x) + 'px, ' + Math.round(y) + 'px)';
       if (changed('bmSize', size)) this.mark.style.setProperty('--s', size + 'px');
-      // Label disembunyikan saat bos sangat dekat (memenuhi layar) atau menumpuk dengan pesawat sendiri
-      const near = size >= 150 ? true : (Touch.enabled ? Math.abs(y - H * 0.68) < H * 0.12 ? Math.abs(x - W / 2) < W * 0.12 : false : false);
+      // Label juga disembunyikan saat menumpuk dengan pesawat sendiri di mode HP
+      const near = this.form !== 'lengkap' ? true : (Touch.enabled ? Math.abs(y - H * 0.68) < H * 0.12 ? Math.abs(x - W / 2) < W * 0.12 : false : false);
       if (changed('bmNear', near)) this.mark.classList.toggle('near', near);
       if (changed('bmDist', distTxt)) this.mark.querySelector('.bm-dist').textContent = distTxt;
       // Label tetap di dalam layar (geser horizontal) saat bos dekat tepi
@@ -12319,6 +12343,7 @@ function updateHud(dt) {
   if (changed('reticleVis', v)) hud.reticle.style.visibility = v ? 'visible' : 'hidden';
   const x = Math.round((_vc.x + 1) * 0.5 * Layout.w);
   const y = Math.round((1 - _vc.y) * 0.5 * Layout.h);
+  hud.retX = x; hud.retY = y;
   if (changed('reticle', x * 100000 + y)) hud.reticle.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
 }
 
@@ -14742,6 +14767,10 @@ const GameHooks = {
     bossHud() {
       const R = (el) => { if (!el ? true : el.classList.contains('hidden')) return null; const r = el.getBoundingClientRect(); return r.width > 0 ? { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) } : null; };
       return { active: !!Bosses.active, state: BossHud.state, rear: BossHud.rear, mark: R(BossHud.mark), markInfo: BossHud.mark.classList.contains('near') ? null : R(BossHud.mark.querySelector('.bm-info')), edge: R(BossHud.edge), edgeTurn: BossHud.edge.classList.contains('turn'),
+        form: BossHud.form, ret: [Math.round(hud.retX || 0), Math.round(hud.retY || 0)],
+        corners: [...BossHud.mark.querySelectorAll('.bm-c')].map((el) => (getComputedStyle(el).opacity > 0.05 ? R(el) : null)).filter(Boolean),
+        hpBar: R(BossHud.mark.querySelector('.bm-hp')),
+        bossBox: (() => { const b = Bosses.active; if (!b) return null; const A = (b.anchor || b.group).position, p = _vc.copy(A).project(camera); const px = (b.size * 2) / (Math.max(1, camera.position.distanceTo(A)) * 2 * Math.tan(camera.fov * Math.PI / 360)) * Layout.h; return { x: Math.round((p.x + 1) * 0.5 * Layout.w), y: Math.round((1 - p.y) * 0.5 * Layout.h), r: Math.round(px / 2) }; })(),
         rearEl: R(BossHud.rearEl), rearChip: R(hud.alertEls.boss), intro: R(BossHud.intro), introStage: BossHud.introStage, lead: R(BossHud.lead), dot: R($('boss-dot')), mission: $('hpx-mission').textContent, barName: $('boss-name').textContent };
     },
     // Letakkan bos relatif terhadap pemain (koordinat lokal: kanan, atas, depan) tanpa merender (uji penanda)
