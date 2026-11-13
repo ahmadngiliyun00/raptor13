@@ -2031,7 +2031,7 @@ Save.load();
   let fresh = true;
   try { fresh = !window.localStorage.getItem(SAVE_KEY); } catch (err) { fresh = true; }
   const touch = (window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false) || (navigator.maxTouchPoints || 0) > 0;
-  if (fresh ? touch : false) { Save.settings.quality = 'rendah'; Save.settings.robotHelp = 'ringkas'; }
+  if (fresh ? touch : false) { Save.settings.quality = 'rendah'; Save.settings.bloom = false; Save.settings.robotHelp = 'ringkas'; }
 })();
 CONFIG.qualityPreset = Save.settings.quality;
 
@@ -2473,7 +2473,7 @@ const JetTextures = {
   make(w, h, draw, srgb = true) {
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
-    draw(c.getContext('2d'), w, h);
+    draw(c.getContext('2d', { willReadFrequently: true }), w, h);   // kanvas sumber tekstur: berbasis CPU agar unggahan ke WebGL tanpa readback GPU
     const t = new THREE.CanvasTexture(c);
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 4;
@@ -2680,7 +2680,7 @@ function starfighterTextures(accent) {
   if (SF_TEX[accent]) return SF_TEX[accent];
   const make = (draw, srgb = true) => {
     const c = document.createElement('canvas'); c.width = 256; c.height = 256;
-    draw(c.getContext('2d'));
+    draw(c.getContext('2d', { willReadFrequently: true }));
     const t = new THREE.CanvasTexture(c);
     if (srgb) t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = 4;
@@ -6042,12 +6042,12 @@ const PlanetTex = {
     this.init();
     const cv = document.createElement('canvas');
     cv.width = w; cv.height = h;
-    const ctx = cv.getContext('2d');
+    const ctx = cv.getContext('2d', { willReadFrequently: true });
     const img = ctx.createImageData(w, h), d = img.data;
     let hcv = null, himg = null, hd = null;
     if (heightOut) {
       hcv = document.createElement('canvas'); hcv.width = w; hcv.height = h;
-      himg = hcv.getContext('2d').createImageData(w, h); hd = himg.data;
+      himg = hcv.getContext('2d', { willReadFrequently: true }).createImageData(w, h); hd = himg.data;
     }
     const col = [0, 0, 0, 0];
     const cosU = new Float32Array(w), sinU = new Float32Array(w);
@@ -6065,7 +6065,7 @@ const PlanetTex = {
       }
     }
     ctx.putImageData(img, 0, 0);
-    if (hcv) hcv.getContext('2d').putImageData(himg, 0, 0);
+    if (hcv) hcv.getContext('2d', { willReadFrequently: true }).putImageData(himg, 0, 0);
     const tex = new THREE.CanvasTexture(cv);
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 4;
@@ -6353,7 +6353,7 @@ const RING_RECIPES = {
 function ringTexture(kind) {
   const w = 1024, cv = document.createElement('canvas');
   cv.width = w; cv.height = 1;
-  const ctx = cv.getContext('2d'), img = ctx.createImageData(w, 1), rnd = makeRng(kind.length * 977);
+  const ctx = cv.getContext('2d', { willReadFrequently: true }), img = ctx.createImageData(w, 1), rnd = makeRng(kind.length * 977);
   for (let i = 0; i < w; i++) {
     const c = RING_RECIPES[kind](i / (w - 1), rnd());
     img.data[i * 4] = clamp(c[0], 0, 1) * 255; img.data[i * 4 + 1] = clamp(c[1], 0, 1) * 255;
@@ -11759,7 +11759,9 @@ function menuKeyHandler(code) {
   if (code === 'Enter' || code === 'NumpadEnter') {
     if (Game.state === 'gameover') { if (Game.stateTime < 1.0) return true; }   // cegah tembakan ikut menekan
     const list = UI.buttons(root);
-    const target = list.includes(document.activeElement) ? document.activeElement : list[0];
+    // Fokus di tombol layar ini dipakai; bila fokus hilang, pakai kartu yang sedang terpilih, baru tombol pertama (H8)
+    const sel = list.find((b) => b.classList.contains('selected'));
+    const target = list.includes(document.activeElement) ? document.activeElement : sel || list[0];
     if (target) target.click();
     return true;
   }
@@ -13106,7 +13108,7 @@ const JetPreview = {
       holder.position.set((i % cols - (cols - 1) / 2) * gap, 0, Math.floor(i / cols) * gap - 16);
       // Label nama di bawah model
       const cv = document.createElement('canvas'); cv.width = 256; cv.height = 48;
-      const ctx = cv.getContext('2d'); ctx.fillStyle = '#e8eef6'; ctx.font = 'bold 26px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(CONFIG.enemies[type].label, 128, 34);
+      const ctx = cv.getContext('2d', { willReadFrequently: true }); ctx.fillStyle = '#e8eef6'; ctx.font = 'bold 26px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.fillText(CONFIG.enemies[type].label, 128, 34);
       const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
       const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
       label.scale.set(10, 1.9, 1); label.position.set(0, -6.5, 0);

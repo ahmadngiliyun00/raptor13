@@ -1714,6 +1714,43 @@ test.describe('27a: kontrol sentuh mode HP', () => {
   });
 });
 
+// ---------- Blok H8: navigasi keyboard konsisten di semua layar pilihan ----------
+test('H8: Enter sekali menekan pilihan di Pilih Medan, Pilih Mode, Pilih Kapal, kontrak, dan kartu level', async ({ page }) => {
+  for (const terrain of ['space', 'earth']) {
+    await open(page);
+    await page.evaluate((t) => { localStorage.clear(); localStorage.setItem('raptor13.v3', JSON.stringify({ version: 3, settings: { terrain: t } })); }, terrain);
+    await open(page);
+    const scr = () => page.evaluate(() => [...document.querySelectorAll('.screen')].filter((e) => !e.classList.contains('hidden')).map((e) => e.id).join(','));
+    await page.keyboard.press('Enter');
+    await expect.poll(scr).toBe('screen-terrain');
+    if (terrain === 'earth') await page.keyboard.press('ArrowLeft');      // pindah ke Luar Angkasa
+    await page.keyboard.press('Enter');
+    await expect.poll(scr).toBe('screen-mode');
+    await page.keyboard.press('Enter');                                  // satu kali Enter di Pilih Mode
+    await expect.poll(scr).toBe('screen-hangar');
+  }
+  // Fokus hilang (misalnya setelah klik di luar): Enter tetap memakai kartu yang terpilih
+  await open(page);
+  await clickStart(page);
+  await page.click('.tcard[data-world="space"]');
+  await page.evaluate(() => document.activeElement.blur());
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#screen-hangar')).toBeVisible();
+  // Kontrak dan kartu level: Enter memilih kartu yang terfokus
+  await open(page);
+  await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); g.debug.skipCutscene(); });
+  await expect.poll(async () => (await snap(page)).state).toBe('contract');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await dbg(page, 'contract')).type).toBeTruthy();
+  await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).toBe('playing');
+  await dbg(page, 'levelUp');
+  await expect.poll(async () => (await snap(page)).state).toBe('levelup');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expect.poll(async () => (await snap(page)).state, { timeout: 6000 }).not.toBe('levelup');
+});
+
 // ---------- Simpan dan muat sesi (bertahan setelah halaman dimuat ulang) ----------
 test('Simpan: tombol SIMPAN di menu jeda, sesi kampanye pulih setelah reload lewat LANJUTKAN', async ({ page }) => {
   await start(page, { world: 'space', mode: 'campaign' });
