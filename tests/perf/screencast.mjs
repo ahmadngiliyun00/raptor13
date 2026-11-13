@@ -27,7 +27,8 @@ let result;
 try {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR });
   const page = await ctx.newPage();
-  await page.goto(`http://localhost:${PORT}/index.html?debug=1${opt.query ? '&' + opt.query : ''}`);
+  const qs = new URLSearchParams(opt.query ? String(opt.query) : ''); qs.set('debug', '1');
+  await page.goto(`http://localhost:${PORT}/index.html?${qs}`);
   await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
   if (opt.scene === 'space') {
     await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(true); g.startIn('space', 'free'); g.skipTransition(); g.debug.skipCutscene(); g.debug.autoContract(); g.debug.startWave(8); g.debug.setAutoplay(true); });
