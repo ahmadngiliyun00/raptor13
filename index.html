@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-lIOZhoEsm61CbDtHtEABusA615q4BZPSk7jduDP60eg='; style-src 'self' 'sha256-d7Vn/dPeFRp6Gb72fSwJtw2v1RLnI8eMR66a6wEwvRI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-+ofho+pszuzYrHGbrUFUVtkjlbgnhgvqb7L6nVYkGRg='; style-src 'self' 'sha256-d7Vn/dPeFRp6Gb72fSwJtw2v1RLnI8eMR66a6wEwvRI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -72,7 +72,7 @@
   "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
   "image": "https://raptor13.ngiliyun.my.id/icons/og-image.jpg",
   "url": "https://raptor13.ngiliyun.my.id/",
-  "version": "2.0.0",
+  "version": "2.3.0",
   "datePublished": "2026-11-12",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "IDR" },
@@ -1609,7 +1609,7 @@ const QUALITY_PRESETS = {
 };
 
 // Satu sumber nomor versi: ditampilkan di menu, Tentang, dan overlay performa (samakan dengan package.json)
-const GAME_VERSION = '2.2.0';
+const GAME_VERSION = '2.3.0';
 // Parameter URL dibaca sekali dan divalidasi ketat (A3). Hook uji window.__game, alat pratinjau model,
 // dan galeri hanya aktif dengan ?debug=1; overlay diagnosis kotak hitam dengan ?diag=1.
 const URLQ = (() => { try { return new URLSearchParams(location.search); } catch (err) { return new URLSearchParams(''); } })();
@@ -8185,8 +8185,9 @@ const Bosses = {
     scene.add(b.group);
     BossFX.attach(b);
     BossHud.begin(b);
-    // Kemunculan pertama tiap bos dalam satu sesi: sorot kamera singkat dan gerak lambat sesaat (naga punya cutscene)
-    if (!this.seen.has(kind)) { this.seen.add(kind); if (kind !== 'naga') { CamRig.focusBoss(1.6); Game.slowMo = Math.max(Game.slowMo, 0.6); } }
+    // Kemunculan pertama tiap bos dalam satu sesi: sorot kamera singkat ke arah bos (naga punya cutscene sendiri).
+    // Tanpa gerak lambat: HUD, radar, dan simulasi tetap berjalan pada waktu normal.
+    if (!this.seen.has(kind)) { this.seen.add(kind); if (kind !== 'naga') CamRig.focusBoss(1.6); }
     this.bar.classList.remove('hidden');
     this.barName.textContent = 'BOS: ' + b.name;
     Events.emit('bossStart', kind);   // nama bos tampil lewat pengenalan BossHud (ikon besar di tepi atas)
@@ -9032,6 +9033,9 @@ const BossFX = {
     if (this.hasLast ? dt > 0 : false) { _vd.copy(A).sub(this._last).divideScalar(dt); if (_vd.lengthSq() < 1e6) this.vel.lerp(_vd, clamp(dt * 6, 0, 1)); }
     this._last.copy(A); this.hasLast = true;
     const attr = this.trail.geometry.attributes.position, a = attr.array;
+    // Lompatan posisi (naga lolos dan muncul lagi di depan, pemindahan uji): jejak diatur ulang, bukan garis panjang
+    const jx = src.x - a[0], jy = src.y - a[1], jz = src.z - a[2];
+    if (jx * jx + jy * jy + jz * jz > 60 * 60) { for (let i = 0; i < a.length; i += 3) { a[i] = src.x; a[i + 1] = src.y; a[i + 2] = src.z; } }
     this.trailT -= dt;
     if (this.trailT <= 0) { this.trailT = 1 / 16; a.copyWithin(3, 0, a.length - 3); }
     a[0] = src.x; a[1] = src.y; a[2] = src.z;

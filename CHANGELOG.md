@@ -5,6 +5,79 @@ Semua perubahan penting RAPTOR13 dicatat di berkas ini. Format mengikuti
 [Semantic Versioning](https://semver.org/lang/id/). Tanggal diambil dari riwayat git (WIB, UTC+7).
 Bukti pemilihan commit tiap tag ada di `docs/rilis/rencana-tag.md`.
 
+## [2.3.0] - 2026-11-14
+
+Petunjuk dan perilaku bos, tabrakan berbasis ukuran, dan pencegahan zoom di iPhone. HP bos, damage senjata,
+HP musuh, dan hadiah tidak berubah.
+
+### Ditambahkan
+- Pelacakan bos:
+  - ikon emblem orisinal per bos (tengkorak naga geometris untuk Sang Naga Vanta), digambar prosedural;
+  - penanda di atas bos: braket sudut, ikon, nama, jarak, bar HP mini, dan panah arah gerak;
+  - panah tepi layar berikon saat bos di luar layar; bila bos di belakang, panah menunjuk arah putar
+    tercepat dengan ikon putar;
+  - indikator BOS DI BELAKANG di bawah tengah (chip di mode HP);
+  - pengenalan ikon besar di tepi atas yang mengecil ke baris misi, dan sorot kamera singkat pada kemunculan
+    pertama tiap bos.
+- Jejak bos 3 detik, titik bidik prediksi yang mengikuti Bantuan bidik, blip radar berikon dengan jejak mini,
+  garis arah dan garis putus-putus, serta ikon bos di Peta Tata Surya.
+- Kontur siluet bos yang menyala (satu draw call per bos) dan opsi Sorotan bos (Mati, Halus, Kuat) di tab
+  Grafis. Bos yang di layar lebih kecil dari 14 piksel diberi titik bercahaya.
+- Jendela rentan setelah bos berputar kembali ke depan: damage ke bos x1,6 (Mudah), x1,4 (Normal), x1,25
+  (Sulit). Kontur dan penanda berkedip emas.
+- Tabrakan berbasis ukuran dan energi (`COLLISION_TIERS`) dengan empat tingkat: kecil (tanpa damage),
+  pantul (1 sampai 3 persen), sedang (persen HP maksimum dari energi, dengan pantulan), dan fatal. Umpan
+  baliknya: kilat di sisi dampak dengan persen damage, bar HP berkedip, dan suara sesuai ukuran.
+- Penjaga zoom iOS. Lapisannya: meta viewport lengkap, `touch-action`, pencegahan gesture WebKit, dua ketukan
+  dan cubit di luar kontrol, serta cadangan `visualViewport` dengan tip Reset tampilan. Diuji di WebKit
+  (iPhone 12 dan 14) dan Chromium (Pixel 7).
+- Hook debug:
+  - bos: `bossProbe`, `bossSim` (bot jelajah dan buru), `bossMetrics`, `bossChecks`, `bossFx`, `bossHud`,
+    `placeBoss`;
+  - tabrakan: `collisionTest`, `collisionConfig`;
+  - lainnya: `zoomGuard`, `programList`.
+- Skrip pengukuran di `tests/bos/` dan uji baru `tests/bos.spec.mjs` dan `tests/zoom.spec.mjs`. Playwright
+  kini punya proyek webkit khusus uji zoom.
+- Dokumen:
+  - `docs/bos/diagnosis.md`, `docs/bos/perilaku.md`;
+  - `docs/fisika/tabrakan.md`;
+  - `docs/zoom-ios.md` (dengan langkah uji manual di iPhone);
+  - `docs/apk/rencana-apk.md` (rencana APK, belum diimplementasikan).
+
+### Diubah
+- Bos tidak lagi mengekor. Siklusnya kini: mendekat lalu terbang di depan pemain, serang lewat depan, lewat
+  dan menjauh, lalu berputar dan menyusul ke depan lagi. Bos tidak boleh berada di ekor lebih dari 4, 6, atau
+  9 detik berturut-turut (Mudah, Normal, Sulit).
+  - Hasil bot jelajah, waktu bos di kerucut depan: Mudah 1 menjadi 69 persen, Normal 1 menjadi 46 persen,
+    Sulit 1 menjadi 26 persen.
+  - Sentuhan badan bos: Penambang dari sekitar 6 menjadi di bawah 1 per menit, Naga dari sekitar 10 menjadi
+    di bawah 1 per menit.
+- Material bos mendapat emissive dan rim light berwarna khas. Kabut Bumi hanya 35 persen pada bos. Bidang jauh
+  kamera Bumi diperlebar selama bos jauh.
+- Tembakan bor dan lemparan batu Penambang Raksasa serta rudal Pemburu Agung kini memakai aba-aba
+  (sebelumnya instan). Serbuan bor menuju samping pemain dengan jarak aman. Umpan tiruan terbang dalam formasi
+  di samping bos asli.
+- Nama bos tampil sebagai "BOS: nama" di bar bos dan baris misi. Spanduk nama besar diganti pengenalan ikon.
+- Damage tabrakan asteroid kini mengikuti ukuran, jenis batu, dan kecepatan, bukan angka tetap per kelas.
+  Damage sedang dikali kesulitan: Mudah x0,75, Normal x1, Sulit x1,25. Asteroid raksasa, planet, bulan,
+  daratan, dan bos tetap fatal.
+
+### Diperbaiki
+- Bos tidak terlihat:
+  - material hampir hitam di latar angkasa;
+  - bos di luar bidang jauh kamera dan tertelan kabut penuh di medan Bumi kualitas Rendah (far 504);
+  - bos bisa berada di dalam planet;
+  - bos tidak pernah masuk penanda tepi layar.
+
+  Pengukuran yang tidak terlihat turun dari 84 menjadi 3 dari 576.
+- Tabrakan tak terlihat di Phobos dan Deimos: bola tabrakan kini sama dengan permukaan terdalam yang terlihat.
+- Kerikil dan batu cincin yang jauh lebih kecil dari pesawat tidak lagi memakan 10 HP. Pecahan asteroid tidak
+  terhitung sebagai benturan baru. Uji sapuan mencegah tembus pada kecepatan tinggi.
+- Zoom browser saat halaman diketuk dua kali di iPhone (Safari dan Chrome iOS). Perilaku di iPhone asli
+  masih perlu dipastikan dengan langkah uji manual.
+- Shader bos dipanaskan di layar muat dan saat dunia berganti, jadi kemunculan bos tidak menambah program
+  shader di tengah permainan.
+
 ## [2.2.0] - 2026-11-13
 
 Audit performa, panas, keamanan, dan UI/UX. Gameplay, keseimbangan, AI musuh, dan isi konten tidak

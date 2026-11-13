@@ -142,3 +142,41 @@ jarak 1200 dan kualitas Tinggi tertutup lapisan awan stratus (bos diuji 96 satua
 awan 205 sampai 248); pada kualitas Rendah yang awannya lebih sedikit Naga tampak 76 piksel. Dalam permainan
 Naga hanya muncul di Pluto. Bloom kini menambah piksel tampak (rata-rata 4770) karena kontur dan rim cukup
 terang untuk berpendar, sebelumnya mengurangi 76.
+
+## Anggaran performa
+
+`node tests/bos/perf.mjs <label>`: tanpa bos dan dengan tiap bos, medan Bumi dan Saturnus, kualitas Tinggi
+dan Rendah, batas 60 FPS, autopilot, 6,5 detik per skenario, MacBook Pro M1 Pro (ANGLE Metal). Nilai di kiri
+tanda garis miring adalah sebelum blok BT (snapshot setelah B1), di kanan sesudah. Data:
+`docs/bos/data/perf-sebelum.json` dan `perf-sesudah.json`.
+
+| Kualitas | Dunia | Bos | Frame rata-rata (ms) | Kerja JS rata-rata (ms) | Kerja JS p95 (ms) | Draw call | Segitiga | Program |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| tinggi | medan Bumi | tanpa bos | 16,67 / 16,67 | 1,85 / 1,48 | 3,9 / 2,4 | 99 / 99 | 77282 / 77282 | 94 / 102 |
+| tinggi | medan Bumi | raksasa | 16,67 / 16,67 | 1,66 / 1,51 | 2,3 / 3,2 | 104 / 99 | 79218 / 79026 | 95 / 106 |
+| tinggi | medan Bumi | miner | 16,67 / 16,67 | 1,28 / 1,79 | 2 / 2,7 | 105 / 102 | 77858 / 79026 | 95 / 106 |
+| tinggi | medan Bumi | hunter | 16,67 / 16,67 | 1,55 / 1,63 | 3,8 / 3,2 | 117 / 104 | 83398 / 79334 | 95 / 106 |
+| tinggi | medan Bumi | naga | 16,67 / 16,67 | 1,64 / 1,63 | 3,6 / 2,5 | 145 / 106 | 79742 / 82762 | 96 / 107 |
+| tinggi | Saturnus | tanpa bos | 16,67 / 16,67 | 1,83 / 1,41 | 2,6 / 2,5 | 68 / 68 | 145718 / 146134 | 77 / 81 |
+| tinggi | Saturnus | raksasa | 16,67 / 16,67 | 1,57 / 1,74 | 2,3 / 3,6 | 69 / 71 | 147654 / 147702 | 80 / 86 |
+| tinggi | Saturnus | miner | 16,67 / 16,67 | 1,63 / 1,61 | 3 / 2,4 | 66 / 66 | 145974 / 146182 | 80 / 86 |
+| tinggi | Saturnus | hunter | 16,67 / 16,67 | 1,75 / 1,54 | 3 / 2,4 | 70 / 84 | 131726 / 224586 | 80 / 86 |
+| tinggi | Saturnus | naga | 16,67 / 16,67 | 1,79 / 1,55 | 3,8 / 2,2 | 68 / 70 | 146358 / 150958 | 81 / 87 |
+| rendah | medan Bumi | tanpa bos | 16,67 / 16,67 | 1,56 / 1,62 | 3,6 / 3,5 | 61 / 61 | 34098 / 34098 | 61 / 69 |
+| rendah | medan Bumi | raksasa | 16,67 / 16,67 | 1,14 / 1,13 | 2,1 / 1,8 | 66 / 67 | 36034 / 36514 | 62 / 73 |
+| rendah | medan Bumi | miner | 16,67 / 16,67 | 1,55 / 1,39 | 3,4 / 3,3 | 66 / 65 | 34594 / 35202 | 62 / 73 |
+| rendah | medan Bumi | hunter | 16,67 / 16,67 | 1,53 / 1,26 | 3,6 / 2,9 | 76 / 68 | 37094 / 36310 | 62 / 73 |
+| rendah | medan Bumi | naga | 16,67 / 16,67 | 2,15 / 1,6 | 4,6 / 2,6 | 126 / 68 | 38178 / 39898 | 63 / 74 |
+| rendah | Saturnus | tanpa bos | 16,67 / 16,67 | 1,67 / 1,68 | 4 / 3,9 | 47 / 47 | 77456 / 77456 | 46 / 50 |
+| rendah | Saturnus | raksasa | 16,67 / 16,67 | 1,42 / 1,21 | 3,6 / 2 | 48 / 50 | 78976 / 79440 | 48 / 54 |
+| rendah | Saturnus | miner | 16,67 / 16,67 | 1,51 / 1,5 | 3,6 / 2,9 | 45 / 45 | 77712 / 77920 | 48 / 54 |
+| rendah | Saturnus | hunter | 16,67 / 16,67 | 1,12 / 1,51 | 2,3 / 2,4 | 47 / 63 | 62972 / 156324 | 48 / 54 |
+| rendah | Saturnus | naga | 16,67 / 16,67 | 1,55 / 1,4 | 3,7 / 2,2 | 47 / 50 | 78096 / 82360 | 49 / 55 |
+
+Ringkasan:
+- Frame time tetap 16,67 ms (60 FPS) di semua 20 skenario.
+- Kerja JS rata-rata 1,59 ms sebelum dan 1,51 ms sesudah, dalam batas variasi pengukuran.
+- Jumlah draw call per frame bergantung pada posisi bos (di layar atau di luar). Kontur sendiri tepat satu
+  draw call per bos (`debug.bossFx`).
+- Program shader naik 4 sampai 11, karena varian shader bos (material, kontur, jejak) kini dikompilasi di
+  layar muat dan saat dunia berganti. Kemunculan bos tidak lagi menambah program di tengah permainan.

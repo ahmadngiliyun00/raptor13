@@ -14,10 +14,15 @@ tag v2.1.0 2f582565a7837811cfa6ab90520f56f6fd12e239 docs/rilis/catatan/v2.1.0.md
 tag v2.2.0 <hash commit "docs: A6 rencana tag dan perintah rilis"> docs/rilis/catatan/v2.2.0.md
 git push origin --tags
 
+# 2.3.0 (blok BT): tag langsung di commit rilis terakhir
+git tag -a --cleanup=verbatim v2.3.0 -F docs/rilis/catatan/v2.3.0.md
+git push origin v2.3.0
+
 gh release create v1.0.0 --title "RAPTOR13 1.0.0 (sejarah)" --notes-file docs/rilis/catatan/v1.0.0.md --latest=false
 gh release create v2.0.0 --title "RAPTOR13 2.0.0 (sejarah)" --notes-file docs/rilis/catatan/v2.0.0.md --latest=false
 gh release create v2.1.0 --title "RAPTOR13 2.1.0" --notes-file docs/rilis/catatan/v2.1.0.md --latest=false
-gh release create v2.2.0 --title "RAPTOR13 2.2.0" --notes-file docs/rilis/catatan/v2.2.0.md --latest
+gh release create v2.2.0 --title "RAPTOR13 2.2.0" --notes-file docs/rilis/catatan/v2.2.0.md --latest=false
+gh release create v2.3.0 --title "RAPTOR13 2.3.0" --notes-file docs/rilis/catatan/v2.3.0.md --latest
 
 # Verifikasi
 git tag -n

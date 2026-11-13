@@ -30,7 +30,7 @@ const rows = [];
 async function open(quality, world) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
   await page.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, 'getBattery', { value: undefined, configurable: true }); } catch (err) { /* abaikan */ } });
-  await page.goto(`http://localhost:${PORT}/index.html?debug=1&kualitas=${quality}`);
+  await page.goto(`http://localhost:${PORT}/index.html?` + new URLSearchParams({ debug: '1', kualitas: quality }));
   await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
   await page.evaluate((w) => {
     const g = window.__game, d = g.debug;

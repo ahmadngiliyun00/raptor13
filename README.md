@@ -263,6 +263,55 @@ bersegmen dengan empat fase (generator perisai, kepala terbuka dengan laser berg
 kejar-kejaran 50 detik melewati puing es, dan inti dada yang hanya bisa dihabisi ultimate), dengan
 cutscene pembuka, peralihan, dan penutup, lalu layar akhir.
 
+### Pelacakan dan perilaku bos (2.3.0)
+
+**Penanda dan arah.**
+
+- Tiap bos punya ikon emblem orisinal. Ikon tampil di bar bos dan baris misi ("BOS: nama"), di atas bos
+  (braket sudut, nama, jarak, bar HP mini, panah arah gerak), dan di panah tepi layar saat bos di luar
+  layar.
+- Saat bos di belakang, panah tepi menunjuk arah putar tercepat, dan muncul indikator BOS DI BELAKANG di
+  bawah tengah.
+- Bos meninggalkan jejak 3 detik. Titik bidik prediksi (ikut Bantuan bidik) menunjukkan tempat peluru akan
+  mengenai bos.
+- Di radar, bos tampil sebagai ikon dengan jejak mini dan garis putus-putus. Di Peta Tata Surya bos juga
+  ditandai ikon.
+
+**Keterlihatan.**
+
+- Bos diberi rim light berwarna khas dan kontur siluet menyala (satu draw call). Opsi Sorotan bos: Mati,
+  Halus, Kuat.
+- Bos yang lebih kecil dari 14 piksel diberi titik bercahaya.
+- Bos tidak lagi tertelan kabut Bumi atau terpotong bidang jauh kamera.
+
+**Perilaku.** Siklus bos: mendekat lalu terbang di depan pemain, serang lewat depan, lewat dan menjauh, lalu
+berputar menyusul ke depan lagi. Saat kembali ke depan ada jendela rentan berkedip emas, dengan damage ke bos
+x1,6, x1,4, atau x1,25.
+
+| Kesulitan | Waktu bos di kerucut depan (bot jelajah) | Batas di ekor |
+| --- | --- | --- |
+| Mudah | sekitar 69 persen | 4 detik |
+| Normal | sekitar 46 persen | 6 detik |
+| Sulit | sekitar 26 persen | 9 detik |
+
+Sebelumnya bos 1 sampai 3 persen di depan. Rincian: [docs/bos/diagnosis.md](docs/bos/diagnosis.md) dan
+[docs/bos/perilaku.md](docs/bos/perilaku.md).
+
+## Tabrakan (2.3.0)
+
+Tabrakan dihitung dari ukuran dan energi (`COLLISION_TIERS`):
+
+- **Fatal:** planet, bulan, daratan, pilar, bos, kapal berat, asteroid minimal sekitar R 18, atau benturan
+  berenergi ekstrem.
+- **Sedang:** benda lain memotong persen HP maksimum yang naik dengan energi, misalnya 8 persen untuk
+  asteroid kecil, 19 persen untuk yang sedang, dan 39 persen untuk yang besar pada kecepatan dasar. Damage
+  dikali kesulitan, dan pesawat memantul.
+- **Pantul:** puing yang jauh lebih kecil dari pesawat hanya 1 sampai 3 persen.
+- **Kecil:** kerikil tidak memberi damage.
+
+Satu benda tidak dihitung dua kali, dan uji sapuan mencegah tembus pada kecepatan tinggi. Tabel lengkap:
+[docs/fisika/tabrakan.md](docs/fisika/tabrakan.md).
+
 ## HUD
 
 Status di kiri atas (nyawa, integritas, nitro, ultimate, level dan XP), misi dan gelombang di
@@ -306,10 +355,21 @@ npm test
 ```
 
 `npm test` memasang Chromium untuk Playwright, menyalakan server statis di port 4173, lalu
-menjalankan 97 uji di `tests/game.spec.mjs`, 31 uji mode HP di `tests/hp.spec.mjs` (emulasi sentuh
-di tujuh ukuran layar landscape ditambah safe area), dan 13 uji audit di `tests/audit.spec.mjs`
-(hook terkunci, query berbahaya, simpanan rusak, CSP, konteks WebGL, batas FPS, mode performa, tab
-tersembunyi, tutorial, aksesibilitas, resize). Semua uji membuka `index.html?debug=1`. Screenshot mode HP di `docs/screenshots/hp/`
+menjalankan uji berikut:
+
+- 97 uji di `tests/game.spec.mjs`.
+- 31 uji mode HP di `tests/hp.spec.mjs`: emulasi sentuh di tujuh ukuran layar landscape ditambah safe area.
+- 13 uji audit di `tests/audit.spec.mjs`: hook terkunci, query berbahaya, simpanan rusak, CSP, konteks
+  WebGL, batas FPS, mode performa, tab tersembunyi, tutorial, aksesibilitas, resize.
+- 10 uji bos dan tabrakan di `tests/bos.spec.mjs`:
+  - keterlihatan tiap bos di 12 dunia pada jarak 50 sampai 1200;
+  - penanda yang tidak menimpa HUD dan zona tengah di empat ukuran HP dan desktop 1440x900;
+  - perilaku per kesulitan;
+  - tabel dan benturan nyata.
+- 8 uji zoom di `tests/zoom.spec.mjs`: proyek webkit untuk iPhone 12 dan 14 serta chromium untuk Pixel 7.
+  `npx playwright install webkit` diperlukan sekali.
+
+Semua uji membuka `index.html?debug=1`. Screenshot mode HP di `docs/screenshots/hp/`
 dibuat ulang dengan `SHOTS=1 npx playwright test tests/hp.spec.mjs`. Setiap uji gagal bila ada console error atau warning,
 error halaman (termasuk pelanggaran CSP), atau request apa pun ke luar localhost. Cakupan utama: kontrol dan kombinasi
 tombol, manuver dan looping, tabrakan fatal dengan penyebab yang benar, simulasi bot yang mengukur
@@ -368,6 +428,12 @@ __game.debug.perf()                        // fps, frame time p95, draw call, bu
 __game.debug.setPerfMode('hemat'); __game.debug.feature('bloom', false)
 __game.debug.glitchProbe('start'); __game.debug.glitchProbe('report')
 __game.debug.tutorial('start')
+__game.debug.bossProbe({ kind: 'hunter', dist: 400 })   // piksel bos yang tampak (render dengan dan tanpa bos)
+__game.debug.bossSim('miner', 180, { difficulty: 'normal', bot: 'jelajah' })   // metrik perilaku bos
+__game.debug.bossHud(); __game.debug.placeBoss(0, 0, -300); __game.debug.bossFx()
+__game.debug.collisionTest('tabel'); __game.debug.collisionTest({ radius: 0.6, kind: 'ice' }, 2000)
+__game.debug.collisionConfig({ fatalEnergy: 1200 })
+__game.debug.zoomGuard()                   // meta viewport, touch-action, event zoom yang dicegah
 ```
 
 ## Struktur proyek
@@ -430,6 +496,12 @@ raptor13/
 - Bos Bumi memakai model Penjaga yang diperbesar; kepala Sang Naga Vanta masih sederhana dibanding
   tubuhnya.
 - Tabrakan memakai bola, sehingga bentuk sayap tidak dihitung presisi.
+- Pencegahan zoom iOS diuji lewat emulasi WebKit; perilaku di iPhone asli perlu dipastikan dengan langkah
+  manual di [docs/zoom-ios.md](docs/zoom-ios.md).
+- Dengan perilaku bos baru, bot sederhana butuh lebih lama untuk mengalahkan Pemburu Agung dan Penambang
+  (sekitar separuh HP dalam 3 menit di Normal), karena bos tidak lagi bisa ditempel dari belakang terus.
+  Parameter jendela rentan di `BOSS_PILOT` bisa dinaikkan bila terasa terlalu lama.
+- Aplikasi Android (APK) baru berupa rencana: [docs/apk/rencana-apk.md](docs/apk/rencana-apk.md).
 
 ## Melapor masalah
 

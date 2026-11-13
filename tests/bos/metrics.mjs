@@ -28,7 +28,7 @@ try {
   for (const bot of BOTS) for (const kind of BOSSES) for (const difficulty of DIFFS) for (const seed of SEEDS) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     await page.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, 'getBattery', { value: undefined, configurable: true }); } catch (err) { /* abaikan */ } });
-    await page.goto(`http://localhost:${PORT}/index.html?debug=1&kualitas=rendah`);
+    await page.goto(`http://localhost:${PORT}/index.html?` + new URLSearchParams({ debug: '1', kualitas: 'rendah' }));
     await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
     const r = await page.evaluate(([kind, world, difficulty, seed, secs, bot]) => {
       const g = window.__game, d = g.debug;
