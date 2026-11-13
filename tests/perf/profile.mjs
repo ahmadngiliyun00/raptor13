@@ -53,7 +53,7 @@ const INIT = () => {
 };
 
 function startServer() {
-  const child = spawn(process.execPath, ['tests/static-server.mjs', String(PORT)], { cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
+  const child = spawn(process.execPath, ['tests/static-server.mjs', String(PORT)], { cwd: process.env.PERF_SITE || ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
   return new Promise((res) => child.stdout.once('data', () => res(child)));
 }
 

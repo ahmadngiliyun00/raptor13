@@ -23,7 +23,7 @@ const FEATURES = {
   earth: ['shadows', 'clouds', 'particles', 'skyEarth', 'css'],
 };
 
-const server = spawn(process.execPath, ['tests/static-server.mjs', String(PORT)], { cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
+const server = spawn(process.execPath, ['tests/static-server.mjs', String(PORT)], { cwd: process.env.PERF_SITE || ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
 await new Promise((r) => server.stdout.once('data', r));
 const browser = await chromium.launch({ args: [...gpuArgs, '--disable-frame-rate-limit', '--disable-gpu-vsync'] });
 const out = {};
@@ -49,6 +49,7 @@ try {
         g.debug.setAutoplay(true);
       }, scene);
     }
+    await page.evaluate(() => window.__game.debug.fpsOverride?.(0));   // ukur kerja per frame tanpa batas FPS game
     await page.waitForTimeout(2500);
     const base = await window_(page);
     const rows = [{ feature: 'semua aktif', frameMs: base.frameAvgMs, workMs: base.workAvgMs, calls: base.calls, deltaMs: 0 }];

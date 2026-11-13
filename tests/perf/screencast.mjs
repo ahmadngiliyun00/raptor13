@@ -20,7 +20,7 @@ mkdirSync(`${OUT}screencast/`, { recursive: true });
 const gpuArgs = process.platform === 'darwin' ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] : ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'];
 const extra = opt.uncapped ? ['--disable-frame-rate-limit', '--disable-gpu-vsync'] : [];
 
-const server = spawn(process.execPath, ['tests/static-server.mjs', String(PORT)], { cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
+const server = spawn(process.execPath, ['tests/static-server.mjs', String(PORT)], { cwd: process.env.PERF_SITE || ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
 await new Promise((r) => server.stdout.once('data', r));
 const browser = await chromium.launch({ args: [...gpuArgs, ...extra] });
 let result;

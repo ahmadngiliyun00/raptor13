@@ -25,7 +25,7 @@ const INIT = () => {
   window.clearInterval = function (id) { if (live.get(id) === 'i') { live.delete(id); window.__timers.intervals--; } return ci.call(window, id); };
 };
 
-const server = spawn(process.execPath, ['tests/static-server.mjs', String(PORT)], { cwd: ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
+const server = spawn(process.execPath, ['tests/static-server.mjs', String(PORT)], { cwd: process.env.PERF_SITE || ROOT, stdio: ['ignore', 'pipe', 'inherit'] });
 await new Promise((r) => server.stdout.once('data', r));
 const browser = await chromium.launch({ args: [...gpuArgs, '--js-flags=--expose-gc'] });
 const res = {};

@@ -280,6 +280,7 @@
   .set-label { color: var(--ui-dim); font-size: 13px; letter-spacing: 0.06em; }
   .seg { display: inline-flex; border: 1px solid var(--ui-line); border-radius: 6px; overflow: hidden; }
   .set-grid > .seg { justify-self: start; }
+  .seg.seg-wrap { flex-wrap: wrap; }
   .seg button { font: inherit; font-size: 14px; color: var(--ui-fg); background: transparent; border: 0; padding: 9px 14px; cursor: pointer; min-height: 40px; }
   .seg button + button { border-left: 1px solid var(--ui-line); }
   .seg button.on { background: var(--ui-accent); color: #1a0e04; font-weight: 800; }
@@ -404,6 +405,9 @@
   .man.ready { border-color: rgba(255, 154, 60, 0.7); }
   .man.active { background: rgba(255, 154, 60, 0.45); }
   body.mode-hp #maneuvers { display: none; }
+  #perf-overlay { position: fixed; left: max(var(--sa-l, 8px), 8px); top: 50%; transform: translateY(-50%); z-index: 60; margin: 0; padding: 6px 8px;
+    font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #cfe8ff; background: rgba(4, 8, 14, 0.78);
+    border: 1px solid rgba(120, 200, 255, 0.3); border-radius: 6px; pointer-events: none; white-space: pre; }
   #fps { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); font-size: 11px; color: var(--ui-dim); letter-spacing: 0.1em; }
   @media (max-width: 560px) { .set-grid { grid-template-columns: 1fr; } }
   #countdown {
@@ -878,6 +882,7 @@
   <div class="cs-sub"><b id="cs-who"></b><span id="cs-text"></span></div>
   <button id="cs-skip" class="cs-skip" type="button">LEWATI<span class="kb-only"> (Enter)</span></button>
 </div>
+<pre id="perf-overlay" class="hidden" aria-hidden="true"></pre>
 <div id="hud" class="hidden">
   <div id="vignette"></div>
   <div id="cloud-veil"></div>
@@ -1152,6 +1157,18 @@
         </div>
         <p class="note hidden" id="quality-note">Berlaku setelah dimuat ulang. <button type="button" id="btn-reload" class="link">Muat ulang sekarang</button></p>
       </div>
+      <span class="set-label">Mode performa</span>
+      <div class="seg seg-wrap" data-key="perfMode">
+        <button type="button" data-v="otomatis">Otomatis</button><button type="button" data-v="hemat">Hemat baterai</button><button type="button" data-v="seimbang">Seimbang</button><button type="button" data-v="kualitas">Kualitas tinggi</button>
+      </div>
+      <span class="set-label">Batas FPS</span>
+      <div class="seg" data-key="fpsCap">
+        <button type="button" data-v="otomatis">Otomatis</button><button type="button" data-v="30">30</button><button type="button" data-v="60">60</button><button type="button" data-v="tanpa">Tanpa batas</button>
+      </div>
+      <span class="set-label">Resolusi maksimum</span>
+      <div class="seg" data-key="resolution">
+        <button type="button" data-v="otomatis">Otomatis</button><button type="button" data-v="1">1x</button><button type="button" data-v="1.5">1,5x</button><button type="button" data-v="2">2x</button>
+      </div>
       <span class="set-label">Bantuan bidik</span>
       <div class="seg" data-key="aimAssist">
         <button type="button" data-v="mati">Mati</button><button type="button" data-v="rendah">Rendah</button><button type="button" data-v="sedang">Sedang</button>
@@ -1190,6 +1207,7 @@
         <label class="tog"><input type="checkbox" data-key="cameraRoll"> Kamera ikut berguling</label>
         <label class="tog"><input type="checkbox" data-key="damageNumbers"> Angka damage</label>
         <label class="tog"><input type="checkbox" data-key="showFps"> Tampilkan FPS</label>
+        <label class="tog"><input type="checkbox" data-key="perfOverlay"> Overlay performa<small class="tog-note kb-only"> (F3)</small></label>
         <label class="tog"><input type="checkbox" data-key="bloom"> Bloom<small class="tog-note"> (angkasa, mati di kualitas Rendah)</small></label>
       </div>
     </div>
@@ -1397,10 +1415,12 @@ const QUALITY_PRESETS = {
   tinggi: { shadows: true,  shadowMapSize: 2048, maxParticles: 3200, particleDensity: 1.0,  chunkRadius: 4, pixelRatioMax: 2,   antialias: true,  clouds: 48, bloom: 1, stars: 1, planetTex: 1024, rocks: 1, loadRange: 1 },
 };
 
+// Satu sumber nomor versi: ditampilkan di menu, Tentang, dan overlay performa (samakan dengan package.json)
+const GAME_VERSION = '2.0.0';
 const CONFIG = {
   qualityPreset: 'sedang',     // rendah | sedang | tinggi (bisa ditimpa lewat ?kualitas=)
   maxDelta: 0.05,              // batas atas delta time per frame (detik)
-  version: '2.0.0',
+  version: GAME_VERSION,
   countdownTime: 3,            // detik hitung mundur setelah jeda
   startTransition: 1.5,        // detik transisi kamera dari menu ke permainan
   // Tabel kesulitan: memengaruhi damage yang diterima pemain, HP musuh dan asteroid,
@@ -1933,6 +1953,10 @@ const SETTING_DEFAULTS = {
   robotHelp: 'penuh',          // bantuan robot Piko: penuh | ringkas (bawaan di perangkat sentuh) | ikon | mati
   touchPromptShown: false,     // deteksi perangkat sentuh sudah dilakukan (otomatis atau lewat saran)
   a2hsHintShown: false,        // petunjuk Tambahkan ke Layar Utama (iOS) sudah tampil sekali
+  perfMode: 'otomatis',        // mode performa: otomatis | hemat (hemat baterai) | seimbang | kualitas (kualitas tinggi)
+  fpsCap: 'otomatis',          // batas FPS: otomatis (60, turun di perangkat sentuh saat panas) | 30 | 60 | tanpa
+  resolution: 'otomatis',      // pixel ratio maksimum: otomatis (sesuai kualitas, 1,25 di perangkat sentuh) | 1 | 1.5 | 2
+  perfOverlay: false,          // overlay performa (F3)
 };
 const SETTING_ENUMS = {
   difficulty: ['mudah', 'normal', 'sulit'],
@@ -1944,6 +1968,9 @@ const SETTING_ENUMS = {
   robotHelp: ['penuh', 'ringkas', 'ikon', 'mati'],
   leftStyle: ['joystick', 'dpad'],
   cameraDistance: ['dekat', 'normal', 'jauh'],
+  perfMode: ['otomatis', 'hemat', 'seimbang', 'kualitas'],
+  fpsCap: ['otomatis', '30', '60', 'tanpa'],
+  resolution: ['otomatis', '1', '1.5', '2'],
 };
 const SETTING_RANGES = { controlSize: [70, 130], controlTransparency: [0, 80], asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100], volMusic: [0, 100] };
 
@@ -2171,7 +2198,10 @@ camera.position.set(0, 3, 10);
 /* Post-processing: bloom hanya di medan angkasa (glow mesin, laser, bintang), mengikuti preset kualitas */
 const Post = {
   composer: null, bloom: null,
-  get wanted() { if (Debug.off.has('bloom')) return false; return Q.bloom > 0 ? (Save.settings.bloom ? Worlds.active === SpaceWorld : false) : false; },
+  get wanted() {
+    if (Debug.off.has('bloom') ? true : Pacer.noBloom) return false;
+    return Q.bloom > 0 ? (Save.settings.bloom ? Worlds.active === SpaceWorld : false) : false;
+  },
   setup() {
     if (this.composer) return;
     this.composer = new EffectComposer(renderer);
@@ -2183,10 +2213,15 @@ const Post = {
     this.composer.addPass(new OutputPass());
     this.resize();
   },
+  // Composer dan bloom disamakan dengan renderer. composer.setSize menimpa ukuran tiap pass dengan
+  // ukuran penuh x pixel ratio, jadi bloom diatur ulang sesudahnya: setengah resolusi di bawah Tinggi.
   resize() {
     if (!this.composer) return;
-    this.composer.setPixelRatio(renderer.getPixelRatio());
-    this.composer.setSize(window.innerWidth, window.innerHeight);
+    const w = window.innerWidth, h = window.innerHeight, pr = renderer.getPixelRatio();
+    this.composer.setPixelRatio(pr);
+    this.composer.setSize(w, h);
+    const k = Q.bloom >= 1 ? 1 : 0.5;
+    this.bloom.setSize(Math.max(2, Math.round(w * pr * k)), Math.max(2, Math.round(h * pr * k)));
   },
   render() {
     if (this.wanted) { this.setup(); this.composer.render(); }
@@ -2194,15 +2229,20 @@ const Post = {
   },
 };
 
+// Satu fungsi resize untuk semua: kanvas, pixel ratio (batas perangkat, batas megapiksel, skala
+// resolusi dinamis), kamera, composer dan bloom, ukuran titik partikel dan bintang. Dipanggil saat
+// jendela berubah ukuran, saat skala resolusi dinamis berubah, dan setelah konteks WebGL pulih.
 function onResize() {
   const w = window.innerWidth, h = window.innerHeight;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pixelRatioMax, 2));
+  const pr = typeof Pacer !== 'undefined' ? Pacer.pixelRatio() : Math.min(window.devicePixelRatio || 1, Q.pixelRatioMax, 2);
+  if (Math.abs(renderer.getPixelRatio() - pr) > 0.001) renderer.setPixelRatio(pr);
   renderer.setSize(w, h);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   if (typeof FX !== 'undefined') FX.setViewport(renderer.domElement.height);
   Post.resize();
   if (typeof SpaceSky !== 'undefined') SpaceSky.setPixelRatio(renderer.getPixelRatio());
+  if (typeof Pacer !== 'undefined') Pacer.dirty = true;
 }
 window.addEventListener('resize', onResize);
 
@@ -8708,9 +8748,18 @@ Events.on('playerDeath', () => { if (Contracts.stats) Contracts.stats.livesLost+
    pitch dan bank (0 saat datar), dan horizon buatan kecil.
    ===================================================================== */
 const Radar = {
-  cv: document.getElementById('radar'), ctx: null, size: 0, frame: 0, counts: {},
+  cv: document.getElementById('radar'), ctx: null, size: 0, frame: 0, counts: { enemy: 0, boss: 0, pickup: 0, planet: 0, gate: 0, convoy: 0, target: 0 },
   att: document.getElementById('attitude'), actx: null,
+  // Ukuran kanvas dibaca ulang hanya saat ResizeObserver melapor (tanpa baca layout tiap frame);
+  // radar digambar 15 kali per detik dan instrumen 20 kali per detik, tanpa objek atau closure baru
+  needInit: true, radarT: 0, instT: 0, _o: { x: 0, y: 0, dy: 0 }, _sp: { x: 0, y: 0, z: 0 }, dc: null, dk: 1, dR: 1, dcx: 0, dcy: 0,
+  observe() {
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => { this.needInit = true; });
+    ro.observe(this.cv); ro.observe(this.att);
+  },
   init() {
+    this.needInit = false;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     this.size = this.cv.clientWidth || 150;
     this.cv.width = this.size * dpr; this.cv.height = this.size * dpr;
@@ -8743,14 +8792,38 @@ const Radar = {
     }
     return null;
   },
-  update() {
-    if (!this.ctx ? true : this.cv.clientWidth !== this.size) { if (this.cv.clientWidth > 0) this.init(); }
+  blip(p, color, r, shape) {
+    const c = this.dc, o = this.rel(p, this._o), R = this.dR;
+    let x = o.x * this.dk, y = o.y * this.dk;
+    const d = Math.hypot(x, y), out = d > R;
+    if (out) { x *= R / d; y *= R / d; }
+    const px = this.dcx + x, py = this.dcy - y;
+    c.fillStyle = color; c.strokeStyle = color;
+    if (shape === 'diamond') { c.beginPath(); c.moveTo(px, py - r); c.lineTo(px + r, py); c.lineTo(px, py + r); c.lineTo(px - r, py); c.closePath(); c.fill(); }
+    else if (shape === 'square') c.fillRect(px - r, py - r, r * 2, r * 2);
+    else if (shape === 'ring') { c.lineWidth = 2; c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.stroke(); }
+    else { c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.fill(); }
+    // Penanda ketinggian relatif: segitiga kecil di atas atau bawah titik
+    if (out ? false : Math.abs(o.dy) > CONFIG.radar.elevationMark) {
+      c.beginPath(); const sg = o.dy > 0 ? -1 : 1;
+      c.moveTo(px - 3, py + sg * (r + 2)); c.lineTo(px + 3, py + sg * (r + 2)); c.lineTo(px, py + sg * (r + 6)); c.closePath(); c.fill();
+    }
+    return out;
+  },
+  update(dt = 0.016) {
+    if (this.needInit) { if (this.cv.clientWidth > 0) this.init(); }
     if (!this.ctx) return;
     this.frame++;
-    this.updateInstruments();
-    if (this.frame % 2) return;   // radar 30 kali per detik sudah cukup
+    this.instT -= dt;
+    if (this.instT <= 0) { this.instT = 0.05; this.updateInstruments(); }
+    this.radarT -= dt;
+    if (this.radarT > 0) return;
+    this.radarT = 1 / 15;
     const c = this.ctx, S = this.size, R = S / 2 - 6, cx = S / 2, cy = S / 2, range = this.range(), k = R / range;
-    const counts = { enemy: 0, boss: 0, pickup: 0, planet: 0, gate: 0, convoy: 0, target: 0 };
+    this.dc = c; this.dk = k; this.dR = R; this.dcx = cx; this.dcy = cy;
+    const counts = this.counts;
+    for (const key in counts) counts[key] = 0;
+    const blip = (p, color, r, shape) => this.blip(p, color, r, shape);
     c.clearRect(0, 0, S, S);
     c.fillStyle = 'rgba(6, 14, 24, 0.72)';
     c.beginPath(); c.arc(cx, cy, R + 4, 0, Math.PI * 2); c.fill();
@@ -8762,25 +8835,7 @@ const Radar = {
     const nx = cx - Math.sin(hd) * (R - 8), ny = cy - Math.cos(hd) * (R - 8);
     c.fillStyle = '#ffd24a'; c.font = 'bold 10px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText('U', nx, ny);
-    const o = { x: 0, y: 0, dy: 0 };
-    const blip = (p, color, r, shape) => {
-      this.rel(p, o);
-      let x = o.x * k, y = o.y * k;
-      const d = Math.hypot(x, y), out = d > R;
-      if (out) { x *= R / d; y *= R / d; }
-      const px = cx + x, py = cy - y;
-      c.fillStyle = color; c.strokeStyle = color;
-      if (shape === 'diamond') { c.beginPath(); c.moveTo(px, py - r); c.lineTo(px + r, py); c.lineTo(px, py + r); c.lineTo(px - r, py); c.closePath(); c.fill(); }
-      else if (shape === 'square') c.fillRect(px - r, py - r, r * 2, r * 2);
-      else if (shape === 'ring') { c.lineWidth = 2; c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.stroke(); }
-      else { c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.fill(); }
-      // Penanda ketinggian relatif: segitiga kecil di atas atau bawah titik
-      if (out ? false : Math.abs(o.dy) > CONFIG.radar.elevationMark) {
-        c.beginPath(); const s = o.dy > 0 ? -1 : 1;
-        c.moveTo(px - 3, py + s * (r + 2)); c.lineTo(px + 3, py + s * (r + 2)); c.lineTo(px, py + s * (r + 6)); c.closePath(); c.fill();
-      }
-      return out;
-    };
+    const o = this._o;
     // Planet dan bulan terdekat (angkasa)
     if (Worlds.active === SpaceWorld ? SolarSystem.built : false) {
       for (const b of SolarSystem.solids) {
@@ -8794,7 +8849,7 @@ const Radar = {
         counts.planet++;
       }
     }
-    const sp = { x: 0, y: 0, z: 0 };
+    const sp = this._sp;
     for (let i = 0; i < CONFIG.stars.max; i++) { if (!Stars.active[i]) continue; sp.x = Stars.px[i * 3]; sp.y = Stars.px[i * 3 + 1]; sp.z = Stars.px[i * 3 + 2]; blip(sp, '#ffe066', 1.6); counts.pickup++; }
     for (const p of Pickups.items) if (p.active) { blip(p.group.position, '#5dff9a', 2.2); counts.pickup++; }
     for (const e of Enemies.list) {
@@ -8850,6 +8905,7 @@ const Radar = {
     a.strokeStyle = 'rgba(160, 210, 255, 0.6)'; a.beginPath(); a.arc(h, h, h - 1, 0, Math.PI * 2); a.stroke();
   },
 };
+Radar.observe();
 
 /* =====================================================================
    SIMPAN DAN MUAT SESI - sesi yang sedang dimainkan (skor, nyawa, level dan kartu,
@@ -9064,7 +9120,7 @@ const SpaceWorld = {
     RockFields.build();
     if (!Boundary.mesh) Boundary.init();
     for (const o of this.objects()) o.visible = true;
-    scene.background = new THREE.Color(0x02030a);
+    scene.background = SkyBake.background;
     scene.fog = null;
     camera.far = CONFIG.solar.cameraFar;
     camera.updateProjectionMatrix();
@@ -9078,19 +9134,21 @@ const SpaceWorld = {
   },
   reset() { RockFields.reset(); },
   // Musuh, asteroid dan pesawat attract mode tidak menembus planet: didorong ke permukaan
+  // Dorong titik keluar dari benda padat (tanpa closure per frame)
+  push(p, r) {
+    const b = SolarSystem.inside(p.x, p.y, p.z, r);
+    if (!b) return false;
+    _va.copy(p).sub(b.pos);
+    const l = _va.length() || 1;
+    p.copy(b.pos).addScaledVector(_va, (b.radius + r + 1) / l);
+    return true;
+  },
   update() {
-    const push = (p, r) => {
-      const b = SolarSystem.inside(p.x, p.y, p.z, r);
-      if (!b) return false;
-      _va.copy(p).sub(b.pos);
-      const l = _va.length() || 1;
-      p.copy(b.pos).addScaledVector(_va, (b.radius + r + 1) / l);
-      return true;
-    };
-    for (const e of Enemies.list) if (e.active) push(e.pos, e.radius + 4);
-    for (const a of Asteroids.list) if (a.active) push(a.pos, a.radius + 2);
+    const L = Enemies.list, A = Asteroids.list;
+    for (let i = 0; i < L.length; i++) if (L[i].active) this.push(L[i].pos, L[i].radius + 4);
+    for (let i = 0; i < A.length; i++) if (A[i].active) this.push(A[i].pos, A[i].radius + 2);
     if (Game.state === 'playing') return;
-    push(Player.pos, 30);
+    this.push(Player.pos, 30);
   },
   follow() {
     SolarSystem.update(lastDt || 0.016);
@@ -9927,6 +9985,41 @@ Events.on('pickup', (type, pos) => {
 
 SpaceSky.init();
 DeepSky.init();
+
+/* =====================================================================
+   LANGIT TERPANGGANG (A2) - nebula, pita Bima Sakti, dan galaksi tidak bergerak terhadap kamera,
+   tetapi shader fbm-nya dulu dihitung untuk setiap piksel layar setiap frame (sekitar 60 persen
+   kerja GPU di menu dan angkasa). Sekarang dirender sekali ke cubemap sRGB lalu dipakai sebagai
+   scene.background. Ukuran per sisi mengikuti kualitas (Tinggi 2048, sebanding kerapatan piksel
+   layar Retina, jadi tampilannya tetap sama). Black hole (beranimasi), bintang (berkelip), dan
+   Matahari tetap dirender langsung. Dipanggang ulang setelah konteks WebGL pulih.
+   ===================================================================== */
+const SPACE_BG = new THREE.Color(0x02030a);
+const SkyBake = {
+  scene: null, rt: null, baked: false, size: 0, ms: 0,
+  bake() {
+    const t0 = performance.now();
+    if (!this.scene) {
+      this.scene = new THREE.Scene();
+      this.scene.background = SPACE_BG;
+      for (const m of [SpaceSky.nebula, DeepSky.milky, ...DeepSky.galaxies]) this.scene.add(m);   // dipindah dari grup langit
+    }
+    const want = CONFIG.qualityPreset === 'tinggi' ? 2048 : CONFIG.qualityPreset === 'sedang' ? 1024 : 512;
+    const size = Math.min(want, renderer.capabilities.maxCubemapSize || 1024);
+    if (!this.rt ? true : this.size !== size) {
+      if (this.rt) this.rt.dispose();
+      this.rt = new THREE.WebGLCubeRenderTarget(size, { type: THREE.UnsignedByteType, colorSpace: THREE.SRGBColorSpace, generateMipmaps: false, depthBuffer: false });
+      this.size = size;
+    }
+    const cam = new THREE.CubeCamera(1, 100, this.rt);
+    cam.update(renderer, this.scene);
+    this.baked = true;
+    this.ms = Math.round(performance.now() - t0);
+    if (Worlds.active === SpaceWorld) scene.background = this.background;
+  },
+  get background() { return this.baked ? (Debug.off.has('sky') ? SPACE_BG : this.rt.texture) : SPACE_BG; },
+};
+SkyBake.bake();
 Stars.init();
 Companions.init();
 Ultimate.init();
@@ -10133,12 +10226,21 @@ const Sfx = {
   lastShot: 0, lastHit: 0, lastTick: 0, warnTimer: 0, critTimer: 0,
   cache: { ef: -1, e2: -1, flt: -1, eg: -1, ng: -1 },
   wasNitro: false,
-  liveSources: 0, createdSources: 0,
-  // Penghitung sumber suara hidup (osilator dan buffer source) untuk debug.perf dan uji kebocoran
-  track(node) {
+  liveSources: 0, createdSources: 0, sfxLive: 0, dropped: 0,
+  // Penghitung sumber suara hidup (osilator dan buffer source) untuk debug.perf dan uji kebocoran.
+  // Sumber Web Audio hanya bisa diputar sekali, jadi yang di-pool adalah anggaran suara: sumber
+  // selesai langsung diputus dari graf (filter dan gain di belakangnya ikut lepas), dan efek baru
+  // ditolak bila suara efek yang hidup sudah mencapai batas (lebih kecil di mode Hemat baterai).
+  track(node, sfx = true) {
     this.liveSources++; this.createdSources++;
-    node.onended = () => { this.liveSources--; node.onended = null; };
+    if (sfx) this.sfxLive++;
+    node.onended = () => { this.liveSources--; if (sfx) this.sfxLive--; node.onended = null; try { node.disconnect(); } catch (err) { /* sudah lepas */ } };
     return node;
+  },
+  voiceFull() {
+    if (this.sfxLive < (Pacer.saver ? 10 : 32)) return false;
+    this.dropped++;
+    return true;
   },
 
   init() {
@@ -10317,6 +10419,7 @@ const Sfx = {
   // Nada sederhana dengan sapuan frekuensi dan amplop eksponensial
   tone(type, f0, f1, dur, vol, delay = 0) {
     if (!this.ready || vol <= 0.0005) return;
+    if (this.voiceFull()) return;
     const ctx = this.ctx, t = ctx.currentTime + delay;
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = type;
@@ -10333,6 +10436,7 @@ const Sfx = {
   // Semburan noise lewat filter yang frekuensinya menyapu
   noiseBurst(filterType, f0, f1, dur, vol, q = 0.8) {
     if (!this.ready || vol <= 0.0005) return;
+    if (this.voiceFull()) return;
     const ctx = this.ctx, t = ctx.currentTime;
     const src = ctx.createBufferSource(); src.buffer = this.noise;
     const fl = ctx.createBiquadFilter(); fl.type = filterType; fl.Q.value = q;
@@ -10355,7 +10459,7 @@ const Sfx = {
     this.tone('square', 920, 260, 0.07, 0.045);
     this.noiseBurst('highpass', 4000, 2000, 0.04, 0.05);
   },
-  enemyShoot(dist) { this.tone('sawtooth', 460, 170, 0.12, 0.06 * this.attenuation(dist)); },
+  enemyShoot(dist) { if (Pacer.saver ? dist > 220 : false) return; this.tone('sawtooth', 460, 170, 0.12, 0.06 * this.attenuation(dist)); },
   hitMarker() {
     if (!this.ready) return;
     const now = this.ctx.currentTime;
@@ -10454,7 +10558,7 @@ const Music = {
     g.connect(this.tone);
     for (const [type, det] of [['triangle', -5], ['sine', 6]]) {
       const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq; o.detune.value = det;
-      o.connect(g); Sfx.track(o); o.start(when); o.stop(when + len + 2.4);
+      o.connect(g); Sfx.track(o, false); o.start(when); o.stop(when + len + 2.4);
     }
   },
   pluck(freq, when, vol) {
@@ -10464,7 +10568,7 @@ const Music = {
     g.gain.linearRampToValueAtTime(vol, when + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0005, when + 1.6);
     o.connect(g); g.connect(this.tone);
-    Sfx.track(o);
+    Sfx.track(o, false);
     o.start(when); o.stop(when + 1.7);
     this.notes++;
   },
@@ -10473,7 +10577,7 @@ const Music = {
     o.type = 'sine'; o.frequency.setValueAtTime(70, when); o.frequency.exponentialRampToValueAtTime(42, when + 0.25);
     g.gain.setValueAtTime(0.09, when); g.gain.exponentialRampToValueAtTime(0.0005, when + 0.35);
     o.connect(g); g.connect(this.bus);
-    Sfx.track(o);
+    Sfx.track(o, false);
     o.start(when); o.stop(when + 0.4);
   },
   update() {
@@ -10740,7 +10844,7 @@ function updateAlertsHp(hp) {
   const warn = F ? 'TARIK NAIK!' : play ? (Player.warning || '') : '';
   const on = F ? { terrain: true, hp: true, rear: true, comet: true }
     : { terrain: !!warn, hp: play ? hp < CONFIG.player.criticalHp : false, rear: play ? Enemies.rearThreat : false, comet: Game.state === 'playing' ? Comets.threat !== null : false };
-  const key = Object.entries(on).map(([k, v]) => (v ? k : '')).join(',') + '|' + warn;
+  const key = (on.terrain ? 1 : 0) + (on.hp ? 2 : 0) + (on.rear ? 4 : 0) + (on.comet ? 8 : 0) + '|' + warn;
   if (!changed('alerts', key)) return;
   let shown = 0;
   const count = Object.values(on).filter(Boolean).length;
@@ -10848,12 +10952,15 @@ function changed(key, value) {
 function updateHud(dt) {
   const hp = Player.health.ratio;
   let v;
+  // Angka yang berubah terus (skor, kecepatan, ketinggian, kredit) ditulis maksimal 10 kali per detik
+  hud.textT = (hud.textT || 0) - dt;
+  const slow = hud.textT <= 0;
+  if (slow) hud.textT = 0.1;
   v = Player.lives;
   if (changed('lives', v)) renderHearts(v);
   v = Math.round(hp * 200) / 200;
   if (changed('hp', v)) hud.hpFill.style.transform = 'scaleX(' + v + ')';
-  v = Math.ceil(Player.hp);
-  if (changed('hpText', v)) hud.hpText.textContent = v;
+  if (slow) { v = Math.ceil(Player.hp); if (changed('hpText', v)) hud.hpText.textContent = v; }
   v = hp < 0.3 ? 'bar low' : hp < 0.6 ? 'bar mid' : 'bar';
   if (changed('hpClass', v)) hud.hpBar.className = v;
   v = Math.round(Player.nitro * 200) / 200;
@@ -10880,20 +10987,13 @@ function updateHud(dt) {
   if (changed('mult', v)) { hud.mult.textContent = 'x' + v; hud.mult.className = v > 1 ? '' : 'off'; }
   v = Math.max(0, Math.round((Combo.timer / CONFIG.combo.window) * 50) / 50);
   if (changed('combo', v)) hud.comboFill.style.transform = 'scaleX(' + v + ')';
-  v = Math.floor(Game.score);
-  if (changed('score', v)) hud.score.textContent = fmtInt(v);
-  v = Math.max(HighScore.value, Math.floor(Game.score));
-  if (changed('best', v)) hud.best.textContent = fmtInt(v);
-  v = Math.round(Player.speed * 12);
-  if (changed('speed', v)) hud.speed.textContent = v;
-  v = Math.round((Worlds.active.altitude ? Worlds.active.altitude() : Player.pos.y) * 4);
-  if (changed('alt', v)) hud.alt.textContent = v;
-  v = Game.kills;
-  if (changed('kills', v)) hud.kills.textContent = v;
-  v = Game.credits;
-  if (changed('credits', v)) $('credits').textContent = fmtInt(v);
-  v = Enemies.alive;
-  if (changed('enemies', v)) hud.enemies.textContent = v;
+  if (slow) { v = Math.floor(Game.score); if (changed('score', v)) hud.score.textContent = fmtInt(v); }
+  if (slow) { v = Math.max(HighScore.value, Math.floor(Game.score)); if (changed('best', v)) hud.best.textContent = fmtInt(v); }
+  if (slow) { v = Math.round(Player.speed * 12); if (changed('speed', v)) hud.speed.textContent = v; }
+  if (slow) { v = Math.round((Worlds.active.altitude ? Worlds.active.altitude() : Player.pos.y) * 4); if (changed('alt', v)) hud.alt.textContent = v; }
+  if (slow) { v = Game.kills; if (changed('kills', v)) hud.kills.textContent = v; }
+  if (slow) { v = Game.credits; if (changed('credits', v)) $('credits').textContent = fmtInt(v); }
+  if (slow) { v = Enemies.alive; if (changed('enemies', v)) hud.enemies.textContent = v; }
   v = Game.state === 'playing' ? (Player.alive ? Player.warning : '') : '';
   if (changed('warning', v)) { hud.warning.classList.toggle('hidden', !v); if (v) hud.warning.textContent = v; }
 
@@ -10927,7 +11027,7 @@ function updateHud(dt) {
     }
   }
   updateDamageNumbers(dt);
-  if (Game.state === 'playing') Radar.update();
+  if (Game.state === 'playing') Radar.update(dt);
   v = Game.state === 'playing' ? (Player.alive ? hp < CONFIG.player.criticalHp : false) : false;
   if (changed('critical', v)) $('critical').classList.toggle('hidden', !v);
   if (Touch.enabled) { updateHudHp(hp); updateAlertsHp(hp); }
@@ -11024,6 +11124,14 @@ function updateManeuverHud() {
 }
 
 // Penanda musuh di luar layar: panah di tepi layar yang menunjuk arah musuh
+// Posisi penanda tepi ditulis hanya bila berubah minimal 1 px atau 0,01 rad (tanpa string baru tiap frame)
+const _indLast = new Float32Array(64 * 3).fill(-1e9);
+function placeIndicator(n, px, py, ang) {
+  const x = Math.round(px), y = Math.round(py), a = Math.round(ang * 100) / 100, i = n * 3;
+  if (_indLast[i] === x ? (_indLast[i + 1] === y ? _indLast[i + 2] === a : false) : false) return;
+  _indLast[i] = x; _indLast[i + 1] = y; _indLast[i + 2] = a;
+  hud.indicators[n].style.transform = 'translate(' + x + 'px, ' + y + 'px) rotate(' + a + 'rad)';
+}
 function updateIndicators() {
   const w = window.innerWidth, h = window.innerHeight, margin = 28;
   let n = 0;
@@ -11048,7 +11156,7 @@ function updateIndicators() {
       el.className = 'ind ' + e.type;
       el.style.display = 'block';
     }
-    el.style.transform = `translate(${px.toFixed(1)}px, ${py.toFixed(1)}px) rotate(${ang.toFixed(3)}rad)`;
+    placeIndicator(n, px, py, ang);
     n++;
   }
   // Pemindai (kartu Piko): pickup langka ditandai panah hijau
@@ -11066,7 +11174,7 @@ function updateIndicators() {
       x *= sc; y *= sc;
       const el = hud.indicators[n];
       if (hud.indicatorType[n] !== 'pickup') { hud.indicatorType[n] = 'pickup'; el.className = 'ind pickup'; el.style.display = 'block'; }
-      el.style.transform = `translate(${clamp((x * 0.5 + 0.5) * w, margin, w - margin).toFixed(1)}px, ${clamp((0.5 - y * 0.5) * h, margin, h - margin).toFixed(1)}px) rotate(${Math.atan2(-y, x).toFixed(3)}rad)`;
+      placeIndicator(n, clamp((x * 0.5 + 0.5) * w, margin, w - margin), clamp((0.5 - y * 0.5) * h, margin, h - margin), Math.atan2(-y, x));
       n++;
     }
   }
@@ -11546,7 +11654,7 @@ const Settings = {
   SECTIONS: { terrain: 'umum', difficulty: 'umum', asteroidDensity: 'umum', aimAssist: 'umum', robotHelp: 'umum',
     volMaster: 'suara', volSfx: 'suara', volEngine: 'suara', volMusic: 'suara', music: 'suara',
     controlMode: 'kontrol', leftStyle: 'kontrol', controlSize: 'kontrol', controlTransparency: 'kontrol', leftHanded: 'kontrol', invertPitch: 'kontrol',
-    quality: 'grafis', cameraDistance: 'grafis', cameraShake: 'grafis' },
+    quality: 'grafis', cameraDistance: 'grafis', cameraShake: 'grafis', perfMode: 'grafis', fpsCap: 'grafis', resolution: 'grafis' },
   tab: 'umum',
   setTab(t) {
     this.tab = t;
@@ -11800,6 +11908,8 @@ function keyCode(e) {
 
 function onKeyDown(e) {
   const code = keyCode(e);
+  // F3: overlay performa (desktop), juga tersedia di Pengaturan
+  if (code === 'F3') { e.preventDefault(); if (!e.repeat) Settings.set('perfOverlay', !Save.settings.perfOverlay); return; }
   if (!GAME_CODES.has(code)) return;
   if (PREVENT_CODES.has(code)) e.preventDefault();
   Keyboard.down[code] = true;
@@ -12517,7 +12627,6 @@ function update(dt) {
 }
 
 function render() {
-  Hangar.update(lastDt || 0.016);
   Weapons.pool.sync();
   Enemies.bullets.sync();
   if (Game.state === 'playing' || Game.state === 'paused' || Game.state === 'countdown' || Game.state === 'starting') updateHud(lastDt);
@@ -12528,6 +12637,7 @@ function render() {
 // Uji eliminasi: objek fitur yang dimatikan disembunyikan tepat sebelum render (menimpa logika per frame)
 const DEBUG_FEATURES = {
   nebula: () => [SpaceSky.nebula], milky: () => [DeepSky.milky], galaxies: () => DeepSky.galaxies, blackhole: () => [DeepSky.blackHole],
+  sky: () => [],   // langit terpanggang: ditangani lewat SkyBake.background
   stars: () => [SpaceSky.far, SpaceSky.mid, SpaceSky.near, SpaceSky.dust], particles: () => [FX.fire.points, FX.smoke.points],
   clouds: () => Clouds.meshes, planets: () => [SolarSystem.root], skyEarth: () => [Env.sky],
 };
@@ -13196,7 +13306,9 @@ window.__game = {
         bufferW: size.x, bufferH: size.y, pixelRatio: round2(renderer.getPixelRatio()), megapixels: round2(size.x * size.y / 1e6),
         cssW: window.innerWidth, cssH: window.innerHeight, dpr: window.devicePixelRatio || 1,
         meshes, meshesVisible, instances, pointsObjects: pointsObjs, lights, shadowCasters,
-        shadows: renderer.shadowMap.enabled, shadowMapSize: Q.shadows ? Q.shadowMapSize : 0,
+        shadows: renderer.shadowMap.enabled ? Env.sun.castShadow : false, shadowMapSize: Q.shadows ? Q.shadowMapSize : 0,
+        targetFps: Pacer.targetFps(), isStatic: Pacer.isStatic(), scale: Pacer.scale, perfMode: Pacer.mode, perfLevel: Pacer.level,
+        saver: Pacer.saver, updates: Perf.updates, skyBakeMs: SkyBake.ms, skyBakeSize: SkyBake.size,
         particles: FX.fire.alive + FX.smoke.alive, particleMax: FX.fire.max + FX.smoke.max,
         bloom: Post.wanted, quality: CONFIG.qualityPreset, state: Game.state, world: Worlds.active.id,
         audioState: Sfx.ctx ? Sfx.ctx.state : 'none', audioSources: Sfx.liveSources, audioSourcesCreated: Sfx.createdSources,
@@ -13210,6 +13322,7 @@ window.__game = {
       if (on) Debug.off.delete(name); else Debug.off.add(name);
       if (on ? DEBUG_FEATURES[name] : false) for (const o of DEBUG_FEATURES[name]()) if (o) o.visible = true;
       if (name === 'shadows') renderer.shadowMap.autoUpdate = !!on;
+      if (name === 'sky' ? Worlds.active === SpaceWorld : false) scene.background = SkyBake.background;
       if (name === 'audio') { if (on) Sfx.resume(); else Sfx.suspend(); }
       if (name === 'css') {
         for (const a of document.getAnimations()) { if (on) a.play(); else a.pause(); }
@@ -13223,7 +13336,14 @@ window.__game = {
       if (cmd === 'nan') return { nanPixels: GlitchProbe.scanNaN(), objects: GlitchProbe.scanObjects() };
       return GlitchProbe.report();
     },
-    perfReset() { Perf.count = 0; Perf.idx = 0; Perf.rafCalls = 0; Perf.renders = 0; },
+    perfReset() { Perf.count = 0; Perf.idx = 0; Perf.rafCalls = 0; Perf.renders = 0; Perf.updates = 0; },
+    // Uji mode performa: pilih mode, paksa satu langkah turun, atau atur skala resolusi
+    setPerfMode(m) { if (SETTING_ENUMS.perfMode.includes(m)) Settings.set('perfMode', m); return Pacer.mode; },
+    perfStep() { Pacer.stepDown(); return Pacer.level; },
+    setResScale(v) { Pacer.setScale(Number(v) || 1); return Pacer.scale; },
+    simulateSlow(ms) { Pacer.observe(ms, Pacer.targetFps()); return { scale: Pacer.scale, level: Pacer.level }; },
+    fpsOverride(v) { Pacer.override = v === null ? null : Math.max(0, Number(v) || 0); return Pacer.override; },
+    setFocus(v) { Pacer.focused = !!v; Pacer.audioPolicy(); return Pacer.isStatic(); },
     placePickupAhead(type = 'repair', dist = 120) {
       const P = Player.pos, f = Player.forward;
       return !!Pickups.place(type, P.x + f.x * dist, P.y + f.y * dist, P.z + f.z * dist);
@@ -13357,13 +13477,184 @@ const JetPreview = {
 };
 
 /* =====================================================================
-   MAIN LOOP - requestAnimationFrame dengan delta time yang di-clamp
+   PACER (A2) - penjadwal frame dan tata kelola panas.
+   - Batas FPS berbasis akumulator: rAF tetap dipanggil tiap refresh layar, tetapi update dan render
+     hanya berjalan ketika jadwal berikutnya tercapai, sehingga layar 120 Hz tidak merender dua kali
+     lebih sering. dt tetap waktu nyata sejak frame terakhir (fisika konsisten di FPS berapa pun).
+   - Layar statis (jeda, peta, kartu, game over, Pengaturan, Hangar, menu dengan sesi dijeda, jendela
+     tidak fokus di menu): dunia tidak dirender ulang kecuali ada perubahan; update ringan 10 kali per
+     detik agar musik tetap terjadwal. Menu attract dibatasi 20 FPS.
+   - Resolusi dinamis: skala render 1,0 sampai 0,6 dari pixel ratio efektif, turun cepat saat frame
+     meleset dari target, naik pelan dengan histeresis.
+   - Mode performa: Otomatis (resolusi dinamis, turun satu tingkat kualitas bila tetap lambat),
+     Hemat baterai, Seimbang, Kualitas tinggi.
+   ===================================================================== */
+const TOUCH_DEVICE = (window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false) || (navigator.maxTouchPoints || 0) > 0;
+const Pacer = {
+  next: 0, lastRaf: 0, displayMs: 16.7, dirty: true, focused: true, wasStatic: false, staticUntil: 0, hangarAt: 0,
+  scale: 1, winSum: 0, winN: 0, winT: 0, slowWins: 0, goodWins: 0, cooldown: 0, raiseWait: 5, lastRaiseAt: -1e9, stuckWins: 0,
+  level: 0,             // penurunan otomatis: 1 bloom mati, 2 bayangan mati dan partikel 50 persen, 3 FPS 45, 4 FPS 30 (3 dan 4 hanya perangkat sentuh)
+  toastShown: false, lowBattery: false, reducedMotion: false, resizes: 0,
+  STATIC: new Set(['paused', 'map', 'levelup', 'contract', 'stageclear', 'gameover', 'final']),
+  get mode() { return Save.settings.perfMode; },
+  get saver() { return this.mode === 'hemat' ? true : (this.mode === 'otomatis' ? this.lowBattery : false); },
+  get dynRes() { return this.mode !== 'kualitas'; },
+  get noBloom() { return this.saver ? true : this.level >= 1; },
+  get noShadows() { return this.saver ? true : this.level >= 2; },
+  isStatic() {
+    const st = Game.state;
+    if (st === 'boot' || st === 'preview') return false;
+    if (this.STATIC.has(st)) return true;
+    if (UI.overlay) return true;
+    if (st === 'menu') { if (Game.hasSession ? true : !this.focused) return true; if (this.reducedMotion) return true; }
+    return false;
+  },
+  // -1 statis, 0 tanpa batas, selain itu batas FPS
+  override: null,       // hanya untuk pengukuran (debug.fpsOverride): paksa batas FPS tertentu
+  targetFps() {
+    if (Game.state === 'preview') return 60;
+    if (this.isStatic()) return -1;
+    if (this.override !== null) return this.override;
+    if (Game.state === 'menu') return this.mode === 'kualitas' ? 30 : 20;
+    const c = Save.settings.fpsCap;
+    if (this.saver) return 30;
+    if (c === '30') return 30;
+    if (c === '60') return 60;
+    if (c === 'tanpa') return 0;
+    return this.level >= 4 ? 30 : this.level >= 3 ? 45 : 60;
+  },
+  // Pixel ratio efektif: batas perangkat atau pilihan pemain, maksimum 2 juta piksel di Rendah dan Sedang, dikali skala dinamis
+  basePixelRatio() {
+    const r = Save.settings.resolution, dpr = window.devicePixelRatio || 1;
+    let cap = r === '1' ? 1 : r === '1.5' ? 1.5 : r === '2' ? 2 : Q.pixelRatioMax;
+    if (TOUCH_DEVICE) cap = Math.min(cap, 1.25);
+    let pr = Math.min(dpr, cap);
+    if (CONFIG.qualityPreset !== 'tinggi') pr = Math.min(pr, Math.sqrt(2e6 / Math.max(1, window.innerWidth * window.innerHeight)));
+    return Math.max(0.5, pr);
+  },
+  maxScale() { return this.saver ? 0.75 : 1; },
+  pixelRatio() { return Math.round(this.basePixelRatio() * Math.min(this.scale, this.maxScale()) * 1000) / 1000; },
+  setScale(v) {
+    v = clamp(Math.round(v * 100) / 100, 0.6, 1);
+    if (v === this.scale) return;
+    this.scale = v;
+    this.resizes++;
+    onResize();
+  },
+  // Pengamatan satu frame live: median per jendela 0,5 detik (hitch sesaat seperti kompilasi shader
+  // atau pembangunan dunia tidak dianggap lambat), diabaikan 2 detik setelah pergantian state
+  win: new Float32Array(64), warmUntil: 0,
+  observe(intervalMs, fps) {
+    if (!this.dynRes ? true : Game.state === 'menu') return;
+    if (performance.now() < this.warmUntil) { this.winN = 0; this.winT = 0; return; }
+    if (this.winN < 64) this.win[this.winN++] = intervalMs;
+    this.winT += intervalMs;
+    if (this.winT < 500) return;
+    const arr = this.win.subarray(0, this.winN).sort();
+    const avg = arr[arr.length >> 1];
+    this.winN = 0; this.winT = 0;
+    if (this.cooldown > 0) { this.cooldown -= 0.5; return; }
+    const want = 1000 / (fps > 0 ? fps : 60);
+    if (avg > want * 1.12) { this.slowWins++; this.goodWins = 0; }
+    else if (avg < want * 1.04) { this.goodWins++; this.slowWins = 0; this.stuckWins = 0; }
+    else { this.slowWins = 0; this.goodWins = 0; }
+    if (this.slowWins >= 2) {
+      this.slowWins = 0;
+      if (performance.now() - this.lastRaiseAt < 4000) this.raiseWait = Math.min(60, this.raiseWait * 2);   // naik lalu langsung lambat: tunggu lebih lama
+      if (this.scale > 0.6) { this.setScale(this.scale - 0.1); this.cooldown = 1.5; }
+      else if (++this.stuckWins >= 4) { this.stuckWins = 0; this.stepDown(); this.cooldown = 3; }
+    } else if (this.goodWins >= this.raiseWait * 2 ? this.scale < this.maxScale() : false) {
+      this.goodWins = 0;
+      this.lastRaiseAt = performance.now();
+      this.setScale(this.scale + 0.05);
+      this.cooldown = 1;
+    }
+  },
+  // Mode Otomatis: resolusi sudah minimum tetapi frame tetap meleset, turunkan satu tingkat
+  stepDown() {
+    if (this.mode !== 'otomatis') return;
+    const max = TOUCH_DEVICE ? 4 : 2;
+    if (this.level >= max) return;
+    this.level++;
+    this.applyQuality();
+    if (!this.toastShown) { this.toastShown = true; Pacer.notify('Kualitas diturunkan otomatis agar perangkat tetap sejuk'); }
+  },
+  notify(text) { if (typeof showToast === 'function') showToast(text, false); },
+  // Terapkan efek mode dan tingkat: bloom (lewat Post.wanted), bayangan, kepadatan partikel, resolusi
+  applyQuality() {
+    const shadows = Q.shadows ? !this.noShadows : false;
+    if (Env.sun.castShadow !== shadows) Env.sun.castShadow = shadows;
+    FX.density = Q.particleDensity * (this.saver ? 0.5 : this.level >= 2 ? 0.5 : 1);
+    if (!this.dynRes) this.scale = 1;
+    this.dirty = true;
+    onResize();
+  },
+  reset() { this.level = 0; this.scale = 1; this.slowWins = 0; this.goodWins = 0; this.stuckWins = 0; this.raiseWait = 5; this.applyQuality(); },
+  init() {
+    this.reducedMotion = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)').matches : false;
+    // Baterai lemah dan tidak mengisi (bila API tersedia): mode Otomatis berperilaku seperti Hemat baterai
+    try {
+      if (navigator.getBattery) navigator.getBattery().then((b) => {
+        const upd = () => { const low = b.charging ? false : b.level <= 0.2; if (low !== this.lowBattery) { this.lowBattery = low; this.applyQuality(); } };
+        upd();
+        b.addEventListener('levelchange', upd);
+        b.addEventListener('chargingchange', upd);
+      }).catch(() => {});
+    } catch (err) { /* API tidak tersedia */ }
+    window.addEventListener('focus', () => { this.focused = true; this.dirty = true; this.audioPolicy(); });
+    window.addEventListener('blur', () => { this.focused = false; this.audioPolicy(); });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) { lastTime = performance.now(); this.next = 0; this.dirty = true; this.warmUntil = lastTime + 2000; }
+      this.audioPolicy();
+    });
+    Events.on('state', () => { this.dirty = true; this.warmUntil = performance.now() + 2000; this.audioPolicy(); });
+    let prevMode = Save.settings.perfMode;
+    Events.on('settings', (st) => {
+      this.dirty = true;
+      if (st.perfMode !== prevMode) { prevMode = st.perfMode; this.reset(); }
+      else this.applyQuality();
+      this.audioPolicy();
+    });
+    this.applyQuality();
+  },
+  // AudioContext hanya berjalan saat terdengar: berhenti saat tab tersembunyi, jendela tidak fokus di menu, jeda, dan bisu
+  audioPolicy() {
+    if (!Sfx.ctx) return;
+    const run = document.hidden ? false : Game.muted ? false : Game.state === 'paused' ? false : (this.focused ? true : Game.state !== 'menu');
+    if (run) Sfx.resume(); else Sfx.suspend();
+  },
+};
+
+/* Overlay performa (F3 atau Pengaturan): FPS, frame time, draw call, segitiga, resolusi, kualitas */
+const PerfOverlay = {
+  el: document.getElementById('perf-overlay'), t: 0,
+  update(dt) {
+    const on = Save.settings.perfOverlay;
+    this.el.classList.toggle('hidden', !on);
+    if (!on) return;
+    this.t -= dt;
+    if (this.t > 0) return;
+    this.t = 0.25;
+    const st = Perf.stats(), size = renderer.getDrawingBufferSize(_perfV2), f = Pacer.targetFps();
+    this.el.textContent = 'RAPTOR13 ' + GAME_VERSION
+      + '\nFPS ' + (st.avg > 0 ? Math.round(1000 / st.avg) : 0) + '  target ' + (f < 0 ? 'statis' : f === 0 ? 'tanpa batas' : f)
+      + '\nframe ' + st.avg.toFixed(1) + ' ms  p95 ' + st.p95.toFixed(1) + ' ms'
+      + '\nJS ' + st.workAvg.toFixed(2) + ' ms per frame'
+      + '\ndraw ' + Perf.calls + '  segitiga ' + Perf.triangles
+      + '\nresolusi ' + size.x + 'x' + size.y + '  skala ' + Pacer.scale.toFixed(2) + '  pr ' + renderer.getPixelRatio().toFixed(2)
+      + '\nkualitas ' + CONFIG.qualityPreset + '  mode ' + Pacer.mode + (Pacer.level ? ' turun ' + Pacer.level : '') + (Pacer.saver ? ' hemat' : '')
+      + '\nbloom ' + (Post.wanted ? 'ya' : 'tidak') + '  bayangan ' + (Env.sun.castShadow ? 'ya' : 'tidak');
+  },
+};
+
+/* =====================================================================
+   MAIN LOOP - requestAnimationFrame, dijadwalkan oleh Pacer, delta time di-clamp
    ===================================================================== */
 // Statistik frame: EMA untuk HUD, cincin 240 sampel untuk rata-rata dan p95 (debug.perf), tanpa alokasi
 const Perf = {
   frameMs: 16.7, workMs: 0,
   N: 240, ring: new Float32Array(240), work: new Float32Array(240), idx: 0, count: 0,
-  rafCalls: 0, renders: 0,
+  rafCalls: 0, renders: 0, updates: 0,
   // info renderer satu frame penuh (semua pass composer dan peta bayangan), disalin saat frame selesai
   calls: 0, triangles: 0, points: 0, lines: 0,
   push(frameMs, workMs) {
@@ -13382,25 +13673,61 @@ const Perf = {
 };
 renderer.info.autoReset = false;   // dihitung per frame, bukan per panggilan render
 let lastTime = performance.now();
+let lastRender = performance.now();
 let rafId = 0;
 function frame(now) {
+  rafId = requestAnimationFrame(frame);
   Perf.rafCalls++;
+  const d = now - Pacer.lastRaf;
+  Pacer.lastRaf = now;
+  if (d > 0 ? d < 50 : false) Pacer.displayMs += (d - Pacer.displayMs) * 0.1;
+  const fps = Pacer.targetFps(), isStatic = fps < 0;
+  if (isStatic !== Pacer.wasStatic) { Pacer.wasStatic = isStatic; Pacer.dirty = true; if (isStatic) Pacer.staticUntil = now + 350; }
+  // Hangar punya kanvas sendiri: diputar 30 kali per detik walau dunia di belakangnya statis
+  if (UI.overlay === Hangar.el ? now - Pacer.hangarAt >= 32 : false) { Hangar.update(Math.min((now - Pacer.hangarAt) / 1000, 0.05)); Pacer.hangarAt = now; }
+  let draw = true;
+  if (isStatic) {
+    // Statis: render hanya saat ada perubahan atau sesaat setelah masuk (kamera mengendap), update ringan 10 Hz
+    const settle = now < Pacer.staticUntil ? now - lastRender >= 32 : false;
+    draw = Pacer.dirty ? true : settle;
+    if (!draw ? now - lastTime < 100 : false) return;
+  } else if (fps > 0) {
+    const iv = 1000 / fps;
+    if (now < Pacer.next - Math.min(iv, Pacer.displayMs) * 0.5) return;
+    Pacer.next += iv;
+    if (Pacer.next < now - iv) Pacer.next = now + iv;   // tertinggal jauh (setelah jeda): irama dimulai ulang
+  } else Pacer.next = now;
   const raw = Math.max((now - lastTime) / 1000, 0);
   let dt = Math.min(raw, CONFIG.maxDelta);
   if (Game.slowMo > 0) { Game.slowMo -= dt; dt *= CONFIG.collision.slowMotionScale; }   // gerak lambat saat hancur
   lastTime = now;
   Game.frame++;
   const t0 = performance.now();
-  renderer.info.reset();
+  Perf.updates++;
   update(dt);
-  render();
-  Perf.renders++;
-  const ri = renderer.info.render;
-  Perf.calls = ri.calls; Perf.triangles = ri.triangles; Perf.points = ri.points; Perf.lines = ri.lines;
-  const work = performance.now() - t0;
-  Perf.workMs += (work - Perf.workMs) * 0.05;
-  if (raw < 0.25) { Perf.frameMs += (raw * 1000 - Perf.frameMs) * 0.05; Perf.push(raw * 1000, work); }
-  rafId = requestAnimationFrame(frame);
+  if (draw) {
+    renderer.info.reset();
+    render();
+    Perf.renders++;
+    Pacer.dirty = false;
+    const ri = renderer.info.render;
+    Perf.calls = ri.calls; Perf.triangles = ri.triangles; Perf.points = ri.points; Perf.lines = ri.lines;
+    const iv = now - lastRender;
+    lastRender = now;
+    const work = performance.now() - t0;
+    Perf.workMs += (work - Perf.workMs) * 0.05;
+    if (!isStatic ? iv < 250 : false) { Perf.frameMs += (iv - Perf.frameMs) * 0.05; Perf.push(iv, work); Pacer.observe(iv, fps); }
+  }
+  PerfOverlay.update(raw);
+}
+Pacer.init();
+onResize();
+// Setiap pemanggilan hook uji menandai frame kotor agar layar statis ikut digambar ulang
+for (const obj of [window.__game, window.__game.debug]) {
+  for (const k of Object.keys(obj)) {
+    const f = obj[k];
+    if (typeof f === 'function') obj[k] = function (...a) { Pacer.dirty = true; return f.apply(this, a); };
+  }
 }
 rafId = requestAnimationFrame(frame);
 // Boot selesai setelah frame pertama dirender: dunia sudah dibangun dan shader dikompilasi
