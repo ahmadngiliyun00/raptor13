@@ -155,7 +155,8 @@ for (const [w, h] of MATRIX) {
       const worst = await page.evaluate(audit);
       expectAudit(worst, 'stressHud');
       expect((await dbg(page, 'notify')).visible).toBe(true);
-      expect((await dbg(page, 'alerts'))).toEqual({ terrain: true, hp: true, rear: true, comet: true });
+      // Kasus terburuk menyertakan chip BOS DI BELAKANG (B3) karena stressHud memunculkan bos
+      expect((await dbg(page, 'alerts'))).toEqual({ boss: true, terrain: true, hp: true, rear: true, comet: true });
       if (SHOTS) await page.screenshot({ path: `${SHOT_DIR}${w}x${h}${q ? '-poni' : ''}-main-stress.jpg`, type: 'jpeg', quality: 70 });
     });
   }
