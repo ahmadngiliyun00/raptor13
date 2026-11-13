@@ -100,13 +100,11 @@ secara lokal dan tidak pernah diunggah.
      pakai `sha256sum raptor13-vX.Y.Z.apk` (Linux, macOS: `shasum -a 256`) atau `certutil -hashfile ...
      SHA256` (Windows). Di HP pakai aplikasi pengelola berkas yang menampilkan hash.
 - **Kebijakan distribusi di luar Play Store.** Android mengizinkan pemasangan dari sumber lain dengan izin
-  pengguna. **Penting untuk Indonesia:** menurut pengumuman Google pada Agustus 2025, mulai September 2026
-  aplikasi yang dipasang di perangkat Android bersertifikat di Brasil, Indonesia, Singapura, dan Thailand
-  harus berasal dari **developer yang terverifikasi**. Nama paket dan kunci penandatanganan harus
-  didaftarkan di Android Developer Console, termasuk untuk APK yang tidak lewat Play Store. Pemilik sudah
-  punya akun developer Play, jadi verifikasi identitas dan pendaftaran nama paket
-  (misalnya `id.my.ngiliyun.raptor13`) harus dilakukan **sebelum** APK dibagikan. Status dan rincian
-  aturan ini harus dicek ulang di dokumentasi resmi Google saat membangun, karena bisa berubah.
+  pengguna. **Koreksi 14 November 2026:** versi pertama dokumen ini menyatakan semua APK di luar Play Store
+  sudah wajib berasal dari developer terverifikasi sejak September 2026. Itu **tidak tepat**. Tahap pertama
+  (sejak 30 September 2026) hanya berlaku untuk pemasangan lewat toko aplikasi yang berpartisipasi.
+  Unduhan APK langsung dari situs belum tercakup, tetapi akan tercakup saat perluasan global pada 2027.
+  Rincian, sumber, dan langkahnya ada di bagian "Verifikasi developer Android" di bawah.
 
 ## 4. Penandatanganan dan keamanan
 
@@ -284,3 +282,83 @@ tertutup ditambah waktu peninjauan Google, yang untuk akun baru bisa beberapa ha
 5. Rilis beta di GitHub (pre-release) untuk grup tester, bersama formulir umpan balik.
 6. Kartu unduh dan petunjuk di game, rilis stabil dengan tautan `latest`.
 7. Play Store: AAB dari proyek yang sama, uji tertutup 14 hari, produksi.
+
+
+## Verifikasi developer Android (dicek 14 November 2026)
+
+Sumber resmi yang dibaca pada 14 November 2026:
+
+- https://developer.android.com/developer-verification
+- https://developer.android.com/developer-verification/guides/faq (diperbarui Juli 2026)
+- https://developer.android.com/developer-verification/guides/android-developer-console
+- https://developer.android.com/developer-verification/guides/google-play-console
+- https://developer.android.com/developer-verification/guides/limited-distribution
+- https://developer.android.com/developer-verification/guides/full-distribution
+- https://android-developers.googleblog.com/2026/03/android-developer-verification-rolling-out-to-all-developers.html
+- http://android-developers.googleblog.com/2026/06/android-developer-verification.html (18 Juni 2026)
+
+### Status terkini
+
+- **Sejak 30 September 2026**, di Brasil, Indonesia, Singapura, dan Thailand, pada perangkat Android
+  bersertifikat (ponsel dan tablet, Android 7 ke atas), aplikasi yang dipasang atau diperbarui **lewat toko yang
+  berpartisipasi** wajib terdaftar oleh developer terverifikasi. Tujuh toko yang berpartisipasi: Google Play,
+  HONOR App Market, OPPO App Market, Galaxy Store, Palm Store, V-Appstore, dan GetApps.
+- **Unduhan APK langsung dari situs belum tercakup pada tahap ini.** FAQ Juli 2026: tenggat 30 September 2026
+  "only applies to the specific participating stores", dan bila pengguna memasang langsung, persyaratan baru
+  "won't apply to your app yet".
+- Catatan: halaman panduan Limited Distribution (Maret 2026) masih memakai kalimat yang lebih luas, yaitu nama
+  paket yang belum terdaftar tidak bisa dipasang di perangkat bersertifikat di wilayah itu. Blog Juni 2026 dan
+  FAQ Juli 2026 lebih baru, jadi keduanya yang dijadikan pegangan. Kesimpulannya tetap: daftarkan sebelum 2027.
+- **2027:** verifikasi diperluas secara global untuk semua aplikasi di perangkat bersertifikat (bulan belum
+  diumumkan). Sejak saat itu APK langsung dari situs juga harus terdaftar.
+- **Jalur bagi pengguna** untuk aplikasi yang tidak terdaftar: ADB, atau "advanced flow". Advanced flow adalah
+  proses sekali untuk pengguna mahir: mode developer, pemeriksaan singkat, mulai ulang, tunggu 24 jam,
+  konfirmasi sidik jari atau PIN, lalu izin 7 hari atau permanen.
+
+### Tiga jalur akun
+
+| Jalur | Untuk | Biaya | Syarat | Batas |
+| --- | --- | --- | --- | --- |
+| Play Console (sudah dimiliki pemilik) | Distribusi di Play dan di luar Play | sudah dibayar | Identitas Play yang sudah terverifikasi; untuk sebagian besar developer Play tidak perlu langkah baru | tanpa batas |
+| Android Developer Console, distribusi penuh | Hanya di luar Play | 25 dolar AS sekali | Perorangan: kartu identitas berfoto dan bukti alamat, email dan nomor telepon terverifikasi. Organisasi: D-U-N-S, situs terverifikasi di Search Console, dokumen resmi | aplikasi dan pemasangan tanpa batas |
+| Limited Distribution (pelajar dan hobi) | Berbagi ke perangkat yang disetujui | gratis | Akun Google, verifikasi 2 langkah, profil pembayaran Google, email kontak, tanpa kartu identitas | 20 perangkat menurut blog Juni dan FAQ; panduannya menulis 50 |
+
+**Rekomendasi:** pakai **Play Console yang sudah dimiliki pemilik**. Satu tempat untuk verifikasi identitas,
+pendaftaran nama paket di luar Play, dan nanti Play Store.
+
+### Langkah pendaftaran nama paket `id.my.ngiliyun.raptor13`
+
+1. Buat keystore rilis lebih dulu (lihat `docs/apk/keystore.md`, dibuat bersama APK di versi berikutnya).
+   Tanpa kunci tidak ada sidik jari, dan kehilangan kunci berarti nama paket tidak bisa didaftarkan atau
+   diperbarui dengan identitas yang sama.
+2. Cetak sidik jari SHA-256 sertifikat dengan `scripts/print-cert-fingerprint.sh`. Skrip ini memakai
+   `keytool` untuk keystore atau `apksigner` untuk APK, dan tidak pernah mencetak sandi.
+3. Masuk Play Console, buka halaman verifikasi developer Android, lalu pilih daftarkan aplikasi di luar Play.
+   Masukkan nama paket dan sidik jari SHA-256.
+4. **Bukti kepemilikan** hanya diminta untuk nama paket yang sudah ada di luar sana (sudah pernah dibagikan).
+   Caranya: menandatangani APK dengan kunci pribadi dan mengunggahnya, dengan potongan berkas aset yang diberikan
+   konsol. Untuk nama paket baru yang belum pernah dirilis, status langsung "In review" lalu "Registered".
+5. Simpan email konfirmasi dan catat tanggalnya.
+
+### Satu kunci atau banyak kunci
+
+- Konsol mengizinkan beberapa kunci tanda tangan untuk satu nama paket. Jadi kunci untuk APK langsung dan kunci
+  aplikasi Play bisa didaftarkan berdua.
+- Dengan Play App Signing, Google memegang **kunci aplikasi** dan pemilik memegang **kunci unggah**. APK yang
+  diunduh dari Play ditandatangani kunci aplikasi Google. APK dari GitHub ditandatangani kunci pemilik.
+  Keduanya tidak bisa saling memperbarui kecuali kuncinya sama.
+- Saran: saat unggahan pertama ke Play, pilih opsi memakai kunci sendiri sebagai kunci aplikasi (unggah kunci
+  yang sama dengan APK langsung). Kedua jalur lalu saling memperbarui. Daftarkan semua sidik jari yang
+  dipakai. Halaman yang dibaca tidak menyebut aturan kunci untuk Play App Signing secara rinci (FAQ hanya bilang
+  aplikasi dengan Play App Signing ikut pendaftaran otomatis), jadi cek ulang saat itu.
+
+### Risiko nama paket bertabrakan
+
+Bila developer lain sudah memakai nama yang sama:
+
+1. Prioritas diberikan pada kunci yang menguasai lebih dari 50 persen pemasangan.
+2. Bila tidak ada, kunci dengan lebih dari 50 pemasangan.
+3. Bila tidak ada juga, yang pertama mendaftar.
+
+Nama `id.my.ngiliyun.raptor13` memakai domain milik pemilik, jadi risikonya rendah. Tetap daftarkan sebelum
+APK pertama dibagikan, agar tidak ada yang lebih dulu memakai nama itu.
