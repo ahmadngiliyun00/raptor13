@@ -219,6 +219,10 @@ test('A2: mode performa Hemat baterai, Kualitas tinggi, resolusi dinamis, dan tu
   // Otomatis: frame lambat terus menurunkan skala resolusi, lalu satu tingkat kualitas dengan toast sekali
   await dbg(page, 'setPerfMode', 'otomatis');
   await page.waitForTimeout(2100);   // lewati masa pemanasan setelah perubahan
+  // Layar 90 Hz dengan batas 60: jarak frame bergantian 11,1 dan 22,2 ms (rata-rata 60 FPS) tidak boleh dianggap lambat
+  const ok = await page.evaluate(() => { const d = window.__game.debug; let last; for (let i = 0; i < 400; i++) last = d.simulateSlow(i % 2 ? 22.2 : 11.1); return last; });
+  expect(ok.scale).toBe(1);
+  expect(ok.level).toBe(0);
   const r = await page.evaluate(() => { const d = window.__game.debug; let last; for (let i = 0; i < 400; i++) last = d.simulateSlow(40); return last; });
   expect(r.scale).toBeLessThan(1);
   expect(r.level).toBeGreaterThanOrEqual(1);
@@ -329,4 +333,14 @@ test('A7: satu fungsi resize menyinkronkan kanvas, composer, dan bloom saat jend
   const g = await dbg(page, 'glitchProbe', 'nan');
   expect(g.nanPixels).toBe(0);
   expect(g.objects).toEqual([]);
+});
+
+test('A6: satu nomor versi di menu, Tentang, overlay F3, dan package.json', async ({ page }) => {
+  const pkg = JSON.parse((await import('node:fs')).readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  await open(page);
+  await expect(page.locator('#title-version')).toHaveText('v' + pkg.version);
+  await expect(page.locator('#about-version')).toHaveText(pkg.version);
+  await page.keyboard.press('F3');
+  await expect(page.locator('#perf-overlay')).toContainText('RAPTOR13 ' + pkg.version);
+  await page.keyboard.press('F3');
 });

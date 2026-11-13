@@ -116,28 +116,31 @@ konten tidak berubah; tampilan hanya boleh turun lewat tingkat kualitas dan kual
 secantik sebelumnya; setiap temuan dicatat dengan angka sebelum dan sesudah; commit per task dengan
 awalan perf:, security:, fix:, docs:, chore:, test:; tanpa rewrite riwayat. Urutan pengerjaan:
 
-- A1 Baseline dan profiling: hook debug.perf(), skrip CDP tests/perf/profile.mjs (menu, Bumi,
+- (SELESAI) A1 Baseline dan profiling: hook debug.perf(), skrip CDP tests/perf/profile.mjs (menu, Bumi,
   angkasa ramai; DPR 1, 2, 3; emulasi 120 Hz), cek butir a sampai n, peringkat akar masalah,
   docs/audit/baseline.md.
-- A2 Perbaikan performa dan panas: batas FPS berbasis akumulator, batas DPR dan resolusi dinamis,
+- (SELESAI) A2 Perbaikan performa dan panas: batas FPS berbasis akumulator, batas DPR dan resolusi dinamis,
   Mode performa (Otomatis, Hemat baterai, Seimbang, Kualitas tinggi), berhenti render saat tersembunyi
   dan di layar statis, langit dipanggang ke cubemap, bloom setengah resolusi, pooling dan dispose,
   HUD dan DOM, audio, uji kebocoran, overlay F3, docs/audit/performa.md dan docs/audit/cara-mengukur.md.
-- A3 Audit keamanan: validasi localStorage, injeksi, hook debug hanya dengan ?debug=1, Three.js
+- (SELESAI) A3 Audit keamanan: validasi localStorage, injeksi, hook debug hanya dengan ?debug=1, Three.js
   ditanam lokal dengan SRI, CSP, header server dan .htaccess, rantai pasok, pindai rahasia riwayat
   git, ketahanan WebGL dan penyimpanan, privasi, docs/audit/keamanan.md.
-- A4 Audit UI/UX mobile dan desktop: tutorial singkat, konsistensi, haptik, aksesibilitas (ukuran
+- (SELESAI) A4 Audit UI/UX mobile dan desktop: tutorial singkat, konsistensi, haptik, aksesibilitas (ukuran
   teks, kurangi gerakan, buta warna, ARIA, fokus), kenyamanan (wake lock, anti gulir, peringatan
   tutup), layar muat dan error, desktop 1280 sampai 2560 dan ultrawide, docs/audit/ui-ux.md,
   screenshot sebelum dan sesudah di docs/screenshots/audit/.
-- A7 Kotak hitam berkedip di menu: reproduksi, eliminasi, akar masalah, debug.glitchProbe dan
+- (SELESAI) A7 Kotak hitam berkedip di menu: reproduksi, eliminasi, akar masalah, debug.glitchProbe dan
   ?diag=1, pra-pemanasan shader dan tekstur, fungsi resize tunggal, pemulihan konteks WebGL,
   docs/audit/glitch-kotak-hitam.md.
-- A5 Pengujian dan regresi: uji kebocoran, console bersih termasuk CSP, localStorage rusak, query
+- (SELESAI) A5 Pengujian dan regresi: uji kebocoran, console bersih termasuk CSP, localStorage rusak, query
   berbahaya, hook terkunci, mode performa, jeda saat tersembunyi, tata letak; metrik bot dibanding
   baseline; docs/audit/ringkasan.md.
-- A6 Versi dan rilis: docs/rilis/rencana-tag.md, tag v1.0.0, v2.0.0, v2.1.0 (akhir blok H) dan
+- (SELESAI) A6 Versi dan rilis: docs/rilis/rencana-tag.md, tag v1.0.0, v2.0.0, v2.1.0 (akhir blok H) dan
   v2.2.0 (akhir audit), GAME_VERSION tunggal, CHANGELOG.md, README, GitHub Release.
+
+Hasil blok A: `docs/audit/ringkasan.md`. Setelah mengubah skrip atau style di `index.html`, jalankan
+`node tests/csp.mjs --write` (hash CSP), lalu `npx playwright test`. Hook uji hanya dengan `?debug=1`.
 
 ## Catatan teknis
 

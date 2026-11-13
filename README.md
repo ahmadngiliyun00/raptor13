@@ -4,8 +4,11 @@
 
 RAPTOR13 adalah game tempur udara dan angkasa 3D bergaya arcade yang berjalan langsung di browser.
 Seluruh game ada di satu berkas `index.html` (HTML, CSS, dan JavaScript inline), tanpa build step
-dan tanpa aset eksternal. Three.js 0.187.0 dimuat dari CDN lewat importmap, semua model, tekstur,
-langit, dan planet dibuat prosedural oleh kode, dan semua suara serta musik disintesis dengan WebAudio.
+dan tanpa aset eksternal. Three.js 0.187.0 ditanam lokal di `vendor/three-0.187.0/` (berkas resmi npm,
+dipetakan importmap dengan integrity sha384), semua model, tekstur, langit, dan planet dibuat prosedural
+oleh kode, dan semua suara serta musik disintesis dengan WebAudio.
+
+Versi saat ini: **2.2.0** (lihat [CHANGELOG.md](CHANGELOG.md)). Tanpa cookie, pelacak, atau analitik.
 
 Ada dua medan: **Luar Angkasa** (Tata Surya lengkap dengan Kampanye 10 stage dan Jelajah Bebas)
 dan **Atmosfer Bumi** (gelombang tanpa akhir di atas pegunungan, laut, dan pilar batu).
@@ -29,7 +32,10 @@ Tidak perlu `npm install` untuk bermain.
 python3 -m http.server 8080      # atau: npm run serve
 ```
 
-Lalu buka `http://localhost:8080/`. Koneksi internet dibutuhkan untuk memuat Three.js dari jsDelivr.
+Lalu buka `http://localhost:8080/`. Tidak butuh internet: Three.js ada di `vendor/`.
+
+Header keamanan server, contoh `.htaccess` untuk OpenLiteSpeed atau CyberPanel, padanan nginx, dan
+perintah verifikasi `curl -I` ada di [docs/deploy/security-headers.md](docs/deploy/security-headers.md).
 
 ### Deploy ke GitHub Pages
 
@@ -276,10 +282,21 @@ Pilih di Pengaturan atau lewat URL `?kualitas=rendah|sedang|tinggi` (`QUALITY_PR
 | sedang | hidup | 1800 | sebagian | 512 | 0,8 | 0,9 |
 | tinggi | hidup | 3200 | penuh | 1024 | 1 | 1 |
 
-Hasil ukur di Mac dengan GPU asli: semua skenario berat (orbit Bumi, di dalam cincin Saturnus,
-Sabuk Asteroid dengan roster gelombang 8, pertarungan naga) berjalan 60 FPS dengan kerja CPU
-sekitar 2 sampai 3 ms per frame di ketiga preset. Membangun tekstur Tata Surya sekali saat memuat
-butuh sekitar 0,4 detik (Rendah, Sedang) dan 1,3 detik (Tinggi).
+### Mode performa dan panas (2.2.0)
+
+Pengaturan, tab Grafis dan Lainnya:
+
+| Opsi | Nilai | Isi |
+| --- | --- | --- |
+| Mode performa | Otomatis (bawaan), Hemat baterai, Seimbang, Kualitas tinggi | Otomatis memakai resolusi dinamis dan menurunkan satu tingkat (bloom, lalu bayangan dan partikel, di HP juga 45 lalu 30 FPS) bila tetap lambat, serta berperilaku hemat saat baterai lemah. Hemat baterai: 30 FPS, tanpa bloom dan bayangan, partikel 50 persen, resolusi 0,75 |
+| Batas FPS | Otomatis (60), 30, 60, Tanpa batas | Menu 20 FPS, layar statis tidak dirender ulang |
+| Resolusi maksimum | Otomatis, 1x, 1,5x, 2x | Otomatis mengikuti kualitas, maksimal 1,25 di perangkat sentuh, maksimal 2 juta piksel di Rendah dan Sedang |
+| Overlay performa | F3 | FPS, frame time, draw call, segitiga, resolusi, mode |
+
+Hasil ukur di MacBook Pro M1 Pro (ANGLE Metal): tanpa batas frame menu dulu butuh 10,3 ms GPU per frame
+dan dirender 104 sampai 231 kali per detik; sekarang sekitar 1,5 ms dan 20 kali per detik. Angka lengkap
+sebelum dan sesudah di [docs/audit/performa.md](docs/audit/performa.md), cara mengukur sendiri di
+[docs/audit/cara-mengukur.md](docs/audit/cara-mengukur.md).
 
 ## Pengujian otomatis
 
@@ -289,19 +306,25 @@ npm test
 ```
 
 `npm test` memasang Chromium untuk Playwright, menyalakan server statis di port 4173, lalu
-menjalankan 97 uji di `tests/game.spec.mjs` dan 31 uji mode HP di `tests/hp.spec.mjs` (emulasi sentuh
-di tujuh ukuran layar landscape ditambah safe area). Screenshot mode HP di `docs/screenshots/hp/`
+menjalankan 97 uji di `tests/game.spec.mjs`, 31 uji mode HP di `tests/hp.spec.mjs` (emulasi sentuh
+di tujuh ukuran layar landscape ditambah safe area), dan 13 uji audit di `tests/audit.spec.mjs`
+(hook terkunci, query berbahaya, simpanan rusak, CSP, konteks WebGL, batas FPS, mode performa, tab
+tersembunyi, tutorial, aksesibilitas, resize). Semua uji membuka `index.html?debug=1`. Screenshot mode HP di `docs/screenshots/hp/`
 dibuat ulang dengan `SHOTS=1 npx playwright test tests/hp.spec.mjs`. Setiap uji gagal bila ada console error atau warning,
-error halaman, atau request ke luar localhost dan Three.js. Cakupan utama: kontrol dan kombinasi
+error halaman (termasuk pelanggaran CSP), atau request apa pun ke luar localhost. Cakupan utama: kontrol dan kombinasi
 tombol, manuver dan looping, tabrakan fatal dengan penyebab yang benar, simulasi bot yang mengukur
 keadilan musuh (waktu membuntuti, tabrakan, serudukan, batas kecepatan), senjata dan buff, audio
 tanpa NaN, hangar dan migrasi save, setiap planet dan bulan, LOD cincin dan sabuk, batas jelajah,
 fakta dan Penemuan setelah reload, kampanye, warp, peta, cutscene, semua fase bos, roster musuh,
-XP dan kartu, kontrak, radar dan instrumen, musik, preset kualitas, anggaran tata letak mode HP, kebocoran sumber daya setelah 10 restart dan 5 menit simulasi,
+XP dan kartu, kontrak, radar dan instrumen, musik, preset kualitas, anggaran tata letak mode HP, kebocoran sumber daya setelah 20 restart dan 5 menit simulasi,
 dan screenshot di `docs/screenshots/`.
 
 Di macOS uji memakai GPU asli lewat ANGLE Metal; di platform lain SwiftShader dan uji FPS dilewati.
-Kegagalan sesekali bertuliskan `ERR_NETWORK_CHANGED` berasal dari jaringan saat memuat Three.js.
+
+Setelah mengubah skrip atau style di `index.html`, jalankan `npm run csp` (atau
+`node tests/csp.mjs --write`) untuk memperbarui hash CSP; tanpa itu browser menolak skrip dan uji gagal.
+Skrip pengukuran ada di `tests/perf/` (profil CDP, alokasi, kebocoran, pemecahan GPU, glitch, screenshot
+audit, metrik bot, verifikasi tag).
 
 ## Mengatur gameplay
 
@@ -321,7 +344,9 @@ Semua angka penting ada di objek `CONFIG` di bagian atas skrip. Beberapa nilai k
 
 ## Hook debug
 
-`window.__game` tersedia untuk uji otomatis dan eksperimen di console browser, misalnya:
+`window.__game` hanya tersedia bila halaman dibuka dengan `?debug=1` (juga pratinjau `?jetpreview=1`,
+`?shippreview=`, dan `?gallery=1`). Tanpa parameter itu tidak ada hook global. Overlay diagnosis kotak
+hitam: `?diag=1`. Contoh di console:
 
 ```js
 __game.snapshot()                          // ringkasan state, skor, posisi, nitro, fps
@@ -339,6 +364,10 @@ __game.debug.viewport(); __game.debug.planeFrame()   // satuan --u, jarak tepi, 
 __game.debug.touchState(); __game.debug.notify(); __game.debug.keyboardHints()
 __game.debug.setSetting('leftHanded', true)
 __game.debug.simulate(300)                 // simulasi cepat dengan bot
+__game.debug.perf()                        // fps, frame time p95, draw call, buffer, audio, heap
+__game.debug.setPerfMode('hemat'); __game.debug.feature('bloom', false)
+__game.debug.glitchProbe('start'); __game.debug.glitchProbe('report')
+__game.debug.tutorial('start')
 ```
 
 ## Struktur proyek
@@ -346,15 +375,24 @@ __game.debug.simulate(300)                 // simulasi cepat dengan bot
 ```text
 raptor13/
 ├── index.html               # seluruh game
+├── vendor/three-0.187.0/    # Three.js resmi (ditanam lokal, MIT)
+├── CHANGELOG.md
 ├── README.md
 ├── package.json             # hanya untuk tooling uji (Playwright)
 ├── playwright.config.mjs
 ├── tests/
-│   ├── game.spec.mjs        # 92 uji Playwright
+│   ├── game.spec.mjs        # uji gameplay
+│   ├── hp.spec.mjs          # uji mode HP
+│   ├── audit.spec.mjs       # uji audit blok A
+│   ├── csp.mjs              # hash CSP dan integrity importmap
+│   ├── perf/                # skrip pengukuran
 │   └── static-server.mjs    # server statis kecil tanpa dependensi
 └── docs/
     ├── PROGRESS.md          # urutan task dan catatan kerja
     ├── SELF-REVIEW.md       # tinjauan Definition of Done
+    ├── audit/               # baseline, performa, keamanan, UI/UX, glitch, dependensi, ringkasan
+    ├── deploy/              # header keamanan server dan contoh .htaccess
+    ├── rilis/               # rencana tag dan perintah rilis
     └── screenshots/
 ```
 
@@ -375,7 +413,9 @@ raptor13/
 
 ## Keterbatasan yang diketahui
 
-- Three.js dimuat dari CDN, jadi butuh internet; belum ada service worker untuk luring.
+- Belum ada service worker untuk luring penuh (Three.js sudah lokal, tetapi halaman tetap dimuat dari server).
+- Kotak hitam berkedip di menu belum terkonfirmasi hilang di perangkat pemilik; lihat
+  `docs/audit/glitch-kotak-hitam.md` dan pakai `?diag=1` untuk merekam.
 - Belum ada dukungan mouse dan gamepad. Mode HP hanya mendatar.
 - Kinerja hanya diukur di Mac dengan GPU asli; perangkat HP sungguhan belum diuji (tata letak HP
   diuji lewat emulasi di tujuh ukuran layar dan safe area buatan). Kunci orientasi dan petunjuk
@@ -390,6 +430,13 @@ raptor13/
 - Bos Bumi memakai model Penjaga yang diperbesar; kepala Sang Naga Vanta masih sederhana dibanding
   tubuhnya.
 - Tabrakan memakai bola, sehingga bentuk sayap tidak dihitung presisi.
+
+## Melapor masalah
+
+Buka issue di <https://github.com/ahmadngiliyun00/raptor13/issues> dengan isi: perangkat dan browser,
+langkah untuk mengulang, screenshot atau rekaman, dan bila menyangkut tampilan, log dari
+`index.html?diag=1` (tombol UNDUH LOG). Untuk masalah panas atau patah-patah, sertakan isi overlay F3.
+Ringkasan audit terakhir: [docs/audit/ringkasan.md](docs/audit/ringkasan.md).
 
 ## Ide lanjutan
 

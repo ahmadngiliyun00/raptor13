@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-igw5LnbNMmgm3Nprm3CIzawvahkW3K4DiRDFM7COJIw='; style-src 'self' 'sha256-TtZW5AC+Oa2fxSZ7Mu1GwSzRCO3Z6Wv4lhZhftqmhsc='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-yYz3Hpc3UOUWinM396CZRB7ULtNW+VJfCOGQfG3ZMEY='; style-src 'self' 'sha256-rhKzdNu9PU3tJKXO1hJS0uJ48UaRKKzXN1FOU3OQJks='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -451,6 +451,7 @@
   /* Kurangi gerakan: tanpa kedip dan animasi berulang, transisi seketika */
   body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
     animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .title-version { position: absolute; right: max(var(--sa-r, 8px), 10px); bottom: max(var(--sa-b, 8px), 8px); font-size: 11px; letter-spacing: 0.08em; color: var(--ui-dim); pointer-events: none; }
   #perf-overlay { position: fixed; left: max(var(--sa-l, 8px), 8px); top: 50%; transform: translateY(-50%); z-index: 60; margin: 0; padding: 6px 8px;
     font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #cfe8ff; background: rgba(4, 8, 14, 0.78);
     border: 1px solid rgba(120, 200, 255, 0.3); border-radius: 6px; pointer-events: none; white-space: pre; }
@@ -1109,6 +1110,7 @@
 
 <!-- Menu utama: latar adalah adegan 3D hidup (attract mode) -->
 <div id="screen-title" class="screen menu">
+  <small id="title-version" class="title-version" aria-label="Versi game"></small>
   <div class="menu-panel">
     <div class="logo-wrap">
       <div class="logo-mark"></div>
@@ -1499,7 +1501,7 @@ const QUALITY_PRESETS = {
 };
 
 // Satu sumber nomor versi: ditampilkan di menu, Tentang, dan overlay performa (samakan dengan package.json)
-const GAME_VERSION = '2.0.0';
+const GAME_VERSION = '2.2.0';
 // Parameter URL dibaca sekali dan divalidasi ketat (A3). Hook uji window.__game, alat pratinjau model,
 // dan galeri hanya aktif dengan ?debug=1; overlay diagnosis kotak hitam dengan ?diag=1.
 const URLQ = (() => { try { return new URLSearchParams(location.search); } catch (err) { return new URLSearchParams(''); } })();
@@ -11805,7 +11807,8 @@ onButton(ui.btnPauseRestart, () => UI.confirm('MULAI ULANG?', 'Progres sesi ini 
 onButton(ui.btnPauseMenu, () => UI.confirm('KE MENU UTAMA?', 'Sesi ini disimpan dan bisa dilanjutkan dari menu, juga setelah halaman dimuat ulang.', goToMenu));
 onButton(ui.confirmNo, () => UI.closeOverlay());
 onButton(ui.confirmYes, () => { const fn = UI.confirmAction; UI.confirmAction = null; UI.closeOverlay(true); if (fn) fn(); });
-document.getElementById('about-version').textContent = CONFIG.version;
+document.getElementById('about-version').textContent = GAME_VERSION;
+document.getElementById('title-version').textContent = 'v' + GAME_VERSION;   // pojok kecil menu utama
 renderTitleBest();
 
 // Isi layar game over dan simpan skor tertinggi
@@ -13783,17 +13786,18 @@ const Pacer = {
     this.resizes++;
     onResize();
   },
-  // Pengamatan satu frame live: median per jendela 0,5 detik (hitch sesaat seperti kompilasi shader
-  // atau pembangunan dunia tidak dianggap lambat), diabaikan 2 detik setelah pergantian state
-  win: new Float32Array(64), warmUntil: 0,
+  // Pengamatan satu frame live: rata-rata jarak frame per jendela 0,5 detik, yaitu FPS yang benar-benar
+  // tercapai. Bukan median: di layar 90 Hz dengan batas 60 jarak frame bergantian 11 dan 22 ms (rata-rata
+  // tepat 60 FPS) sehingga median keliru menganggapnya lambat. Hitch kompilasi atau pembangunan dunia
+  // diabaikan lewat masa pemanasan 2 detik setelah pergantian state; satu jendela lambat saja tidak cukup.
+  warmUntil: 0,
   observe(intervalMs, fps) {
     if (!this.dynRes ? true : Game.state === 'menu') return;
     if (performance.now() < this.warmUntil) { this.winN = 0; this.winT = 0; return; }
-    if (this.winN < 64) this.win[this.winN++] = intervalMs;
+    this.winN++;
     this.winT += intervalMs;
     if (this.winT < 500) return;
-    const arr = this.win.subarray(0, this.winN).sort();
-    const avg = arr[arr.length >> 1];
+    const avg = this.winT / this.winN;
     this.winN = 0; this.winT = 0;
     if (this.cooldown > 0) { this.cooldown -= 0.5; return; }
     const want = 1000 / (fps > 0 ? fps : 60);

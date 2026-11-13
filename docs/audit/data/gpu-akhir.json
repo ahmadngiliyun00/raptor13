@@ -1,0 +1,237 @@
+{
+  "menu": {
+    "dpr": 2,
+    "buffer": "1874x1066",
+    "rows": [
+      {
+        "feature": "semua aktif",
+        "frameMs": 1.88,
+        "workMs": 1.63,
+        "calls": 81,
+        "deltaMs": 0
+      },
+      {
+        "feature": "bloom",
+        "frameMs": 1.36,
+        "workMs": 1.15,
+        "calls": 45,
+        "deltaMs": 0.52
+      },
+      {
+        "feature": "nebula",
+        "frameMs": 1.95,
+        "workMs": 1.74,
+        "calls": 59,
+        "deltaMs": -0.07
+      },
+      {
+        "feature": "milky",
+        "frameMs": 1.78,
+        "workMs": 1.64,
+        "calls": 61,
+        "deltaMs": 0.1
+      },
+      {
+        "feature": "galaxies",
+        "frameMs": 1.77,
+        "workMs": 1.6,
+        "calls": 58,
+        "deltaMs": 0.11
+      },
+      {
+        "feature": "blackhole",
+        "frameMs": 1.72,
+        "workMs": 1.62,
+        "calls": 61,
+        "deltaMs": 0.16
+      },
+      {
+        "feature": "stars",
+        "frameMs": 1.78,
+        "workMs": 1.67,
+        "calls": 69,
+        "deltaMs": 0.1
+      },
+      {
+        "feature": "planets",
+        "frameMs": 1.71,
+        "workMs": 1.59,
+        "calls": 53,
+        "deltaMs": 0.17
+      },
+      {
+        "feature": "shadows",
+        "frameMs": 1.82,
+        "workMs": 1.56,
+        "calls": 68,
+        "deltaMs": 0.06
+      },
+      {
+        "feature": "particles",
+        "frameMs": 1.74,
+        "workMs": 1.62,
+        "calls": 76,
+        "deltaMs": 0.14
+      },
+      {
+        "feature": "css",
+        "frameMs": 1.77,
+        "workMs": 1.64,
+        "calls": 61,
+        "deltaMs": 0.11
+      },
+      {
+        "feature": "semua fitur di atas mati",
+        "frameMs": 1.39,
+        "workMs": 1.3,
+        "calls": 25,
+        "deltaMs": 0.49
+      }
+    ]
+  },
+  "space": {
+    "dpr": 2,
+    "buffer": "1874x1066",
+    "rows": [
+      {
+        "feature": "semua aktif",
+        "frameMs": 2.58,
+        "workMs": 2.19,
+        "calls": 105,
+        "deltaMs": 0
+      },
+      {
+        "feature": "bloom",
+        "frameMs": 1.71,
+        "workMs": 1.35,
+        "calls": 98,
+        "deltaMs": 0.87
+      },
+      {
+        "feature": "nebula",
+        "frameMs": 2.83,
+        "workMs": 2.33,
+        "calls": 185,
+        "deltaMs": -0.25
+      },
+      {
+        "feature": "milky",
+        "frameMs": 2.63,
+        "workMs": 2.23,
+        "calls": 80,
+        "deltaMs": -0.05
+      },
+      {
+        "feature": "galaxies",
+        "frameMs": 2.75,
+        "workMs": 2.35,
+        "calls": 85,
+        "deltaMs": -0.17
+      },
+      {
+        "feature": "blackhole",
+        "frameMs": 2.33,
+        "workMs": 1.94,
+        "calls": 89,
+        "deltaMs": 0.25
+      },
+      {
+        "feature": "stars",
+        "frameMs": 2.66,
+        "workMs": 2.21,
+        "calls": 100,
+        "deltaMs": -0.08
+      },
+      {
+        "feature": "planets",
+        "frameMs": 2.6,
+        "workMs": 2.11,
+        "calls": 142,
+        "deltaMs": -0.02
+      },
+      {
+        "feature": "shadows",
+        "frameMs": 2.62,
+        "workMs": 2.18,
+        "calls": 118,
+        "deltaMs": -0.04
+      },
+      {
+        "feature": "particles",
+        "frameMs": 2.94,
+        "workMs": 2.45,
+        "calls": 110,
+        "deltaMs": -0.36
+      },
+      {
+        "feature": "css",
+        "frameMs": 2.58,
+        "workMs": 2.16,
+        "calls": 127,
+        "deltaMs": 0
+      },
+      {
+        "feature": "semua fitur di atas mati",
+        "frameMs": 1.91,
+        "workMs": 1.55,
+        "calls": 90,
+        "deltaMs": 0.67
+      }
+    ]
+  },
+  "earth": {
+    "dpr": 2,
+    "buffer": "1874x1066",
+    "rows": [
+      {
+        "feature": "semua aktif",
+        "frameMs": 1.56,
+        "workMs": 1.25,
+        "calls": 105,
+        "deltaMs": 0
+      },
+      {
+        "feature": "shadows",
+        "frameMs": 1.47,
+        "workMs": 1.26,
+        "calls": 70,
+        "deltaMs": 0.09
+      },
+      {
+        "feature": "clouds",
+        "frameMs": 1.55,
+        "workMs": 1.13,
+        "calls": 102,
+        "deltaMs": 0.01
+      },
+      {
+        "feature": "particles",
+        "frameMs": 1.51,
+        "workMs": 1.23,
+        "calls": 82,
+        "deltaMs": 0.05
+      },
+      {
+        "feature": "skyEarth",
+        "frameMs": 1.5,
+        "workMs": 1.12,
+        "calls": 86,
+        "deltaMs": 0.06
+      },
+      {
+        "feature": "css",
+        "frameMs": 1.5,
+        "workMs": 1.14,
+        "calls": 93,
+        "deltaMs": 0.06
+      },
+      {
+        "feature": "semua fitur di atas mati",
+        "frameMs": 1.48,
+        "workMs": 1.17,
+        "calls": 78,
+        "deltaMs": 0.08
+      }
+    ]
+  }
+}

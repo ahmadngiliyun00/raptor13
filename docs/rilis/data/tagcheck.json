@@ -1,0 +1,41 @@
+[
+  {
+    "hash": "95d12e9",
+    "subject": "fix: uji game over membaca skor tertinggi dari save berversi raptor13.v1",
+    "date": "2026-11-11 01:19:23 +0700",
+    "menu": true,
+    "version": "1.1.0",
+    "state": "playing",
+    "shots": 18,
+    "world": "earth",
+    "lives": 3,
+    "fps": 60,
+    "consoleErrors": []
+  },
+  {
+    "hash": "e5ca272",
+    "subject": "docs: S18 README lengkap dengan screenshot, Ide lanjutan, self-review Definition of Done, versi 2.0.0",
+    "date": "2026-11-11 12:53:01 +0700",
+    "menu": true,
+    "version": "2.0.0",
+    "state": "playing",
+    "shots": 16,
+    "world": "earth",
+    "lives": 3,
+    "fps": 60,
+    "consoleErrors": []
+  },
+  {
+    "hash": "2f58256",
+    "subject": "docs: H10 README mode HP (kontrol, HUD, notifikasi, kamera, layar penuh, opsi baru, uji safe area, hasil ukur per layar) dan self-review blok H",
+    "date": "2026-11-13 13:51:54 +0700",
+    "menu": true,
+    "version": "2.0.0",
+    "state": "playing",
+    "shots": 15,
+    "world": "earth",
+    "lives": 3,
+    "fps": 60,
+    "consoleErrors": []
+  }
+]

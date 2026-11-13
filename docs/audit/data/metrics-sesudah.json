@@ -1,0 +1,68 @@
+[
+  {
+    "world": "earth",
+    "seed": 4242,
+    "time": 120,
+    "tailRatio": 0.01,
+    "collisionsPerMin": 0,
+    "ramsPerMin": 1.5,
+    "kills": 19,
+    "score": 8300,
+    "wave": 4
+  },
+  {
+    "world": "earth",
+    "seed": 7,
+    "time": 120,
+    "tailRatio": 0.01,
+    "collisionsPerMin": 0,
+    "ramsPerMin": 0.5,
+    "kills": 24,
+    "score": 7899,
+    "wave": 4
+  },
+  {
+    "world": "earth",
+    "seed": 99,
+    "time": 120,
+    "tailRatio": 0,
+    "collisionsPerMin": 0,
+    "ramsPerMin": 0.5,
+    "kills": 10,
+    "score": 3000,
+    "wave": 3
+  },
+  {
+    "world": "space",
+    "seed": 4242,
+    "time": 120,
+    "tailRatio": 0.01,
+    "collisionsPerMin": 0,
+    "ramsPerMin": 0.5,
+    "kills": 15,
+    "score": 5525,
+    "wave": 3
+  },
+  {
+    "world": "space",
+    "seed": 7,
+    "time": 120,
+    "tailRatio": 0,
+    "collisionsPerMin": 0.5,
+    "ramsPerMin": 0.5,
+    "kills": 39,
+    "score": 10084,
+    "wave": 5
+  },
+  {
+    "world": "space",
+    "seed": 99,
+    "time": 120,
+    "tailRatio": 0,
+    "collisionsPerMin": 0,
+    "ramsPerMin": 0.5,
+    "kills": 13,
+    "score": 4000,
+    "wave": 3
+  }
+]
