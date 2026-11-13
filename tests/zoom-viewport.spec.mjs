@@ -110,3 +110,23 @@ test('E2: zoom asli Chromium (CDP setPageScaleFactor) tidak mengubah canvas dan 
   await page.waitForTimeout(250);
   expect((await measure(page)).cssW).toBe(base0.cssW);
 });
+
+test('D7: overlay ?diag=1 menampilkan angka zoom tanpa membuka hook debug; hook D2 dan D4 hanya dengan ?debug=1', async ({ page }) => {
+  // Tanpa parameter: tidak ada overlay dan tidak ada hook
+  await page.goto('/index.html');
+  await expect(page.locator('#screen-title')).toBeVisible();
+  expect(await page.locator('#diag').count()).toBe(0);
+  expect(await page.evaluate(() => typeof window.__game)).toBe('undefined');
+  // ?diag=1: overlay berisi layout, visualViewport, skala, canvas, buffer, dan event zoom yang dicegah, hook tetap tertutup
+  await page.goto('/index.html?diag=1');
+  await expect(page.locator('#diag')).toBeVisible();
+  await expect(page.locator('#diag pre')).toContainText('layout 844x390', { timeout: 10000 });
+  const txt = await page.locator('#diag pre').textContent();
+  for (const k of ['visualViewport', 'skala', 'canvas CSS', 'buffer', 'resolusi', 'zoom dicegah', 'cubit']) expect(txt).toContain(k);
+  expect(await page.evaluate(() => typeof window.__game)).toBe('undefined');
+  // ?debug=1: hook bot terampil (D2), hitbox (D4), dan penanda bos (D3) tersedia
+  await page.goto(gameUrl());
+  await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
+  const hooks = await page.evaluate(() => ['skilledBot', 'botAccuracy', 'bossLog', 'showHitboxes', 'fatalWatch', 'hitboxAudit', 'bossHud', 'layout'].map((k) => k + ':' + typeof window.__game.debug[k]));
+  for (const h of hooks) expect(h).toMatch(/:function$/);
+});
