@@ -413,35 +413,65 @@
     text-shadow: 0 6px 0 rgba(0, 0, 0, 0.35), 0 0 40px rgba(255, 154, 60, 0.7); }
   #countdown small { color: var(--ui-dim); letter-spacing: 0.2em; }
 
-  /* Mode HP: kontrol sentuh */
+  /* Mode HP: kontrol sentuh (H2). Semua ukuran turunan --cu (= --u dikali skala kontrol). Ukuran tampak
+     boleh kecil, area sentuh efektif minimal 44 px lewat hit slop transparan (::before) yang tidak
+     menimpa tombol lain karena jarak antar tombol dihitung dari besar hit slop. */
   html { touch-action: manipulation; }
-  #touch { position: fixed; inset: 0; z-index: 15; pointer-events: none; }
+  #touch { position: fixed; left: 0; top: 0; width: 100%; height: var(--app-h); z-index: 15; pointer-events: none; }
   #touch .tbtn {
     position: absolute; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none;
-    -webkit-touch-callout: none; display: flex; align-items: center; justify-content: center;
-    color: rgba(255, 255, 255, 0.9); background: rgba(20, 30, 44, 0.38); border: 2px solid rgba(255, 255, 255, 0.35);
-    border-radius: 50%; font: 800 13px/1 system-ui, sans-serif; letter-spacing: 0.08em;
+    -webkit-touch-callout: none; display: flex; align-items: center; justify-content: center; padding: 0;
+    width: var(--sz); height: var(--sz); inset-inline-end: var(--x); bottom: var(--y);
+    color: rgba(255, 255, 255, 0.92); background: rgba(20, 30, 44, 0.4); border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 50%; opacity: calc(0.78 * var(--ca)); transition: opacity 0.12s, transform 0.08s;
   }
-  #touch .tbtn svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-  #touch .tbtn.on { background: rgba(255, 154, 60, 0.55); border-color: #ffd08a; transform: scale(0.94); }
-  /* Tata letak grid: tombol tidak bisa bertumpuk, jarak 12 px, area sentuh minimal 56 px */
-  .dpad { position: absolute; left: var(--ed-l); bottom: var(--ed-b);
-    display: grid; grid-template-columns: repeat(3, 60px); grid-template-rows: repeat(3, 60px); gap: 8px; }
-  #touch .dpad .tbtn, #touch .actions .tbtn { position: relative; inset: auto; width: 100%; height: 100%; }
-  .t-up { grid-area: 1 / 2; } .t-left { grid-area: 2 / 1; } .t-right { grid-area: 2 / 3; } .t-down { grid-area: 3 / 2; }
-  .actions { position: absolute; right: var(--ed-r); bottom: var(--ed-b);
-    display: grid; grid-template-columns: repeat(4, 56px); grid-template-rows: 56px 84px; gap: 12px; align-items: center; justify-items: center; }
-  .t-roll { grid-area: 1 / 1; } .t-imm { grid-area: 1 / 2; } .t-loop { grid-area: 1 / 3; } .t-ult { grid-area: 1 / 4; }
-  #touch .actions .t-nitro { grid-area: 2 / 1 / 3 / 3; width: 68px; height: 68px; }
-  #touch .actions .t-fire { grid-area: 2 / 3 / 3 / 5; width: 84px; height: 84px; background: rgba(255, 90, 60, 0.38); border-color: rgba(255, 170, 150, 0.7); }
-  #touch .t-fire.on { background: rgba(255, 90, 60, 0.75); }
-  #touch .t-fire svg { width: 40px; height: 40px; }
-  #touch .t-nitro { background: rgba(255, 150, 40, 0.3); border-color: rgba(255, 200, 120, 0.6); }
-  #touch .t-man { border-radius: 16px; }
-  #touch .t-man svg, #touch .t-ult svg { width: 28px; height: 28px; }
-  #touch .t-man.cool { opacity: 0.4; }
-  #touch .t-ult { border-radius: 16px; background: rgba(200, 60, 160, 0.32); }
-  #touch .t-ult.ready { background: rgba(255, 80, 200, 0.72); border-color: #ffc0f0; box-shadow: 0 0 16px rgba(255, 90, 210, 0.6); }
+  #touch .tbtn::before { content: ""; position: absolute; inset: min(0px, calc((var(--sz) - 44px) / 2)); border-radius: 50%; }
+  #touch .tbtn svg { width: 56%; height: 56%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  #touch .tbtn.on { opacity: 1; background: rgba(255, 154, 60, 0.6); border-color: #ffd08a; transform: scale(0.94); }
+  /* Cluster aksi kanan bawah: TEMBAK di pojok, NITRO di atasnya, grid 2x2 manuver dan ultimate di kirinya */
+  .actions {
+    --s: var(--cu); --n: calc(var(--cu) * 1.1); --f: calc(var(--cu) * 1.4);
+    --gs: max(4px, calc(45px - var(--s)));
+    --gf: max(4px, calc(max(0px, (44px - var(--s)) / 2) + max(0px, (44px - var(--f)) / 2) + 1px));
+    --gn: max(4px, calc(max(0px, (44px - var(--n)) / 2) + max(0px, (44px - var(--f)) / 2) + 1px));
+    position: absolute; right: var(--sa-r); bottom: var(--sa-b); direction: ltr;
+    width: calc(var(--s) * 2 + var(--gs) + var(--gf) + var(--f));
+    height: max(calc(var(--s) * 2 + var(--gs)), calc(var(--n) + var(--gn) + var(--f)));
+  }
+  body.kidal .actions { right: auto; left: var(--sa-l); direction: rtl; }
+  #touch .t-fire { --sz: var(--f); --x: 0px; --y: 0px; background: rgba(255, 90, 60, 0.42); border-color: rgba(255, 170, 150, 0.75); }
+  #touch .t-fire.on { background: rgba(255, 90, 60, 0.8); }
+  #touch .t-nitro { --sz: var(--n); --x: calc((var(--f) - var(--n)) / 2); --y: calc(var(--f) + var(--gn)); background: rgba(255, 150, 40, 0.34); border-color: rgba(255, 200, 120, 0.65); }
+  #touch .t-roll { --sz: var(--s); --x: calc(var(--f) + var(--gf) + var(--s) + var(--gs)); --y: calc(var(--s) + var(--gs)); }
+  #touch .t-imm { --sz: var(--s); --x: calc(var(--f) + var(--gf)); --y: calc(var(--s) + var(--gs)); }
+  #touch .t-loop { --sz: var(--s); --x: calc(var(--f) + var(--gf) + var(--s) + var(--gs)); --y: 0px; }
+  #touch .t-ult { --sz: var(--s); --x: calc(var(--f) + var(--gf)); --y: 0px; background: rgba(200, 60, 160, 0.34); }
+  #touch .t-man { border-radius: 30%; }
+  #touch .t-man::before { border-radius: 30%; }
+  #touch .t-man.cool { opacity: calc(0.35 * var(--ca)); }
+  #touch .t-ult.ready { opacity: 1; background: rgba(255, 80, 200, 0.75); border-color: #ffc0f0; box-shadow: 0 0 14px rgba(255, 90, 210, 0.6); }
+  /* Joystick analog melayang: posisi bawaan samar di kiri bawah, pindah ke titik sentuh pertama */
+  #joy-zone { position: absolute; left: 0; top: 0; bottom: 0; width: 45%; pointer-events: auto; touch-action: none; }
+  body.kidal #joy-zone { left: auto; right: 0; }
+  .joy { --jb: calc(var(--cu) * 2.6); --jt: calc(var(--cu) * 1.1);
+    position: absolute; left: var(--sa-l); bottom: var(--sa-b); width: var(--jb); height: var(--jb); pointer-events: none;
+    opacity: calc(0.5 * var(--ca)); transition: opacity 0.15s; }
+  body.kidal .joy { left: auto; right: var(--sa-r); }
+  .joy.active { opacity: min(1, calc(0.95 * var(--ca) + 0.1)); transition: none; }
+  .joy-base { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.4);
+    background: radial-gradient(circle, rgba(20, 30, 44, 0.18) 0 40%, rgba(20, 30, 44, 0.42) 100%); }
+  .joy-base::after { content: ""; position: absolute; inset: 30%; border-radius: 50%; border: 1px dashed rgba(255, 255, 255, 0.25); }
+  .joy-thumb { position: absolute; left: 50%; top: 50%; width: var(--jt); height: var(--jt); margin: calc(var(--jt) / -2) 0 0 calc(var(--jt) / -2);
+    border-radius: 50%; background: rgba(230, 240, 250, 0.42); border: 2px solid rgba(255, 255, 255, 0.75); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); }
+  /* Gaya Tombol arah: satu cakram tetap dengan empat panah (arah dari posisi jari, termasuk diagonal) */
+  .dpad { --jb: calc(var(--cu) * 2.6); position: absolute; left: var(--sa-l); bottom: var(--sa-b); width: var(--jb); height: var(--jb);
+    pointer-events: auto; touch-action: none; border-radius: 50%; opacity: calc(0.78 * var(--ca));
+    background: rgba(20, 30, 44, 0.4); border: 2px solid rgba(255, 255, 255, 0.4); }
+  body.kidal .dpad { left: auto; right: var(--sa-r); }
+  .dpad svg { position: absolute; width: 30%; height: 30%; fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  .dpad .d-up { left: 35%; top: 4%; } .dpad .d-down { left: 35%; bottom: 4%; } .dpad .d-left { left: 4%; top: 35%; } .dpad .d-right { right: 4%; top: 35%; }
+  .dpad svg.on { stroke: #ffb45c; }
+  .dpad.on { opacity: 1; }
   /* HUD mode HP: blok bawah disembunyikan agar tidak bertabrakan dengan tombol */
   body.mode-hp .hud-block.bl, body.mode-hp .hud-block.br { display: none; }
   /* Baris atas mode HP: kiri (status ringkas), tengah (misi), kanan (skor), lalu bar bos dan panel data di tengah */
@@ -499,10 +529,6 @@
     .big { font-size: 18px; }
     .label { font-size: 10px; }
     .stat .num { font-size: 14px; min-width: 44px; }
-    .dpad { grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); }
-    .actions { grid-template-columns: repeat(4, 54px); grid-template-rows: 54px 78px; }
-    #touch .actions .t-fire { width: 78px; height: 78px; }
-    #touch .actions .t-nitro { width: 62px; height: 62px; }
     body.mode-hp #radar { width: 68px; height: 68px; top: calc(96px + var(--ed-t)); }
     .card { padding: 16px 18px; gap: 10px; }
     .screen h2 { font-size: 30px; }
@@ -751,13 +777,15 @@
   <div id="banner"></div>
   <div id="toasts"></div>
 </div>
-<!-- Kontrol sentuh (mode HP): D-pad kiri bawah, TEMBAK dan NITRO kanan bawah -->
+<!-- Kontrol sentuh (mode HP): joystick melayang atau tombol arah di kiri, cluster aksi di kanan (ditukar di mode kidal) -->
 <div id="touch" class="hidden" aria-hidden="true">
-  <div class="dpad">
-    <button class="tbtn t-up" data-act="up" type="button" aria-label="Naik"><svg viewBox="0 0 24 24"><path d="M5 15l7-7 7 7"/></svg></button>
-    <button class="tbtn t-left" data-act="left" type="button" aria-label="Kiri"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
-    <button class="tbtn t-right" data-act="right" type="button" aria-label="Kanan"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
-    <button class="tbtn t-down" data-act="down" type="button" aria-label="Turun"><svg viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg></button>
+  <div id="joy-zone"></div>
+  <div id="joy" class="joy"><div class="joy-base"></div><div class="joy-thumb"></div></div>
+  <div id="dpad" class="dpad hidden" aria-label="Tombol arah">
+    <svg class="d-up" viewBox="0 0 24 24"><path d="M5 15l7-7 7 7"/></svg>
+    <svg class="d-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>
+    <svg class="d-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>
+    <svg class="d-down" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></svg>
   </div>
   <div class="actions">
     <button class="tbtn t-man t-roll" data-man="roll" type="button" aria-label="Gulung Tong" title="Gulung Tong"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20.5 3.5v4.5H16"/></svg></button>
@@ -914,6 +942,16 @@
       <div class="seg" data-key="controlMode">
         <button type="button" data-v="keyboard">Keyboard</button><button type="button" data-v="hp">HP (sentuh)</button>
       </div>
+      <span class="set-label">Gaya kontrol kiri</span>
+      <div class="seg" data-key="leftStyle">
+        <button type="button" data-v="joystick">Joystick</button><button type="button" data-v="dpad">Tombol arah</button>
+      </div>
+      <span class="set-label">Ukuran kontrol</span>
+      <div class="range-wrap"><input type="range" min="70" max="130" step="5" data-key="controlSize" aria-label="Ukuran kontrol"><output data-for="controlSize"></output></div>
+      <span class="set-label">Transparansi kontrol</span>
+      <div class="range-wrap"><input type="range" min="0" max="80" step="5" data-key="controlTransparency" aria-label="Transparansi kontrol"><output data-for="controlTransparency"></output></div>
+      <span class="set-label">Mode kidal</span>
+      <label class="tog"><input type="checkbox" data-key="leftHanded"> Joystick di kanan, tombol aksi di kiri</label>
       <span class="set-label">Opsi</span>
       <div class="tog-list">
         <label class="tog"><input type="checkbox" data-key="invertPitch"> Balik arah naik turun</label>
@@ -1648,6 +1686,10 @@ const SETTING_DEFAULTS = {
   damageNumbers: true,
   showFps: false,
   autoFire: false,             // tembak otomatis di mode HP
+  leftStyle: 'joystick',       // gaya kontrol kiri mode HP: joystick (analog melayang) | dpad (tombol arah)
+  controlSize: 100,            // ukuran kontrol sentuh dalam persen (dibatasi anggaran layar)
+  controlTransparency: 20,     // transparansi kontrol sentuh dalam persen (0 pekat)
+  leftHanded: false,           // mode kidal: joystick di kanan, tombol aksi di kiri
   bloom: true,                 // efek bloom di medan angkasa (dimatikan oleh kualitas Rendah)
   robotHelp: 'penuh',          // bantuan robot Piko: penuh | tanpa-teks | tanpa-suara | mati
   touchPromptShown: false,
@@ -1660,8 +1702,9 @@ const SETTING_ENUMS = {
   spaceMode: ['campaign', 'free'],
   aimAssist: ['mati', 'rendah', 'sedang'],
   robotHelp: ['penuh', 'tanpa-teks', 'tanpa-suara', 'mati'],
+  leftStyle: ['joystick', 'dpad'],
 };
-const SETTING_RANGES = { asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100], volMusic: [0, 100] };
+const SETTING_RANGES = { controlSize: [70, 130], controlTransparency: [0, 80], asteroidDensity: [0, 2], volMaster: [0, 100], volSfx: [0, 100], volEngine: [0, 100], volMusic: [0, 100] };
 
 const Save = {
   data: null,
@@ -11041,7 +11084,8 @@ const Settings = {
     for (const inp of this.el.querySelectorAll('input[type=range]')) {
       inp.value = s[inp.dataset.key];
       const out = this.el.querySelector(`output[data-for="${inp.dataset.key}"]`);
-      out.textContent = inp.dataset.key === 'asteroidDensity' ? DENSITY_LABELS[s.asteroidDensity] : s[inp.dataset.key] + '%';
+      out.textContent = inp.dataset.key === 'asteroidDensity' ? DENSITY_LABELS[s.asteroidDensity]
+        : inp.dataset.key === 'controlSize' ? Touch.sizeLabel() : s[inp.dataset.key] + '%';
     }
     for (const inp of this.el.querySelectorAll('input[type=checkbox]')) inp.checked = !!s[inp.dataset.key];
     document.getElementById('quality-note').classList.toggle('hidden', s.quality === this.bootQuality);
@@ -11182,19 +11226,20 @@ Events.on('pickupSpawned', (type) => { if (type === 'heart' || type === 'overdri
    ===================================================================== */
 const Controls = {
   up: false, down: false, left: false, right: false, fire: false, nitro: false, lookBack: false,
+  axPitch: 0, axYaw: 0,   // sumbu analog -1..1 dari joystick sentuh (0 bila tidak dipakai)
   invertPitch: false,
   sources: [],
   addSource(src) { this.sources.push(src); },
   // Dipanggil sekali per frame: gabungkan (OR) semua sumber
   update() {
     this.up = false; this.down = false; this.left = false; this.right = false; this.fire = false; this.nitro = false;
-    this.lookBack = false;
+    this.lookBack = false; this.axPitch = 0; this.axYaw = 0;
     for (let i = 0; i < this.sources.length; i++) this.sources[i].fill(this);
   },
   reset() { for (let i = 0; i < this.sources.length; i++) this.sources[i].reset(); this.update(); },
   // Sumbu turunan yang dipakai fisika pesawat
-  get pitch() { const p = (this.up ? 1 : 0) - (this.down ? 1 : 0); return this.invertPitch ? -p : p; },
-  get yaw() { return (this.left ? 1 : 0) - (this.right ? 1 : 0); },
+  get pitch() { const p = clamp((this.up ? 1 : 0) - (this.down ? 1 : 0) + this.axPitch, -1, 1); return this.invertPitch ? -p : p; },
+  get yaw() { return clamp((this.left ? 1 : 0) - (this.right ? 1 : 0) + this.axYaw, -1, 1); },
 };
 
 // Sumber keyboard: berbasis KeyboardEvent.code (posisi fisik tombol)
@@ -11402,23 +11447,37 @@ const Viewport = {
 };
 Viewport.init();
 
-// Sumber sentuh (mode HP): tiap pointerId dilacak terpisah sehingga multi-touch bekerja,
-// dan jari yang digeser di atas D-pad berpindah aksi mengikuti tombol di bawahnya
+// Sumber sentuh (mode HP, H2): tiap pointerId dilacak terpisah sehingga multi-touch bekerja
+// (joystick, tembak, dan nitro bersamaan). Joystick analog melayang muncul di titik sentuh
+// pertama pada separuh kiri layar (kanan di mode kidal); gaya Tombol arah memakai cakram tetap.
+// Logika game tetap membaca Controls: joystick mengisi sumbu analog axPitch dan axYaw.
 const Touch = {
   root: document.getElementById('touch'),
-  pointers: new Map(),     // pointerId -> aksi
+  zone: document.getElementById('joy-zone'),
+  joyEl: document.getElementById('joy'),
+  thumb: null,
+  dpadEl: document.getElementById('dpad'),
+  actionsEl: null,
+  pointers: new Map(),     // pointerId -> aksi tombol (fire, nitro)
   counts: { up: 0, down: 0, left: 0, right: 0, fire: 0, nitro: 0 },
   buttons: {},
   enabled: false,
+  joy: { id: null, ox: 0, oy: 0, x: 0, y: 0, r: 1, dx: 0, dy: 0 },   // x, y: sumbu -1..1 setelah deadzone dan kurva
+  dpad: { id: null, dir: { up: false, down: false, left: false, right: false } },
+  deadzone: 0.12,
+  scale: 1,                // skala kontrol efektif setelah dibatasi anggaran layar
   fill(c) {
     if (!this.enabled) return;
     const n = this.counts;
-    if (n.up > 0) c.up = true;
-    if (n.down > 0) c.down = true;
-    if (n.left > 0) c.left = true;
-    if (n.right > 0) c.right = true;
     if (n.nitro > 0) c.nitro = true;
     if (n.fire > 0) c.fire = true;
+    const d = this.dpad.dir;
+    if (d.up) c.up = true;
+    if (d.down) c.down = true;
+    if (d.left) c.left = true;
+    if (d.right) c.right = true;
+    // Joystick: atas = naik (pitch positif), kanan = belok kanan (yaw negatif)
+    if (this.joy.id !== null) { c.axPitch += -this.joy.y; c.axYaw += -this.joy.x; }
     // Tembak otomatis: menembak bila ada musuh di kerucut bidik
     if (Save.settings.autoFire) { if (Game.state === 'playing') { if (Weapons.findAssistTarget(5)) c.fire = true; } }
   },
@@ -11426,6 +11485,8 @@ const Touch = {
     this.pointers.clear();
     for (const k in this.counts) this.counts[k] = 0;
     for (const k in this.buttons) this.buttons[k].classList.remove('on');
+    this.releaseJoy();
+    this.releaseDpad();
   },
   setAction(id, act) {
     const prev = this.pointers.get(id);
@@ -11434,45 +11495,152 @@ const Touch = {
     if (act) { this.pointers.set(id, act); this.counts[act]++; this.buttons[act].classList.add('on'); }
     else this.pointers.delete(id);
   },
-  actAt(x, y) {
-    const el = document.elementFromPoint(x, y);
-    const b = el ? el.closest('[data-act]') : null;
-    return b ? b.dataset.act : null;
+  // Kurva respons: deadzone radial lalu kurva halus (pelan di dekat tengah, penuh di tepi)
+  curve(m) {
+    if (m <= this.deadzone) return 0;
+    const t = Math.min(1, (m - this.deadzone) / (1 - this.deadzone));
+    return 0.35 * t + 0.65 * t * t;
   },
+  // Batas atas cakram joystick: di bawah blok HUD kiri atas agar tidak menimpanya
+  topLimit() {
+    const tl = document.querySelector('.hud-block.tl');
+    const r = tl ? tl.getBoundingClientRect() : null;
+    return r ? (r.height > 0 ? r.bottom + 6 : 60) : 60;
+  },
+  startJoy(e) {
+    const J = this.joy, rect = this.joyEl.getBoundingClientRect();
+    const size = rect.width || 90, R = size / 2;
+    const ed = Viewport.edges(), W = Viewport.w, H = Viewport.h;
+    const kidal = Save.settings.leftHanded;
+    const xMin = kidal ? W * 0.55 + R : ed.l + R, xMax = kidal ? W - ed.r - R : W * 0.45 - R;
+    const yMin = this.topLimit() + R, yMax = H - ed.b - R;
+    J.id = e.pointerId; J.r = R * 0.62;
+    J.ox = clamp(e.clientX, xMin, Math.max(xMin, xMax));
+    J.oy = clamp(e.clientY, Math.min(yMin, yMax), yMax);
+    this.joyEl.style.left = (J.ox - R) + 'px';
+    this.joyEl.style.top = (J.oy - R) + 'px';
+    this.joyEl.style.right = 'auto'; this.joyEl.style.bottom = 'auto';
+    this.joyEl.classList.add('active');
+    this.moveJoy(e);
+  },
+  moveJoy(e) {
+    const J = this.joy;
+    let dx = e.clientX - J.ox, dy = e.clientY - J.oy;
+    const len = Math.hypot(dx, dy);
+    if (len > J.r) { dx *= J.r / len; dy *= J.r / len; }
+    J.dx = dx; J.dy = dy;
+    const m = Math.min(1, len / J.r), k = m > 0 ? this.curve(m) / m : 0;
+    J.x = clamp((dx / J.r) * k, -1, 1);
+    J.y = clamp((dy / J.r) * k, -1, 1);
+    this.thumb.style.transform = 'translate(' + dx.toFixed(1) + 'px, ' + dy.toFixed(1) + 'px)';
+  },
+  releaseJoy() {
+    const J = this.joy;
+    J.id = null; J.x = 0; J.y = 0; J.dx = 0; J.dy = 0;
+    if (!this.thumb) return;
+    this.thumb.style.transform = '';
+    this.joyEl.classList.remove('active');
+    this.joyEl.style.left = ''; this.joyEl.style.top = ''; this.joyEl.style.right = ''; this.joyEl.style.bottom = '';
+  },
+  // Cakram tombol arah: arah dari posisi jari relatif terhadap pusat (diagonal diizinkan)
+  moveDpad(e) {
+    const r = this.dpadEl.getBoundingClientRect(), R = r.width / 2;
+    const dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R;
+    const d = this.dpad.dir, dead = 0.28;
+    d.up = dy < -dead; d.down = dy > dead; d.left = dx < -dead; d.right = dx > dead;
+    for (const k of ['up', 'down', 'left', 'right']) this.dpadEl.querySelector('.d-' + k).classList.toggle('on', d[k]);
+    this.dpadEl.classList.add('on');
+  },
+  releaseDpad() {
+    const D = this.dpad;
+    D.id = null;
+    for (const k in D.dir) D.dir[k] = false;
+    if (!this.dpadEl) return;
+    for (const el of this.dpadEl.querySelectorAll('svg')) el.classList.remove('on');
+    this.dpadEl.classList.remove('on');
+  },
+  // Arah gulung tong dari sentuhan: ke kanan bila joystick atau tombol arah condong ke kanan
+  rollDir() { return (this.joy.x > 0.2 ? true : this.dpad.dir.right) ? -1 : 1; },
   init() {
+    this.thumb = this.joyEl.querySelector('.joy-thumb');
+    this.actionsEl = this.root.querySelector('.actions');
     for (const b of this.root.querySelectorAll('[data-act]')) this.buttons[b.dataset.act] = b;
     this.manButtons = Array.from(this.root.querySelectorAll('[data-man]'));
+    const capture = (el, e) => { try { el.setPointerCapture(e.pointerId); } catch (err) { /* pointer sintetis tidak bisa di-capture */ } };
     const down = (e) => {
-      // Tombol ultimate: sekali tekan
-      if (e.target.closest('[data-ult]')) { e.preventDefault(); Ultimate.fire(); return; }
-      // Tombol manuver: sekali tekan
-      const mb = e.target.closest('[data-man]');
-      if (mb) {
+      onAudioGesture();
+      if (e.target === this.zone) {
         e.preventDefault();
-        Player.startManeuver(mb.dataset.man, this.counts.right > 0 ? -1 : 1);
+        if (this.joy.id === null ? Save.settings.leftStyle !== 'dpad' : false) { capture(this.zone, e); this.startJoy(e); }
         return;
       }
+      if (e.target === this.dpadEl) {
+        e.preventDefault();
+        if (this.dpad.id === null) { this.dpad.id = e.pointerId; capture(this.dpadEl, e); this.moveDpad(e); }
+        return;
+      }
+      // Tombol ultimate dan manuver: sekali tekan
+      if (e.target.closest('[data-ult]')) { e.preventDefault(); Ultimate.fire(); return; }
+      const mb = e.target.closest('[data-man]');
+      if (mb) { e.preventDefault(); Player.startManeuver(mb.dataset.man, this.rollDir()); return; }
       const b = e.target.closest('[data-act]');
       if (!b) return;
       e.preventDefault();
-      onAudioGesture();
-      try { b.setPointerCapture(e.pointerId); } catch (err) { /* pointer sintetis tidak bisa di-capture */ }
+      capture(b, e);
       this.setAction(e.pointerId, b.dataset.act);
     };
     const move = (e) => {
-      if (!this.pointers.has(e.pointerId)) return;
-      const cur = this.pointers.get(e.pointerId);
-      if (cur === 'fire' || cur === 'nitro') return;     // tombol aksi tidak berpindah saat jari bergeser
-      const act = this.actAt(e.clientX, e.clientY);
-      if (act ? act !== 'fire' ? act !== 'nitro' : false : false) this.setAction(e.pointerId, act);
+      if (e.pointerId === this.joy.id) { this.moveJoy(e); return; }
+      if (e.pointerId === this.dpad.id) this.moveDpad(e);
     };
-    const up = (e) => { if (this.pointers.has(e.pointerId)) this.setAction(e.pointerId, null); };
+    const up = (e) => {
+      if (e.pointerId === this.joy.id) this.releaseJoy();
+      if (e.pointerId === this.dpad.id) this.releaseDpad();
+      if (this.pointers.has(e.pointerId)) this.setAction(e.pointerId, null);
+    };
     this.root.addEventListener('pointerdown', down);
     this.root.addEventListener('pointermove', move);
     this.root.addEventListener('pointerup', up);
     this.root.addEventListener('pointercancel', up);
     this.root.addEventListener('lostpointercapture', up);
     this.root.addEventListener('contextmenu', (e) => e.preventDefault());
+    Events.on('viewport', () => this.applyLayout());
+    Events.on('settings', () => this.applyLayout());
+    this.applyLayout();
+  },
+  // Ukuran cluster pada skala c (px), dengan rumus yang sama seperti CSS .actions dan .joy
+  measure(c) {
+    const u = clamp(Viewport.h * 0.11, 34, 48) * c;
+    const s = u, n = u * 1.1, f = u * 1.4;
+    const slop = (v) => Math.max(0, (44 - v) / 2);
+    const gs = Math.max(4, 45 - s), gf = Math.max(4, slop(s) + slop(f) + 1), gn = Math.max(4, slop(n) + slop(f) + 1);
+    return { actW: s * 2 + gs + gf + f, actH: Math.max(s * 2 + gs, n + gn + f), joy: u * 2.6 };
+  },
+  // Skala efektif: pilihan pemain, dibatasi agar tiap cluster maksimal 30 persen tinggi dan 26 persen lebar
+  fitScale() {
+    const want = Save.settings.controlSize / 100;
+    const ok = (c) => { const m = this.measure(c); return m.actH <= Viewport.h * 0.3 ? (m.actW <= Viewport.w * 0.26 ? m.joy <= Math.min(Viewport.h * 0.3, Viewport.w * 0.26) : false) : false; };
+    if (ok(want)) return want;
+    let lo = 0.5, hi = want;
+    for (let i = 0; i < 18; i++) { const mid = (lo + hi) / 2; if (ok(mid)) lo = mid; else hi = mid; }
+    return Math.round(lo * 1000) / 1000;
+  },
+  sizeLabel() {
+    const want = Save.settings.controlSize, eff = Math.round(this.scale * 100);
+    return eff < want ? want + '% (efektif ' + eff + '%)' : want + '%';
+  },
+  applyLayout() {
+    const s = Save.settings;
+    this.scale = this.fitScale();
+    const st = document.documentElement.style;
+    st.setProperty('--cs', String(this.scale));
+    st.setProperty('--ca', String(1 - s.controlTransparency / 100));
+    document.body.classList.toggle('kidal', s.leftHanded);
+    const dp = s.leftStyle === 'dpad';
+    this.dpadEl.classList.toggle('hidden', !dp);
+    this.joyEl.classList.toggle('hidden', dp);
+    this.zone.classList.toggle('hidden', dp);
+    if (dp) this.releaseJoy(); else this.releaseDpad();
   },
   // Tombol manuver meredup saat cooldown; tombol ultimate menyala saat penuh
   updateCooldowns() {
@@ -12059,30 +12227,29 @@ window.__game = {
     offerCards(ids) { Levels.open(ids); return Levels.offer.map((c) => c.id); },
     pickCard(id) { return Levels.choose(id); },
     companions() { return Companions.list.map((c) => ({ active: c.active, visible: c.group.visible, inScene: !!c.group.parent, d: round2(c.pos.distanceTo(Player.pos)) })); },
-    // Periksa tumpang tindih tata letak HUD dan tombol sentuh (kotak batas elemen yang tampil)
-    // Ukuran tampak, satuan --u, skala kontrol, dan jarak tepi efektif (H1)
-    viewport() {
-      const px = (e) => round2(Viewport.px(e));
-      return { w: Viewport.w, h: Viewport.h, u: px('var(--u)'), cu: px('var(--cu)'), cs: Number(getComputedStyle(document.documentElement).getPropertyValue('--cs')) || 1,
-        sa: { l: px('var(--sa-l)'), t: px('var(--sa-t)'), r: px('var(--sa-r)'), b: px('var(--sa-b)') }, ed: Viewport.edges(), override: Viewport.override };
-    },
+    // Periksa tumpang tindih tata letak HUD dan tombol sentuh (kotak batas elemen yang tampil).
+    // Tombol sentuh diukur dengan area sentuh efektif (ukuran tampak ditambah hit slop ::before).
     layoutOverlaps() {
-      const sel = ['#touch .tbtn', '.hud-block', '#radar', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical'];
+      const sel = ['#touch .tbtn', '#joy', '#dpad', '.hud-block', '#radar', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical'];
       const items = [];
       for (const q of sel) for (const el of document.querySelectorAll(q)) {
         if (el.offsetParent === null ? getComputedStyle(el).position !== 'fixed' : false) continue;
-        const r = el.getBoundingClientRect();
-        if (r.width < 2 ? true : r.height < 2) continue;
+        const r0 = el.getBoundingClientRect();
+        if (r0.width < 2 ? true : r0.height < 2) continue;
         const cs = getComputedStyle(el);
         if (cs.visibility === 'hidden' ? true : cs.display === 'none') continue;
-        items.push({ name: q + (el.dataset.act || el.dataset.man || el.id || el.className.split(' ').slice(-1)[0] || ''), r, touch: q.startsWith('#touch') });
+        const touch = q.startsWith('#touch') ? true : (q === '#joy' ? true : q === '#dpad');
+        let slop = 0;
+        if (q === '#touch .tbtn') slop = Math.max(0, -parseFloat(getComputedStyle(el, '::before').top) || 0);
+        const r = { left: r0.left - slop, top: r0.top - slop, right: r0.right + slop, bottom: r0.bottom + slop, width: r0.width + slop * 2, height: r0.height + slop * 2 };
+        items.push({ name: q + (el.dataset.act || el.dataset.man || el.id || el.className.split(' ').slice(-1)[0] || ''), r, vis: r0, touch });
       }
       const hits = [], small = [];
       for (let i = 0; i < items.length; i++) {
         const a = items[i];
-        if (a.touch ? Math.min(a.r.width, a.r.height) < 52 : false) small.push(a.name + ' ' + Math.round(a.r.width));
+        if (a.touch ? Math.min(a.r.width, a.r.height) < 43.5 : false) small.push(a.name + ' ' + Math.round(a.r.width));
         for (let j = i + 1; j < items.length; j++) {
-          const b = items[j], pad = a.touch ? (b.touch ? 8 : 4) : (b.touch ? 4 : 0);
+          const b = items[j], pad = a.touch ? (b.touch ? 0 : 2) : (b.touch ? 2 : 0);
           if (a.r.left < b.r.right + pad ? (b.r.left < a.r.right + pad ? (a.r.top < b.r.bottom + pad ? b.r.top < a.r.bottom + pad : false) : false) : false) hits.push(a.name + ' x ' + b.name);
         }
       }

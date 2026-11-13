@@ -1677,7 +1677,7 @@ test.describe('27a: kontrol sentuh mode HP', () => {
       await page.waitForTimeout(2600);
       await page.evaluate(() => { for (const id of ['warning', 'rear-warn', 'comet-warn', 'critical']) document.getElementById(id).classList.remove('hidden'); document.getElementById('warning').textContent = 'KELUAR BATAS MISI'; });
       const r = await dbg(page, 'layoutOverlaps');
-      expect(r.touch).toBe(10);
+      expect(r.touch).toBe(7);   // 6 tombol aksi dan joystick
       expect(r.hits).toEqual([]);
       expect(r.small).toEqual([]);
       // Semua tombol berupa ikon (SVG) tanpa teks, dengan label aksesibilitas
