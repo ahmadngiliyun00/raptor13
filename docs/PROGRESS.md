@@ -90,6 +90,25 @@ Fase berikutnya:
 28. (SELESAI) S17 dan B14 Pengujian menyeluruh dan perbaikan visual.
 29. (SELESAI) S18 README, screenshot, Ide lanjutan, self-review semua DEFINITION OF DONE, ringkasan jujur.
 
+## Blok H: tata letak dan kontrol mode HP landscape (permintaan pemain 13 Nov)
+
+Fokus hanya UI dan UX mode HP landscape. Gameplay, keseimbangan, AI musuh, dunia, audio, mode keyboard
+desktop, dan semua hook debug tidak berubah. Matriks uji: 568x320, 667x375, 740x360, 812x375, 844x390,
+915x412, 932x430, ditambah ?safearea=47,0,47,21. Anggaran idle: HUD dan kontrol maksimal 22 persen luas
+layar, tiap cluster maksimal 30 persen tinggi dan 26 persen lebar, zona tengah (x 30 sampai 70 persen,
+y 20 sampai 80 persen) bebas UI.
+
+- H1 (BELUM) Audit CSS mode HP, var --u (clamp(34px, 11vh, 48px), dari visualViewport), --sa-l/t/r/b = max(safe-area, 8px), override ?safearea=kiri,atas,kanan,bawah, hapus penjumlahan 16px dengan safe-area.
+- H2 (BELUM) Joystick analog melayang (separuh kiri, deadzone 12 persen, kurva halus, lewat Controls), cluster aksi baru (tembak pojok kanan bawah, nitro di atasnya, 2x2 manuver dan ultimate), hit slop 44 px, opsi Ukuran kontrol, Transparansi, Mode kidal, Gaya kontrol kiri (Joystick atau Tombol arah).
+- H3 (BELUM) HUD kompak (kiri atas 150x48, baris misi tengah atas, kanan atas hanya Jeda dan Suara), radar 48 sampai 56 px dengan ikon peta, teks minimum 11 px.
+- H4 (BELUM) Pusat notifikasi tunggal dengan antrean prioritas (Piko, area, pickup, level, kontrak), indikator tepi untuk peringatan kritis, Bantuan robot: Penuh, Ringkas, Hanya ikon, Mati.
+- H5 (BELUM) Kamera mode HP: jarak dan offset agar pesawat maksimal 18 persen tinggi di sepertiga bawah, opsi Jarak kamera.
+- H6 (BELUM) Menu dua kolom, jeda dua kolom, pengaturan bertab, kartu kontrak dan level, game over, stage clear, peta, hangar, atlas muat di 320 px; teks petunjuk per mode; overlay menyembunyikan HUD.
+- H7 (BELUM) Deteksi perangkat sentuh otomatis, layar penuh dan kunci orientasi, petunjuk Tambahkan ke Layar Utama di iOS, overlay putar layar.
+- H8 (BELUM) willReadFrequently, Enter di Pilih Mode, kualitas Rendah dan bloom mati di perangkat sentuh.
+- H9 (BELUM) Uji Playwright matriks penuh, debug.stressHud, layoutOverlaps diperluas, screenshot docs/screenshots/hp/, dua putaran perbaikan.
+- H10 (BELUM) README dan self-review Definition of Done blok H.
+
 ## Catatan teknis
 
 - State game: boot, menu, starting, playing, paused, countdown, gameover, preview.
