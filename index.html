@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-7QQGJ3AmeDQ6d2r2llLZtvwQEWnec0ith5vdDL+/yh4='; style-src 'self' 'sha256-4yDrHSlPs3Nr+UBCLMTGgH1G43jAUJXnrYgh1S5GFIw='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-XQ+c4yW0i4Py8QLBkdX7EPecSxWMKBdshe3sk3UG5jo='; style-src 'self' 'sha256-+afmhOR+SwX69+MwANikDnEt61a+yHbQRQkMLe7k0mI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -315,6 +315,18 @@
   #piko-text b { color: var(--ui-accent); margin-right: 4px; }
   .ind.pickup { border-left-color: #5dff7a; }
   #lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #ffd24a; transform-origin: center; }
+  /* Umpan balik benturan (B6): kilat di sisi dampak dengan persen damage, bar HP berkedip */
+  #hit-side { position: absolute; pointer-events: none; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px #000; animation: hitSide 0.75s ease-out forwards; }
+  #hit-side.l { left: 0; top: 0; bottom: 0; width: 90px; background: linear-gradient(90deg, rgba(255, 70, 50, 0.55), transparent); }
+  #hit-side.r { right: 0; top: 0; bottom: 0; width: 90px; background: linear-gradient(270deg, rgba(255, 70, 50, 0.55), transparent); }
+  #hit-side.t { left: 0; right: 0; top: 0; height: 70px; background: linear-gradient(180deg, rgba(255, 70, 50, 0.55), transparent); }
+  #hit-side.b { left: 0; right: 0; bottom: 0; height: 70px; background: linear-gradient(0deg, rgba(255, 70, 50, 0.55), transparent); }
+  #hit-side.soft { animation-duration: 0.45s; }
+  #hit-side.soft.l, #hit-side.soft.r, #hit-side.soft.t, #hit-side.soft.b { opacity: 0.6; }
+  @keyframes hitSide { from { opacity: 1; } to { opacity: 0; } }
+  .bar.blink, .hpx-bar.blink { animation: hpBlink 0.15s steps(2) 4; }
+  @keyframes hpBlink { 50% { filter: brightness(2.2); } }
+  body.reduce-motion #hit-side { animation-duration: 0.9s; }
   /* Pelacakan bos (B3, B4) */
   #boss-mark, #boss-edge, #boss-rear, #boss-intro, #boss-lead { --bc: #ff4f6e; pointer-events: none; }
   #boss-mark { position: absolute; left: 0; top: 0; width: 0; height: 0; --s: 40px; }
@@ -1024,6 +1036,7 @@
   <div id="reticle"><i id="hitmark"></i></div>
   <div id="lead" class="hidden"></div>
   <div id="boss-dot" class="hidden"></div>
+  <div id="hit-side" class="hidden" aria-hidden="true"><span></span></div>
   <!-- Pelacakan bos (B3, B4): penanda di atas bos, panah tepi layar, indikator di belakang, pengenalan, titik bidik -->
   <div id="boss-mark" class="hidden" aria-hidden="true">
     <i class="bm-c tl"></i><i class="bm-c tr"></i><i class="bm-c bl"></i><i class="bm-c br"></i>
@@ -2304,6 +2317,7 @@ const randRange = (a, b) => a + (b - a) * rand();
 const Events = {
   map: Object.create(null),
   on(name, fn) { (this.map[name] || (this.map[name] = [])).push(fn); },
+  off(name, fn) { const l = this.map[name]; if (!l) return; const i = l.indexOf(fn); if (i >= 0) l.splice(i, 1); },
   emit(name, a, b, c, d) {
     const list = this.map[name];
     if (list) for (let i = 0; i < list.length; i++) list[i](a, b, c, d);
@@ -2367,7 +2381,7 @@ function applyDamage(entity, amount, source, x, y, z) {
 const Worlds = { active: null, list: {} };
 
 // Saklar debug (dipakai uji otomatis lewat window.__game)
-const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
+const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, speedOverride: 0, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
 
 // Uji tabrakan segmen (gerak peluru satu frame) terhadap bola, tanpa alokasi
 function segmentHitsSphere(ax, ay, az, bx, by, bz, cx, cy, cz, r) {
@@ -3439,6 +3453,7 @@ const Player = {
     const slope = 1 - F.climbSpeedFactor * this.forward.y;
     const targetSpeed = (this.nitroActive ? C.nitroSpeed : C.baseSpeed) * sp * slope;
     this.speed = damp(this.speed, targetSpeed, this.nitroActive ? C.accel * 1.6 : C.accel, dt);
+    if (Debug.speedOverride > 0) this.speed = Debug.speedOverride;   // uji tabrakan kecepatan ekstrem (B6)
 
     this.vel.copy(this.forward).multiplyScalar(this.speed);
     this.pos.addScaledVector(this.vel, dt);
@@ -5543,6 +5558,7 @@ const Asteroids = {
     a.mesh.rotation.set(rand() * 6.28, rand() * 6.28, rand() * 6.28);
     a.flash = 0;
     a.hpBarTimer = 0;
+    a.lastHitT = -9;
     this.alive++;
     return a;
   },
@@ -5596,6 +5612,7 @@ const Asteroids = {
         if (child) {
           const sp = randRange(8, 15);
           child.vel.set(a.vel.x + ox * sp, a.vel.y + oy * sp, a.vel.z + oz * sp);
+          if (source === 'tabrakan') child.lastHitT = a.lastHitT;   // pecahan tidak dihitung sebagai benturan baru (B6)
         }
       }
     }
@@ -5747,6 +5764,7 @@ Comets.init();
    ===================================================================== */
 function updateCombat() {
   const pb = Weapons.pool, eb = Enemies.bullets, list = Enemies.list, pad = CONFIG.weapons.hitPadding;
+  Collision.begin();
 
   // Peluru pemain terhadap musuh dan terrain
   for (let i = 0; i < pb.max; i++) {
@@ -5826,36 +5844,27 @@ function updateCombat() {
   }
 
   // Tabrakan badan musuh, komet dan asteroid dengan pemain
-  if (!Player.alive) return;
+  if (!Player.alive) { Collision.end(); return; }
+  // Komet dan asteroid (termasuk batu sabuk dan cincin yang tertaut): model ukuran dan energi (B6) dengan uji
+  // sapuan segmen gerak satu frame. Radius tabrakan sama dengan bentuk yang terlihat (0,9 komet, 0,85 batu).
   for (let k = 0; k < Comets.list.length; k++) {
     const c = Comets.list[k];
     if (!c.active) continue;
-    const r = c.radius * 0.9 + pr;
-    if (c.pos.distanceToSquared(P) < r * r) {
-      if (Player.invuln <= 0) { Player.damage(CONFIG.comets.damage + c.radius * 2, 'komet'); Player.invuln = CONFIG.obstacles.invulnTime; }
-      applyDamage(c, c.health.hp, 'tabrakan', c.pos.x, c.pos.y, c.pos.z);
+    if (Collision.sweepHit(c.pos, c.radius * 0.9 + pr)) {
+      const res = Collision.resolve(c, COLLISION_TIERS.density.komet, 'komet');
+      if (!Player.alive) { Collision.end(); return; }
+      if (res) applyDamage(c, c.health.hp, 'tabrakan', c.pos.x, c.pos.y, c.pos.z);
     }
   }
   const al = Asteroids.list;
   for (let k = 0; k < al.length; k++) {
     const a = al[k];
     if (!a.active) continue;
-    const r = a.radius * 0.85 + pr;
-    if (a.pos.distanceToSquared(P) < r * r) {
-      // Asteroid raksasa adalah tabrakan keras (fatal); yang lain ringan (damage)
-      if (a.radius >= CONFIG.collision.giantAsteroidRadius) {
-        hardImpact('Menabrak asteroid raksasa', () => {
-          _vb.subVectors(P, a.pos).normalize();
-          P.copy(a.pos).addScaledVector(_vb, r + 3);
-        });
-        if (!Player.alive) return;
-        continue;
-      }
-      if (Player.invuln <= 0) {
-        Player.damage(a.cfg.damage, 'asteroid');
-        Player.invuln = CONFIG.obstacles.invulnTime;
-      }
-      applyDamage(a, a.health.hp, 'tabrakan', a.pos.x, a.pos.y, a.pos.z);   // asteroid ikut hancur dan pecah
+    if (Collision.sweepHit(a.pos, a.radius * 0.85 + pr)) {
+      const res = Collision.resolve(a, COLLISION_TIERS.density[KIND_DENSITY[a.kind] || 'batu'], 'asteroid');
+      if (!Player.alive) { Collision.end(); return; }
+      // Benda yang tidak fatal pecah (asteroid sedang dan besar terbelah, kerikil hancur)
+      if (res ? res.tier !== 'fatal' : false) applyDamage(a, a.health.hp, 'tabrakan', a.pos.x, a.pos.y, a.pos.z);
     }
   }
   for (let k = 0; k < list.length; k++) {
@@ -5881,6 +5890,7 @@ function updateCombat() {
       Player.damage(c.contactDamage, 'tabrakan');
     }
   }
+  Collision.end();
 }
 
 // Skor saat musuh hancur oleh tembakan pemain
@@ -6017,6 +6027,95 @@ function updateTerrainCollision(dt) {
   if (!warn) { if (P.y - ground < CONFIG.collision.lowAltitudeWarning) warn = 'TERLALU RENDAH'; }
   Player.warning = warn;
 }
+
+
+/* =====================================================================
+   TABRAKAN BERBASIS UKURAN DAN ENERGI (B6) - rincian dan tabel hasil di docs/fisika/tabrakan.md.
+   Tiap benda yang bisa ditabrak punya radius R (sama dengan radius yang terlihat), massa relatif
+   M = (R / R_pesawat)^3 x kepadatan (pesawat = 1), dan kelas. Energi benturan E = 0,5 x M x (v_relatif /
+   kecepatan dasar)^2. Hasil: FATAL (planet, bulan, Matahari, medan, pilar, bos, kapal berat, benda
+   minimal 6,9 kali R_pesawat atau E di atas ambang), SEDANG (persen HP maksimum yang naik halus dengan E,
+   kekebalan singkat, pantulan), PANTUL (benda jauh lebih kecil: 1 sampai 3 persen, benda pecah), KECIL
+   (di bawah ambang sangat kecil: tanpa damage, hanya percikan dan suara). Satu benda tidak dihitung ulang
+   dalam objectCooldown detik, dan uji sapuan (segmen gerak satu frame) mencegah tembus pada kecepatan tinggi.
+   ===================================================================== */
+const COLLISION_TIERS = {
+  // Kepadatan relatif terhadap pesawat
+  density: { batu: 2.6, es: 0.9, logam: 5.0, kristal: 2.3, komet: 0.6 },
+  tinyRatio: 0.3,       // R di bawah 0,3 x R_pesawat: tanpa damage (kerikil, serpihan)
+  pebbleRatio: 0.75,    // R di bawah 0,75 x R_pesawat: memantul atau pecah, 1 sampai 3 persen HP maksimum
+  fatalRatio: 6.9,      // R minimal 6,9 x R_pesawat (sekitar 18 untuk pesawat standar): fatal, sama dengan aturan asteroid raksasa yang disepakati
+  fatalEnergy: 1500,    // E di atas ini fatal walau ukurannya di bawah ambang (batu logam besar pada kecepatan ekstrem)
+  speedRef: 70,         // kecepatan dasar pemain, penormal v_relatif
+  dmgA: 6.2, dmgExp: 0.4, dmgMin: 2, dmgMax: 60,   // persen HP maksimum = clamp(a x E^exp, min, max)
+  pebbleMin: 1, pebbleMax: 3,
+  invuln: 0.8,          // kekebalan tabrakan setelah benturan sedang (detik)
+  objectCooldown: 1.0,  // satu benda tidak dihitung ulang dalam waktu ini
+  difficulty: { mudah: 0.75, normal: 1.0, sulit: 1.25 },   // pengali damage tabrakan sedang (fatal tetap fatal)
+};
+const KIND_DENSITY = { rock: 'batu', ice: 'es', metal: 'logam', crystal: 'kristal' };
+const Collision = {
+  prev: new THREE.Vector3(), prevOk: false, lastDt: 1 / 60, _n: new THREE.Vector3(), _v: new THREE.Vector3(),
+  log: [],   // hasil benturan terakhir (untuk hook debug dan uji)
+  // Klasifikasi murni (tanpa efek): R benda, kepadatan, kecepatan relatif, kelas fatal
+  classify(R, density, vRel, fatalClass, shipR) {
+    const C = COLLISION_TIERS, Rs = shipR || Player.radius, ratio = R / Rs;
+    const mass = Math.pow(ratio, 3) * density, vn = vRel / C.speedRef, E = 0.5 * mass * vn * vn;
+    const out = { ratio: round2(ratio), mass: round2(mass), energy: round2(E), pct: 0, tier: 'kecil', reason: '' };
+    if (fatalClass) { out.tier = 'fatal'; out.pct = 100; out.reason = 'kelas'; return out; }
+    if (ratio >= C.fatalRatio) { out.tier = 'fatal'; out.pct = 100; out.reason = 'ukuran'; return out; }
+    if (E >= C.fatalEnergy) { out.tier = 'fatal'; out.pct = 100; out.reason = 'energi'; return out; }
+    if (ratio < C.tinyRatio) { out.tier = 'kecil'; out.reason = 'ukuran'; return out; }
+    if (ratio < C.pebbleRatio) { out.tier = 'pantul'; out.pct = round2(C.pebbleMin + (C.pebbleMax - C.pebbleMin) * clamp(E / 1.5, 0, 1)); out.reason = 'ukuran'; return out; }
+    out.tier = 'sedang'; out.pct = round2(clamp(C.dmgA * Math.pow(E, C.dmgExp), C.dmgMin, C.dmgMax)); out.reason = 'energi';
+    return out;
+  },
+  diffMul() { return COLLISION_TIERS.difficulty[Game.difficultyKey] || 1; },
+  // Persen HP maksimum ke HP: pengali kesulitan tabrakan menggantikan pengali damage umum (dibagi di sini)
+  amount(pct) { return Player.health.maxHp * pct / 100 * this.diffMul() / (Game.diff.damageTaken || 1); },
+  // Segmen gerak pemain satu frame (prev ke P) mengenai bola (c, r): uji sapuan anti tembus
+  sweepHit(c, r) {
+    const P = Player.pos, A = this.prev;
+    return segmentHitsSphere(A.x, A.y, A.z, P.x, P.y, P.z, c.x, c.y, c.z, r);
+  },
+  begin(dt) {
+    const P = Player.pos;
+    if (!this.prevOk ? true : this.prev.distanceToSquared(P) > 400 * 400) this.prev.copy(P);
+    this.prevOk = true; this.lastDt = dt || 1 / 60;
+  },
+  end() { this.prev.copy(Player.pos); },
+  // Terapkan benturan dengan benda kecil sampai sedang (asteroid, batu medan, komet): ent punya pos, vel, radius
+  resolve(ent, density, label) {
+    const C = COLLISION_TIERS, P = Player.pos, now = Game.time;
+    if (now - (ent.lastHitT === undefined ? -9 : ent.lastHitT) < C.objectCooldown) return null;
+    ent.lastHitT = now;
+    const vRel = this._v.copy(Player.vel).sub(ent.vel || _AX_ZERO).length();
+    const r = this.classify(ent.radius, density, vRel, false);
+    r.label = label; r.vRel = round2(vRel); r.t = round2(now);
+    this.log.push(r); if (this.log.length > 40) this.log.shift();
+    const n = this._n.copy(P).sub(ent.pos); const nl = n.length() || 1; n.divideScalar(nl);
+    if (r.tier === 'fatal') {
+      hardImpact(r.reason === 'energi' ? 'Benturan keras dengan ' + label : 'Menabrak ' + label + ' raksasa', () => { P.copy(ent.pos).addScaledVector(n, ent.radius * 0.85 + Player.radius + 3); });
+      return r;
+    }
+    let dealt = 0;
+    if (r.tier === 'sedang') {
+      if (Player.invuln <= 0) { dealt = Player.damage(this.amount(r.pct), label === 'komet' ? 'komet' : 'asteroid'); Player.invuln = C.invuln; }
+      // Pantulan fisik: keluar dari bola, kecepatan berkurang sedikit, hidung terdorong menjauh dari benda
+      P.copy(ent.pos).addScaledVector(n, ent.radius * 0.85 + Player.radius + 0.5);
+      Player.speed *= 1 - clamp(r.pct / 150, 0.04, 0.3);
+      const side = n.dot(Player._right), up = n.dot(Player._up), k = clamp(r.pct / 100, 0.05, 0.3);
+      Player.rotateLocal(_AX_Y, -side * k); Player.rotateLocal(_AX_X, up * k);
+      CamRig.addTrauma(clamp(r.pct / 60, 0.15, 0.6));
+    } else if (r.tier === 'pantul') {
+      dealt = Player.damage(this.amount(r.pct), label === 'komet' ? 'komet' : 'asteroid');
+    }
+    r.dealt = round2(dealt);
+    Events.emit('collision', r, ent.pos, n);
+    return r;
+  },
+};
+const _AX_ZERO = new THREE.Vector3();
 
 // Benturan keras: fatal (game over seketika, mengabaikan nyawa) atau mode latihan (damage besar dan pantulan)
 function hardImpact(cause, bounce) {
@@ -6877,6 +6976,9 @@ const SolarSystem = {
   },
   makeBody(def, parent) {
     const b = { def, id: def.id, name: def.name, radius: def.radius, pos: new THREE.Vector3(), parent: parent || null, moons: [], proxyScale: 1 };
+    // Bulan tak beraturan (Phobos, Deimos): permukaan tampak antara sekitar 0,65 dan 1,4 kali radius, jadi bola
+    // tabrakan disamakan dengan permukaan terdalam yang terlihat agar tidak ada tabrakan tak terlihat (B6)
+    if (def.lumpy) b.hitR = def.radius * (1 - def.lumpy * 0.9);
     b.group = new THREE.Group();
     b.tilt = new THREE.Group();
     b.tilt.rotation.z = def.tilt || 0;
@@ -6979,7 +7081,7 @@ const SolarSystem = {
   // Titik di dalam benda (dengan margin)
   inside(x, y, z, margin = 0) {
     for (const b of this.solids) {
-      const r = b.radius + margin, dx = x - b.pos.x, dy = y - b.pos.y, dz = z - b.pos.z;
+      const r = (b.hitR || b.radius) + margin, dx = x - b.pos.x, dy = y - b.pos.y, dz = z - b.pos.z;
       if (dx * dx + dy * dy + dz * dz < r * r) return b;
     }
     return null;
@@ -11507,6 +11609,15 @@ const Sfx = {
     this.lastTick = now;
     this.tone('triangle', 1500, 1100, 0.05, 0.05);
   },
+  // Benturan tabrakan (B6): berat sesuai ukuran k (0 kerikil, 1 asteroid besar)
+  bump(k) {
+    if (!this.ready) return;
+    const now = this.ctx.currentTime;
+    if (now - (this.lastBump || 0) < 0.06) return;
+    this.lastBump = now;
+    this.noiseBurst('lowpass', 2400 - k * 1800, 160 + (1 - k) * 600, 0.08 + k * 0.3, 0.12 + k * 0.32);
+    if (k > 0.2) this.tone('sine', 150 - k * 70, 45, 0.18 + k * 0.25, 0.1 + k * 0.22);
+  },
   hit() {
     if (!this.ready) return;
     const now = this.ctx.currentTime;
@@ -11550,6 +11661,28 @@ Events.on('enemyShot', (pos) => Sfx.enemyShoot(distToPlayer(pos)));
 Events.on('enemyHit', () => Sfx.hitMarker());
 Events.on('enemyDestroyed', (e) => Sfx.explosion(e.type === 'drone' ? 0.8 : 1.2, distToPlayer(e.pos)));
 Events.on('playerHit', () => Sfx.hit());
+// Benturan B6: suara sesuai ukuran, percikan, kilat sisi dampak dengan persen damage, bar HP berkedip
+const HitSide = {
+  el: document.getElementById('hit-side'), timer: 0,
+  show(r, pos) {
+    const cam = camera.matrixWorld.elements, dx = pos.x - camera.position.x, dy = pos.y - camera.position.y, dz = pos.z - camera.position.z;
+    const sx = dx * cam[0] + dy * cam[1] + dz * cam[2], sy = dx * cam[4] + dy * cam[5] + dz * cam[6];
+    const side = Math.abs(sx) >= Math.abs(sy) ? (sx > 0 ? 'r' : 'l') : (sy > 0 ? 't' : 'b');
+    const el = this.el;
+    el.className = 'hidden'; void el.offsetWidth;   // mulai ulang animasi
+    el.className = side + (r.tier === 'sedang' ? '' : ' soft');
+    el.querySelector('span').textContent = r.pct > 0 ? '-' + Math.max(1, Math.round(r.pct * Collision.diffMul())) + '%' : '';
+    this.timer = 0.9;
+    for (const id of ['hp-bar', 'hpx-hpbar']) { const b = document.getElementById(id); b.classList.remove('blink'); void b.offsetWidth; if (r.pct > 0) b.classList.add('blink'); }
+  },
+  update(dt) { if (this.timer > 0) { this.timer -= dt; if (this.timer <= 0) this.el.className = 'hidden'; } },
+};
+Events.on('collision', (r, pos) => {
+  const k = clamp((r.ratio - 0.3) / 4, 0, 1);
+  Sfx.bump(r.tier === 'kecil' ? 0 : k);
+  FX.sparks(pos.x, pos.y, pos.z, r.tier === 'sedang' ? 22 : 10, 1, 0.8, 0.5);
+  if (r.tier !== 'fatal') HitSide.show(r, pos);
+});
 Events.on('crash', () => Sfx.hit());
 Events.on('playerDeath', () => Sfx.explosion(2, 0));
 Events.on('asteroidDestroyed', (a) => Sfx.explosion(a.radius / 10, distToPlayer(a.pos)));
@@ -12061,6 +12194,7 @@ function updateHud(dt) {
   updateHpBars();
   updateLeadMarker();
   BossHud.update(dt);
+  HitSide.update(dt);
   v = Game.state === 'playing' ? (Player.alive ? Enemies.rearThreat : false) : false;
   if (changed('rear', v)) $('rear-warn').classList.toggle('hidden', !v);
   v = Game.state === 'playing' ? Comets.threat !== null : false;
@@ -14294,6 +14428,56 @@ const GameHooks = {
         fogged: scene.fog ? round2(clamp((d - scene.fog.near) / Math.max(1, scene.fog.far - scene.fog.near), 0, 1)) : 0 };
     },
     bossMetrics() { return BossStats.summary(); },
+    // Tabrakan (B6). 'tabel': klasifikasi murni untuk daftar benda dan kecepatan (rendah 40, dasar 70, nitro 128,
+    // ekstrem 600). Objek: uji nyata lewat jalur permainan, asteroid diletakkan tepat di jalur pemain lalu
+    // disimulasikan frames langkah; mengembalikan tingkat, persen, HP sebelum dan sesudah, jumlah benturan
+    // tercatat (harus 1, tanpa hitung ganda), dan apakah fatal (mode latihan dipakai sementara agar sesi berlanjut).
+    collisionTest(obj = 'tabel', speed = 70) {
+      if (obj === 'tabel') {
+        const Rs = CONFIG.player.radius, D = COLLISION_TIERS.density;
+        const items = [
+          ['kerikil es (R 0,6)', 0.6, D.es, false], ['puing batu (R 1,5)', 1.5, D.batu, false], ['asteroid kecil (R 3)', 3, D.batu, false],
+          ['asteroid sedang (R 6)', 6, D.batu, false], ['asteroid besar (R 11)', 11, D.batu, false], ['asteroid logam besar (R 14)', 14, D.logam, false],
+          ['asteroid raksasa (R 18)', 18, D.batu, false], ['komet (R 6)', 6, D.komet, false],
+          ['bulan Phobos', 7, D.batu, true], ['planet Mars', 120, D.batu, true], ['daratan atau air', 1000, D.batu, true], ['bos', 20, D.logam, true]];
+        const rows = [];
+        for (const [name, R, dens, fatal] of items) for (const [sp, v] of [['rendah', 40], ['dasar', 70], ['nitro', 128], ['ekstrem', 600]]) {
+          const c = Collision.classify(R, dens, v, fatal, Rs);
+          rows.push({ benda: name, kecepatan: sp, v, tier: c.tier, alasan: c.reason, ratio: c.ratio, energi: c.energy, persen: c.pct,
+            mudah: round2(Math.min(100, c.pct * (c.tier === 'sedang' || c.tier === 'pantul' ? COLLISION_TIERS.difficulty.mudah : 1))), sulit: round2(Math.min(100, c.pct * (c.tier === 'sedang' || c.tier === 'pantul' ? COLLISION_TIERS.difficulty.sulit : 1))) });
+        }
+        return rows;
+      }
+      if (Game.state !== 'playing') return null;
+      const o = typeof obj === 'object' ? obj : {};
+      const keep = { god: Debug.god, fatal: Save.settings.fatalCrash, en: Debug.enemiesEnabled };
+      Debug.god = false; Save.settings.fatalCrash = false; Debug.enemiesEnabled = false; Enemies.reset();
+      for (const a of Asteroids.list) if (a.active) Asteroids.remove(a);
+      Player.spawnInvuln = 0; Player.hitInvuln = 0; Player.invuln = 0;
+      Player.health.reset(Player.health.maxHp);
+      const lives0 = Player.lives, hp0 = Player.health.hp, dist = o.dist || clamp(speed * 0.5, 30, 120);
+      // Batu diletakkan di depan pada garis gerak (hidung pemain), diam di tempat
+      const P = Player.pos, F = Player.forward, x = P.x + F.x * dist, y = P.y + F.y * dist, z = P.z + F.z * dist;
+      const a = Asteroids.spawn(o.size || RockFields.sizeClass(o.radius || 3), x, y, z, o.kind || 'rock', o.radius || 3, true);
+      if (!a) return { error: 'spawn' };
+      a.vel.set(0, 0, 0); a.spin.set(0, 0, 0);
+      Collision.log.length = 0; Collision.prevOk = false;
+      let crash = 0; const onCrash = () => { crash++; };
+      Events.on('crash', onCrash);
+      Debug.speedOverride = speed;
+      const frames = o.frames || Math.ceil((dist + 60) / speed * 60) + 10;
+      for (let i = 0; i < frames; i++) { if (Game.state !== 'playing') break; update(1 / 60); }
+      Debug.speedOverride = 0;
+      Events.off('crash', onCrash);
+      const hits = Collision.log.filter((r) => r.label === 'asteroid');
+      const res = { radius: o.radius || 3, kind: o.kind || 'rock', speed, frames, hits: hits.length, tier: hits[0] ? hits[0].tier : 'tidak kena', pct: hits[0] ? hits[0].pct : 0,
+        hpBefore: round2(hp0), hpAfter: round2(Player.health.hp), lostPct: round2((hp0 - Player.health.hp) / Player.health.maxHp * 100), fatal: crash > 0 ? true : (hits[0] ? hits[0].tier === 'fatal' : false), livesLost: lives0 - Player.lives, alive: Player.alive, stepPerFrame: round2(speed / 60) };
+      if (a.active) Asteroids.remove(a);
+      Debug.god = keep.god; Save.settings.fatalCrash = keep.fatal; Debug.enemiesEnabled = keep.en;
+      Player.health.reset(Player.health.maxHp); Player.invuln = 0;
+      return res;
+    },
+    collisionConfig(patch) { if (patch ? typeof patch === 'object' : false) for (const k of Object.keys(patch)) if (Object.hasOwn(COLLISION_TIERS, k) ? typeof COLLISION_TIERS[k] === typeof patch[k] : false) COLLISION_TIERS[k] = patch[k]; return JSON.parse(JSON.stringify(COLLISION_TIERS)); },
     programList() { return (renderer.info.programs || []).map((p) => p.name + ' ' + String(p.cacheKey).length + ' ' + String(p.cacheKey).slice(0, 400)); },
     // Penanda bos (B3, B4): status, kotak tiap elemen yang terlihat, dan posisi panah tepi
     bossHud() {
