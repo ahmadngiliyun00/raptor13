@@ -5,7 +5,7 @@ bila bertentangan (misalnya Tata Surya menggantikan "sektor tanpa batas", dan da
 8, 10 menggantikan "bos tiap 5 stage"). Status: **Ya** (selesai dan diuji), **Sebagian** (berfungsi
 dengan catatan), **Tidak**.
 
-Bukti utama: 92 uji Playwright di `tests/game.spec.mjs` lolos (jalan penuh terakhir sekitar 7 menit
+Bukti utama: 97 uji Playwright di `tests/game.spec.mjs` lolos (jalan penuh terakhir sekitar 7 menit
 di Mac dengan GPU asli), riwayat git satu commit per task, dan screenshot di `docs/screenshots/`.
 
 ## Blok awal (T1 sampai T17)
@@ -83,6 +83,26 @@ di Mac dengan GPU asli), riwayat git satu commit per task, dan screenshot di `do
 | Minimap dengan musuh, arah, pitch, bank, ketinggian | Ya | uji S13 |
 | Repo publik di GitHub bernama raptor13 | Ya | <https://github.com/ahmadngiliyun00/raptor13> |
 
+## Blok H: tata letak dan kontrol mode HP landscape (H1 sampai H10)
+
+Bukti: `tests/hp.spec.mjs` (31 uji, emulasi sentuh) di matriks 568x320, 667x375, 740x360, 812x375,
+844x390, 915x412, 932x430, ditambah `?safearea=47,0,47,21` di 568x320 dan 844x390. Screenshot di
+`docs/screenshots/hp/` (dibuat ulang dengan `SHOTS=1 npx playwright test tests/hp.spec.mjs`), dua
+putaran tinjauan visual.
+
+| Butir | Status | Bukti atau catatan |
+| --- | --- | --- |
+| Di semua ukuran uji, tidak ada tumpang tindih UI dan tidak ada elemen terpotong | Ya | uji tata letak (idle dan `stressHud`) dan uji layar per ukuran: tidak ada tumpang tindih, tidak keluar layar atau safe area, kartu tanpa scroll |
+| HUD dan kontrol idle maksimal 22 persen luas layar, zona tengah bebas | Ya | luas idle 12,2 sampai 19,3 persen (15,5 persen di 568x320 berponi); zona x 30 sampai 70 persen dan y 20 sampai 80 persen kosong, juga saat kasus terburuk |
+| Kontrol berskala, area sentuh efektif minimal 44 px, joystick analog, opsi ukuran dan kidal | Ya, dengan catatan | uji joystick, deadzone, multi-touch, kidal, tombol arah; ukuran 70 dan 130 persen lolos asersi. Di HP 320 sampai 430 px tinggi, 130 persen dibatasi menjadi sekitar 105 persen agar cluster tetap di bawah 30 persen tinggi |
+| Jarak ke tepi memakai max(safe area, 8px), terbukti lewat uji ?safearea | Ya | `debug.viewport().ed` = 47, 8, 47, 21 untuk `?safearea=47,0,47,21` |
+| Hanya satu notifikasi tampil, tidak pernah menutup tengah atau pesawat | Ya | uji notifikasi (sela prioritas, antrean maksimal 4, kedaluwarsa 4 detik), toast selalu di atas 20 persen tinggi |
+| Menu, jeda, pengaturan, kontrak, level, dan layar lain muat di 320 px tanpa teks tembus | Ya | uji layar per ukuran untuk 18 layar termasuk tiap tab Pengaturan; HUD dan kontrol tersembunyi di balik overlay |
+| Tidak ada teks petunjuk keyboard di mode HP | Ya | `debug.keyboardHints()` kosong di semua layar mode HP |
+| Layar penuh dan orientasi bekerja, overlay portrait rapi | Sebagian | Fullscreen API dan tombol diuji di Chromium; kunci landscape hanya berlaku di browser yang mendukung (Android Chrome) dan belum dicoba di perangkat sungguhan; petunjuk Layar Utama iOS belum dicoba di iPhone sungguhan |
+| Mode keyboard desktop dan gameplay tidak berubah, semua tes lama lolos | Ya | `tests/game.spec.mjs` |
+| Tidak ada em dash dan ampersand di seluruh repo | Ya | `grep` 0 di seluruh berkas proyek di luar dependensi |
+
 ## Yang masih kurang menurut penilaian sendiri
 
 - Kinerja di perangkat HP sungguhan belum diukur; preset Tinggi butuh sekitar 1,3 detik untuk
@@ -92,3 +112,9 @@ di Mac dengan GPU asli), riwayat git satu commit per task, dan screenshot di `do
 - Musuh penembak belum sengaja menyerang kargo pada kontrak Kawal Konvoi.
 - Kepala Sang Naga Vanta dan bos Bumi masih sederhana dibanding model lain.
 - Uji bergantung pada CDN; kegagalan `ERR_NETWORK_CHANGED` sesekali berasal dari jaringan.
+- Mode HP: anggaran 30 persen tinggi membuat slider Ukuran kontrol di atas sekitar 105 persen tidak
+  berpengaruh di HP; di layar 568x320 berponi kontrol bahkan dikecilkan otomatis sekitar 80 persen.
+- Mode HP: di tinggi 320 px toast hanya muat satu baris sehingga ucapan Piko mode Penuh terpotong
+  (mode Ringkas yang menjadi bawaan di perangkat sentuh muat).
+- Mode HP belum dicoba di perangkat sungguhan: Fullscreen API, kunci orientasi, safe area asli, dan
+  rasa joystick hanya diuji lewat emulasi.

@@ -56,9 +56,83 @@ menit game tersedia di `https://ahmadngiliyun00.github.io/raptor13/`.
 | `R` | mulai ulang |
 | `1` `2` `3` | pilih kartu level atau kontrak |
 
-Pemetaan yang sama tampil di layar judul dan di Pengaturan. **Mode HP** (tombol kanan atas, atau
-otomatis ditawarkan di perangkat sentuh) memakai D-pad dan tombol ikon besar berjarak untuk tembak,
-nitro, tiga manuver, dan ultimate; dimainkan mendatar.
+Pemetaan yang sama tampil di layar judul dan di Pengaturan. Di perangkat sentuh dipakai mode HP,
+lihat bagian berikut.
+
+## Mode HP (layar sentuh, landscape)
+
+HP murni (pointer kasar tanpa hover) langsung memakai mode HP tanpa pop-up. Perangkat yang ambigu,
+misalnya laptop layar sentuh, mendapat saran kecil di tengah atas. Mode bisa diganti kapan saja
+lewat tombol kanan atas di menu, Pengaturan, atau menu jeda. Di perangkat sentuh tanpa save,
+kualitas bawaan Rendah, bloom mati, dan Bantuan robot Ringkas.
+
+**Kontrol.** Semua ukuran diturunkan dari satuan `--u = clamp(34px, 11vh, 48px)` yang dihitung dari
+tinggi tampak (`visualViewport`), sehingga ikut menyesuaikan saat bar browser muncul atau hilang.
+
+| Kontrol | Ukuran | Keterangan |
+| --- | --- | --- |
+| Joystick analog melayang | dasar 2,6u, jempol 1,1u | muncul di titik sentuh pertama pada 45 persen kiri layar; atas naik, kiri belok kiri; deadzone 12 persen dan kurva halus |
+| Tembak | 1,4u | pojok kanan bawah, tahan untuk menembak |
+| Nitro | 1,1u | tepat di atas Tembak |
+| Gulung, Balik, Loop, Ultimate | 1,0u | grid 2x2 di kiri Tembak |
+
+Ukuran tampak boleh kecil, tetapi area sentuh efektif selalu minimal 44 px lewat hit slop
+transparan, dan jarak antar tombol dihitung agar hit slop tidak saling menimpa. Multi-touch bekerja
+(joystick, tembak, dan nitro bersamaan). Tombol samar saat diam dan lebih jelas saat ditekan.
+Skala kontrol dibatasi otomatis agar tiap cluster maksimal 30 persen tinggi dan 26 persen lebar
+layar dan tetap di luar zona tengah.
+
+**HUD ringkas.** Kiri atas satu blok 146x47 px (hati, LV, bar HP, bar nitro dan ultimate tipis
+berikon). Tengah atas satu baris misi dengan progres, pengali kombo, dan skor; bar bos 5 px muncul
+di bawahnya saat bos aktif. Kanan atas hanya Jeda dan Suara, radar 52 px di bawahnya dengan ikon
+peta di sampingnya. Mode kontrol, Peta, dan Layar penuh ada di menu jeda. Teks minimal 11 px.
+
+**Satu notifikasi.** Ucapan Piko, nama area, pickup, level, dan kontrak masuk satu antrean
+berprioritas. Hanya satu toast tampil, tepat di bawah baris misi dan tidak pernah melewati 20 persen
+tinggi layar. Pesan yang menunggu lebih dari 4 detik dibuang, prioritas lebih tinggi menyela.
+Peringatan kritis (tarik naik, HP kritis, musuh di belakang, komet) berupa chip ikon berkedip di
+tepi bawah, teks maksimal tiga kata.
+
+**Kamera.** Di layar landscape pendek kamera chase 20 persen lebih jauh dengan titik pandang sedikit
+naik, sehingga pesawat sekitar 18 persen tinggi layar di sepertiga bawah tengah.
+
+**Layar lain.** Menu dua kolom, jeda dua kolom, Pengaturan bertab (Umum, Suara, Kontrol, Grafis,
+Lainnya), kartu kontrak dan level tiga kolom, peta berdampingan; semuanya muat di tinggi 320 px tanpa
+scroll. HUD, kontrol, dan toast disembunyikan di balik layar overlay. Tidak ada teks petunjuk
+keyboard di mode HP.
+
+**Layar penuh dan orientasi.** Tombol Layar penuh di menu jeda dan tip pertama di menu memakai
+Fullscreen API lalu mencoba mengunci landscape. Di iPhone (tanpa Fullscreen API) muncul sekali
+petunjuk Tambahkan ke Layar Utama. Saat tegak, permainan dijeda dengan overlay Putar ke landscape
+yang tidak menutupi toolbar.
+
+| Opsi baru di Pengaturan | Nilai |
+| --- | --- |
+| Gaya kontrol kiri | Joystick (bawaan) atau Tombol arah (cakram tetap dengan arah diagonal) |
+| Ukuran kontrol | 70 sampai 130 persen (dibatasi anggaran layar; label menunjukkan nilai efektif) |
+| Transparansi kontrol | 0 sampai 80 persen |
+| Mode kidal | joystick di kanan, tombol aksi di kiri |
+| Jarak kamera | Dekat, Normal, Jauh |
+| Bantuan robot | Penuh, Ringkas, Hanya ikon, Mati |
+
+**Menguji HP berponi tanpa perangkat.** Tambahkan `?safearea=kiri,atas,kanan,bawah` dalam px,
+misalnya `index.html?safearea=47,0,47,21`. Semua jarak tepi memakai `max(safe area, 8px)` (tidak
+dijumlahkan dengan 16 px), jadi contoh itu menghasilkan tepi 47, 8, 47, dan 21 px.
+
+Hasil ukur akhir (emulasi sentuh, saat bermain tanpa notifikasi):
+
+| Layar | Luas HUD dan kontrol | --u | Tembak, nitro, tombol kecil, joystick (px) | Cluster aksi | Pesawat |
+| --- | --- | --- | --- | --- | --- |
+| 568x320 | 19,3% | 35 | 49, 39, 35, 92 | 135x92 (24% x 29%) | 18% di 68% tinggi |
+| 568x320 berponi 47/47 | 15,5% | 35 | 39, 31, 28, 72 (dikecilkan otomatis) | 123x80 (22% x 25%) | 18% |
+| 667x375 | 16,6% | 41 | 58, 45, 41, 107 | 148x107 (22% x 29%) | 18% |
+| 740x360 | 14,9% | 40 | 55, 44, 40, 103 | 144x103 (19% x 29%) | 18% |
+| 812x375 | 13,7% | 41 | 58, 45, 41, 107 | 148x107 (18% x 29%) | 18% |
+| 844x390 | 13,2% | 43 | 60, 47, 43, 112 | 154x111 (18% x 29%) | 18% |
+| 915x412 | 12,3% | 45 | 63, 50, 45, 118 | 162x117 (18% x 28%) | 18% |
+| 932x430 | 12,2% | 47 | 66, 52, 47, 123 | 169x122 (18% x 28%) | 18% |
+
+Blok status 146x47 px, baris misi 184x24 px (166 px saat berponi), radar 52 px di semua ukuran.
 
 ## Cara main
 
@@ -189,7 +263,8 @@ Status di kiri atas (nyawa, integritas, nitro, ultimate, level dan XP), misi dan
 tengah atas, skor dan kredit di kanan atas, **radar minimap** yang berputar mengikuti arah kapal
 (musuh, bos, pickup, planet, gerbang, kargo, target kontrak, panah tujuan misi), **instrumen terbang**
 (horizon buatan, arah kompas dalam derajat, pitch, dan bank yang bernilai 0 saat datar), bar HP bos,
-angka skor emas dan angka damage merah yang besar, serta panel Piko bersubtitle.
+angka skor emas dan angka damage merah yang besar, serta panel Piko bersubtitle. Di mode HP dipakai
+HUD ringkas dan satu pusat notifikasi (lihat Mode HP).
 
 ## Kualitas grafis
 
@@ -214,14 +289,15 @@ npm test
 ```
 
 `npm test` memasang Chromium untuk Playwright, menyalakan server statis di port 4173, lalu
-menjalankan 92 uji di `tests/game.spec.mjs`. Setiap uji gagal bila ada console error atau warning,
+menjalankan 97 uji di `tests/game.spec.mjs` dan 31 uji mode HP di `tests/hp.spec.mjs` (emulasi sentuh
+di tujuh ukuran layar landscape ditambah safe area). Screenshot mode HP di `docs/screenshots/hp/`
+dibuat ulang dengan `SHOTS=1 npx playwright test tests/hp.spec.mjs`. Setiap uji gagal bila ada console error atau warning,
 error halaman, atau request ke luar localhost dan Three.js. Cakupan utama: kontrol dan kombinasi
 tombol, manuver dan looping, tabrakan fatal dengan penyebab yang benar, simulasi bot yang mengukur
 keadilan musuh (waktu membuntuti, tabrakan, serudukan, batas kecepatan), senjata dan buff, audio
 tanpa NaN, hangar dan migrasi save, setiap planet dan bulan, LOD cincin dan sabuk, batas jelajah,
 fakta dan Penemuan setelah reload, kampanye, warp, peta, cutscene, semua fase bos, roster musuh,
-XP dan kartu, kontrak, radar dan instrumen, musik, preset kualitas, tata letak mode HP tanpa
-tumpang tindih di empat ukuran layar, kebocoran sumber daya setelah 10 restart dan 5 menit simulasi,
+XP dan kartu, kontrak, radar dan instrumen, musik, preset kualitas, anggaran tata letak mode HP, kebocoran sumber daya setelah 10 restart dan 5 menit simulasi,
 dan screenshot di `docs/screenshots/`.
 
 Di macOS uji memakai GPU asli lewat ANGLE Metal; di platform lain SwiftShader dan uji FPS dilewati.
@@ -257,7 +333,11 @@ __game.debug.startBoss('naga'); __game.debug.skipToPhase(3)
 __game.debug.playCutscene('demo'); __game.debug.skipCutscene()
 __game.debug.spawnEnemy('sniper', 300); __game.debug.spawnGroup('scout', 3, 'v')
 __game.debug.levelUp(); __game.debug.fillUltimate()
-__game.debug.layoutOverlaps()              // periksa tumpang tindih HUD dan tombol sentuh
+__game.debug.layoutOverlaps()              // periksa tumpang tindih HUD dan tombol sentuh (area sentuh efektif)
+__game.debug.stressHud()                   // munculkan semua elemen HUD sekaligus (kasus terburuk)
+__game.debug.viewport(); __game.debug.planeFrame()   // satuan --u, jarak tepi, kotak pesawat di layar
+__game.debug.touchState(); __game.debug.notify(); __game.debug.keyboardHints()
+__game.debug.setSetting('leftHanded', true)
 __game.debug.simulate(300)                 // simulasi cepat dengan bot
 ```
 
@@ -298,7 +378,10 @@ raptor13/
 - Three.js dimuat dari CDN, jadi butuh internet; belum ada service worker untuk luring.
 - Belum ada dukungan mouse dan gamepad. Mode HP hanya mendatar.
 - Kinerja hanya diukur di Mac dengan GPU asli; perangkat HP sungguhan belum diuji (tata letak HP
-  diuji lewat emulasi di empat ukuran layar).
+  diuji lewat emulasi di tujuh ukuran layar dan safe area buatan). Kunci orientasi dan petunjuk
+  Layar Utama iOS belum dicoba di perangkat sungguhan.
+- Di HP setinggi 320 sampai 430 px, Ukuran kontrol di atas sekitar 105 persen dibatasi anggaran layar
+  (label pengaturan menunjukkan nilai efektif).
 - Kontrak Kawal Konvoi: hanya drone dan peluru nyasar yang merusak kargo; musuh penembak belum
   sengaja membidik kargo.
 - Konten Angkasa muncul di sekitar pemain (gelombang, medan asteroid, komet, kluster bintang),

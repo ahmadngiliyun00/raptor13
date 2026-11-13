@@ -107,7 +107,7 @@ y 20 sampai 80 persen) bebas UI.
 - H7 (SELESAI) Deteksi perangkat sentuh otomatis, layar penuh dan kunci orientasi, petunjuk Tambahkan ke Layar Utama di iOS, overlay putar layar.
 - H8 (SELESAI) willReadFrequently, Enter di Pilih Mode, kualitas Rendah dan bloom mati di perangkat sentuh.
 - H9 (SELESAI) Uji Playwright matriks penuh, debug.stressHud, layoutOverlaps diperluas, screenshot docs/screenshots/hp/, dua putaran perbaikan.
-- H10 (BELUM) README dan self-review Definition of Done blok H.
+- H10 (SELESAI) README dan self-review Definition of Done blok H.
 
 ## Catatan teknis
 
