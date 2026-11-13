@@ -1,0 +1,722 @@
+[
+  {
+    "size": "1440x900",
+    "dpr": 1,
+    "scene": "menu",
+    "off": [],
+    "frames": 306,
+    "flaggedFrames": 2,
+    "per1000": 6.5,
+    "nanScans": 30,
+    "nanScansWithNaN": 0,
+    "nonFiniteObjects": 0,
+    "contextLost": 0,
+    "bloom": true,
+    "pixelRatio": 1,
+    "world": "space",
+    "errors": [],
+    "sample": [
+      {
+        "t": 1041,
+        "frame": 10,
+        "cells": 4,
+        "rect": [
+          531,
+          410,
+          18,
+          20
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "div",
+          "screen-title",
+          "canvas",
+          "game"
+        ],
+        "shotIndex": 0
+      },
+      {
+        "t": 1241,
+        "frame": 22,
+        "cells": 4,
+        "rect": [
+          423,
+          380,
+          18,
+          30
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "div",
+          "screen-title",
+          "canvas",
+          "game"
+        ],
+        "shotIndex": 1
+      }
+    ]
+  },
+  {
+    "size": "1440x900",
+    "dpr": 2,
+    "scene": "menu",
+    "off": [],
+    "frames": 307,
+    "flaggedFrames": 8,
+    "per1000": 26.1,
+    "nanScans": 30,
+    "nanScansWithNaN": 0,
+    "nonFiniteObjects": 0,
+    "contextLost": 0,
+    "bloom": true,
+    "pixelRatio": 1.5,
+    "world": "space",
+    "errors": [],
+    "sample": [
+      {
+        "t": 1269,
+        "frame": 19,
+        "cells": 4,
+        "rect": [
+          432,
+          380,
+          18,
+          30
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "div",
+          "screen-title",
+          "canvas",
+          "game"
+        ],
+        "shotIndex": 0
+      },
+      {
+        "t": 1407,
+        "frame": 27,
+        "cells": 4,
+        "rect": [
+          450,
+          390,
+          18,
+          20
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "div",
+          "screen-title",
+          "canvas",
+          "game"
+        ],
+        "shotIndex": 1
+      },
+      {
+        "t": 5984,
+        "frame": 302,
+        "cells": 9,
+        "rect": [
+          144,
+          490,
+          81,
+          10
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "btn-atlas",
+          "nav",
+          "div",
+          "screen-title"
+        ],
+        "shotIndex": 2
+      },
+      {
+        "t": 6061,
+        "frame": 306,
+        "cells": 6,
+        "rect": [
+          216,
+          480,
+          54,
+          10
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "btn-atlas",
+          "nav",
+          "div",
+          "screen-title"
+        ],
+        "shotIndex": 3
+      },
+      {
+        "t": 6105,
+        "frame": 309,
+        "cells": 4,
+        "rect": [
+          0,
+          490,
+          9,
+          40
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 4
+      },
+      {
+        "t": 6120,
+        "frame": 310,
+        "cells": 4,
+        "rect": [
+          18,
+          490,
+          9,
+          40
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 5
+      },
+      {
+        "t": 6136,
+        "frame": 311,
+        "cells": 5,
+        "rect": [
+          324,
+          470,
+          45,
+          10
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "div",
+          "screen-title",
+          "canvas",
+          "game"
+        ]
+      },
+      {
+        "t": 6149,
+        "frame": 312,
+        "cells": 4,
+        "rect": [
+          54,
+          480,
+          9,
+          40
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ]
+      }
+    ]
+  },
+  {
+    "size": "844x390",
+    "dpr": 1,
+    "scene": "menu",
+    "off": [],
+    "frames": 304,
+    "flaggedFrames": 26,
+    "per1000": 85.5,
+    "nanScans": 30,
+    "nanScansWithNaN": 0,
+    "nonFiniteObjects": 0,
+    "contextLost": 0,
+    "bloom": true,
+    "pixelRatio": 1,
+    "world": "space",
+    "errors": [],
+    "sample": [
+      {
+        "t": 1016,
+        "frame": 16,
+        "cells": 4,
+        "rect": [
+          459,
+          91,
+          21,
+          4
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 0
+      },
+      {
+        "t": 1231,
+        "frame": 29,
+        "cells": 4,
+        "rect": [
+          781,
+          82,
+          16,
+          9
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 1
+      },
+      {
+        "t": 1432,
+        "frame": 41,
+        "cells": 4,
+        "rect": [
+          501,
+          82,
+          11,
+          13
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 2
+      },
+      {
+        "t": 1634,
+        "frame": 53,
+        "cells": 4,
+        "rect": [
+          607,
+          82,
+          16,
+          9
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 3
+      },
+      {
+        "t": 1698,
+        "frame": 57,
+        "cells": 4,
+        "rect": [
+          459,
+          78,
+          11,
+          13
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 4
+      },
+      {
+        "t": 1831,
+        "frame": 65,
+        "cells": 6,
+        "rect": [
+          443,
+          74,
+          16,
+          13
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 5
+      },
+      {
+        "t": 1848,
+        "frame": 66,
+        "cells": 4,
+        "rect": [
+          628,
+          78,
+          16,
+          9
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ]
+      },
+      {
+        "t": 1864,
+        "frame": 67,
+        "cells": 4,
+        "rect": [
+          638,
+          82,
+          11,
+          13
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 1,
+        "pixelRatio": 1,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ]
+      }
+    ]
+  },
+  {
+    "size": "844x390",
+    "dpr": 2,
+    "scene": "menu",
+    "off": [],
+    "frames": 304,
+    "flaggedFrames": 25,
+    "per1000": 82.2,
+    "nanScans": 30,
+    "nanScansWithNaN": 0,
+    "nonFiniteObjects": 0,
+    "contextLost": 0,
+    "bloom": true,
+    "pixelRatio": 1.5,
+    "world": "space",
+    "errors": [],
+    "sample": [
+      {
+        "t": 996,
+        "frame": 7,
+        "cells": 4,
+        "rect": [
+          528,
+          91,
+          11,
+          9
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 0
+      },
+      {
+        "t": 1031,
+        "frame": 9,
+        "cells": 6,
+        "rect": [
+          533,
+          91,
+          21,
+          9
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 1
+      },
+      {
+        "t": 1183,
+        "frame": 18,
+        "cells": 5,
+        "rect": [
+          443,
+          87,
+          16,
+          9
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 2
+      },
+      {
+        "t": 1213,
+        "frame": 20,
+        "cells": 5,
+        "rect": [
+          448,
+          82,
+          16,
+          13
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 3
+      },
+      {
+        "t": 1313,
+        "frame": 26,
+        "cells": 4,
+        "rect": [
+          506,
+          87,
+          11,
+          9
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 4
+      },
+      {
+        "t": 1416,
+        "frame": 32,
+        "cells": 7,
+        "rect": [
+          496,
+          82,
+          26,
+          9
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ],
+        "shotIndex": 5
+      },
+      {
+        "t": 1516,
+        "frame": 38,
+        "cells": 5,
+        "rect": [
+          528,
+          87,
+          16,
+          13
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ]
+      },
+      {
+        "t": 1562,
+        "frame": 41,
+        "cells": 4,
+        "rect": [
+          538,
+          91,
+          16,
+          9
+        ],
+        "state": "menu",
+        "world": "space",
+        "quality": "sedang",
+        "dpr": 2,
+        "pixelRatio": 1.5,
+        "bloom": true,
+        "nan": 0,
+        "elements": [
+          "screen-title",
+          "canvas",
+          "game",
+          "body"
+        ]
+      }
+    ]
+  }
+]

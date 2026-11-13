@@ -1,0 +1,70 @@
+{
+  "restartBefore": {
+    "sceneObjects": 1188,
+    "sceneChildren": 277,
+    "geometries": 60,
+    "textures": 58,
+    "programs": 43,
+    "listeners": 70,
+    "heapMB": 10.68,
+    "audioSources": 14,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1882,
+    "jsEventListeners": 144,
+    "audioState": "running"
+  },
+  "restartAfter": {
+    "sceneObjects": 1188,
+    "sceneChildren": 277,
+    "geometries": 60,
+    "textures": 58,
+    "programs": 43,
+    "listeners": 70,
+    "heapMB": 11.13,
+    "audioSources": 16,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1876,
+    "jsEventListeners": 146,
+    "audioState": "running"
+  },
+  "stageBefore": {
+    "sceneObjects": 1188,
+    "sceneChildren": 277,
+    "geometries": 60,
+    "textures": 58,
+    "programs": 44,
+    "listeners": 70,
+    "heapMB": 11.45,
+    "audioSources": 17,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1878,
+    "jsEventListeners": 148,
+    "audioState": "running"
+  },
+  "stageAfter": {
+    "sceneObjects": 1188,
+    "sceneChildren": 277,
+    "geometries": 69,
+    "textures": 58,
+    "programs": 46,
+    "listeners": 70,
+    "heapMB": 11.55,
+    "audioSources": 26,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1869,
+    "jsEventListeners": 157,
+    "audioState": "running"
+  }
+}

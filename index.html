@@ -2139,7 +2139,7 @@ function applyDamage(entity, amount, source, x, y, z) {
 const Worlds = { active: null, list: {} };
 
 // Saklar debug (dipakai uji otomatis lewat window.__game)
-const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false };
+const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
 
 // Uji tabrakan segmen (gerak peluru satu frame) terhadap bola, tanpa alokasi
 function segmentHitsSphere(ax, ay, az, bx, by, bz, cx, cy, cz, r) {
@@ -2171,7 +2171,7 @@ camera.position.set(0, 3, 10);
 /* Post-processing: bloom hanya di medan angkasa (glow mesin, laser, bintang), mengikuti preset kualitas */
 const Post = {
   composer: null, bloom: null,
-  get wanted() { return Q.bloom > 0 ? (Save.settings.bloom ? Worlds.active === SpaceWorld : false) : false; },
+  get wanted() { if (Debug.off.has('bloom')) return false; return Q.bloom > 0 ? (Save.settings.bloom ? Worlds.active === SpaceWorld : false) : false; },
   setup() {
     if (this.composer) return;
     this.composer = new EffectComposer(renderer);
@@ -10133,6 +10133,13 @@ const Sfx = {
   lastShot: 0, lastHit: 0, lastTick: 0, warnTimer: 0, critTimer: 0,
   cache: { ef: -1, e2: -1, flt: -1, eg: -1, ng: -1 },
   wasNitro: false,
+  liveSources: 0, createdSources: 0,
+  // Penghitung sumber suara hidup (osilator dan buffer source) untuk debug.perf dan uji kebocoran
+  track(node) {
+    this.liveSources++; this.createdSources++;
+    node.onended = () => { this.liveSources--; node.onended = null; };
+    return node;
+  },
 
   init() {
     if (this.ctx) return;
@@ -10184,6 +10191,7 @@ const Sfx = {
     e1.connect(og); e2.connect(og); og.connect(eg);
     eg.connect(this.engineBus);
     brownSrc.start(); e1.start(); e2.start();
+    this.liveSources += 3; this.createdSources += 3;
     this.engine = { e1, e2, filter: ef, gain: eg };
 
     // Nitro: desis udara stabil (noise lewat highpass) yang memudar halus saat berhenti
@@ -10192,6 +10200,7 @@ const Sfx = {
     const ng = ctx.createGain(); ng.gain.value = 0;
     ns.connect(nfl); nfl.connect(ng); ng.connect(this.engineBus);
     ns.start();
+    this.liveSources++; this.createdSources++;
     this.nitro = { filter: nfl, gain: ng };
     this.ready = true;
     this.applyVolumes();
@@ -10264,6 +10273,7 @@ const Sfx = {
     g.gain.exponentialRampToValueAtTime(0.22, t + 0.18);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
     src.connect(bp); bp.connect(g); g.connect(this.sfxBus);
+    this.track(src);
     src.start(t, Math.random() * 1.2); src.stop(t + 0.6);
     this.tone('sine', 58, 40, 0.38, 0.28);
   },
@@ -10316,6 +10326,7 @@ const Sfx = {
     g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g); g.connect(this.sfxBus);
+    this.track(o);
     o.start(t); o.stop(t + dur + 0.02);
   },
 
@@ -10331,6 +10342,7 @@ const Sfx = {
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     src.connect(fl); fl.connect(g); g.connect(this.sfxBus);
+    this.track(src);
     src.start(t, Math.random() * 1.5);
     src.stop(t + dur + 0.02);
   },
@@ -10442,7 +10454,7 @@ const Music = {
     g.connect(this.tone);
     for (const [type, det] of [['triangle', -5], ['sine', 6]]) {
       const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq; o.detune.value = det;
-      o.connect(g); o.start(when); o.stop(when + len + 2.4);
+      o.connect(g); Sfx.track(o); o.start(when); o.stop(when + len + 2.4);
     }
   },
   pluck(freq, when, vol) {
@@ -10452,6 +10464,7 @@ const Music = {
     g.gain.linearRampToValueAtTime(vol, when + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0005, when + 1.6);
     o.connect(g); g.connect(this.tone);
+    Sfx.track(o);
     o.start(when); o.stop(when + 1.7);
     this.notes++;
   },
@@ -10460,6 +10473,7 @@ const Music = {
     o.type = 'sine'; o.frequency.setValueAtTime(70, when); o.frequency.exponentialRampToValueAtTime(42, when + 0.25);
     g.gain.setValueAtTime(0.09, when); g.gain.exponentialRampToValueAtTime(0.0005, when + 0.35);
     o.connect(g); g.connect(this.bus);
+    Sfx.track(o);
     o.start(when); o.stop(when + 0.4);
   },
   update() {
@@ -12507,14 +12521,145 @@ function render() {
   Weapons.pool.sync();
   Enemies.bullets.sync();
   if (Game.state === 'playing' || Game.state === 'paused' || Game.state === 'countdown' || Game.state === 'starting') updateHud(lastDt);
+  if (Debug.off.size) applyDebugOff();
   Post.render();
+  if (GlitchProbe.active) GlitchProbe.afterRender();
 }
+// Uji eliminasi: objek fitur yang dimatikan disembunyikan tepat sebelum render (menimpa logika per frame)
+const DEBUG_FEATURES = {
+  nebula: () => [SpaceSky.nebula], milky: () => [DeepSky.milky], galaxies: () => DeepSky.galaxies, blackhole: () => [DeepSky.blackHole],
+  stars: () => [SpaceSky.far, SpaceSky.mid, SpaceSky.near, SpaceSky.dust], particles: () => [FX.fire.points, FX.smoke.points],
+  clouds: () => Clouds.meshes, planets: () => [SolarSystem.root], skyEarth: () => [Env.sky],
+};
+function applyDebugOff() {
+  for (const f of Debug.off) { const g = DEBUG_FEATURES[f]; if (g) for (const o of g()) if (o) o.visible = false; }
+  renderer.shadowMap.autoUpdate = !Debug.off.has('shadows');
+}
+
+/* =====================================================================
+   GLITCH PROBE (A7) - diagnosis kotak hitam: membaca kembali gambar kanvas yang diperkecil
+   tepat setelah render, mendeteksi sel yang tiba-tiba gelap dibanding frame sebelum dan
+   sesudahnya, memindai NaN atau Infinity di gambar scene (render target float kecil) dan di
+   matriks objek. Hanya aktif lewat hook debug atau ?diag=1.
+   ===================================================================== */
+const GlitchProbe = {
+  active: false, gw: 160, gh: 90, cv: null, ctx: null, mask: null, stack: null, shots: [], maxShots: 0,
+  hist: [], log: [], frames: 0, flagged: 0, nanEvery: 30, nanFrames: 0, nanHits: 0, nonFinite: 0,
+  rt: null, buf: null,
+  start(opts = {}) {
+    this.gw = opts.gw || 160; this.gh = opts.gh || 90; this.maxShots = opts.shots || 0; this.shots = [];
+    this.nanEvery = opts.nanEvery === undefined ? 30 : opts.nanEvery;
+    if (!this.cv) { this.cv = document.createElement('canvas'); }
+    this.cv.width = this.gw; this.cv.height = this.gh;
+    this.ctx = this.cv.getContext('2d', { willReadFrequently: true });
+    this.hist = []; this.log = []; this.frames = 0; this.flagged = 0; this.nanFrames = 0; this.nanHits = 0; this.nonFinite = 0;
+    this.active = true;
+  },
+  stop() { this.active = false; return this.report(); },
+  report() {
+    return { frames: this.frames, flaggedFrames: this.flagged, per1000: this.frames ? Math.round(this.flagged / this.frames * 10000) / 10 : 0,
+      nanScans: this.nanFrames, nanScansWithNaN: this.nanHits, nonFiniteObjects: this.nonFinite, log: this.log.slice(0, 200), shots: this.shots };
+  },
+  // Luminans rata-rata tiap sel dari kanvas WebGL (dibaca di tugas yang sama dengan render)
+  grab() {
+    const c = this.ctx, w = this.gw, h = this.gh;
+    c.drawImage(renderer.domElement, 0, 0, w, h);
+    const img = c.getImageData(0, 0, w, h), d = img.data, L = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i++) L[i] = (d[i * 4] * 0.2126 + d[i * 4 + 1] * 0.7152 + d[i * 4 + 2] * 0.0722) / 255;
+    L.img = img;
+    return L;
+  },
+  afterRender() {
+    this.frames++;
+    this.hist.push(this.grab());
+    if (this.hist.length > 3) this.hist.shift();
+    if (this.hist.length === 3) this.detect(this.hist[0], this.hist[1], this.hist[2]);
+    if (this.nanEvery > 0 ? this.frames % this.nanEvery === 0 : false) this.scanNaN();
+  },
+  // Sel frame tengah yang jauh lebih gelap dari frame sebelum DAN sesudahnya (muncul lalu hilang).
+  // Hanya komponen terhubung berbentuk blok (minimal 4 sel, isi kotak batas minimal 55 persen) yang
+  // dihitung, agar kerlip bintang atau batu kecil tidak dianggap kotak hitam.
+  detect(a, b, c) {
+    const w = this.gw, h = this.gh, n = w * h;
+    if (!this.mask || this.mask.length !== n) { this.mask = new Uint8Array(n); this.stack = new Int32Array(n); }
+    const M = this.mask;
+    for (let i = 0; i < n; i++) { const ref = Math.min(a[i], c[i]); M[i] = (ref > 0.08 ? b[i] < ref * 0.4 : false) ? 1 : 0; }
+    let best = null;
+    for (let i = 0; i < n; i++) {
+      if (M[i] !== 1) continue;
+      let sp = 0, cnt = 0, x0 = w, y0 = h, x1 = -1, y1 = -1;
+      this.stack[sp++] = i; M[i] = 2;
+      while (sp > 0) {
+        const j = this.stack[--sp], x = j % w, y = (j - x) / w;
+        cnt++; if (x < x0) x0 = x; if (y < y0) y0 = y; if (x > x1) x1 = x; if (y > y1) y1 = y;
+        if (x > 0 ? M[j - 1] === 1 : false) { M[j - 1] = 2; this.stack[sp++] = j - 1; }
+        if (x < w - 1 ? M[j + 1] === 1 : false) { M[j + 1] = 2; this.stack[sp++] = j + 1; }
+        if (y > 0 ? M[j - w] === 1 : false) { M[j - w] = 2; this.stack[sp++] = j - w; }
+        if (y < h - 1 ? M[j + w] === 1 : false) { M[j + w] = 2; this.stack[sp++] = j + w; }
+      }
+      const fill = cnt / ((x1 - x0 + 1) * (y1 - y0 + 1));
+      if (cnt >= 4 ? fill >= 0.55 : false) { if (!best ? true : cnt > best.cnt) best = { cnt, x0, y0, x1, y1 }; }
+    }
+    if (!best) return;
+    this.flagged++;
+    const sx = window.innerWidth / w, sy = window.innerHeight / h;
+    const entry = { t: Math.round(performance.now()), frame: Game.frame, cells: best.cnt,
+      rect: [Math.round(best.x0 * sx), Math.round(best.y0 * sy), Math.round((best.x1 - best.x0 + 1) * sx), Math.round((best.y1 - best.y0 + 1) * sy)],
+      state: Game.state, world: Worlds.active.id, quality: CONFIG.qualityPreset, dpr: window.devicePixelRatio || 1,
+      pixelRatio: renderer.getPixelRatio(), bloom: Post.wanted, nan: this.lastNan || 0 };
+    // Elemen DOM di tengah area (A7 butir i): apakah ada lapisan HTML di atas kanvas
+    const cx = entry.rect[0] + entry.rect[2] / 2, cy = entry.rect[1] + entry.rect[3] / 2;
+    entry.elements = document.elementsFromPoint(cx, cy).slice(0, 4).map((el) => el.id || el.tagName.toLowerCase());
+    // Cuplikan frame sebelum, bermasalah, dan sesudah (untuk diperiksa mata)
+    if (this.shots.length < (this.maxShots || 0)) {
+      const tmp = document.createElement('canvas'); tmp.width = w * 3; tmp.height = h;
+      const g = tmp.getContext('2d');
+      g.putImageData(a.img, 0, 0); g.putImageData(b.img, w, 0); g.putImageData(c.img, w * 2, 0);
+      this.shots.push(tmp.toDataURL('image/png'));
+      entry.shot = this.shots.length - 1;
+    }
+    if (this.log.length < 500) this.log.push(entry);
+  },
+  // Render scene sekali ke target float kecil lalu hitung piksel non-finite (sumber NaN yang disebar bloom)
+  scanNaN() {
+    if (!this.rt) {
+      this.rt = new THREE.WebGLRenderTarget(192, 108, { type: THREE.FloatType, depthBuffer: true });
+      this.buf = new Float32Array(192 * 108 * 4);
+    }
+    const prev = renderer.getRenderTarget();
+    renderer.setRenderTarget(this.rt);
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(prev);
+    renderer.readRenderTargetPixels(this.rt, 0, 0, 192, 108, this.buf);
+    let bad = 0;
+    for (let i = 0; i < this.buf.length; i++) if (!Number.isFinite(this.buf[i])) bad++;
+    this.lastNan = bad;
+    this.nanFrames++;
+    if (bad > 0) this.nanHits++;
+    this.nonFinite = Math.max(this.nonFinite, this.scanObjects().length);
+    return bad;
+  },
+  // Objek dengan matrixWorld berisi NaN atau Infinity (nama dicatat)
+  scanObjects() {
+    const out = [];
+    scene.traverse((o) => {
+      const e = o.matrixWorld.elements;
+      for (let i = 0; i < 16; i++) if (!Number.isFinite(e[i])) { out.push(o.name || o.type); break; }
+      if (o.isInstancedMesh) {
+        const a = o.instanceMatrix.array;
+        for (let i = 0; i < o.count * 16; i++) if (!Number.isFinite(a[i])) { out.push((o.name || 'InstancedMesh') + '#instance'); break; }
+      }
+    });
+    return out;
+  },
+};
 
 
 /* =====================================================================
    HOOK DEBUG - window.__game untuk uji otomatis (ringkas dan aman)
    ===================================================================== */
 const round2 = (v) => Math.round(v * 100) / 100;
+const _perfV2 = new THREE.Vector2();
 window.__game = {
   // Ringkasan state yang aman dibaca (salinan nilai, bukan referensi objek internal)
   snapshot() {
@@ -13032,6 +13177,53 @@ window.__game = {
         heapMB: performance.memory ? round2(performance.memory.usedJSHeapSize / 1048576) : null,
       };
     },
+    // Profil performa (A1): frame time, info renderer satu frame penuh, ukuran buffer, isi scene, audio, heap
+    perf() {
+      const st = Perf.stats(), size = renderer.getDrawingBufferSize(_perfV2);
+      let meshes = 0, meshesVisible = 0, instances = 0, lights = 0, shadowCasters = 0, pointsObjs = 0;
+      scene.traverse((o) => { if (o.isMesh) meshes++; if (o.isLight) lights++; });
+      scene.traverseVisible((o) => {
+        if (o.isMesh) { meshesVisible++; if (o.isInstancedMesh) instances += o.count; if (o.castShadow) shadowCasters++; }
+        if (o.isPoints) pointsObjs++;
+      });
+      const m = renderer.info.memory;
+      return {
+        fps: st.avg > 0 ? round2(1000 / st.avg) : 0, frameAvgMs: round2(st.avg), frameP95Ms: round2(st.p95),
+        workAvgMs: round2(st.workAvg), workP95Ms: round2(st.workP95), samples: Perf.count,
+        rafCalls: Perf.rafCalls, renders: Perf.renders,
+        calls: Perf.calls, triangles: Perf.triangles, points: Perf.points, lines: Perf.lines,
+        geometries: m.geometries, textures: m.textures, programs: renderer.info.programs ? renderer.info.programs.length : 0,
+        bufferW: size.x, bufferH: size.y, pixelRatio: round2(renderer.getPixelRatio()), megapixels: round2(size.x * size.y / 1e6),
+        cssW: window.innerWidth, cssH: window.innerHeight, dpr: window.devicePixelRatio || 1,
+        meshes, meshesVisible, instances, pointsObjects: pointsObjs, lights, shadowCasters,
+        shadows: renderer.shadowMap.enabled, shadowMapSize: Q.shadows ? Q.shadowMapSize : 0,
+        particles: FX.fire.alive + FX.smoke.alive, particleMax: FX.fire.max + FX.smoke.max,
+        bloom: Post.wanted, quality: CONFIG.qualityPreset, state: Game.state, world: Worlds.active.id,
+        audioState: Sfx.ctx ? Sfx.ctx.state : 'none', audioSources: Sfx.liveSources, audioSourcesCreated: Sfx.createdSources,
+        heapMB: performance.memory ? round2(performance.memory.usedJSHeapSize / 1048576) : null,
+      };
+    },
+    // Diagnosis kotak hitam (A7): mulai, hentikan dan laporkan, atau pindai NaN sekali
+    // Matikan atau nyalakan satu fitur untuk uji eliminasi: bloom, shadows, nebula, milky, galaxies,
+    // blackhole, stars, particles, clouds, planets, skyEarth, css (blur dan animasi), audio
+    feature(name, on) {
+      if (on) Debug.off.delete(name); else Debug.off.add(name);
+      if (on ? DEBUG_FEATURES[name] : false) for (const o of DEBUG_FEATURES[name]()) if (o) o.visible = true;
+      if (name === 'shadows') renderer.shadowMap.autoUpdate = !!on;
+      if (name === 'audio') { if (on) Sfx.resume(); else Sfx.suspend(); }
+      if (name === 'css') {
+        for (const a of document.getAnimations()) { if (on) a.play(); else a.pause(); }
+        for (const el of document.querySelectorAll('.screen, .card')) el.style.backdropFilter = on ? '' : 'none';
+      }
+      return [...Debug.off];
+    },
+    glitchProbe(cmd = 'report', opts) {
+      if (cmd === 'start') { GlitchProbe.start(opts || {}); return true; }
+      if (cmd === 'stop') return GlitchProbe.stop();
+      if (cmd === 'nan') return { nanPixels: GlitchProbe.scanNaN(), objects: GlitchProbe.scanObjects() };
+      return GlitchProbe.report();
+    },
+    perfReset() { Perf.count = 0; Perf.idx = 0; Perf.rafCalls = 0; Perf.renders = 0; },
     placePickupAhead(type = 'repair', dist = 120) {
       const P = Player.pos, f = Player.forward;
       return !!Pickups.place(type, P.x + f.x * dist, P.y + f.y * dist, P.z + f.z * dist);
@@ -13167,20 +13359,47 @@ const JetPreview = {
 /* =====================================================================
    MAIN LOOP - requestAnimationFrame dengan delta time yang di-clamp
    ===================================================================== */
-const Perf = { frameMs: 16.7, workMs: 0 };   // rata-rata bergerak (EMA), tanpa alokasi
+// Statistik frame: EMA untuk HUD, cincin 240 sampel untuk rata-rata dan p95 (debug.perf), tanpa alokasi
+const Perf = {
+  frameMs: 16.7, workMs: 0,
+  N: 240, ring: new Float32Array(240), work: new Float32Array(240), idx: 0, count: 0,
+  rafCalls: 0, renders: 0,
+  // info renderer satu frame penuh (semua pass composer dan peta bayangan), disalin saat frame selesai
+  calls: 0, triangles: 0, points: 0, lines: 0,
+  push(frameMs, workMs) {
+    this.ring[this.idx] = frameMs; this.work[this.idx] = workMs;
+    this.idx = (this.idx + 1) % this.N;
+    if (this.count < this.N) this.count++;
+  },
+  stats() {
+    const n = this.count;
+    if (!n) return { avg: 0, p95: 0, workAvg: 0, workP95: 0 };
+    const a = Array.from(this.ring.subarray(0, n)).sort((x, y) => x - y);
+    const w = Array.from(this.work.subarray(0, n)).sort((x, y) => x - y);
+    const avg = a.reduce((s, v) => s + v, 0) / n, wavg = w.reduce((s, v) => s + v, 0) / n;
+    return { avg, p95: a[Math.min(n - 1, Math.floor(n * 0.95))], workAvg: wavg, workP95: w[Math.min(n - 1, Math.floor(n * 0.95))] };
+  },
+};
+renderer.info.autoReset = false;   // dihitung per frame, bukan per panggilan render
 let lastTime = performance.now();
 let rafId = 0;
 function frame(now) {
+  Perf.rafCalls++;
   const raw = Math.max((now - lastTime) / 1000, 0);
   let dt = Math.min(raw, CONFIG.maxDelta);
   if (Game.slowMo > 0) { Game.slowMo -= dt; dt *= CONFIG.collision.slowMotionScale; }   // gerak lambat saat hancur
   lastTime = now;
   Game.frame++;
   const t0 = performance.now();
+  renderer.info.reset();
   update(dt);
   render();
-  Perf.workMs += (performance.now() - t0 - Perf.workMs) * 0.05;
-  if (raw < 0.25) Perf.frameMs += (raw * 1000 - Perf.frameMs) * 0.05;
+  Perf.renders++;
+  const ri = renderer.info.render;
+  Perf.calls = ri.calls; Perf.triangles = ri.triangles; Perf.points = ri.points; Perf.lines = ri.lines;
+  const work = performance.now() - t0;
+  Perf.workMs += (work - Perf.workMs) * 0.05;
+  if (raw < 0.25) { Perf.frameMs += (raw * 1000 - Perf.frameMs) * 0.05; Perf.push(raw * 1000, work); }
   rafId = requestAnimationFrame(frame);
 }
 rafId = requestAnimationFrame(frame);

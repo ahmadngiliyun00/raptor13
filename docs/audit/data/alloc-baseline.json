@@ -1,0 +1,476 @@
+{
+  "menu": {
+    "frames": 1202,
+    "seconds": 20,
+    "totalKB": 47524,
+    "kbPerFrame": 39.54,
+    "top": [
+      {
+        "site": "setValueM4 @three.module.js:5066",
+        "kbPerFrame": 12.3,
+        "kbTotal": 14786
+      },
+      {
+        "site": "setValueV3f @three.module.js:4941",
+        "kbPerFrame": 5.5,
+        "kbTotal": 6610
+      },
+      {
+        "site": "update @index.html?debug=1:6983",
+        "kbPerFrame": 2.94,
+        "kbTotal": 3532
+      },
+      {
+        "site": "update @index.html?debug=1:6624",
+        "kbPerFrame": 1.99,
+        "kbTotal": 2389
+      },
+      {
+        "site": "sort @:0",
+        "kbPerFrame": 1.94,
+        "kbTotal": 2331
+      },
+      {
+        "site": "projectObject @three.module.js:17696",
+        "kbPerFrame": 1.53,
+        "kbTotal": 1838
+      },
+      {
+        "site": "update @index.html?debug=1:9081",
+        "kbPerFrame": 1.45,
+        "kbTotal": 1740
+      },
+      {
+        "site": "replace @:0",
+        "kbPerFrame": 0.84,
+        "kbTotal": 1013
+      },
+      {
+        "site": "setValueV1fArray @three.module.js:5453",
+        "kbPerFrame": 0.82,
+        "kbTotal": 981
+      },
+      {
+        "site": "setValueM3 @three.module.js:5039",
+        "kbPerFrame": 0.81,
+        "kbTotal": 973
+      },
+      {
+        "site": "setProgram @three.module.js:18220",
+        "kbPerFrame": 0.74,
+        "kbTotal": 893
+      },
+      {
+        "site": "copyArray @three.module.js:4860",
+        "kbPerFrame": 0.7,
+        "kbTotal": 845
+      },
+      {
+        "site": "WebGLRenderer.render @three.module.js:17464",
+        "kbPerFrame": 0.64,
+        "kbTotal": 770
+      },
+      {
+        "site": "sunBlocked @index.html?debug=1:6683",
+        "kbPerFrame": 0.41,
+        "kbTotal": 493
+      },
+      {
+        "site": "setFromProjectionMatrix @three.core.js:26022",
+        "kbPerFrame": 0.39,
+        "kbTotal": 469
+      },
+      {
+        "site": "reversePainterSortStable @three.module.js:7869",
+        "kbPerFrame": 0.36,
+        "kbTotal": 437
+      },
+      {
+        "site": "flatten @three.module.js:4811",
+        "kbPerFrame": 0.32,
+        "kbTotal": 385
+      },
+      {
+        "site": "updateEmitters @index.html?debug=1:9804",
+        "kbPerFrame": 0.31,
+        "kbTotal": 369
+      },
+      {
+        "site": "update @index.html?debug=1:5917",
+        "kbPerFrame": 0.26,
+        "kbTotal": 309
+      },
+      {
+        "site": "refreshMaterialUniforms @three.module.js:14811",
+        "kbPerFrame": 0.24,
+        "kbTotal": 292
+      },
+      {
+        "site": "push @index.html?debug=1:9082",
+        "kbPerFrame": 0.24,
+        "kbTotal": 284
+      },
+      {
+        "site": "computeChase @index.html?debug=1:10005",
+        "kbPerFrame": 0.2,
+        "kbTotal": 236
+      },
+      {
+        "site": "update @index.html?debug=1:5399",
+        "kbPerFrame": 0.19,
+        "kbTotal": 224
+      },
+      {
+        "site": "updateFlare @index.html?debug=1:5951",
+        "kbPerFrame": 0.18,
+        "kbTotal": 213
+      },
+      {
+        "site": "animate @index.html?debug=1:2885",
+        "kbPerFrame": 0.17,
+        "kbTotal": 208
+      },
+      {
+        "site": "setFromRotationMatrix @three.core.js:4267",
+        "kbPerFrame": 0.17,
+        "kbTotal": 204
+      },
+      {
+        "site": "rebuildBelt @index.html?debug=1:6873",
+        "kbPerFrame": 0.17,
+        "kbTotal": 200
+      },
+      {
+        "site": "next @:0",
+        "kbPerFrame": 0.16,
+        "kbTotal": 196
+      },
+      {
+        "site": "setValueV2f @three.module.js:4914",
+        "kbPerFrame": 0.15,
+        "kbTotal": 180
+      },
+      {
+        "site": "computeCinematic @index.html?debug=1:10040",
+        "kbPerFrame": 0.14,
+        "kbTotal": 172
+      }
+    ]
+  },
+  "earth": {
+    "frames": 1202,
+    "seconds": 20,
+    "totalKB": 86175,
+    "kbPerFrame": 71.69,
+    "top": [
+      {
+        "site": "setValueM4 @three.module.js:5066",
+        "kbPerFrame": 19,
+        "kbTotal": 22833
+      },
+      {
+        "site": "setValueV3f @three.module.js:4941",
+        "kbPerFrame": 7.23,
+        "kbTotal": 8690
+      },
+      {
+        "site": "updateCombat @index.html?debug=1:5443",
+        "kbPerFrame": 6.28,
+        "kbTotal": 7552
+      },
+      {
+        "site": "rebuild @index.html?debug=1:3528",
+        "kbPerFrame": 5.17,
+        "kbTotal": 6217
+      },
+      {
+        "site": "getParameters @three.module.js:7132",
+        "kbPerFrame": 3.75,
+        "kbTotal": 4505
+      },
+      {
+        "site": "writeTri @index.html?debug=1:3535",
+        "kbPerFrame": 2.38,
+        "kbTotal": 2856
+      },
+      {
+        "site": "noise @index.html?debug=1:3391",
+        "kbPerFrame": 2.02,
+        "kbTotal": 2432
+      },
+      {
+        "site": "update @index.html?debug=1:3824",
+        "kbPerFrame": 1.42,
+        "kbTotal": 1703
+      },
+      {
+        "site": "setValueM3 @three.module.js:5039",
+        "kbPerFrame": 1.42,
+        "kbTotal": 1702
+      },
+      {
+        "site": "painterSortStable @three.module.js:7839",
+        "kbPerFrame": 1.41,
+        "kbTotal": 1691
+      },
+      {
+        "site": "heightAt @index.html?debug=1:3482",
+        "kbPerFrame": 1.38,
+        "kbTotal": 1658
+      },
+      {
+        "site": "sort @:0",
+        "kbPerFrame": 1.29,
+        "kbTotal": 1552
+      },
+      {
+        "site": "join @:0",
+        "kbPerFrame": 1.11,
+        "kbTotal": 1333
+      },
+      {
+        "site": "refreshFogUniforms @three.module.js:14794",
+        "kbPerFrame": 1.06,
+        "kbTotal": 1274
+      },
+      {
+        "site": "LinearToSRGB @three.core.js:6848",
+        "kbPerFrame": 0.99,
+        "kbTotal": 1194
+      },
+      {
+        "site": "update @index.html?debug=1:8746",
+        "kbPerFrame": 0.98,
+        "kbTotal": 1179
+      },
+      {
+        "site": "updateEmitters @index.html?debug=1:9804",
+        "kbPerFrame": 0.87,
+        "kbTotal": 1046
+      },
+      {
+        "site": "updateGunship @index.html?debug=1:4434",
+        "kbPerFrame": 0.68,
+        "kbTotal": 814
+      },
+      {
+        "site": "hypot @:0",
+        "kbPerFrame": 0.64,
+        "kbTotal": 765
+      },
+      {
+        "site": "next @:0",
+        "kbPerFrame": 0.61,
+        "kbTotal": 738
+      },
+      {
+        "site": "setFromProjectionMatrix @three.core.js:26022",
+        "kbPerFrame": 0.59,
+        "kbTotal": 713
+      },
+      {
+        "site": "getProgramCacheKeyParameters @three.module.js:7529",
+        "kbPerFrame": 0.59,
+        "kbTotal": 708
+      },
+      {
+        "site": "projectObject @three.module.js:17696",
+        "kbPerFrame": 0.58,
+        "kbTotal": 696
+      },
+      {
+        "site": "updateIndicators @index.html?debug=1:11027",
+        "kbPerFrame": 0.52,
+        "kbTotal": 621
+      },
+      {
+        "site": "updateHud @index.html?debug=1:10848",
+        "kbPerFrame": 0.49,
+        "kbTotal": 589
+      },
+      {
+        "site": "updateDrone @index.html?debug=1:4411",
+        "kbPerFrame": 0.48,
+        "kbTotal": 573
+      },
+      {
+        "site": "updateInstruments @index.html?debug=1:8824",
+        "kbPerFrame": 0.48,
+        "kbTotal": 572
+      },
+      {
+        "site": "update @index.html?debug=1:3085",
+        "kbPerFrame": 0.42,
+        "kbTotal": 505
+      },
+      {
+        "site": "heightRaw @index.html?debug=1:3466",
+        "kbPerFrame": 0.37,
+        "kbTotal": 441
+      },
+      {
+        "site": "convert @three.core.js:6700",
+        "kbPerFrame": 0.33,
+        "kbTotal": 397
+      }
+    ]
+  },
+  "space": {
+    "frames": 1203,
+    "seconds": 20,
+    "totalKB": 86844,
+    "kbPerFrame": 72.19,
+    "top": [
+      {
+        "site": "setValueM4 @three.module.js:5066",
+        "kbPerFrame": 17.98,
+        "kbTotal": 21629
+      },
+      {
+        "site": "setValueV3f @three.module.js:4941",
+        "kbPerFrame": 7.84,
+        "kbTotal": 9426
+      },
+      {
+        "site": "updateCombat @index.html?debug=1:5443",
+        "kbPerFrame": 7.47,
+        "kbTotal": 8981
+      },
+      {
+        "site": "updateGunship @index.html?debug=1:4434",
+        "kbPerFrame": 4.46,
+        "kbTotal": 5360
+      },
+      {
+        "site": "update @index.html?debug=1:6624",
+        "kbPerFrame": 2,
+        "kbTotal": 2409
+      },
+      {
+        "site": "sort @:0",
+        "kbPerFrame": 1.79,
+        "kbTotal": 2152
+      },
+      {
+        "site": "projectObject @three.module.js:17696",
+        "kbPerFrame": 1.77,
+        "kbTotal": 2131
+      },
+      {
+        "site": "setValueM3 @three.module.js:5039",
+        "kbPerFrame": 1.68,
+        "kbTotal": 2017
+      },
+      {
+        "site": "updateIndicators @index.html?debug=1:11027",
+        "kbPerFrame": 1.61,
+        "kbTotal": 1932
+      },
+      {
+        "site": "update @index.html?debug=1:9081",
+        "kbPerFrame": 1.46,
+        "kbTotal": 1756
+      },
+      {
+        "site": "update @index.html?debug=1:8746",
+        "kbPerFrame": 1.33,
+        "kbTotal": 1600
+      },
+      {
+        "site": "update @index.html?debug=1:4314",
+        "kbPerFrame": 1.18,
+        "kbTotal": 1414
+      },
+      {
+        "site": "blip @index.html?debug=1:8766",
+        "kbPerFrame": 1.16,
+        "kbTotal": 1398
+      },
+      {
+        "site": "rebuildBelt @index.html?debug=1:6873",
+        "kbPerFrame": 1.16,
+        "kbTotal": 1392
+      },
+      {
+        "site": "rng @index.html?debug=1:2062",
+        "kbPerFrame": 1.1,
+        "kbTotal": 1318
+      },
+      {
+        "site": "update @index.html?debug=1:9475",
+        "kbPerFrame": 1.09,
+        "kbTotal": 1306
+      },
+      {
+        "site": "updateEmitters @index.html?debug=1:9804",
+        "kbPerFrame": 0.95,
+        "kbTotal": 1138
+      },
+      {
+        "site": "setValueV1fArray @three.module.js:5453",
+        "kbPerFrame": 0.84,
+        "kbTotal": 1009
+      },
+      {
+        "site": "setProgram @three.module.js:18220",
+        "kbPerFrame": 0.68,
+        "kbTotal": 821
+      },
+      {
+        "site": "copyArray @three.module.js:4860",
+        "kbPerFrame": 0.61,
+        "kbTotal": 729
+      },
+      {
+        "site": "WebGLRenderer.render @three.module.js:17464",
+        "kbPerFrame": 0.58,
+        "kbTotal": 702
+      },
+      {
+        "site": "hypot @:0",
+        "kbPerFrame": 0.56,
+        "kbTotal": 669
+      },
+      {
+        "site": "updateHud @index.html?debug=1:10848",
+        "kbPerFrame": 0.52,
+        "kbTotal": 629
+      },
+      {
+        "site": "updateMinelayer @index.html?debug=1:4909",
+        "kbPerFrame": 0.51,
+        "kbTotal": 617
+      },
+      {
+        "site": "rel @index.html?debug=1:8727",
+        "kbPerFrame": 0.51,
+        "kbTotal": 609
+      },
+      {
+        "site": "push @index.html?debug=1:9082",
+        "kbPerFrame": 0.47,
+        "kbTotal": 569
+      },
+      {
+        "site": "updateInstruments @index.html?debug=1:8824",
+        "kbPerFrame": 0.43,
+        "kbTotal": 521
+      },
+      {
+        "site": "reversePainterSortStable @three.module.js:7869",
+        "kbPerFrame": 0.43,
+        "kbTotal": 517
+      },
+      {
+        "site": "updateDrone @index.html?debug=1:4411",
+        "kbPerFrame": 0.4,
+        "kbTotal": 477
+      },
+      {
+        "site": "nearest @index.html?debug=1:6666",
+        "kbPerFrame": 0.38,
+        "kbTotal": 457
+      }
+    ]
+  }
+}
