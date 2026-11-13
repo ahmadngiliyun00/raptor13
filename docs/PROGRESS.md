@@ -98,7 +98,7 @@ desktop, dan semua hook debug tidak berubah. Matriks uji: 568x320, 667x375, 740x
 layar, tiap cluster maksimal 30 persen tinggi dan 26 persen lebar, zona tengah (x 30 sampai 70 persen,
 y 20 sampai 80 persen) bebas UI.
 
-- H1 (BELUM) Audit CSS mode HP, var --u (clamp(34px, 11vh, 48px), dari visualViewport), --sa-l/t/r/b = max(safe-area, 8px), override ?safearea=kiri,atas,kanan,bawah, hapus penjumlahan 16px dengan safe-area.
+- H1 (SELESAI) Audit CSS mode HP, var --u (clamp(34px, 11vh, 48px), dari visualViewport), --sa-l/t/r/b = max(safe-area, 8px), override ?safearea=kiri,atas,kanan,bawah, hapus penjumlahan 16px dengan safe-area.
 - H2 (BELUM) Joystick analog melayang (separuh kiri, deadzone 12 persen, kurva halus, lewat Controls), cluster aksi baru (tembak pojok kanan bawah, nitro di atasnya, 2x2 manuver dan ultimate), hit slop 44 px, opsi Ukuran kontrol, Transparansi, Mode kidal, Gaya kontrol kiri (Joystick atau Tombol arah).
 - H3 (BELUM) HUD kompak (kiri atas 150x48, baris misi tengah atas, kanan atas hanya Jeda dan Suara), radar 48 sampai 56 px dengan ikon peta, teks minimum 11 px.
 - H4 (BELUM) Pusat notifikasi tunggal dengan antrean prioritas (Piko, area, pickup, level, kontrak), indikator tepi untuk peringatan kritis, Bantuan robot: Penuh, Ringkas, Hanya ikon, Mati.
