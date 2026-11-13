@@ -155,3 +155,104 @@ persen di depan dan sampai 11,8 detik berturut-turut di ekor.
   terlalu lama, `vulnMul`, `vuln`, dan `lead` di `BOSS_PILOT` bisa dinaikkan tanpa menyentuh HP bos.
 - Persentase bot buru di kerucut depan lebih bergantung pada bot itu sendiri (ia selalu berbelok ke bos),
   karena itu sasaran kesulitan diukur dengan bot jelajah.
+
+## Kesiapan bos: bot terampil dan durasi pertarungan (D2, 2.3.1)
+
+Bot jelajah dan bot buru tidak mewakili pemain sungguhan. Karena itu ada bot baru (`debug.skilledBot`, hanya
+lewat `?debug=1`) yang memakai batasan kapal yang sama dengan pemain: input pitch dan yaw, laju putar, nitro,
+cooldown manuver, dan jarak tembak. Perilakunya:
+
+- membidik titik bidik prediksi dengan tundaan reaksi (posisi sasaran yang dilihat adalah posisi beberapa
+  frame lalu) dan galat bidik acak yang berubah tiap 0,4 detik;
+- menembak hanya saat sasaran di kerucut bidik;
+- mengabaikan umpan tiruan (pemain membedakannya lewat kontur);
+- mengejar dengan nitro saat jauh atau saat jendela rentan;
+- menghindari serangan beraba-aba dengan gulung tong;
+- memakai Balik Arah bila bos lama di belakang;
+- menjauh dari badan bos agar tidak menabrak.
+
+Bot menerima kerusakan sungguhan, tanpa mode kebal. Tabrakan keras dicatat dalam mode latihan agar
+pertarungan berlanjut.
+
+| Profil | Reaksi | Galat bidik | Kerucut tembak | Peluang menghindar |
+| --- | --- | --- | --- | --- |
+| terampil | 250 ms | 1 derajat | 7 derajat | 85 persen |
+| rata-rata | 450 ms | 2,6 derajat | 9 derajat | 35 persen |
+
+Skrip: `node tests/bos/ttk.mjs <label>`. Tiap bos di area stage-nya, Mudah, Normal, Sulit, 5 seed (arah
+awal dan galat bidik berbeda), batas 300 detik (Naga 600 detik dengan 3 seed). Data:
+`docs/bos/data/ttk-sebelum.json`, `ttk-sesudah.json`, `ttk-sesudah-naga.json`.
+
+### Penyetelan (hanya parameter perilaku; HP bos, damage, dan hadiah tidak berubah)
+
+| Parameter | Sebelum | Sesudah | Alasan |
+| --- | --- | --- | --- |
+| Jarak mode depan Sulit | 270 | 240 | Pertarungan Sulit terlalu lama |
+| Jarak mode depan per bos (`leadMul`) | 1 untuk semua (naga 1,35) | Penjaga 0,9, Penambang 0,8, Pemburu 0,6, Naga 1,1 (fase 2: 0,75) | Pemburu kecil dan cepat: dari jarak 230 hampir tidak pernah ada di kerucut bidik |
+| Kecepatan di mode depan (`leadSpeed`) | sama dengan pemain | Pemburu 0,9, Naga 0,9 | Pemain bisa merapat dengan sengaja |
+| Liukan mode depan Pemburu (`weave`) | 1 | 0,45 | Liukan lebar membuat Pemburu jarang di kerucut bidik |
+| Jendela rentan Naga (`vulnTime`) | 1 | 1,6 kali | Titik lemah Naga kecil |
+| Naga fase 1 | 30 di atas pemain | 45 di bawah dan 70 ke samping | Generator di punggung tertutup segmen ekor bila dilihat dari belakang |
+| Naga fase 2 | kepala searah gerak | kepala menghadap pemain di mode depan | Titik lemah ada di mulut |
+
+### Waktu sampai bos kalah (detik, median dengan rentang; sebelum lalu sesudah)
+
+Bot terampil (target awal: Mudah 60 sampai 100, Normal 90 sampai 150, Sulit 120 sampai 200, Naga sekitar dua
+kali lipat). Kolom setelah "sesudah" adalah nilai sesudah: kerusakan diterima (HP), kematian, jendela rentan
+terpakai, persen waktu di depan, dan runtun ekor terlama (detik).
+
+| Bos | Kesulitan | Sebelum | Sesudah | Kerusakan | Mati | Rentan terpakai | Di depan | Ekor terlama |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Penjaga Raksasa | mudah | 93 (51 sampai 114) | 53 (32 sampai 79) | 24 | 0 | 2,8 | 91 | 0 |
+| Penjaga Raksasa | normal | 103 (60 sampai 190) | 93 (56 sampai 107) | 54 | 0,2 | 5,2 | 65 | 1,5 |
+| Penjaga Raksasa | sulit | 227 (139 sampai 257) | 175 (113 sampai 273) | 239 | 2 | 8 | 53 | 2,27 |
+| Penambang Raksasa | mudah | 113 (97 sampai 134) | 102 (91 sampai 114) | 203 | 1,6 | 3,6 | 70 | 1,37 |
+| Penambang Raksasa | normal | 168 (114 sampai 191) | 133 (106 sampai 139) | 253 | 2,2 | 7 | 67 | 2,07 |
+| Penambang Raksasa | sulit | 225 (200 sampai 264) | 233 (178 sampai 246) | 413 | 3,6 | 14,2 | 55 | 2,52 |
+| Pemburu Agung | mudah | 258 (225 sampai 284) | 36 (36 sampai 57) | 88 | 0,2 | 2 | 84 | 1,02 |
+| Pemburu Agung | normal | tidak kalah dalam 300 | 110 (90 sampai 154) | 227 | 1,6 | 8,2 | 52 | 1,72 |
+| Pemburu Agung | sulit | tidak kalah dalam 300 | 257 (229 sampai 295), 20 persen tidak kalah | 520 | 4,6 | 15,8 | 41 | 1,97 |
+| Sang Naga Vanta | mudah | tidak kalah | tidak kalah dalam 600 | 525 | 5 | 3,7 | 56 | 1,33 |
+| Sang Naga Vanta | normal | tidak kalah | tidak kalah dalam 600 | 575 | 5 | 17,3 | 48 | 1,53 |
+| Sang Naga Vanta | sulit | tidak kalah | tidak kalah dalam 600 | 662 | 5,7 | 10,7 | 35 | 1,52 |
+
+Bot rata-rata (perkiraan pemain biasa):
+
+| Bos | Kesulitan | Sebelum | Sesudah | Kerusakan | Mati |
+| --- | --- | --- | --- | --- | --- |
+| Penjaga Raksasa | mudah | 114, 20 persen tidak kalah | 111 (93 sampai 196) | 29 | 0 |
+| Penjaga Raksasa | normal | 223 | 193 (141 sampai 203) | 179 | 1,6 |
+| Penjaga Raksasa | sulit | 272, 40 persen tidak kalah | tidak kalah dalam 300 | 452 | 4 |
+| Penambang Raksasa | mudah | 181 | 158 (139 sampai 166) | 303 | 2,6 |
+| Penambang Raksasa | normal | 220 | 176 (155 sampai 229) | 375 | 3,2 |
+| Penambang Raksasa | sulit | 292, 60 persen tidak kalah | tidak kalah dalam 300 | 466 | 4 |
+| Pemburu Agung | mudah | 252 | 64 (56 sampai 68) | 135 | 1 |
+| Pemburu Agung | normal | tidak kalah | 215 (164 sampai 276) | 415 | 3,8 |
+| Pemburu Agung | sulit | tidak kalah | tidak kalah dalam 300 | 603 | 5,6 |
+
+### Penilaian jujur
+
+- **Normal:** ketiga bos reguler masuk target bot terampil (93, 133, 110 detik). Bot rata-rata 1,6 sampai 2
+  kali lebih lama (176 sampai 215 detik), sesuai perkiraan 1,5 sampai 2,5 kali untuk manusia, dan di bawah
+  batas 6 menit.
+- **Mudah:** lebih cepat dari target untuk Penjaga (53) dan Pemburu (36). Ini sengaja dibiarkan, karena Mudah
+  yang terlalu cepat lebih aman daripada Normal yang terlalu lama.
+- **Sulit:** Penambang (233) dan Pemburu (257) di atas target 200 detik untuk bot terampil. Bot rata-rata
+  tidak mengalahkan Penjaga, Penambang, dan Pemburu dalam 300 detik. Ini perlu disetel lagi setelah pemilik
+  mencoba sendiri (calon: `vuln` dan `lead` Sulit).
+- **Bot tetap terancam:** bot terampil menerima 24 sampai 662 HP kerusakan dan mati 0 sampai 5,7 kali per
+  pertarungan, jadi bos tetap berbahaya.
+- **Batas ekor dipatuhi:** runtun di ekor terlama 2,85 detik, jauh di bawah batas 4, 6, dan 9 detik.
+- **Sang Naga Vanta tidak kalah oleh kedua bot dalam 600 detik** di semua kesulitan, dan juga tidak sebelum
+  perubahan. Bot tertahan di fase 1: generator perisai di punggung berukuran bola radius 3. Pada jarak sekitar
+  170, itu kira-kira 1 derajat, sehingga 873 peluru dalam 240 detik hanya 16 yang kena. Mengubah perilaku
+  terbang (posisi di samping, di bawah, lebih dekat, lebih lambat) tidak cukup. Yang dibutuhkan adalah
+  keputusan desain di luar batas prompt ini, misalnya generator lebih besar dan lebih terang, atau sudut tembak
+  ke generator yang lebih bebas. Rekomendasinya ada di ringkasan rilis. Naga belum diuji oleh manusia.
+
+## Telemetri lokal pertarungan bos (D2)
+
+Sepuluh pertarungan bos terakhir disimpan di perangkat (`raptor13.bosslog.v1`, divalidasi, tanpa data pribadi,
+tanpa jaringan): bos, kesulitan, durasi, HP hilang, jendela rentan terpakai, hasil (menang, kalah, batal), dan
+tanggal. Data ini ikut dalam berkas UNDUH LOG pada overlay `?diag=1` (bagian `pertarunganBos`), sehingga
+pemilik bisa melaporkan rasa bertarung dengan angka. Simulasi uji tidak dicatat.

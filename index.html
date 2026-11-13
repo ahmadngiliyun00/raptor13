@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-Mchxmj8zrQzEiu0zcQtaAW4bPASzn7xdh0MF82vfuCY='; style-src 'self' 'sha256-d7Vn/dPeFRp6Gb72fSwJtw2v1RLnI8eMR66a6wEwvRI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-Lj08SBPwXxuNhl9wVF8W0jjHddGeTbNkEuurbRQmzEI='; style-src 'self' 'sha256-d7Vn/dPeFRp6Gb72fSwJtw2v1RLnI8eMR66a6wEwvRI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -8217,6 +8217,7 @@ const Bosses = {
     scene.add(b.group);
     BossFX.attach(b);
     BossHud.begin(b);
+    BossLog.start(kind);
     // Kemunculan pertama tiap bos dalam satu sesi: sorot kamera singkat ke arah bos (naga punya cutscene sendiri).
     // Tanpa gerak lambat: HUD, radar, dan simulasi tetap berjalan pada waktu normal.
     if (!this.seen.has(kind)) { this.seen.add(kind); if (kind !== 'naga') CamRig.focusBoss(1.6); }
@@ -8233,6 +8234,7 @@ const Bosses = {
     if (b.dispose) b.dispose();
     BossFX.detach();
     BossHud.end();
+    BossLog.end('batal');   // tidak berpengaruh bila pertarungan sudah dicatat menang atau kalah
     this.active = null;
     this.bar.classList.add('hidden');
   },
@@ -8267,7 +8269,7 @@ const Bosses = {
     // Lambung yang tidak bisa dirusak tetap menghentikan peluru
     for (const s of b.blockers || []) {
       s.obj.getWorldPosition(_vd);
-      if (segmentHitsSphere(ax, ay, az, bx, by, bz, _vd.x, _vd.y, _vd.z, s.radius)) { Events.emit('shieldHit', bx, by, bz); return true; }
+      if (segmentHitsSphere(ax, ay, az, bx, by, bz, _vd.x, _vd.y, _vd.z, s.radius)) { if (BossStats.on) BossStats.blockedShots = (BossStats.blockedShots || 0) + 1; Events.emit('shieldHit', bx, by, bz); return true; }
     }
     return false;
   },
@@ -8279,8 +8281,13 @@ const Bosses = {
       amount = Math.min(amount, p.health.hp - floor);
     }
     p.hpBarTimer = 2;
+    if (BossStats.on ? !byUltimate : false) { BossStats.hits = (BossStats.hits || 0) + 1; BossStats.dmg = (BossStats.dmg || 0) + amount; }
     // Jendela rentan (B5): damage ke bos dikali sesuai kesulitan
-    if (this.active.vuln > 0 ? !byUltimate : false) amount *= BossPilot.P().vulnMul;
+    if (this.active.vuln > 0 ? !byUltimate : false) {
+      amount *= BossPilot.P().vulnMul;
+      if (BossStats.on ? BossStats.vulnUsedWin !== BossStats.vulnWindows : false) { BossStats.vulnUsedWin = BossStats.vulnWindows; BossStats.vulnUsed++; }
+      BossLog.vulnHit(this.active.vulnId || 0);
+    }
     Events.emit('enemyHit', x, y, z);
     return applyDamage(p, amount, 'pemain', x, y, z);
   },
@@ -8313,6 +8320,7 @@ const Bosses = {
     if (!b ? true : b.dead) return;
     b.dead = true;
     if (BossStats.on) BossStats.defeatAt = BossStats.time;
+    BossLog.end('menang');
     const P = (b.anchor || b.group).position;
     for (let i = 0; i < 8; i++) FX.explosion(P.x + randRange(-1, 1) * b.size, P.y + randRange(-0.5, 0.5) * b.size, P.z + randRange(-1, 1) * b.size, 2.2);
     Stars.burst(P.x, P.y, P.z, 10);
@@ -8357,7 +8365,7 @@ const BossStats = {
   reset() {
     this.time = 0; this.front = 0; this.rear = 0; this.streak = 0; this.maxRear = 0; this.overshoots = 0; this.vulnWindows = 0; this.vulnTime = 0;
     this.inside = 0; this.occluded = 0; this.offscreen = 0; this.distSum = 0; this.lastAhead = null; this.defeatAt = null; this.minPx = Infinity; this.pxSum = 0;
-    this.contacts = 0; this.lastContact = -9; this.modes = {};
+    this.contacts = 0; this.lastContact = -9; this.modes = {}; this.vulnUsed = 0; this.vulnUsedWin = -1; this.shots = 0; this.hits = 0; this.dmg = 0; this.blockedShots = 0;
   },
   // Garis kamera ke titik terhalang planet, bulan, Matahari (angkasa) atau medan (Bumi)
   blocked(a, b) {
@@ -8403,7 +8411,7 @@ const BossStats = {
   summary() {
     const T = Math.max(this.time, 1e-6), pct = (v) => Math.round(v / T * 1000) / 10;
     return { time: round2(this.time), frontPct: pct(this.front), rearPct: pct(this.rear), maxRearStreak: round2(this.maxRear),
-      overshootsPerMin: round2(this.overshoots / (T / 60)), vulnWindows: this.vulnWindows, vulnPct: pct(this.vulnTime),
+      overshootsPerMin: round2(this.overshoots / (T / 60)), vulnWindows: this.vulnWindows, vulnUsed: this.vulnUsed, vulnPct: pct(this.vulnTime),
       insideBodyPct: pct(this.inside), occludedPct: pct(this.occluded), offscreenPct: pct(this.offscreen),
       modePct: Object.fromEntries(Object.entries(this.modes).map(([k, v]) => [k, pct(v)])), contactsPerMin: round2(this.contacts / (T / 60)), meanDist: Math.round(this.distSum / T), meanPx: Math.round(this.pxSum / T), defeatAt: this.defeatAt === null ? null : round2(this.defeatAt) };
   },
@@ -8427,7 +8435,7 @@ const BOSS_PILOT = {
   // berhadapan lalu lewat ke belakang
   mudah: { frontShare: 0.65, lead: [14, 17], leadDist: 190, overshoot: 50, turn: 2.8, catchup: 2.0, vuln: 3.0, vulnMul: 1.6, tailMax: 4, cross: true },
   normal: { frontShare: 0.45, lead: [4.4, 5.6], leadDist: 230, overshoot: 150, turn: 2.0, catchup: 1.6, vuln: 2.2, vulnMul: 1.4, tailMax: 6 },
-  sulit: { frontShare: 0.25, lead: [2, 2.8], leadDist: 270, overshoot: 280, turn: 1.5, catchup: 1.35, vuln: 1.5, vulnMul: 1.25, tailMax: 9 },
+  sulit: { frontShare: 0.25, lead: [2, 2.8], leadDist: 240, overshoot: 280, turn: 1.5, catchup: 1.35, vuln: 1.5, vulnMul: 1.25, tailMax: 9 },
 };
 const BossPilot = {
   _d: new THREE.Vector3(), _t: new THREE.Vector3(), _a: new THREE.Vector3(),
@@ -8460,8 +8468,9 @@ const BossPilot = {
       // Liukan sempit (sekitar 10 derajat) agar bos tetap di kerucut depan; naga lebih jauh dan lebih tinggi agar
       // tubuh panjangnya tidak melintang di jalur pemain
       const ld = C.leadDist * (o.leadMul || 1);
-      T.copy(P).addScaledVector(F, ld).addScaledVector(R, Math.sin(b.time * 0.8) * 30 + pl.side * 12).addScaledVector(U, Math.sin(b.time * 0.55) * 12 + 6 + (o.leadUp || 0));
-      speed = clamp(ps - (lz - ld) * 0.5, ps * 0.7, ps * 1.4);
+      const wv = o.weave === undefined ? 1 : o.weave, ls = o.leadSpeed || 1;
+      T.copy(P).addScaledVector(F, ld).addScaledVector(R, (Math.sin(b.time * 0.8) * 30 + pl.side * 12) * wv + pl.side * (o.leadSide || 0)).addScaledVector(U, Math.sin(b.time * 0.55) * 12 * wv + 6 + (o.leadUp || 0));
+      speed = clamp(ps * ls - (lz - ld) * 0.5, ps * 0.7, ps * 1.4);
       turn = 3.4;
       if (pl.t > pl.leadT) this.set(b, o.windup > 0 ? 'windup' : 'strafe');
     } else if (pl.mode === 'windup') {
@@ -8491,7 +8500,7 @@ const BossPilot = {
       speed = Math.min(ps * C.catchup + (pl.tail > 0 ? 70 : 20), CONFIG.player.nitroSpeed * (pl.tail > 0 ? 1.45 : 1.15)); turn = pl.tail > 0 ? Math.max(C.turn, 2.4) : C.turn;
       if (cos > (C.cross ? 0.75 : 0.8) ? dist < C.leadDist * (o.leadMul || 1) * 1.8 : false) {
         this.set(b, 'lead');
-        b.vuln = C.vuln;
+        b.vuln = C.vuln * (o.vulnTime || 1); b.vulnId = (b.vulnId || 0) + 1;
         if (BossStats.on) BossStats.vulnWindows++;
         Events.emit('bossVulnerable', b.kind);
       }
@@ -8505,9 +8514,37 @@ const BossPilot = {
     _desired.subVectors(T, pos).normalize();
     b.dir.lerp(_desired, clamp(turn * dt, 0, 1)).normalize();
     pos.addScaledVector(b.dir, speed * dt);
-    if (o.face !== false) obj.lookAt(_vc.copy(pos).sub(b.dir));
+    if (o.facePlayer) obj.lookAt(_vc.copy(pos).sub(this._a.copy(P).sub(pos).normalize()));
+    else if (o.face !== false) obj.lookAt(_vc.copy(pos).sub(b.dir));
   },
 };
+
+/* Telemetri lokal pertarungan bos (D2): 10 pertarungan terakhir di perangkat (localStorage, divalidasi, tanpa data
+   pribadi, tanpa jaringan) agar pemilik bisa melaporkan rasa bertarung dengan angka lewat ?diag=1 (UNDUH LOG). */
+const BOSS_LOG_KEY = 'raptor13.bosslog.v1';
+const BossLog = {
+  cur: null,
+  load() {
+    const v = Store.get(BOSS_LOG_KEY);
+    if (!Array.isArray(v)) return [];
+    const kinds = Object.keys(BOSS_DEFS), res = ['menang', 'kalah', 'batal'];
+    return v.filter((x) => (x ? typeof x === 'object' : false) ? (kinds.includes(x.bos) ? (Object.hasOwn(CONFIG.difficulty.levels, x.kesulitan) ? (res.includes(x.hasil) ? [x.durasi, x.hpHilang, x.rentan].every((n) => Number.isFinite(n) ? n >= 0 : false) : false) : false) : false) : false).slice(-10)
+      .map((x) => ({ bos: x.bos, kesulitan: x.kesulitan, durasi: Math.round(x.durasi), hpHilang: Math.round(x.hpHilang), rentan: Math.round(x.rentan), hasil: x.hasil, tanggal: typeof x.tanggal === 'string' ? x.tanggal.slice(0, 10) : '' }));
+  },
+  start(kind) { this.cur = BossStats.on ? null : { bos: kind, kesulitan: Game.difficultyKey, t0: Game.time, hp: 0, rentan: 0, win: -1 }; },
+  damage(dealt) { if (this.cur) this.cur.hp += dealt; },
+  vulnHit(winId) { if (this.cur ? this.cur.win !== winId : false) { this.cur.win = winId; this.cur.rentan++; } },
+  end(hasil) {
+    const c = this.cur;
+    if (!c) return;
+    this.cur = null;
+    const list = this.load();
+    list.push({ bos: c.bos, kesulitan: c.kesulitan, durasi: Math.max(0, Math.round(Game.time - c.t0)), hpHilang: Math.round(c.hp), rentan: c.rentan, hasil, tanggal: new Date().toISOString().slice(0, 10) });
+    Store.set(BOSS_LOG_KEY, list.slice(-10));
+  },
+};
+Events.on('damage', (e, dealt) => { if (e === Player) BossLog.damage(dealt); });
+Events.on('gameover', () => BossLog.end('kalah'));
 
 // Model bos dari loft dan lathe
 function buildBossMiner() {
@@ -8592,7 +8629,7 @@ const BOSS_DEFS = {
     group.position.set(P.x + f.x * 600, Math.max(P.y + 40, groundHeightAt(P.x + f.x * 600, P.z + f.z * 600) + 80), P.z + f.z * 600);
     b.barRatio = () => health.ratio;
     b.phaseLabel = () => 'FASE ' + b.phase;
-    BossPilot.init(b, { clear: 48, alt: 70 });
+    BossPilot.init(b, { clear: 48, alt: 70, leadMul: 0.9 });
     b.update = (dt) => {
       if (b.phase === 1 ? health.ratio < 0.5 : false) { b.phase = 2; showBanner('PENJAGA RAKSASA MENGAMUK', 1500); }
       BossPilot.update(b, group, dt);
@@ -8617,7 +8654,7 @@ const BOSS_DEFS = {
     b.phaseLabel = () => 'FASE ' + b.phase;
     // Serbuan bor = fase serang lewat depan: aba-aba 1,3 detik (bor berputar cepat menghadap pemain), lalu menyerbu
     // ke samping pemain dengan jarak aman (sebelumnya langsung ke posisi pemain dan sering menabrak)
-    BossPilot.init(b, { clear: 60, alt: 70, windup: 1.3, strafeSpeed: CONFIG.player.nitroSpeed * 0.8,
+    BossPilot.init(b, { clear: 60, alt: 70, leadMul: 0.8, windup: 1.3, strafeSpeed: CONFIG.player.nitroSpeed * 0.8,
       onMode: (bb, mode) => { b.mode = mode === 'windup' ? 'windup' : mode === 'strafe' ? 'charge' : 'orbit'; if (mode === 'windup') showToast('BOR BERPUTAR!'); } });
     b.update = (dt) => {
       if (b.phase === 1 ? health.ratio < 0.5 : false) { b.phase = 2; showBanner('BOR DIPERCEPAT', 1400); Piko.say('bossPhase'); }
@@ -8679,7 +8716,7 @@ const BOSS_DEFS = {
     b.dispose = () => { for (const d of b.decoys) scene.remove(d.obj); };
     b.barRatio = () => health.ratio;
     b.phaseLabel = () => 'FASE ' + b.phase;
-    BossPilot.init(b, { clear: 42, alt: 60 });
+    BossPilot.init(b, { clear: 42, alt: 60, leadMul: 0.6, leadSpeed: 0.9, weave: 0.45 });
     b.update = (dt) => {
       if (b.phase === 1 ? health.ratio < 0.5 : false) { b.phase = 2; b.decoyCd = 0; showBanner('PEMBURU AGUNG MEMANGGIL TIRUAN', 1500); Piko.say('bossPhase'); }
       BossPilot.update(b, m.group, dt);
@@ -8768,7 +8805,7 @@ const BOSS_DEFS = {
       b.laser.mode = 'idle'; b.laserLine.visible = false; b.laserBeam.visible = false;
       Events.emit('bossPhase', n);
     };
-    BossPilot.init(b, { clear: 90, alt: 80, leadMul: 1.35, leadUp: 30 });
+    BossPilot.init(b, { clear: 90, alt: 80, leadMul: 1.35, leadUp: 30, leadSpeed: 0.9, vulnTime: 1.6 });
     b.update = (dt) => Naga.update(b, dt);
     b.intro = () => Naga.introCutscene(b);
     b.onDefeat = () => Naga.ending(b);
@@ -8803,7 +8840,16 @@ const Naga = {
       b.dir.lerp(_desired, clamp(turn * dt, 0, 1)).normalize();
       head.position.addScaledVector(b.dir, speed * dt);
       head.lookAt(_vc.copy(head.position).sub(b.dir));
-    } else BossPilot.update(b, head, dt);   // fase 1, 2, 4: siklus lewat depan (B5)
+    } else {
+      // Fase 1, 2, 4: siklus lewat depan (B5). D2: di fase 2 titik lemah ada di mulut, jadi naga di mode depan
+      // lebih dekat dan kepalanya menghadap pemain agar mulut bisa dibidik.
+      const o = b.pilot.o;
+      // Fase 1: generator di punggung, naga sedikit di bawah garis pandang agar punggungnya terlihat. Fase 4: inti di
+      // bawah dada, naga di atas.
+      // Fase 1 juga bergeser ke samping: dari belakang, generator tertutup segmen ekor (peluru sejajar tubuh)
+      o.leadMul = b.phase === 2 ? 0.75 : 1.1; o.leadUp = b.phase === 1 ? -45 : b.phase === 2 ? 12 : 30; o.leadSide = b.phase === 1 ? 70 : 0; o.facePlayer = b.phase === 2 ? b.pilot.mode === 'lead' : false;
+      BossPilot.update(b, head, dt);
+    }
     const jaw = head.getObjectByName('jaw');
     jaw.rotation.x = b.phase >= 2 ? 0.25 + Math.sin(b.time * 3) * 0.1 : 0.05;
     // Tubuh mengikuti jejak kepala
@@ -13827,6 +13873,8 @@ const AutoInput = {
       if (front < 0) d2 *= 9;
       if (d2 < best) { best = d2; target = e; }
     }
+    // Bot terampil dan rata-rata (D2): kendali sendiri lewat SkilledBot
+    if (Debug.botBoss === 'terampil' ? true : Debug.botBoss === 'rata') { SkilledBot.update(t, this); return; }
     // Uji bos (B1, B5): bot memburu bagian bos yang bisa ditembak; hanya lewat hook debug.bossSim
     if (Debug.botBoss === 'jelajah') target = null;   // bot jelajah: tidak membidik, hanya meliuk (kecenderungan bos sendiri)
     else if (Debug.botBoss ? Bosses.active : false) {
@@ -13847,6 +13895,77 @@ const AutoInput = {
     this.fire = true;
   },
 };
+
+/* Bot terampil dan rata-rata untuk uji durasi pertarungan bos (D2), hanya lewat hook debug. Memakai batasan
+   kapal yang sama dengan pemain (input pitch dan yaw, laju putar, nitro, cooldown manuver, jarak tembak):
+   membidik titik bidik prediksi dengan tundaan reaksi (posisi sasaran yang dilihat adalah posisi beberapa frame
+   lalu) dan galat bidik acak yang berubah pelan, menembak hanya saat sasaran di kerucut bidik, mengejar dengan
+   nitro saat jauh atau saat jendela rentan, menghindari serangan beraba-aba dengan gulung tong (peluang per
+   profil), dan memakai Balik Arah bila bos terlalu lama di belakang. Tanpa teleportasi dan tanpa akurasi sempurna. */
+const BOT_PROFILES = {
+  terampil: { reaction: 0.25, aimErr: 1.0, fireCone: 7, dodge: 0.85, reverse: 1.2, gain: 3.2 },
+  rata: { reaction: 0.45, aimErr: 2.6, fireCone: 9, dodge: 0.35, reverse: 2.5, gain: 2.4 },
+};
+const SkilledBot = {
+  prof: BOT_PROFILES.terampil, rng: Math.random, hist: null, hi: 0, filled: 0, errT: 0, ex: 0, ey: 0, lastTele: -9, teleHandled: -9, behindT: 0,
+  _a: new THREE.Vector3(), _d: new THREE.Vector3(),
+  start(name, seed) {
+    this.prof = BOT_PROFILES[name] || BOT_PROFILES.terampil;
+    this.rng = makeRng((seed || 1) >>> 0);
+    if (!this.hist) { this.hist = []; for (let i = 0; i < 64; i++) this.hist.push(new THREE.Vector3()); }
+    this.hi = 0; this.filled = 0; this.errT = 0; this.lastTele = -9; this.teleHandled = -9; this.behindT = 0;
+  },
+  onTele(pos) {
+    const b = Bosses.active;
+    if (!b ? true : !(Debug.botBoss === 'terampil' ? true : Debug.botBoss === 'rata')) return;
+    if (pos.distanceToSquared((b.anchor || b.group).position) < Math.pow(b.size * 4, 2)) this.lastTele = Game.time;
+  },
+  update(t, out) {
+    const P = Player.pos, F = Player.forward, b = Bosses.active, pr = this.prof;
+    out.fire = false; out.nitro = false;
+    if (!b) { out.yaw = 0; out.pitch = clamp(-Player.pitch * 1.6, -1, 1); return; }
+    let part = null, bd = Infinity;
+    // Umpan tiruan tidak dibidik: pemain membedakan bos asli lewat kontur dan penanda
+    for (const pt of b.parts) { if (!pt.active ? true : (pt.hittable ? !pt.hittable() : false)) continue; if (b.decoys ? b.decoys.some((dc) => dc.part === pt) : false) continue; const d2 = pt.pos.distanceToSquared(P); if (d2 < bd) { bd = d2; part = pt; } }
+    const tp = part ? part.pos : (b.anchor || b.group).position, dist = Math.sqrt(part ? bd : tp.distanceToSquared(P));
+    // Titik bidik prediksi (sama dengan yang dilihat pemain), disimpan per frame untuk tundaan reaksi
+    const tf = dist / (CONFIG.weapons.bulletSpeed + Player.speed);
+    this.hist[this.hi].copy(BossFX.vel).multiplyScalar(tf).add(tp);
+    const delay = Math.min(63, Math.round(pr.reaction * 60)), idx = (this.hi - Math.min(delay, this.filled) + 64) % 64;
+    this.hi = (this.hi + 1) % 64; this.filled = Math.min(64, this.filled + 1);
+    // Galat bidik: sudut acak kecil yang berubah tiap 0,4 detik
+    this.errT -= 1 / 60;
+    if (this.errT <= 0) { this.errT = 0.4; this.ex = (this.rng() * 2 - 1) * pr.aimErr; this.ey = (this.rng() * 2 - 1) * pr.aimErr; }
+    const off = dist * Math.tan(Math.PI / 180);
+    const aim = this._a.copy(this.hist[idx]).addScaledVector(Player._right, this.ex * off).addScaledVector(Player._up, this.ey * off);
+    const d = this._d.copy(aim).sub(P), dl = d.length() || 1;
+    const want = Math.atan2(-d.x, -d.z);
+    out.yaw = clamp(wrapAngle(want - Player.yaw) * pr.gain, -1, 1);
+    const pitchErr = Math.atan2(d.y, Math.hypot(d.x, d.z)) - Math.asin(clamp(F.y, -1, 1));
+    out.pitch = clamp(pitchErr * pr.gain * 1.2, -1, 1);
+    if (Worlds.active === EarthWorld) { const g = groundHeightAt(P.x, P.z); if (P.y < g + 35) out.pitch = 1; }
+    // Seperti pemain sungguhan: jangan menabrak badan bos, belok menjauh dan naik bila terlalu dekat
+    const keep = b.size * 1.4 + 25, toBoss = (b.anchor || b.group).position, dbx = toBoss.x - P.x, dby = toBoss.y - P.y, dbz = toBoss.z - P.z;
+    const dB = Math.hypot(dbx, dby, dbz);
+    if (dB < keep ? (dbx * F.x + dby * F.y + dbz * F.z) / (dB || 1) > 0.2 : false) {
+      out.yaw = clamp(-wrapAngle(Math.atan2(-dbx, -dbz) - Player.yaw) * 4, -1, 1) || 1; out.pitch = 0.8; out.nitro = false; out.fire = false; return;
+    }
+    const cosA = (d.x * F.x + d.y * F.y + d.z * F.z) / dl, inCone = cosA > Math.cos(pr.fireCone * Math.PI / 180);
+    out.fire = inCone ? dist < 750 : false;
+    out.nitro = (cosA > 0.7 ? dist > 380 : false) ? true : (b.vuln > 0 ? (cosA > 0.7 ? dist > 160 : false) : false);
+    if (Player.ult >= 1 ? (inCone ? dist < 600 : false) : false) Ultimate.fire();
+    // Menghindari serangan beraba-aba: satu keputusan per aba-aba, gulung tong ke samping
+    if (Game.time - this.lastTele < 0.5 ? this.teleHandled < this.lastTele - 0.6 : false) {
+      this.teleHandled = Game.time;
+      if (this.rng() < pr.dodge ? dist < 450 : false) Player.startManeuver('roll', this.rng() < 0.5 ? -1 : 1);
+    }
+    // Bos lama di belakang: Balik Arah bila siap
+    this.behindT = cosA < -0.3 ? this.behindT + 1 / 60 : 0;
+    if (this.behindT > pr.reverse ? dist < 500 : false) { if (Player.startManeuver('immelmann')) this.behindT = 0; }
+  },
+};
+Events.on('enemyTelegraph', (pos) => SkilledBot.onTele(pos));
+Events.on('shot', () => { if (BossStats.on) BossStats.shots++; });
 
 let lastDt = 0;
 function update(dt) {
@@ -14463,7 +14582,17 @@ const GameHooks = {
       if (opts.difficulty ? Object.hasOwn(CONFIG.difficulty.levels, opts.difficulty) : false) Game.difficultyKey = opts.difficulty;
       if (!resume) BossStats.reset();
       BossStats.on = true;
-      Debug.god = true; Debug.autoInput = true; Debug.botBoss = opts.bot === 'jelajah' ? 'jelajah' : 'buru';
+      const real = opts.bot === 'terampil' ? true : opts.bot === 'rata';   // D2: bot terampil dan rata-rata menerima kerusakan sungguhan
+      const fatalBefore = Save.settings.fatalCrash;
+      Debug.god = !real; Debug.autoInput = true; Debug.botBoss = real ? opts.bot : (opts.bot === 'jelajah' ? 'jelajah' : 'buru');
+      let dmgTaken = 0, deaths = 0, crashes = 0;
+      const onDmg = (e, dealt) => { if (e === Player) dmgTaken += dealt; }, onDeath = () => { deaths++; }, onCrash = () => { crashes++; };
+      if (real) {
+        Save.settings.fatalCrash = false; Player.lives = 99;   // tabrakan keras dicatat (mode latihan), nyawa tidak habis
+        Events.on('damage', onDmg); Events.on('playerDeath', onDeath); Events.on('crash', onCrash);
+        SkilledBot.start(opts.bot, opts.seed || 1);
+        if (!resume) Player.setHeading(Player.yaw + ((opts.seed || 1) % 7 - 3) * 0.25);   // arah awal berbeda per seed
+      }
       if (!resume) { Bosses.start(kind); if (Bosses.active) Bosses.active.onDefeat = null; }
       Cutscene.skip();
       const steps = Math.round(seconds * 60), t0 = performance.now();
@@ -14479,6 +14608,7 @@ const GameHooks = {
       const r = BossStats.summary();
       r.kind = kind; r.bot = Debug.botBoss; r.difficulty = Game.difficultyKey; r.alive = !!Bosses.active; r.phase = Bosses.active ? Bosses.active.phase : null; r.ultUsed = ultUsed;
       r.msPerStep = round2((performance.now() - t0) / steps);
+      if (real) { Events.off('damage', onDmg); Events.off('playerDeath', onDeath); Events.off('crash', onCrash); Save.settings.fatalCrash = fatalBefore; r.damageTaken = Math.round(dmgTaken); r.deaths = deaths; r.crashes = crashes; }
       BossStats.on = false; Debug.botBoss = false; Debug.autoInput = false; Debug.god = godBefore; Debug.enemiesEnabled = enBefore;
       Controls.reset();
       if (!opts.keep) Bosses.clear();
@@ -14534,6 +14664,11 @@ const GameHooks = {
         fogged: scene.fog ? round2(clamp((d - scene.fog.near) / Math.max(1, scene.fog.far - scene.fog.near), 0, 1)) : 0 };
     },
     bossMetrics() { return BossStats.summary(); },
+    bossLog() { return BossLog.load(); },
+    // Efisiensi tembakan bot (D2): peluru keluar, peluru kena bos, damage ke bos
+    botAccuracy() { return { shots: BossStats.shots || 0, hits: BossStats.hits || 0, blocked: BossStats.blockedShots || 0, dmg: Math.round(BossStats.dmg || 0), kills: Game.kills }; },
+    // Bot terampil (D2): pertarungan bos dengan bot yang memakai batasan pemain; profil 'terampil' atau 'rata'
+    skilledBot(kind, seconds = 300, opts = {}) { return this.bossSim(kind, seconds, { ...opts, bot: opts.profile === 'rata' ? 'rata' : 'terampil' }); },
     // Ukuran tata letak dan render (E2): layout viewport, visualViewport, canvas CSS dan buffer, kamera, resolusi dinamis
     layout() {
       const vv = window.visualViewport, cv = renderer.domElement, r = cv.getBoundingClientRect();
@@ -15366,7 +15501,7 @@ const Diag = {
   },
   download() {
     const data = { versi: GAME_VERSION, waktu: new Date().toISOString(), browser: navigator.userAgent, layar: { w: screen.width, h: screen.height, dpr: window.devicePixelRatio },
-      gl: { log: GLState.log, lostCount: GLState.lostCount, restoredCount: GLState.restoredCount }, renderTargets: this.rtInfo(), perf: GameHooks.debug.perf(), probe: GlitchProbe.report(), zoom: this.zoomInfo() };
+      gl: { log: GLState.log, lostCount: GLState.lostCount, restoredCount: GLState.restoredCount }, renderTargets: this.rtInfo(), perf: GameHooks.debug.perf(), probe: GlitchProbe.report(), zoom: this.zoomInfo(), pertarunganBos: BossLog.load() };
     const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
     const a = document.createElement('a');
     a.href = url; a.download = 'raptor13-diagnosis.json';
