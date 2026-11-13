@@ -554,13 +554,33 @@
   body.mode-hp .tool .ic-hp { display: block; }
   body.mode-hp .tool .ic-kb { display: none; }
   .tool svg rect { fill: none !important; }
-  #rotate-hint { z-index: 60; }
+  /* H7: overlay putar layar di bawah toolbar (Suara dan Mode tetap bisa ditekan), tip layar penuh dan
+     saran mode HP berupa pil kecil di tengah atas yang tidak menimpa tombol menu */
+  #rotate-hint { position: fixed; inset: 0; z-index: 38; display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(6, 10, 18, 0.92); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  #rotate-hint.hidden { display: none; }
+  .rot-card { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 300px; text-align: center; }
+  .rot-card b { font-size: 20px; letter-spacing: 0.08em; }
+  .rot-card span { color: var(--ui-dim); font-size: 14px; line-height: 1.4; }
+  .rot-ic { width: 84px; height: 84px; fill: none; stroke: var(--ui-accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+    animation: rotPhone 2.4s ease-in-out infinite; transform-origin: 50% 45%; }
+  @keyframes rotPhone { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
+  body.portrait-hp #toolbar { display: flex !important; }
+  #fs-tip { position: fixed; z-index: 45; top: var(--ed-t); left: 50%; transform: translateX(-50%); max-width: min(380px, calc(100vw - 200px));
+    display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; background: rgba(10, 18, 28, 0.92); border: 1px solid var(--ui-line);
+    border-radius: 20px; font-size: 12px; line-height: 1.25; }
+  #fs-tip.hidden { display: none; }
+  #fs-tip .btn { padding: 8px 12px; font-size: 12px; letter-spacing: 0.1em; flex: none; }
+  .fs-x { position: relative; flex: none; width: 30px; height: 30px; padding: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--ui-fg); background: transparent; border: 0; border-radius: 50%; cursor: pointer; }
+  .fs-x::before { content: ""; position: absolute; inset: -7px; }
+  .fs-x svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
   #touch-prompt {
-    position: fixed; z-index: 45; right: var(--ed-r); bottom: var(--ed-b); max-width: 360px;
+    position: fixed; z-index: 45; top: var(--ed-t); left: 50%; transform: translateX(-50%); max-width: min(420px, calc(100vw - 200px));
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
-    padding: 10px 14px; background: rgba(10, 18, 28, 0.9); border: 1px solid var(--ui-line); border-radius: 8px; font-size: 14px;
+    padding: 6px 8px 6px 14px; background: rgba(10, 18, 28, 0.92); border: 1px solid var(--ui-line); border-radius: 20px; font-size: 12px;
   }
-  #touch-prompt .btn { padding: 10px 18px; font-size: 14px; }
+  #touch-prompt .btn { padding: 8px 14px; font-size: 12px; letter-spacing: 0.12em; }
 
   /* Layar pendek (HP landscape): menu dan HUD dipadatkan */
   @media (max-height: 520px) {
@@ -971,7 +991,20 @@
     <button class="tbtn t-fire" data-act="fire" type="button" aria-label="Tembak" title="Tembak"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg></button>
   </div>
 </div>
-<div id="rotate-hint" class="screen hidden"><div class="card"><h2>PUTAR LAYAR</h2><p class="hint">Mode HP dimainkan mendatar (landscape). Putar perangkatmu untuk melanjutkan.</p></div></div>
+<div id="rotate-hint" class="hidden" role="dialog" aria-label="Putar ke landscape">
+  <div class="rot-card">
+    <svg class="rot-ic" viewBox="0 0 64 64" aria-hidden="true"><rect x="22" y="8" width="20" height="36" rx="4"/><path d="M29 39h6"/><path class="rot-arrow" d="M12 46a22 22 0 0 0 30 10"/><path class="rot-arrow" d="M38 52l4 4-5 3"/></svg>
+    <b>Putar ke landscape</b>
+    <span>Mode HP dimainkan mendatar. Permainan dijeda sampai layar diputar.</span>
+  </div>
+</div>
+<div id="fs-tip" class="hidden" role="status">
+  <span id="fs-tip-text">Main di layar penuh?</span>
+  <button id="fs-tip-go" class="btn" type="button">LAYAR PENUH</button>
+  <button id="fs-tip-close" class="fs-x" type="button" aria-label="Tutup">
+    <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+</div>
 <div id="touch-prompt" class="hidden">
   <span>Perangkat sentuh terdeteksi. Pakai mode HP?</span>
   <button id="prompt-yes" class="btn" type="button">YA</button>
@@ -1897,7 +1930,8 @@ const SETTING_DEFAULTS = {
   cameraDistance: 'normal',    // jarak kamera chase: dekat | normal | jauh
   bloom: true,                 // efek bloom di medan angkasa (dimatikan oleh kualitas Rendah)
   robotHelp: 'penuh',          // bantuan robot Piko: penuh | ringkas (bawaan di perangkat sentuh) | ikon | mati
-  touchPromptShown: false,
+  touchPromptShown: false,     // deteksi perangkat sentuh sudah dilakukan (otomatis atau lewat saran)
+  a2hsHintShown: false,        // petunjuk Tambahkan ke Layar Utama (iOS) sudah tampil sekali
 };
 const SETTING_ENUMS = {
   difficulty: ['mudah', 'normal', 'sulit'],
@@ -12104,25 +12138,97 @@ const Touch = {
 Touch.init();
 Controls.addSource(Touch);
 
-// Mode HP dimainkan mendatar: tampilkan saran putar layar dan jeda bila sedang bermain
+// Mode HP dimainkan mendatar (H7): overlay putar layar yang rapi di bawah toolbar, permainan dijeda
 function checkOrientation() {
-  const portrait = window.innerHeight > window.innerWidth;
+  const portrait = Viewport.h > Viewport.w;
   const need = Save.settings.controlMode === 'hp' ? portrait : false;
   document.getElementById('rotate-hint').classList.toggle('hidden', !need);
+  document.body.classList.toggle('portrait-hp', need);
   if (need) { if (Game.state === 'playing') setState('paused'); }
 }
-window.addEventListener('resize', checkOrientation);
+Events.on('viewport', checkOrientation);
 
 function setControlMode(mode) { Settings.set('controlMode', mode); }
 onButton(document.getElementById('btn-mode'), () => setControlMode(Save.settings.controlMode === 'hp' ? 'keyboard' : 'hp'));
 Events.on('state', () => Touch.updateVisibility());
 Events.on('settings', () => Touch.updateVisibility());
 
-// Saran mode HP sekali saja bila perangkat sentuh terdeteksi
+/* =====================================================================
+   LAYAR PENUH DAN ORIENTASI (H7) - Fullscreen API dengan kunci landscape bila didukung.
+   iOS di browser tidak punya Fullscreen API: tampilkan petunjuk Tambahkan ke Layar Utama sekali.
+   ===================================================================== */
+const FullScreen = {
+  tip: document.getElementById('fs-tip'), tipText: document.getElementById('fs-tip-text'), tipGo: document.getElementById('fs-tip-go'),
+  tipTimer: 0, offeredThisSession: false,
+  supported() { const el = document.documentElement; return typeof el.requestFullscreen === 'function' ? true : typeof el.webkitRequestFullscreen === 'function'; },
+  active() { return !!(document.fullscreenElement || document.webkitFullscreenElement); },
+  ios() { return /iPad|iPhone|iPod/.test(navigator.userAgent) ? true : (navigator.platform === 'MacIntel' ? (navigator.maxTouchPoints || 0) > 1 : false); },
+  standalone() { return (window.matchMedia ? window.matchMedia('(display-mode: standalone)').matches : false) ? true : navigator.standalone === true; },
+  lockLandscape() {
+    try { const o = screen.orientation; if (o ? typeof o.lock === 'function' : false) o.lock('landscape').catch(() => { /* tidak didukung atau tidak layar penuh */ }); } catch (err) { /* abaikan */ }
+  },
+  enter() {
+    const el = document.documentElement;
+    try {
+      const p = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null;
+      if (p ? typeof p.then === 'function' : false) p.then(() => this.lockLandscape()).catch(() => { /* ditolak browser */ });
+      else this.lockLandscape();
+    } catch (err) { /* abaikan */ }
+  },
+  exit() {
+    try {
+      const p = document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen ? document.webkitExitFullscreen() : null;
+      if (p ? typeof p.catch === 'function' : false) p.catch(() => { /* abaikan */ });
+    } catch (err) { /* abaikan */ }
+  },
+  toggle() { if (this.active()) this.exit(); else this.enter(); },
+  label() { return this.active() ? 'KELUAR LAYAR PENUH' : 'LAYAR PENUH'; },
+  hideTip() { this.tip.classList.add('hidden'); clearTimeout(this.tipTimer); },
+  // Toast pertama saat mode HP aktif di menu: tawarkan layar penuh, atau petunjuk Layar Utama di iOS (sekali saja)
+  offer() {
+    if (Save.settings.controlMode !== 'hp' ? true : Game.state !== 'menu') return;
+    if (this.offeredThisSession ? true : this.active()) return;
+    if (this.supported()) {
+      this.tipText.textContent = 'Main di layar penuh?';
+      this.tipGo.classList.remove('hidden');
+    } else if (this.ios() ? (!this.standalone() ? !Save.settings.a2hsHintShown : false) : false) {
+      this.tipText.textContent = 'Layar penuh di iPhone: ketuk Bagikan lalu Tambahkan ke Layar Utama';
+      this.tipGo.classList.add('hidden');
+      Save.settings.a2hsHintShown = true; Save.save();
+    } else return;
+    this.offeredThisSession = true;
+    this.tip.classList.remove('hidden');
+    clearTimeout(this.tipTimer);
+    this.tipTimer = setTimeout(() => this.hideTip(), 9000);
+  },
+  init() {
+    onButton(this.tipGo, () => { this.hideTip(); this.enter(); });
+    onButton(document.getElementById('fs-tip-close'), () => this.hideTip());
+    const btn = document.getElementById('btn-pause-fs');
+    onButton(btn, () => { this.toggle(); setTimeout(() => { btn.textContent = this.label(); }, 300); });
+    const sync = () => { btn.textContent = this.label(); btn.classList.toggle('hidden', !this.supported()); };
+    document.addEventListener('fullscreenchange', sync);
+    document.addEventListener('webkitfullscreenchange', sync);
+    Events.on('state', (next) => { if (next === 'paused') sync(); if (next !== 'menu') this.hideTip(); else setTimeout(() => this.offer(), 600); });
+    Events.on('settings', () => setTimeout(() => this.offer(), 300));
+    sync();
+  },
+};
+FullScreen.init();
+
+// Deteksi perangkat sentuh (H7): HP murni (pointer kasar tanpa hover) langsung memakai mode HP tanpa pop-up.
+// Perangkat ambigu (misalnya laptop layar sentuh) mendapat saran kecil di tengah atas, sekali saja.
 (() => {
-  const coarse = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false;
-  const touchDevice = coarse || (navigator.maxTouchPoints || 0) > 0;
-  if (!touchDevice || Save.settings.touchPromptShown || Save.settings.controlMode === 'hp') return;
+  const mm = (q) => (window.matchMedia ? window.matchMedia(q).matches : false);
+  const coarse = mm('(pointer: coarse)'), noHover = mm('(hover: none)');
+  const touchPoints = (navigator.maxTouchPoints || 0) > 0;
+  if (Save.settings.touchPromptShown ? true : Save.settings.controlMode === 'hp') return;
+  if (coarse ? noHover : false) {
+    Save.settings.touchPromptShown = true;
+    setControlMode('hp');
+    return;
+  }
+  if (!(coarse ? true : touchPoints)) return;
   const box = document.getElementById('touch-prompt');
   box.classList.remove('hidden');
   const done = (useHp) => {
@@ -12132,6 +12238,7 @@ Events.on('settings', () => Touch.updateVisibility());
   };
   onButton(document.getElementById('prompt-yes'), () => done(true));
   onButton(document.getElementById('prompt-no'), () => done(false));
+  Events.on('state', (next) => { if (next !== 'menu') box.classList.add('hidden'); });
 })();
 
 /* =====================================================================
