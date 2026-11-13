@@ -90,6 +90,25 @@ Fase berikutnya:
 28. (SELESAI) S17 dan B14 Pengujian menyeluruh dan perbaikan visual.
 29. (SELESAI) S18 README, screenshot, Ide lanjutan, self-review semua DEFINITION OF DONE, ringkasan jujur.
 
+## Blok BT: petunjuk bos, tabrakan berbasis ukuran, zoom dua kali ketuk, rencana APK (permintaan pemain 13 Nov)
+
+Nomor task mengikuti spesifikasi pemain (B1 sampai B10, berbeda dari B1 sampai B11 Fase 0 di atas).
+Aturan tambahan: satu `index.html` tanpa build step; mode keyboard desktop, anggaran performa (draw call,
+frame time), keamanan (CSP, hook hanya lewat `?debug=1`), tata letak HP (anggaran blok H) dan perbaikan
+kotak hitam tidak boleh mundur; semua ikon bos orisinal; setiap klaim disertai angka atau screenshot.
+HP bos, damage senjata, HP musuh, dan hadiah tidak berubah.
+
+- B1 Diagnosis bos tidak terlihat: hook `debug.bossProbe` (piksel bos terlihat dan kontras, dengan dan tanpa bos), semua bos di semua dunia pada jarak 50, 150, 400, 1200, dengan dan tanpa bloom, kualitas Rendah; metrik baseline perilaku bos; `docs/bos/diagnosis.md`.
+- B2 Keterlihatan bos: emissive dan rim light, kontur siluet (maksimal satu draw call per bos), penanda piksel minimum, bos tidak tertutup planet, opsi Sorotan bos (Mati, Halus, Kuat).
+- B3 Ikon bos orisinal, penanda di atas bos, panah tepi layar dengan arah putar, indikator BOS DI BELAKANG, peringatan awal, aman di mode HP.
+- B4 Jejak bos, panah arah gerak, titik bidik prediksi (ikut Bantuan bidik), blip radar dengan ikon dan garis putus-putus, ikon bos di Peta Tata Surya.
+- B5 Perilaku bos: siklus mendekat, serang lewat depan, lewat dan menjauh, berputar; batas waktu di ekor; jendela rentan; parameter per kesulitan; `debug.bossMetrics`; `docs/bos/perilaku.md`.
+- B6 Tabrakan berbasis ukuran dan energi: COLLISION_TIERS, tiga tingkat, cooldown per objek, sapuan anti tembus, umpan balik, `debug.collisionTest`, `docs/fisika/tabrakan.md`.
+- B7 Cegah zoom dua kali ketuk dan cubit di iOS: meta, CSS, JS, fallback visualViewport, input 16 px, uji WebKit, langkah uji manual.
+- B8 Rencana APK `docs/apk/rencana-apk.md` (dokumen saja).
+- B9 Regresi penuh, screenshot, CHANGELOG, GAME_VERSION, tag, rilis.
+- B10 Verifikasi Definition of Done dan ringkasan jujur.
+
 ## Blok H: tata letak dan kontrol mode HP landscape (permintaan pemain 13 Nov)
 
 Fokus hanya UI dan UX mode HP landscape. Gameplay, keseimbangan, AI musuh, dunia, audio, mode keyboard
