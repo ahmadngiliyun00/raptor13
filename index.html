@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-Tmll0LpZchCLDjKGaOFwRe38SgEoujMpHvPcZG7f+8w='; style-src 'self' 'sha256-DrYUByQya5pZua89iz3ItQJNRcKlpxszDa7BctBjSPM='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-BroX9GV2Rs0igf5Y8ODELG+UpZY0jPCVe6a5Cvjc02o='; style-src 'self' 'sha256-WSznB5BZplStaVJ2Mpt+fYWiGvdfhZQHhpD64SXwsqE='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -404,7 +404,9 @@
   body.mode-hp #boss-edge .be-ico { left: 6px; top: 6px; width: 22px; height: 22px; }
   body.mode-hp #boss-edge .be-dir::after { left: 21px; }
   body.mode-hp #boss-edge .be-dist { top: 39px; }
-  #boss-dot { --bc: #ff4f6e; position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: radial-gradient(circle, #fff 0 18%, var(--bc) 40%, transparent 72%); box-shadow: 0 0 10px 3px var(--bc); pointer-events: none; }
+  /* D5: titik piksel minimum 16 px dengan inti putih, warna khas bos, dan cincin gelap tipis: kontras di latar terang (langit, kabut) dan gelap */
+  #boss-dot { --bc: #ff4f6e; position: absolute; left: 0; top: 0; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: radial-gradient(circle, #fff 0 20%, var(--bc) 42%, var(--bc) 62%, transparent 66%);
+    box-shadow: 0 0 0 2px rgba(12, 4, 12, 0.85), 0 0 10px 3px var(--bc); pointer-events: none; }
   #rear-warn { position: absolute; left: 50%; bottom: calc(40px + var(--ed-b)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #ffd0d0; border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.6s steps(2) infinite; }
   #comet-warn { position: absolute; left: 50%; top: calc(94px + var(--ed-t)); transform: translateX(-50%);
@@ -9235,6 +9237,13 @@ const OUTLINE_FRAG = /* glsl */`
     #include <colorspace_fragment>
   }`;
 
+// D5: proyeksi layar posisi bos yang tidak terpotong bidang jauh kamera. Titik digeser sepanjang sinar pandang
+// yang sama ke dalam bidang jauh, jadi posisi x dan y di layar tetap benar walau bos lebih jauh dari far kamera.
+function projectBoss(A, out) {
+  const L = out.copy(A).sub(camera.position).length(), m = camera.far * 0.9;
+  if (L > m) out.multiplyScalar(m / L);
+  return out.add(camera.position).project(camera);
+}
 const BossFX = {
   outline: null, outlineMat: null, segGeo: null, headGeo: null, _m: new THREE.Matrix4(), _p: new THREE.Vector3(), _c: new THREE.Color(),
   dot: document.getElementById('boss-dot'), dotOn: false, baseFar: 0, farBoost: false,
@@ -9401,7 +9410,7 @@ const BossFX = {
       for (let i = 0; i < b.segs.length; i++) { b.segs[i].updateMatrixWorld(); this.outline.setMatrixAt(b.outlineIds[i + 1], b.segs[i].matrixWorld); }
     } else { b.group.updateMatrixWorld(); this.outline.matrix.copy(b.group.matrixWorld); this.outline.matrixWorldNeedsUpdate = true; }
     // Penanda piksel minimum: bos di layar tetapi lebih kecil dari sekitar 14 piksel diberi titik bercahaya
-    const A = (b.anchor || b.group).position, p = this._p.copy(A).project(camera);
+    const A = (b.anchor || b.group).position, p = projectBoss(A, this._p);
     const onScreen = p.z < 1 ? Math.max(Math.abs(p.x), Math.abs(p.y)) <= 1 : false;
     const px = (b.size * 2) / (Math.max(1, camera.position.distanceTo(A)) * 2 * Math.tan(camera.fov * Math.PI / 360)) * Layout.h;
     const show = onScreen ? (px < 14 ? Game.state === 'playing' : false) : false;
@@ -9553,7 +9562,7 @@ const BossHud = {
     const d = this._d.copy(A).sub(P), dist = d.length() || 1;
     const lx = d.dot(Player._right), ly = d.dot(Player._up), lz = d.dot(Player.forward);
     this.rear = lz / dist < -0.5;   // kerucut 120 derajat di belakang
-    const p = this._p.copy(A).project(camera);
+    const p = projectBoss(A, this._p);
     const behind = p.z > 1, onScreen = behind ? false : Math.max(Math.abs(p.x), Math.abs(p.y)) <= 1;
     const distTxt = fmtInt(Math.round(dist * 4)) + ' m';
     this.show(this.rearEl, this.rear ? !Touch.enabled : false);
@@ -14861,6 +14870,8 @@ const GameHooks = {
       CamRig.update(1 / 60);
       Worlds.active.follow();
       if (typeof BossFX !== 'undefined') BossFX.update(0);
+      // D5: penanda HUD (braket dan titik piksel minimum) ikut diperbarui agar status keterlihatannya terukur
+      BossHud.update(0);
       const gl = renderer.getContext(), W = renderer.domElement.width, H = renderer.domElement.height;
       const read = () => { render(); const buf = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, buf); return buf; };
       const on = read();
@@ -14881,7 +14892,7 @@ const GameHooks = {
       }
       const pr = renderer.getPixelRatio(), d = camera.position.distanceTo(A);
       const expectPx = (b.size * 2) / (d * 2 * Math.tan(camera.fov * Math.PI / 360)) * Layout.h;
-      const proj = _vc.copy(A).project(camera);
+      const proj = projectBoss(A, _vc);
       return { kind, dist, world: Worlds.active.id, area: Worlds.active === SpaceWorld ? SpaceWorld.area : 'bumi', bloom: Post.wanted, quality: CONFIG.qualityPreset,
         pixels: Math.round(n / (pr * pr)), meanContrast: n ? round2(sum / n / 255) : 0, maxContrast: round2(max / 255),
         boxW: x1 >= 0 ? Math.round((x1 - x0 + 1) / pr) : 0, boxH: y1 >= 0 ? Math.round((y1 - y0 + 1) / pr) : 0, expectPx: round2(expectPx), camDist: Math.round(d),
@@ -15056,7 +15067,7 @@ const GameHooks = {
         form: BossHud.form, ret: [Math.round(hud.retX || 0), Math.round(hud.retY || 0)],
         corners: [...BossHud.mark.querySelectorAll('.bm-c')].map((el) => (getComputedStyle(el).opacity > 0.05 ? R(el) : null)).filter(Boolean),
         hpBar: R(BossHud.mark.querySelector('.bm-hp')),
-        bossBox: (() => { const b = Bosses.active; if (!b) return null; const A = (b.anchor || b.group).position, p = _vc.copy(A).project(camera); const px = (b.size * 2) / (Math.max(1, camera.position.distanceTo(A)) * 2 * Math.tan(camera.fov * Math.PI / 360)) * Layout.h; return { x: Math.round((p.x + 1) * 0.5 * Layout.w), y: Math.round((1 - p.y) * 0.5 * Layout.h), r: Math.round(px / 2) }; })(),
+        bossBox: (() => { const b = Bosses.active; if (!b) return null; const A = (b.anchor || b.group).position, p = projectBoss(A, _vc); const px = (b.size * 2) / (Math.max(1, camera.position.distanceTo(A)) * 2 * Math.tan(camera.fov * Math.PI / 360)) * Layout.h; return { x: Math.round((p.x + 1) * 0.5 * Layout.w), y: Math.round((1 - p.y) * 0.5 * Layout.h), r: Math.round(px / 2) }; })(),
         rearEl: R(BossHud.rearEl), rearChip: R(hud.alertEls.boss), intro: R(BossHud.intro), introStage: BossHud.introStage, lead: R(BossHud.lead), dot: R($('boss-dot')), mission: $('hpx-mission').textContent, barName: $('boss-name').textContent };
     },
     // Letakkan bos relatif terhadap pemain (koordinat lokal: kanan, atas, depan) tanpa merender (uji penanda)

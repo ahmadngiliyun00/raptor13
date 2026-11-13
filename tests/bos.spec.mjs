@@ -58,6 +58,25 @@ test('B2: tiap bos terlihat di tiap dunia pada jarak 50 sampai 1200 (piksel kont
   expect(failures).toEqual([]);
 });
 
+// ---------- D5: titik piksel minimum untuk semua bos ----------
+test('D5: titik piksel minimum 16 piksel bercincin gelap tampil untuk keempat bos saat jauh, tersembunyi saat dekat', async ({ page }) => {
+  test.setTimeout(120_000);
+  for (const world of ['earth', 'saturnus']) {
+    await play(page, world);
+    // Jarak tempat tiap bos sekitar 11 piksel di layar 720 piksel (ukuran bos berbeda)
+    for (const [kind, dist] of [['raksasa', 1340], ['miner', 1900], ['hunter', 960], ['naga', 3800]]) {
+      const far = await page.evaluate(([kind, dist]) => { const d = window.__game.debug; const p = d.bossProbe({ kind, dist, bloom: false }); const h = d.bossHud(); const el = document.getElementById('boss-dot'); return { on: p.onScreen, px: p.expectPx, state: h.state, dot: h.dot, ring: getComputedStyle(el).boxShadow }; }, [kind, dist]);
+      expect(far.px, `${world} ${kind} ukuran`).toBeLessThan(14);
+      expect(far.on, `${world} ${kind}`).toBe(true);
+      expect(far.state, `${world} ${kind} braket`).toBe('mark');
+      expect(far.dot?.w, `${world} ${kind} titik`).toBeGreaterThanOrEqual(16);
+      expect(far.ring, `${world} ${kind} cincin gelap`).toContain('rgba(12, 4, 12');
+      const near = await page.evaluate((kind) => { const d = window.__game.debug; d.bossProbe({ kind, dist: 150, bloom: false }); return d.bossHud().dot; }, kind);
+      expect(near, `${world} ${kind} dekat`).toBeNull();
+    }
+  }
+});
+
 // ---------- B3 dan B4: penanda tidak menimpa HUD, tidak masuk zona tengah HP ----------
 const HUD_SEL = ['#touch .tbtn', '#joy', '#dpad', '.hud-block', '.hpx-block', '#radar', '#btn-radar-map', '#notify.show', '#alerts .alert:not([data-alert="boss"])', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical'];
 const SIZES = [[568, 320, true], [667, 375, true], [844, 390, true], [932, 430, true], [1440, 900, false]];

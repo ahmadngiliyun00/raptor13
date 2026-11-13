@@ -143,6 +143,52 @@ awan 205 sampai 248); pada kualitas Rendah yang awannya lebih sedikit Naga tampa
 Naga hanya muncul di Pluto. Bloom kini menambah piksel tampak (rata-rata 4770) karena kontur dan rim cukup
 terang untuk berpendar, sebelumnya mengurangi 76.
 
+## Pembaruan 2.3.1: penanda piksel minimum untuk semua bos (D5)
+
+Masalah dari laporan pemilik: Penjaga Raksasa yang jauh nyaris tidak terlihat. Pada 2.3.0 masih ada 3 dari 576
+pengukuran yang tidak terlihat di kanvas, dan bos di jarak 1200 hanya 7 sampai 14 piksel tinggi.
+
+Perubahan:
+
+- Titik piksel minimum (`#boss-dot`) kini 16 piksel dengan inti putih, warna khas bos, dan cincin gelap tipis
+  2 piksel, sehingga tetap kontras di langit Bumi yang terang maupun di angkasa yang gelap. Titik aktif untuk
+  semua bos, di semua dunia dan kualitas, kapan pun bos di layar lebih kecil dari 14 piksel, tanpa batas
+  jarak (bidang jauh kamera sudah diperlebar sejauh bos sejak 2.3.0).
+- Bug yang ditemukan saat menguji: bos di medan Bumi yang lebih jauh dari bidang jauh kamera (kualitas Rendah
+  1261 satuan, Tinggi 2522 satuan, sudah termasuk perluasan 2,5 kali) terpotong, sehingga proyeksinya
+  dianggap "di belakang" dan braket serta titik hilang. Kini posisi layar penanda dihitung dari titik pada
+  sinar pandang yang sama di dalam bidang jauh (`projectBoss`), jadi braket dan titik tetap tampil di posisi
+  yang benar walau bos sangat jauh.
+- Braket penanda di atas bos (minimal 26 piksel) tetap tampil setiap kali bos di layar, dan panah tepi layar
+  mengambil alih saat bos di luar layar.
+- `debug.bossProbe` kini ikut memperbarui `BossHud`, dan `tests/bos/diagnose.mjs` mencatat status penanda
+  (`hud`, `dot`, ukuran titik) pada frame yang sama dengan pengukuran kanvas. Sebuah kombinasi dihitung
+  terlihat bila kanvas jelas atau samar, atau penanda tampil.
+
+Ringkasan 576 pengukuran (`docs/bos/data/probe-sesudah-d5.json`):
+
+- Kanvas saja: **jelas 498, samar 78, tidak terlihat 0** (2.3.0: 498, 75, 3).
+- Kanvas dan penanda: **0 dari 576 tidak terlihat**. Braket tampil di 576 dari 576, titik piksel minimum
+  tampil di 72 kombinasi (semuanya jarak 1200 atau bos kecil di jarak 400). Ukuran efektif terkecil bos
+  ditambah penanda: 26 piksel.
+
+| Bos | Jarak | Piksel tampak (median angkasa) | Kontras rata-rata | Medan Bumi (piksel) | Kualitas Rendah | Dunia samar di kanvas |
+| --- | --- | --- | --- | --- | --- | --- |
+| Penjaga Raksasa | 400 | 251 | 0,55 | 294 | 210 | 3 dari 12 |
+| Penjaga Raksasa | 1200 | 72 | 0,65 | 94 | 62 | 12 dari 12 |
+| Penambang Raksasa | 1200 | 75 | 0,56 | 94 | 62 | 8 dari 12 |
+| Pemburu Agung | 400 | 119 | 0,45 | 138 | 82 | 10 dari 12 |
+| Pemburu Agung | 1200 | 37 | 0,53 | 56 | 34 | 11 dari 12 |
+| Sang Naga Vanta | 1200 | 83 | 0,52 | 78 | 76 | 2 dari 12 |
+
+Tabel hanya memuat baris yang masih samar di kanvas; semuanya tertolong braket dan titik. Baris lain sama
+dengan tabel B2 di atas (selisih di bawah 3 persen karena acak dunia). Kelas "samar" memakai ambang yang sama
+dengan sebelumnya (minimal 10 piksel, atau 40 piksel dengan kontras di bawah 0,15).
+
+Uji: `tests/bos.spec.mjs` (D5) memeriksa bahwa braket dan titik (16 piksel, cincin gelap) tampil untuk keempat
+bos pada jarak tempat bos sekitar 11 piksel di layar (Penjaga 1340, Penambang 1900, Pemburu 960, Naga 3800),
+di angkasa dan di medan Bumi, dan titik tersembunyi saat bos dekat (150).
+
 ## Anggaran performa
 
 `node tests/bos/perf.mjs <label>`: tanpa bos dan dengan tiap bos, medan Bumi dan Saturnus, kualitas Tinggi

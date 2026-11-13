@@ -51,7 +51,8 @@ try {
     for (const kind of BOSSES) {
       for (const dist of DISTS) {
         for (const bloom of quality === 'tinggi' ? [true, false] : [false]) {
-          const r = await page.evaluate(([kind, dist, bloom]) => window.__game.debug.bossProbe({ kind, dist, bloom }), [kind, dist, bloom]);
+          // Probe kanvas lalu status penanda HUD (braket di atas bos atau titik piksel minimum) pada frame yang sama
+          const r = await page.evaluate(([kind, dist, bloom]) => { const d = window.__game.debug, p = d.bossProbe({ kind, dist, bloom }); if (!p) return p; const h = d.bossHud(); return { ...p, hud: h.state, dot: !!h.dot, dotW: h.dot ? h.dot.w : 0, form: h.form || '' }; }, [kind, dist, bloom]);
           if (!r) { console.log('gagal', quality, world, kind, dist); continue; }
           rows.push({ quality, world, ...r });
           if (SHOTS ? (quality === 'tinggi' ? (bloom ? (SHOT_WORLDS.includes(world) ? (dist === 400 || dist === 1200) : false) : false) : false) : false) {

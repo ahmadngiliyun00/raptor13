@@ -23,6 +23,14 @@ for (const l of labels) {
   }
   const tot = rows.length, counts = { jelas: 0, samar: 0, tidak: 0 };
   for (const r of rows) counts[cls(r)]++;
+  // D5: terlihat bila kanvas jelas atau samar, ATAU penanda HUD (braket atau titik) tampil
+  if (rows.some((r) => r.hud !== undefined)) {
+    const seen = (r) => (cls(r) !== 'tidak' ? true : (r.hud === 'mark' ? true : r.dot));
+    const inv = rows.filter((r) => !seen(r));
+    const eff = rows.map((r) => Math.max(r.boxW || 0, r.boxH || 0, r.dot ? (r.dotW || 16) : 0, r.hud === 'mark' ? 26 : 0));
+    console.log('\nD5: kombinasi tidak terlihat (kanvas dan penanda): ' + inv.length + ' dari ' + tot + '; ukuran efektif minimum bos plus penanda: ' + Math.min(...eff) + ' px; titik piksel minimum tampil di ' + rows.filter((r) => r.dot).length + ' kombinasi.');
+    for (const r of inv) console.log('  tidak terlihat: ' + r.quality + ' ' + W(r) + ' ' + r.kind + ' ' + r.dist + (r.bloom ? ' bloom' : ''));
+  }
   console.log(`\nTotal ${tot} pengukuran: jelas ${counts.jelas}, samar ${counts.samar}, tidak terlihat ${counts.tidak}.`);
   const bloomDiff = rows.filter((r) => r.bloom).map((r) => { const nb = rows.find((x) => x.quality === r.quality ? (x.world === r.world ? (x.kind === r.kind ? (x.dist === r.dist ? !x.bloom : false) : false) : false) : false); return nb ? r.pixels - nb.pixels : 0; });
   console.log(`Bloom mengubah piksel tampak rata-rata ${Math.round(bloomDiff.reduce((s, x) => s + x, 0) / Math.max(1, bloomDiff.length))} piksel.`);
