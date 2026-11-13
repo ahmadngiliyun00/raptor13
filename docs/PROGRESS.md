@@ -97,18 +97,37 @@ tetapi bug zoom dari prompt 03 (E1, E2) dikerjakan PALING AWAL karena merusak ga
 screenshot iPhone 12 Chrome iOS di docs/bug/zoom-ios/) dan tidak bergantung pada task lain. Commit per task.
 
 Bagian 1 (prompt 03, prioritas tertinggi):
-- E1 Reproduksi bug zoom dan ukuran canvas, daftar sumber ukuran, docs/bug/zoom-viewport.md
-- E2 Ukuran berbasis layout viewport, abaikan zoom, penjaga kewarasan, lantai resolusi dinamis, Reset tampilan, overlay diag, tes lintas skala
+- E1 (SELESAI, eb9eb95) Reproduksi bug zoom dan ukuran canvas, daftar sumber ukuran, docs/bug/zoom-viewport.md
+- E2 (SELESAI, f173f69) Ukuran berbasis layout viewport, abaikan zoom, penjaga kewarasan, lantai resolusi dinamis, Reset tampilan, overlay diag, tes lintas skala
 
 Bagian 2 (prompt 02, versi patch 2.3.1):
-- D1 Skrip dan panduan deploy, jalankan hanya bila ssh siap
-- D2 Bot terampil dan rata-rata, TTK bos, penyetelan BOSS_PILOT, telemetri lokal
-- D3 Penanda bos ringkas, jarak aman dari crosshair
-- D4 Audit hitbox, objek tipis, showHitboxes, ambang fatal, indikator bahaya fatal
-- D5 Keterlihatan bos jauh, ukur ulang 576 kombinasi
-- D6 Verifikasi developer Android, keputusan Capacitor versus TWA, skrip sidik jari, naskah kartu, checklist
-- D7 Overlay diagnostik zoom dan panduan uji manual
-- D8 Regresi, SELF-REVIEW, 2.3.1, CHANGELOG, tag, rilis
+- D1 (SELESAI sebagian, 864bb68) Skrip dan panduan deploy; deploy BELUM dijalankan karena host ssh belum ada
+- D2 (SELESAI, 07ab499) Bot terampil dan rata-rata, TTK bos, penyetelan BOSS_PILOT, telemetri lokal
+- D3 (SELESAI, 755eb76) Penanda bos ringkas, jarak aman dari crosshair
+- D4 (SELESAI, 7b65791) Audit hitbox, objek tipis, showHitboxes, ambang fatal, indikator bahaya fatal
+- D5 (SELESAI, 3a3d246) Keterlihatan bos jauh, ukur ulang 576 kombinasi
+- D6 (SELESAI, 68e1133) Verifikasi developer Android, keputusan Capacitor versus TWA, skrip sidik jari, naskah kartu, checklist
+- D7 (SELESAI, 91a3b80) Overlay diagnostik zoom dan panduan uji manual
+- D8 (SELESAI) Regresi, SELF-REVIEW, 2.3.1, CHANGELOG, tag, rilis
+
+SELF-REVIEW D1 sampai D7 (2.3.1):
+- D1: skrip tidak menebak host, memakai BatchMode dan `--ff-only`, tidak mengubah konfigurasi server. Kurang:
+  deploy tidak bisa dijalankan dari Mac ini; situs live masih 2.2.0.
+- D2: bot memakai batasan kapal pemain dan kerusakan sungguhan. Normal masuk target untuk tiga bos reguler.
+  Kurang: Sulit di atas target, Naga tidak terkalahkan bot (butuh keputusan desain pemilik), belum diuji manusia.
+- D3: jarak sudut braket ke crosshair minimal 30 px di lima ukuran layar. Kurang: hanya diukur di emulasi.
+- D4: semua objek dalam toleransi 15 persen kecuali hitbox pemain yang sengaja pemaaf. Indikator fatal tidak
+  muncul untuk benda tidak fatal. Kurang: sayap tetap diwakili bola.
+- D5: 0 dari 576 kombinasi tidak terlihat. Ditemukan dan diperbaiki penanda hilang saat bos di luar bidang
+  jauh kamera Bumi. Kurang: belum dicek di layar HP asli.
+- D6: sumber resmi dicek 14 November 2026, keputusan dan checklist tertulis. Kurang: angka batas perangkat
+  distribusi terbatas berbeda antar sumber (20 atau 50), ditandai untuk dicek ulang pemilik.
+- D7: overlay dan hook diuji terkunci tanpa parameter. Kurang: zoom iOS asli hanya bisa dipastikan di iPhone.
+- Uji B5 sempat tidak stabil (runtun ekor 9,52 detik di Sulit, batas 9); pembatas ekor diperkuat dan uji
+  lolos 9 kali berturut-turut.
+- Regresi penuh 2.3.1: 176 lolos, 9 dilewati (uji khusus WebKit atau Chromium), 1 gagal karena tidak stabil:
+  uji antrean notifikasi H9 terganggu sapaan Piko saat pickup langka muncul acak. Uji kini mematikan Piko
+  selama bagian antrean, lalu lolos 4 kali berturut-turut.
 
 Bagian 3 (prompt 01, versi minor 2.4.0):
 - C1 Kontras UI adaptif

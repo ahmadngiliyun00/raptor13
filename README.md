@@ -8,7 +8,18 @@ dan tanpa aset eksternal. Three.js 0.187.0 ditanam lokal di `vendor/three-0.187.
 dipetakan importmap dengan integrity sha384), semua model, tekstur, langit, dan planet dibuat prosedural
 oleh kode, dan semua suara serta musik disintesis dengan WebAudio.
 
-Versi saat ini: **2.2.0** (lihat [CHANGELOG.md](CHANGELOG.md)). Tanpa cookie, pelacak, atau analitik.
+Versi saat ini: **2.3.1** (lihat [CHANGELOG.md](CHANGELOG.md)). Tanpa cookie, pelacak, atau analitik.
+
+### Yang baru di 2.3.1
+
+- **Bug zoom iPhone diperbaiki.** Game tidak lagi menyusut ke kiri atas saat iOS memperbesar halaman. Semua
+  ukuran kini berasal dari layout viewport. Overlay `?diag=1` menampilkan angka zoom untuk laporan uji.
+- **Hitbox sesuai bentuk.** Bos, asteroid, komet, musuh, dan bulan tak bulat memakai bentuk tabrakan dari
+  geometri. Peringatan **BELOK SEKARANG** dan tepi layar merah muncul bila benda fatal ada di jalur.
+- **Penanda bos lebih rapi.** Di dekat crosshair penanda menjadi braket tipis yang tidak menutupi bos atau
+  titik bidik. Bos sangat jauh selalu diberi titik 16 piksel bercincin gelap.
+- **Pertarungan bos disetel** dengan bot terampil: di Normal sekitar 1,5 sampai 2,2 menit per bos reguler.
+- Skrip deploy aman, dokumen verifikasi developer Android, dan keputusan Capacitor atau TWA untuk APK.
 
 Ada dua medan: **Luar Angkasa** (Tata Surya lengkap dengan Kampanye 10 stage dan Jelajah Bebas)
 dan **Atmosfer Bumi** (gelombang tanpa akhir di atas pegunungan, laut, dan pilar batu).
@@ -281,8 +292,11 @@ cutscene pembuka, peralihan, dan penutup, lalu layar akhir.
 
 - Bos diberi rim light berwarna khas dan kontur siluet menyala (satu draw call). Opsi Sorotan bos: Mati,
   Halus, Kuat.
-- Bos yang lebih kecil dari 14 piksel diberi titik bercahaya.
+- Bos yang lebih kecil dari 14 piksel diberi titik 16 piksel bercincin gelap (2.3.1), di semua dunia,
+  kualitas, dan jarak. Dari 576 kombinasi yang diukur, 0 tidak terlihat.
 - Bos tidak lagi tertelan kabut Bumi atau terpotong bidang jauh kamera.
+- Penanda ringkas (2.3.1): di zona tengah dan dekat crosshair penanda hanya berupa braket tipis dan HP kecil,
+  tiap sudutnya minimal 30 piksel dari crosshair. Bos lebih besar dari 120 piksel hanya diberi bar HP tipis.
 
 **Perilaku.** Siklus bos: mendekat lalu terbang di depan pemain, serang lewat depan, lewat dan menjauh, lalu
 berputar menyusul ke depan lagi. Saat kembali ke depan ada jendela rentan berkedip emas, dengan damage ke bos
@@ -296,6 +310,20 @@ x1,6, x1,4, atau x1,25.
 
 Sebelumnya bos 1 sampai 3 persen di depan. Rincian: [docs/bos/diagnosis.md](docs/bos/diagnosis.md) dan
 [docs/bos/perilaku.md](docs/bos/perilaku.md).
+
+**Lama pertarungan (2.3.1).** Diukur dengan bot terampil yang memakai batasan kapal pemain, tundaan reaksi
+250 ms, dan galat bidik. Median detik sampai bos kalah:
+
+| Bos | Mudah | Normal | Sulit |
+| --- | --- | --- | --- |
+| Penjaga Raksasa | 53 | 93 | 175 |
+| Penambang Raksasa | 102 | 133 | 233 |
+| Pemburu Agung | 36 | 110 | 257 |
+| Sang Naga Vanta | tidak kalah dalam 600 | tidak kalah dalam 600 | tidak kalah dalam 600 |
+
+Sang Naga Vanta belum terkalahkan bot karena generator perisainya sangat kecil dari jarak tempur; ini butuh
+keputusan desain (lihat `docs/bos/perilaku.md`). Sepuluh pertarungan bos terakhir disimpan di perangkat dan ikut
+dalam log `?diag=1`.
 
 ## Tabrakan (2.3.0)
 
@@ -311,6 +339,11 @@ Tabrakan dihitung dari ukuran dan energi (`COLLISION_TIERS`):
 
 Satu benda tidak dihitung dua kali, dan uji sapuan mencegah tembus pada kecepatan tinggi. Tabel lengkap:
 [docs/fisika/tabrakan.md](docs/fisika/tabrakan.md).
+
+Sejak 2.3.1 bentuk tabrakan mengikuti bentuk yang terlihat: bos memakai beberapa bola padat yang dibuat dari
+geometrinya, dan ambang fatal dihitung relatif terhadap ukuran visual kapal. Bila benda fatal ada di jalur,
+muncul peringatan **BELOK SEKARANG**, tepi layar merah ke arah benda, dan asteroidnya diberi rona merah. Audit
+dan wireframe: [docs/fisika/audit-hitbox.md](docs/fisika/audit-hitbox.md).
 
 ## HUD
 
@@ -434,6 +467,10 @@ __game.debug.bossHud(); __game.debug.placeBoss(0, 0, -300); __game.debug.bossFx(
 __game.debug.collisionTest('tabel'); __game.debug.collisionTest({ radius: 0.6, kind: 'ice' }, 2000)
 __game.debug.collisionConfig({ fatalEnergy: 1200 })
 __game.debug.zoomGuard()                   // meta viewport, touch-action, event zoom yang dicegah
+__game.debug.layout()                      // layout viewport, skala zoom, resize yang diabaikan
+__game.debug.skilledBot('hunter', 300, { profile: 'terampil', difficulty: 'normal' })   // TTK bot terampil
+__game.debug.botAccuracy(); __game.debug.bossLog()
+__game.debug.showHitboxes(true); __game.debug.hitboxAudit(); __game.debug.fatalWatch()
 ```
 
 ## Struktur proyek
@@ -495,12 +532,12 @@ raptor13/
   atau pos musuh secara tetap.
 - Bos Bumi memakai model Penjaga yang diperbesar; kepala Sang Naga Vanta masih sederhana dibanding
   tubuhnya.
-- Tabrakan memakai bola, sehingga bentuk sayap tidak dihitung presisi.
-- Pencegahan zoom iOS diuji lewat emulasi WebKit; perilaku di iPhone asli perlu dipastikan dengan langkah
-  manual di [docs/zoom-ios.md](docs/zoom-ios.md).
-- Dengan perilaku bos baru, bot sederhana butuh lebih lama untuk mengalahkan Pemburu Agung dan Penambang
-  (sekitar separuh HP dalam 3 menit di Normal), karena bos tidak lagi bisa ditempel dari belakang terus.
-  Parameter jendela rentan di `BOSS_PILOT` bisa dinaikkan bila terasa terlalu lama.
+- Tabrakan memakai bola (beberapa bola untuk bos), sehingga bentuk sayap tidak dihitung presisi. Hitbox
+  pemain sengaja lebih kecil dari visual (2,6 dibanding 3,83).
+- Pencegahan zoom dan perbaikan ukuran canvas diuji lewat emulasi WebKit dan zoom asli Chromium; perilaku
+  di iPhone asli perlu dipastikan dengan langkah manual dan templat laporan di [docs/zoom-ios.md](docs/zoom-ios.md).
+- Di Sulit, bot rata-rata belum mengalahkan Penjaga, Penambang, dan Pemburu dalam 5 menit, dan Sang Naga
+  Vanta belum terkalahkan bot di semua kesulitan. Perlu disetel setelah diuji manusia.
 - Aplikasi Android (APK) baru berupa rencana: [docs/apk/rencana-apk.md](docs/apk/rencana-apk.md).
 
 ## Melapor masalah

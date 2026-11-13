@@ -253,6 +253,8 @@ test('H9 sentuh: mode kidal menukar sisi, tombol arah menghasilkan arah digital 
 test('H9 notifikasi: satu toast, antrean prioritas, kedaluwarsa, prioritas tinggi menyela, Bantuan robot Hanya ikon', async ({ page }) => {
   await playHp(page, 667, 375, '', {}, 'free', 'earth');              // medan Bumi tanpa musuh: tidak ada komet, kontrak, atau penemuan
   await page.waitForTimeout(3800);                                     // biarkan sapaan awal selesai
+  // Piko dimatikan selama uji antrean: pickup langka yang muncul acak memicu sapaan Piko prioritas 2 dan mengacaukan urutan
+  await dbg(page, 'setSetting', 'robotHelp', 'mati');
   await page.evaluate(() => { const d = window.__game.debug; d.notifyPush('pesan biasa', 'info', 1); d.notifyPush('pesan antre', 'info', 1); d.notifyPush('pesan penting', 'info', 3); });
   let n = await dbg(page, 'notify');
   expect(n.text).toBe('pesan penting');                               // prioritas tinggi menyela pesan yang sedang tampil

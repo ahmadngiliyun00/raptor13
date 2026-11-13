@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-BroX9GV2Rs0igf5Y8ODELG+UpZY0jPCVe6a5Cvjc02o='; style-src 'self' 'sha256-WSznB5BZplStaVJ2Mpt+fYWiGvdfhZQHhpD64SXwsqE='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-RsJ2Q3BzPOyEsAw6SnqVhEaO0CkJxDLgNcQry79k8To='; style-src 'self' 'sha256-WSznB5BZplStaVJ2Mpt+fYWiGvdfhZQHhpD64SXwsqE='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -72,7 +72,7 @@
   "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
   "image": "https://raptor13.ngiliyun.my.id/icons/og-image.jpg",
   "url": "https://raptor13.ngiliyun.my.id/",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "datePublished": "2026-11-12",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "IDR" },
@@ -1627,7 +1627,7 @@ const QUALITY_PRESETS = {
 };
 
 // Satu sumber nomor versi: ditampilkan di menu, Tentang, dan overlay performa (samakan dengan package.json)
-const GAME_VERSION = '2.3.0';
+const GAME_VERSION = '2.3.1';
 // Parameter URL dibaca sekali dan divalidasi ketat (A3). Hook uji window.__game, alat pratinjau model,
 // dan galeri hanya aktif dengan ?debug=1; overlay diagnosis kotak hitam dengan ?diag=1.
 const URLQ = (() => { try { return new URLSearchParams(location.search); } catch (err) { return new URLSearchParams(''); } })();
