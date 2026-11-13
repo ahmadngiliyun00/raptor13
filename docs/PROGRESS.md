@@ -90,6 +90,52 @@ Fase berikutnya:
 28. (SELESAI) S17 dan B14 Pengujian menyeluruh dan perbaikan visual.
 29. (SELESAI) S18 README, screenshot, Ide lanjutan, self-review semua DEFINITION OF DONE, ringkasan jujur.
 
+## Blok E1, D, C, E: zoom, penyelesaian 2.3.x, pembaruan besar, Piko dan senjata (permintaan pemain 14 Nov)
+
+Sumber: tiga prompt pemilik (pembaruan 01, 02, 03; disimpan lokal, tidak dikomit). Urutan resmi 02, 01, 03,
+tetapi bug zoom dari prompt 03 (E1, E2) dikerjakan PALING AWAL karena merusak game di situs live (bukti
+screenshot iPhone 12 Chrome iOS di docs/bug/zoom-ios/) dan tidak bergantung pada task lain. Commit per task.
+
+Bagian 1 (prompt 03, prioritas tertinggi):
+- E1 Reproduksi bug zoom dan ukuran canvas, daftar sumber ukuran, docs/bug/zoom-viewport.md
+- E2 Ukuran berbasis layout viewport, abaikan zoom, penjaga kewarasan, lantai resolusi dinamis, Reset tampilan, overlay diag, tes lintas skala
+
+Bagian 2 (prompt 02, versi patch 2.3.1):
+- D1 Skrip dan panduan deploy, jalankan hanya bila ssh siap
+- D2 Bot terampil dan rata-rata, TTK bos, penyetelan BOSS_PILOT, telemetri lokal
+- D3 Penanda bos ringkas, jarak aman dari crosshair
+- D4 Audit hitbox, objek tipis, showHitboxes, ambang fatal, indikator bahaya fatal
+- D5 Keterlihatan bos jauh, ukur ulang 576 kombinasi
+- D6 Verifikasi developer Android, keputusan Capacitor versus TWA, skrip sidik jari, naskah kartu, checklist
+- D7 Overlay diagnostik zoom dan panduan uji manual
+- D8 Regresi, SELF-REVIEW, 2.3.1, CHANGELOG, tag, rilis
+
+Bagian 3 (prompt 01, versi minor 2.4.0):
+- C1 Kontras UI adaptif
+- C2 Tata letak HUD baru (busur tombol)
+- C3 Editor tata letak HUD
+- C4 Data dan aturan equipment
+- C5 UI equipment
+- C6 Pengujian equipment dan keseimbangan
+- C7 Persistensi dan keamanan data baru
+- C8 Open source (lisensi, kontribusi, templat, CI, arsitektur, roadmap)
+- C9 PWA
+- C10 Android Capacitor (APK)
+- C11 Workflow rilis APK
+- C12 iOS
+- C13 Regresi, versi, rilis
+- C14 Verifikasi akhir
+
+Bagian 4 (prompt 03 sisa, versi minor 2.5.0):
+- E3 Piko gerak mandiri
+- E4 Piko menempel (tuck)
+- E5 Senjata bertingkat berbasis hardpoint
+- E6 Diagnosis kehalusan penerbangan
+- E7 Perbaikan penerbangan
+- E8 Manuver Putar Balik U
+- E9 Uji kehalusan, bot, TTK
+- E10 Regresi, versi, rilis, deploy bila siap
+
 ## Blok BT: petunjuk bos, tabrakan berbasis ukuran, zoom dua kali ketuk, rencana APK (permintaan pemain 13 Nov)
 
 Nomor task mengikuti spesifikasi pemain (B1 sampai B10, berbeda dari B1 sampai B11 Fase 0 di atas).
