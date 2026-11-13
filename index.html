@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-+JWlomj1AjHSe3t7pcoyM6AZ9Ju8MG5q5fzxntTLjWE='; style-src 'self' 'sha256-lTS2Y0DLNWWpopxLVuNaYS6Bd5GQUscJ+dKgkP30h6M='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-Tmll0LpZchCLDjKGaOFwRe38SgEoujMpHvPcZG7f+8w='; style-src 'self' 'sha256-DrYUByQya5pZua89iz3ItQJNRcKlpxszDa7BctBjSPM='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -315,6 +315,13 @@
   #piko-text b { color: var(--ui-accent); margin-right: 4px; }
   .ind.pickup { border-left-color: #5dff7a; }
   #lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #ffd24a; transform-origin: center; }
+  /* Indikator bahaya fatal (D4): ikon di tepi layar dengan panah ke arah menghindar */
+  #danger-edge { position: absolute; left: 0; top: 0; width: 40px; height: 40px; margin: -20px 0 0 -20px; pointer-events: none; border-radius: 50%; background: rgba(90, 0, 0, 0.78);
+    border: 2px solid #ff4a3a; box-shadow: 0 0 12px #ff4a3a; animation: bossPulse 0.6s ease-in-out infinite; }
+  #danger-edge svg { position: absolute; left: 8px; top: 7px; width: 24px; height: 24px; fill: none; stroke: #ffd0c8; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+  #danger-edge .de-arrow { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform: rotate(var(--a, 0rad)); }
+  #danger-edge .de-arrow::after { content: ''; position: absolute; left: 22px; top: -7px; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-left: 11px solid #ff4a3a; }
+  body.reduce-motion #danger-edge { animation: none; }
   /* Umpan balik benturan (B6): kilat di sisi dampak dengan persen damage, bar HP berkedip */
   #hit-side { position: absolute; pointer-events: none; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; color: #fff; text-shadow: 0 1px 3px #000; animation: hitSide 0.75s ease-out forwards; }
   #hit-side.l { left: 0; top: 0; bottom: 0; width: 90px; background: linear-gradient(90deg, rgba(255, 70, 50, 0.55), transparent); }
@@ -1055,6 +1062,7 @@
   <div id="lead" class="hidden"></div>
   <div id="boss-dot" class="hidden"></div>
   <div id="hit-side" class="hidden" aria-hidden="true"><span></span></div>
+  <div id="danger-edge" class="hidden" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3L22 20H2z"/><path d="M12 9v5M12 16.5v.5"/></svg><i class="de-arrow"></i></div>
   <div id="zoom-tip" class="hidden" role="status"><span>Zoom terdeteksi. Cubit untuk memperkecil</span><button type="button" id="zoom-reset">Reset tampilan</button></div>
   <!-- Pelacakan bos (B3, B4): penanda di atas bos, panah tepi layar, indikator di belakang, pengenalan, titik bidik -->
   <div id="boss-mark" class="hidden" aria-hidden="true">
@@ -3379,6 +3387,8 @@ const Player = {
     this.model = model;
     this.ship = def;
     this.radius = def.radius;
+    // Radius visual (persentil 75 bentuk kapal): dasar ambang fatal tabrakan (D4), bukan radius tabrakan pemaaf
+    this.visualR = visualRadius(model.root) || def.radius * 1.47;
     this.health.reset(def.stats.hp);
     FX.hasPrev = false;
   },
@@ -4593,7 +4603,9 @@ const Enemies = {
     for (const type of ENEMY_TYPES) {
       const t = ENEMY_BUILDERS[type]();
       this.templates[type] = t;
-      for (let i = 0; i < CONFIG.enemies.pools[type]; i++) this.list.push(new Enemy(type, t));
+      // Radius sentuh badan sesuai bentuk (D4); radius peluru (cfg.radius) tetap agar keseimbangan tembak tidak berubah
+      const vr = visualRadius(t) || visualRadius(t, 0.75, true);
+      for (let i = 0; i < CONFIG.enemies.pools[type]; i++) { const e = new Enemy(type, t); e.contactR = vr > 0 ? vr : e.radius; this.list.push(e); }
     }
     // Peluru musuh: bola bulat merah magenta gelap dengan halo, beda bentuk dan warna dari bolt pemain
     this.bullets = new BulletPool(
@@ -5518,6 +5530,11 @@ function buildAsteroidGeometry(seed) {
   }
   geo.computeVertexNormals();
   geo.computeBoundingSphere();
+  // Radius tabrakan sesuai bentuk (D4): persentil 75 jarak titik ke pusat
+  const d = [];
+  for (let i = 0; i < pos.count; i++) d.push(Math.hypot(pos.getX(i), pos.getY(i), pos.getZ(i)));
+  d.sort((a, b) => a - b);
+  geo.userData.hitK = d[Math.floor(d.length * 0.75)];
   return geo;
 }
 
@@ -5531,6 +5548,7 @@ class Asteroid {
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.scale.setScalar(this.radius);
     this.mesh.visible = false;
+    this.hitK = geometry.userData.hitK || 0.85;
     this.pos = this.mesh.position;
     this.vel = new THREE.Vector3();
     this.spin = new THREE.Vector3();
@@ -5597,6 +5615,7 @@ const Asteroids = {
       a.radius = radius || randRange(rr[0], rr[1]);
     } else a.radius = a.cfg.radius;
     a.mesh.scale.setScalar(a.radius);
+    a.hitR = a.radius * a.hitK;
     a.material.color.setHex(space ? T.color : a.cfg.color);
     a.baseEmissive.setHex(space ? T.emissive : 0x000000);
     a.material.emissive.copy(a.baseEmissive);
@@ -5696,6 +5715,11 @@ const Asteroids = {
         a.flash -= dt;
         const v = Math.max(a.flash, 0) / 0.09;
         a.material.emissive.setRGB(v, v, v).lerp(a.baseEmissive, 1 - v);   // kilatan putih singkat saat kena tembakan
+      } else if (a.danger > 0) {
+        // D4: benda fatal di jalur tabrakan memerah halus
+        a.danger -= dt;
+        const k = a.danger > 0 ? (Save.settings.reduceMotion ? 0.35 : 0.25 + 0.2 * Math.sin(Game.time * 9)) : 0;
+        a.material.emissive.copy(a.baseEmissive).lerp(_dangerRed, k);
       }
       if (a.hpBarTimer > 0) a.hpBarTimer -= dt;
       if (a.lodRef) continue;   // batu medan: dilepas oleh RockFields saat jauh
@@ -5732,6 +5756,7 @@ const Comets = {
   list: [], alive: 0, timer: 8, acc: 0, threat: null, destroyed: 0,
   init() {
     const geo = buildAsteroidGeometry(4242);
+    this.hitK = geo.userData.hitK || 0.9;
     for (let i = 0; i < 4; i++) this.list.push(new Comet(geo));
   },
   reset() {
@@ -5745,6 +5770,7 @@ const Comets = {
     const C = CONFIG.comets, P = Player.pos;
     c.radius = randRange(C.radius[0], C.radius[1]);
     c.mesh.scale.setScalar(c.radius);
+    c.hitR = c.radius * (Comets.hitK || 1);
     const ang = Player.yaw + randRange(-1.2, 1.2);
     c.pos.set(P.x - Math.sin(ang) * dist, P.y + randRange(-120, 120), P.z - Math.cos(ang) * dist);
     const speed = randRange(C.speed[0], C.speed[1]);
@@ -5901,7 +5927,7 @@ function updateCombat() {
   for (let k = 0; k < Comets.list.length; k++) {
     const c = Comets.list[k];
     if (!c.active) continue;
-    if (Collision.sweepHit(c.pos, c.radius * 0.9 + pr)) {
+    if (Collision.sweepHit(c.pos, (c.hitR || c.radius * 0.9) + pr)) {
       const res = Collision.resolve(c, COLLISION_TIERS.density.komet, 'komet');
       if (!Player.alive) { Collision.end(); return; }
       if (res) applyDamage(c, c.health.hp, 'tabrakan', c.pos.x, c.pos.y, c.pos.z);
@@ -5911,7 +5937,7 @@ function updateCombat() {
   for (let k = 0; k < al.length; k++) {
     const a = al[k];
     if (!a.active) continue;
-    if (Collision.sweepHit(a.pos, a.radius * 0.85 + pr)) {
+    if (Collision.sweepHit(a.pos, (a.hitR || a.radius * 0.85) + pr)) {
       const res = Collision.resolve(a, COLLISION_TIERS.density[KIND_DENSITY[a.kind] || 'batu'], 'asteroid');
       if (!Player.alive) { Collision.end(); return; }
       // Benda yang tidak fatal pecah (asteroid sedang dan besar terbelah, kerikil hancur)
@@ -5921,7 +5947,7 @@ function updateCombat() {
   for (let k = 0; k < list.length; k++) {
     const e = list[k];
     if (!e.active) continue;
-    const r = e.radius + pr;
+    const r = (e.contactR || e.radius) + pr;
     if (e.pos.distanceToSquared(P) < r * r) {
       const c = e.cfg;
       if (c.ai === 'mine') continue;                       // ranjau meledak lewat pemicunya sendiri
@@ -6095,7 +6121,7 @@ const COLLISION_TIERS = {
   density: { batu: 2.6, es: 0.9, logam: 5.0, kristal: 2.3, komet: 0.6 },
   tinyRatio: 0.3,       // R di bawah 0,3 x R_pesawat: tanpa damage (kerikil, serpihan)
   pebbleRatio: 0.75,    // R di bawah 0,75 x R_pesawat: memantul atau pecah, 1 sampai 3 persen HP maksimum
-  fatalRatio: 6.9,      // R minimal 6,9 x R_pesawat (sekitar 18 untuk pesawat standar): fatal, sama dengan aturan asteroid raksasa yang disepakati
+  fatalRatio: 2.0,      // D4: R minimal 2 x radius VISUAL pesawat (sekitar 7,7 untuk Starfighter): benda yang tampak jauh lebih besar dari kapal fatal
   fatalEnergy: 1500,    // E di atas ini fatal walau ukurannya di bawah ambang (batu logam besar pada kecepatan ekstrem)
   speedRef: 70,         // kecepatan dasar pemain, penormal v_relatif
   dmgA: 6.2, dmgExp: 0.4, dmgMin: 2, dmgMax: 60,   // persen HP maksimum = clamp(a x E^exp, min, max)
@@ -6105,16 +6131,69 @@ const COLLISION_TIERS = {
   difficulty: { mudah: 0.75, normal: 1.0, sulit: 1.25 },   // pengali damage tabrakan sedang (fatal tetap fatal)
 };
 const KIND_DENSITY = { rock: 'batu', ice: 'es', metal: 'logam', crystal: 'kristal' };
+const _dangerRed = new THREE.Color(0.9, 0.08, 0.04);
+/* Indikator bahaya fatal (D4): benda kelas fatal yang berada di jalur tabrakan dalam 2,5 detik (asteroid besar,
+   kapal berat, badan bos) memberi peringatan BELOK SEKARANG lewat saluran peringatan yang sudah ada (chip mode HP,
+   teks desktop; planet dan medan tetap memakai TARIK NAIK), ikon bahaya di tepi layar dengan panah ke arah
+   menghindar, dan benda memerah halus. Benda yang tidak fatal tidak memicu indikator. */
+const FatalWatch = {
+  hit: null, ttc: 0, esc: new THREE.Vector3(), _v: new THREE.Vector3(), _o: new THREE.Vector3(), _d: new THREE.Vector3(),
+  el: document.getElementById('danger-edge'), shown: false, rectT: 0,
+  // Waktu sampai tabrakan bola (c, r) di sepanjang gerak relatif; Infinity bila tidak kena dalam 2,5 detik
+  ttcOf(c, r, vel) {
+    const P = Player.pos, rv = this._v.copy(Player.vel).sub(vel || _AX_ZERO), sp = rv.length();
+    if (sp < 1) return Infinity;
+    rv.divideScalar(sp);
+    const o = this._o.copy(c).sub(P), t = o.dot(rv);
+    if (t < 0 ? true : t > sp * 2.5) return Infinity;
+    const d2 = o.lengthSq() - t * t, rr = r + Player.radius;
+    if (d2 > rr * rr) return Infinity;
+    return t / sp;
+  },
+  update(dt) {
+    let best = Infinity, bc = null, br = 0;
+    if (Player.alive ? Game.state === 'playing' : false) {
+      for (const a of Asteroids.list) {
+        if (!a.active) continue;
+        const t = this.ttcOf(a.pos, a.hitR || a.radius * 0.85, a.vel);
+        if (t >= best) continue;
+        const vr = this._d.copy(Player.vel).sub(a.vel).length();
+        if (Collision.classify(a.radius, COLLISION_TIERS.density[KIND_DENSITY[a.kind] || 'batu'], vr, false).tier !== 'fatal') continue;
+        best = t; bc = a.pos; br = a.hitR || a.radius; a.danger = 0.3;
+      }
+      for (const e of Enemies.list) {
+        if (!e.active ? true : !e.cfg.heavy) continue;
+        const t = this.ttcOf(e.pos, e.contactR || e.radius, e.vel);
+        if (t < best) { best = t; bc = e.pos; br = e.contactR || e.radius; }
+      }
+      const b = Bosses.active;
+      if (b) for (const sd of b.solids) {
+        const c = solidCenter(sd, this._d);
+        const t = this.ttcOf(c, sd.radius, BossFX.vel);
+        if (t < best) { best = t; bc = c.clone(); br = sd.radius; }
+      }
+    }
+    this.hit = Number.isFinite(best) ? bc : null; this.ttc = best;
+    if (this.hit) {
+      // Arah menghindar: berlawanan dengan simpangan benda dari jalur (di bidang kanan dan atas pesawat)
+      const o = this._o.copy(this.hit).sub(Player.pos), f = Player.forward;
+      o.addScaledVector(f, -o.dot(f));
+      if (o.lengthSq() < 0.01) o.copy(Player._up).negate();
+      this.esc.set(-o.dot(Player._right), -o.dot(Player._up), 0).normalize();
+      if (!Player.warning) Player.warning = 'BELOK SEKARANG';
+    }
+  },
+};
 const Collision = {
   prev: new THREE.Vector3(), prevOk: false, lastDt: 1 / 60, _n: new THREE.Vector3(), _v: new THREE.Vector3(),
   log: [],   // hasil benturan terakhir (untuk hook debug dan uji)
   // Klasifikasi murni (tanpa efek): R benda, kepadatan, kecepatan relatif, kelas fatal
-  classify(R, density, vRel, fatalClass, shipR) {
-    const C = COLLISION_TIERS, Rs = shipR || Player.radius, ratio = R / Rs;
+  classify(R, density, vRel, fatalClass, shipR, shipVisR) {
+    const C = COLLISION_TIERS, Rs = shipR || Player.radius, ratio = R / Rs, Rv = shipVisR || Player.visualR || Rs * 1.47;
     const mass = Math.pow(ratio, 3) * density, vn = vRel / C.speedRef, E = 0.5 * mass * vn * vn;
     const out = { ratio: round2(ratio), mass: round2(mass), energy: round2(E), pct: 0, tier: 'kecil', reason: '' };
     if (fatalClass) { out.tier = 'fatal'; out.pct = 100; out.reason = 'kelas'; return out; }
-    if (ratio >= C.fatalRatio) { out.tier = 'fatal'; out.pct = 100; out.reason = 'ukuran'; return out; }
+    if (R / Rv >= C.fatalRatio) { out.tier = 'fatal'; out.pct = 100; out.reason = 'ukuran'; return out; }
     if (E >= C.fatalEnergy) { out.tier = 'fatal'; out.pct = 100; out.reason = 'energi'; return out; }
     if (ratio < C.tinyRatio) { out.tier = 'kecil'; out.reason = 'ukuran'; return out; }
     if (ratio < C.pebbleRatio) { out.tier = 'pantul'; out.pct = round2(C.pebbleMin + (C.pebbleMax - C.pebbleMin) * clamp(E / 1.5, 0, 1)); out.reason = 'ukuran'; return out; }
@@ -6146,14 +6225,14 @@ const Collision = {
     this.log.push(r); if (this.log.length > 40) this.log.shift();
     const n = this._n.copy(P).sub(ent.pos); const nl = n.length() || 1; n.divideScalar(nl);
     if (r.tier === 'fatal') {
-      hardImpact(r.reason === 'energi' ? 'Benturan keras dengan ' + label : 'Menabrak ' + label + ' raksasa', () => { P.copy(ent.pos).addScaledVector(n, ent.radius * 0.85 + Player.radius + 3); });
+      hardImpact(r.reason === 'energi' ? 'Benturan keras dengan ' + label : 'Menabrak ' + label + ' raksasa', () => { P.copy(ent.pos).addScaledVector(n, (ent.hitR || ent.radius * 0.85) + Player.radius + 3); });
       return r;
     }
     let dealt = 0;
     if (r.tier === 'sedang') {
       if (Player.invuln <= 0) { dealt = Player.damage(this.amount(r.pct), label === 'komet' ? 'komet' : 'asteroid'); Player.invuln = C.invuln; }
       // Pantulan fisik: keluar dari bola, kecepatan berkurang sedikit, hidung terdorong menjauh dari benda
-      P.copy(ent.pos).addScaledVector(n, ent.radius * 0.85 + Player.radius + 0.5);
+      P.copy(ent.pos).addScaledVector(n, (ent.hitR || ent.radius * 0.85) + Player.radius + 0.5);
       Player.speed *= 1 - clamp(r.pct / 150, 0.04, 0.3);
       const side = n.dot(Player._right), up = n.dot(Player._up), k = clamp(r.pct / 100, 0.05, 0.3);
       Player.rotateLocal(_AX_Y, -side * k); Player.rotateLocal(_AX_X, up * k);
@@ -7068,6 +7147,13 @@ const SolarSystem = {
     for (const def of CONFIG.solar.bodies) this.bodies.push(this.makeBody(def, null));
     this.root.visible = false;
     scene.add(this.root);
+    // Bulan tak beraturan (D4): bola tabrakan tepat di permukaan terdalam yang terlihat (persentil 10)
+    for (const b of this.solids) if (b.def.lumpy) {
+      const g = b.mesh.geometry.attributes.position, sc = b.mesh.scale, d = [], v = new THREE.Vector3();
+      for (let i = 0; i < g.count; i++) { v.fromBufferAttribute(g, i); d.push(Math.hypot(v.x * sc.x, v.y * sc.y, v.z * sc.z)); }
+      d.sort((x, y) => x - y);
+      b.hitR = d[Math.floor(d.length * 0.1)];
+    }
     this.built = true;
     this.buildMs = Math.round(performance.now() - t0);
     this.update(0);
@@ -8276,7 +8362,7 @@ const Bosses = {
     }
     // Lambung yang tidak bisa dirusak tetap menghentikan peluru
     for (const s of b.blockers || []) {
-      s.obj.getWorldPosition(_vd);
+      solidCenter(s, _vd);
       if (segmentHitsSphere(ax, ay, az, bx, by, bz, _vd.x, _vd.y, _vd.z, s.radius)) { if (BossStats.on) BossStats.blockedShots = (BossStats.blockedShots || 0) + 1; Events.emit('shieldHit', bx, by, bz); return true; }
     }
     return false;
@@ -8314,7 +8400,7 @@ const Bosses = {
     const b = this.active;
     if (!b) return;
     for (const s of b.solids) {
-      s.obj.getWorldPosition(_vd);
+      solidCenter(s, _vd);
       const r = s.radius + pr;
       if (_vd.distanceToSquared(P) < r * r) {
         if (BossStats.on ? b.time - BossStats.lastContact > 1 : false) { BossStats.contacts++; BossStats.lastContact = b.time; }
@@ -8505,7 +8591,9 @@ const BossPilot = {
       // Berputar lebar lalu menyusul ke depan pemain lagi; jendela rentan saat masuk kembali ke depan
       T.copy(P).addScaledVector(F, C.leadDist * (o.leadMul || 1) * 1.1).addScaledVector(R, pl.side * (o.clear + (C.cross ? 15 : 70))).addScaledVector(U, o.leadUp || 0);
       // Masih di ekor: dorongan ekstra agar batas tailMax tidak terlewati
-      speed = Math.min(ps * C.catchup + (pl.tail > 0 ? 70 : 20), CONFIG.player.nitroSpeed * (pl.tail > 0 ? 1.45 : 1.15)); turn = pl.tail > 0 ? Math.max(C.turn, 2.4) : C.turn;
+      // Lewat 60 persen batas ekor: dorongan dan belokan diperkuat lagi (B5 kadang 9,5 detik di Sulit dengan batas 9)
+      const urgent = pl.tail > C.tailMax * 0.6;
+      speed = Math.min(ps * C.catchup + (pl.tail > 0 ? (urgent ? 110 : 70) : 20), CONFIG.player.nitroSpeed * (pl.tail > 0 ? (urgent ? 1.7 : 1.45) : 1.15)); turn = pl.tail > 0 ? Math.max(C.turn, urgent ? 3.2 : 2.4) : C.turn;
       if (cos > (C.cross ? 0.75 : 0.8) ? dist < C.leadDist * (o.leadMul || 1) * 1.8 : false) {
         this.set(b, 'lead');
         b.vuln = C.vuln * (o.vulnTime || 1); b.vulnId = (b.vulnId || 0) + 1;
@@ -8553,6 +8641,64 @@ const BossLog = {
 };
 Events.on('damage', (e, dealt) => { if (e === Player) BossLog.damage(dealt); });
 Events.on('gameover', () => BossLog.end('kalah'));
+
+/* Hitbox sesuai bentuk (D4, docs/fisika/audit-hitbox.md). visualRadius: persentil jarak titik mesh buram ke titik
+   asal root (ruang root, termasuk skala bagian). bossAutoSolids: bola padat dari tiap bagian model bos; bagian
+   memanjang dibagi beberapa bola sepanjang sumbu panjangnya, bagian kecil (lampu, kilat) dilewati. */
+function visualRadius(root, q = 0.75, transparentToo = false) {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), m = new THREE.Matrix4(), v = new THREE.Vector3(), d = [];
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const mat = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (transparentToo ? false : (mat ? (mat.transparent ? true : mat.blending === THREE.AdditiveBlending) : true)) return;
+    m.multiplyMatrices(inv, o.matrixWorld);
+    const P = o.geometry.attributes.position, st = Math.max(1, Math.floor(P.count / 500));
+    for (let i = 0; i < P.count; i += st) d.push(v.fromBufferAttribute(P, i).applyMatrix4(m).length());
+  });
+  if (!d.length) return 0;
+  d.sort((a, b) => a - b);
+  return d[Math.min(d.length - 1, Math.floor(d.length * q))];
+}
+function bossAutoSolids(root, skip) {
+  root.updateMatrixWorld(true);
+  const out = [], ws = new THREE.Vector3(), box = new THREE.Box3(), size = new THREE.Vector3(), cen = new THREE.Vector3();
+  root.traverse((o) => {
+    if (!o.isMesh ? true : (skip ? skip(o) : false)) return;
+    const mat = Array.isArray(o.material) ? o.material[0] : o.material;
+    if (mat ? (mat.transparent ? true : mat.blending === THREE.AdditiveBlending) : true) return;
+    if (!o.geometry.boundingBox) o.geometry.computeBoundingBox();
+    box.copy(o.geometry.boundingBox); box.getSize(size); box.getCenter(cen);
+    o.getWorldScale(ws);
+    const dims = [{ ax: 'x', l: size.x * ws.x }, { ax: 'y', l: size.y * ws.y }, { ax: 'z', l: size.z * ws.z }].sort((a, b) => b.l - a.l);
+    if (dims[0].l < 1.2) return;
+    const a = dims[0].l, b = Math.max(dims[1].l, 0.6), c = dims[2].l;
+    if (c < b * 0.35 ? b > 1.5 : false) {
+      // Pelat tipis (sayap, sirip): grid bola kecil di bidang dua sumbu terpanjang
+      const cell = Math.max(b / 2.2, c * 2, 1), n = Math.min(6, Math.ceil(a / cell)), m = Math.min(4, Math.ceil(b / cell));
+      const A = dims[0].ax, B = dims[1].ax, sA = A === 'x' ? ws.x : A === 'y' ? ws.y : ws.z, sB = B === 'x' ? ws.x : B === 'y' ? ws.y : ws.z;
+      // Titik grid hanya di dalam bentuk: dipertahankan bila ada titik geometri di dekatnya
+      const P = o.geometry.attributes.position, vv = new THREE.Vector3();
+      for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) {
+        const off = cen.clone(); off[A] = box.min[A] + (i + 0.5) / n * (box.max[A] - box.min[A]); off[B] = box.min[B] + (j + 0.5) / m * (box.max[B] - box.min[B]);
+        let near = Infinity;
+        for (let k = 0; k < P.count; k++) { vv.fromBufferAttribute(P, k); const dd = Math.hypot((vv[A] - off[A]) * sA, (vv[B] - off[B]) * sB); if (dd < near) near = dd; }
+        if (near < cell * 0.9) out.push({ obj: o, off, radius: cell * 0.62 });
+      }
+      return;
+    }
+    if (a > b * 1.4) {
+      const n = Math.min(6, Math.ceil(a / b)), r = b * 0.55, axis = dims[0].ax, sc = axis === 'x' ? ws.x : axis === 'y' ? ws.y : ws.z;
+      for (let i = 0; i < n; i++) {
+        const off = cen.clone(); off[axis] = box.min[axis] + (i + 0.5) / n * (box.max[axis] - box.min[axis]);
+        out.push({ obj: o, off, radius: Math.max(r, a / n * 0.5) * (sc ? 1 : 1) });
+      }
+    } else out.push({ obj: o, off: cen.clone(), radius: (a + b) * 0.29 });
+  });
+  return out;
+}
+// Titik pusat bola padat bos di ruang dunia (dengan offset lokal bila ada)
+function solidCenter(sd, out) { return sd.off ? out.copy(sd.off).applyMatrix4(sd.obj.matrixWorld) : sd.obj.getWorldPosition(out); }
 
 // Model bos dari loft dan lathe
 function buildBossMiner() {
@@ -8632,7 +8778,7 @@ const BOSS_DEFS = {
     const b = { name: 'Penjaga Raksasa', group, dir: new THREE.Vector3(0, 0, 1), size: 14, score: 5000, credits: 120, fireCd: 2, tele: 0, angle: 0, phase: 1,
       parts: [], solids: [], blockers: [] };
     const part = new BossPart(group, 12, health);
-    b.parts.push(part); b.solids.push({ obj: group, radius: 9 });
+    b.parts.push(part); b.solids.push(...bossAutoSolids(group));
     const P = Player.pos, f = Player.forward;
     group.position.set(P.x + f.x * 600, Math.max(P.y + 40, groundHeightAt(P.x + f.x * 600, P.z + f.z * 600) + 80), P.z + f.z * 600);
     b.barRatio = () => health.ratio;
@@ -8655,14 +8801,14 @@ const BOSS_DEFS = {
     const b = { name: 'Penambang Raksasa', group: m.group, dir: new THREE.Vector3(0, 0, 1), size: 20, score: 8000, credits: 200, phase: 1, angle: 0, mode: 'orbit', modeT: 3, fireCd: 2, throwCd: 4, tele: 0, throwTele: 0,
       parts: [], solids: [], blockers: [] };
     b.parts.push(new BossPart(m.group, 11, health), new BossPart(m.drill, 6, health));
-    b.solids.push({ obj: m.group, radius: 9 }, { obj: m.drill, radius: 4.5 });
+    b.solids.push(...bossAutoSolids(m.group));
     const P = Player.pos, f = Player.forward;
     m.group.position.set(P.x + f.x * 650, P.y + 40, P.z + f.z * 650);
     b.barRatio = () => health.ratio;
     b.phaseLabel = () => 'FASE ' + b.phase;
     // Serbuan bor = fase serang lewat depan: aba-aba 1,3 detik (bor berputar cepat menghadap pemain), lalu menyerbu
     // ke samping pemain dengan jarak aman (sebelumnya langsung ke posisi pemain dan sering menabrak)
-    BossPilot.init(b, { clear: 60, alt: 70, leadMul: 0.8, windup: 1.3, strafeSpeed: CONFIG.player.nitroSpeed * 0.8,
+    BossPilot.init(b, { clear: 72, alt: 70, leadMul: 0.8, windup: 1.3, strafeSpeed: CONFIG.player.nitroSpeed * 0.8,
       onMode: (bb, mode) => { b.mode = mode === 'windup' ? 'windup' : mode === 'strafe' ? 'charge' : 'orbit'; if (mode === 'windup') showToast('BOR BERPUTAR!'); } });
     b.update = (dt) => {
       if (b.phase === 1 ? health.ratio < 0.5 : false) { b.phase = 2; showBanner('BOR DIPERCEPAT', 1400); Piko.say('bossPhase'); }
@@ -8700,7 +8846,7 @@ const BOSS_DEFS = {
     const b = { name: 'Pemburu Agung', group: m.group, dir: new THREE.Vector3(0, 0, 1), size: 10, score: 9000, credits: 220, phase: 1, angle: 0, fireCd: 1.5, missileCd: 4, missileTele: 0, decoyCd: 0, tele: 0,
       parts: [], solids: [], blockers: [], decoys: [] };
     b.parts.push(new BossPart(m.group, 7, health));
-    b.solids.push({ obj: m.group, radius: 5 });
+    b.solids.push(...bossAutoSolids(m.group));
     const P = Player.pos, f = Player.forward;
     m.group.position.set(P.x + f.x * 550, P.y + 30, P.z + f.z * 550);
     // Umpan tiruan: salinan tembus pandang yang ikut terbang dan pecah sekali tembak
@@ -8789,9 +8935,11 @@ const BOSS_DEFS = {
     b.parts.push(...b.gens, b.mouth, ...b.tails, b.chest);
     // Turret pada beberapa segmen
     b.turrets = C.turretSegments.map((i) => { const lamp = mark(segs[i], VANTA.red, 0.7, 4.2); return { lamp, cd: 1 + i * 0.2, tele: 0 }; });
-    b.solids.push({ obj: head, radius: 6 });
-    for (let i = 0; i < N; i += 2) b.solids.push({ obj: segs[i], radius: 3.4 * (1 - (i / N) * 0.55) });
-    b.blockers = b.solids;
+    // Peluru tetap ditahan bola lama (keseimbangan tembak tidak berubah); tabrakan badan memakai bola sesuai bentuk (D4)
+    b.blockers = [{ obj: head, radius: 6 }];
+    for (let i = 0; i < N; i += 2) b.blockers.push({ obj: segs[i], radius: 3.4 * (1 - (i / N) * 0.55) });
+    b.solids.push(...bossAutoSolids(head, (o) => o === headShield ? true : o.parent === headShield));
+    for (const sg of segs) b.solids.push(...bossAutoSolids(sg, (o) => o.material === BOSS_MAT.cyan ? true : (o.material === BOSS_MAT.core ? true : o.material === VANTA.red)));
     // Garis laser kepala
     const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
     b.laserLine = new THREE.Line(lg, new THREE.LineBasicMaterial({ color: new THREE.Color(2, 0.2, 0.2), transparent: true, opacity: 0.5 }));
@@ -9330,7 +9478,7 @@ const BossIcons = {
     return cv;
   },
 };
-const BOSS_HUD_SEL = ['#touch .tbtn', '#joy', '#dpad', '.hud-block', '.hpx-block', '#radar', '#btn-radar-map', '#notify.show', '#alerts .alert', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical', '#boss-rear', '#hpx-status', '#hpx-buffs'];
+const BOSS_HUD_SEL = ['#touch .tbtn', '#joy', '#dpad', '.hud-block', '.hpx-block', '#radar', '#btn-radar-map', '#notify.show', '#alerts .alert', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical', '#boss-rear', '#hpx-status', '#hpx-buffs', '#danger-edge'];
 const BossHud = {
   mark: document.getElementById('boss-mark'), edge: document.getElementById('boss-edge'), rearEl: document.getElementById('boss-rear'), intro: document.getElementById('boss-intro'), lead: document.getElementById('boss-lead'),
   kind: null, rear: false, rects: [], rectT: 0, form: '', formT: 0, ed: { l: 16, t: 16, r: 16, b: 16 }, introT: 0, introStage: 0, state: 'none', edgePos: null,
@@ -11778,6 +11926,22 @@ Events.on('enemyShot', (pos) => Sfx.enemyShoot(distToPlayer(pos)));
 Events.on('enemyHit', () => Sfx.hitMarker());
 Events.on('enemyDestroyed', (e) => Sfx.explosion(e.type === 'drone' ? 0.8 : 1.2, distToPlayer(e.pos)));
 Events.on('playerHit', () => Sfx.hit());
+// Indikator bahaya fatal di tepi layar (D4): sisi arah menghindar, posisi menghindari HUD dan zona tengah mode HP
+function updateDangerEdge(dt) {
+  const F = FatalWatch, el = F.el, show = F.hit ? Game.state === 'playing' : false;
+  if (show !== F.shown) { F.shown = show; el.classList.toggle('hidden', !show); }
+  if (!show) return;
+  F.rectT -= dt;
+  if (F.rectT <= 0) { F.rectT = 0.3; BossHud.refreshRects(); }
+  const W = Layout.w, H = Layout.h, ex = F.esc.x, ey = F.esc.y;
+  const tx = W / 2 + ex * W, ty = H * 0.45 - ey * H;
+  const pt = BossHud.placeEdge(tx, ty, 40, 40);
+  if (!pt) { el.classList.add('hidden'); F.shown = false; return; }
+  const key = Math.round(pt[0]) * 100000 + Math.round(pt[1]);
+  if (changed('dangerPos', key)) el.style.transform = 'translate(' + Math.round(pt[0]) + 'px, ' + Math.round(pt[1]) + 'px)';
+  const a = Math.round(Math.atan2(-ey, ex) * 50) / 50;
+  if (changed('dangerAng', a)) el.querySelector('.de-arrow').style.setProperty('--a', a + 'rad');
+}
 // Benturan B6: suara sesuai ukuran, percikan, kilat sisi dampak dengan persen damage, bar HP berkedip
 const HitSide = {
   el: document.getElementById('hit-side'), timer: 0,
@@ -12133,7 +12297,7 @@ const Notify = {
   reset() { this.queue.length = 0; this.hide(); this.gapUntil = 0; },
 };
 // Chip peringatan kritis di tepi bawah mode HP: urutan prioritas, teks hanya untuk yang paling penting bila ramai
-const ALERT_TEXT = { 'TARIK NAIK!': 'TARIK NAIK', 'TERLALU RENDAH': 'TERLALU RENDAH', 'TERLALU DEKAT': 'TERLALU DEKAT', 'KELUAR BATAS MISI': 'BATAS MISI' };
+const ALERT_TEXT = { 'TARIK NAIK!': 'TARIK NAIK', 'TERLALU RENDAH': 'TERLALU RENDAH', 'TERLALU DEKAT': 'TERLALU DEKAT', 'KELUAR BATAS MISI': 'BATAS MISI', 'BELOK SEKARANG': 'BELOK SEKARANG' };
 hud.alertEls = {};
 for (const el of document.querySelectorAll('#alerts .alert')) hud.alertEls[el.dataset.alert] = el;
 function updateAlertsHp(hp) {
@@ -12312,6 +12476,7 @@ function updateHud(dt) {
   updateLeadMarker();
   BossHud.update(dt);
   HitSide.update(dt);
+  updateDangerEdge(dt);
   v = Game.state === 'playing' ? (Player.alive ? Enemies.rearThreat : false) : false;
   if (changed('rear', v)) $('rear-warn').classList.toggle('hidden', !v);
   v = Game.state === 'playing' ? Comets.threat !== null : false;
@@ -14014,6 +14179,7 @@ function update(dt) {
       Player.update(dt, ctl.pitch, ctl.yaw);
       Player.updateInvuln(dt);
       Worlds.active.collide(dt);
+      FatalWatch.update(dt);
     }
     Weapons.update(dt, Player.alive ? ctl.fire : false);
     if (Worlds.active.features.rings) Rings.update(dt);
@@ -14075,7 +14241,42 @@ function update(dt) {
   Sfx.update(dt);   // selalu dipanggil: saat jeda gain mesin turun ke 0
 }
 
+
+/* Tampilan hitbox (D4, hanya lewat hook debug): bola tabrakan pemain, asteroid, komet, musuh (radius sentuh),
+   bola padat bos, dan planet atau bulan terdekat sebagai wireframe. Warna: merah = fatal, kuning = merusak. */
+const HitboxView = {
+  on: false, pool: [], geo: null, matF: null, matD: null, n: 0, _c: new THREE.Vector3(),
+  set(v) {
+    this.on = !!v;
+    if (this.on ? !this.geo : false) {
+      this.geo = new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(1, 2));
+      this.matF = new THREE.LineBasicMaterial({ color: 0xff3030, depthTest: false, transparent: true, opacity: 0.8 });
+      this.matD = new THREE.LineBasicMaterial({ color: 0xffd040, depthTest: false, transparent: true, opacity: 0.8 });
+    }
+    if (!this.on) for (const l of this.pool) l.visible = false;
+    return this.on;
+  },
+  put(c, r, fatal) {
+    if (this.n >= 400) return;
+    let l = this.pool[this.n];
+    if (!l) { l = new THREE.LineSegments(this.geo, this.matD); l.frustumCulled = false; l.renderOrder = 9; scene.add(l); this.pool.push(l); }
+    l.material = fatal ? this.matF : this.matD; l.position.copy(c); l.scale.setScalar(r); l.visible = true; this.n++;
+  },
+  update() {
+    if (!this.on) return;
+    this.n = 0;
+    this.put(Player.pos, Player.radius, false);
+    for (const a of Asteroids.list) if (a.active) this.put(a.pos, a.hitR || a.radius * 0.85, Collision.classify(a.radius, 2.6, 70, false).tier === 'fatal');
+    for (const c of Comets.list) if (c.active) this.put(c.pos, c.hitR || c.radius * 0.9, false);
+    for (const e of Enemies.list) if (e.active) this.put(e.pos, e.contactR || e.radius, !!e.cfg.heavy);
+    const b = Bosses.active;
+    if (b) for (const sd of b.solids) this.put(solidCenter(sd, this._c), sd.radius, true);
+    if (Worlds.active === SpaceWorld ? SolarSystem.built : false) for (const s of SolarSystem.solids) if (s.pos.distanceTo(Player.pos) - s.radius < 3000) this.put(s.pos, s.hitR || s.radius, true);
+    for (let i = this.n; i < this.pool.length; i++) this.pool[i].visible = false;
+  },
+};
 function render() {
+  HitboxView.update();
   Weapons.pool.sync();
   Enemies.bullets.sync();
   if (Game.state === 'playing' || Game.state === 'paused' || Game.state === 'countdown' || Game.state === 'starting') updateHud(lastDt);
@@ -14689,6 +14890,91 @@ const GameHooks = {
         fogged: scene.fog ? round2(clamp((d - scene.fog.near) / Math.max(1, scene.fog.far - scene.fog.near), 0, 1)) : 0 };
     },
     bossMetrics() { return BossStats.summary(); },
+    // Wireframe bentuk tabrakan (D4); on = false menyembunyikan
+    showHitboxes(on = true) { return HitboxView.set(on); },
+    fatalWatch() { return { hit: !!FatalWatch.hit, ttc: Number.isFinite(FatalWatch.ttc) ? round2(FatalWatch.ttc) : null, warning: Player.warning, edge: !FatalWatch.el.classList.contains('hidden'), visualR: round2(Player.visualR || 0) }; },
+    // Audit hitbox (D4): radius tabrakan dibanding radius visual (persentil 75 jarak titik geometri ke pusat objek,
+    // setelah skala; bentuk tak bulat memakai beberapa bola). Toleransi 15 persen.
+    hitboxAudit() {
+      const rows = [], v = new THREE.Vector3(), inv = new THREE.Matrix4();
+      const pct = (arr, q) => { if (!arr.length) return 0; arr.sort((a, b) => a - b); return arr[Math.min(arr.length - 1, Math.floor(arr.length * q))]; };
+      // Jarak titik-titik mesh (buram) di bawah root ke titik pusat c (ruang dunia)
+      const dists = (root, c, skip) => {
+        root.updateMatrixWorld(true);
+        const out = [];
+        root.traverse((o) => {
+          if (!o.isMesh ? true : (skip ? skip(o) : false)) return;
+          const m = Array.isArray(o.material) ? o.material[0] : o.material;
+          if (m ? (m.transparent ? true : m.blending === THREE.AdditiveBlending) : true) return;
+          const P = o.geometry.attributes.position, step = Math.max(1, Math.floor(P.count / 400));
+          for (let i = 0; i < P.count; i += step) out.push(v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld).distanceTo(c));
+        });
+        return out;
+      };
+      const add = (obj, kelas, coll, vis, catatan) => rows.push({ objek: obj, kelas, visual: round2(vis), tabrakan: round2(coll), selisih: round2((coll - vis) / Math.max(1e-6, vis)), status: Math.abs(coll - vis) / Math.max(1e-6, vis) <= 0.15 ? 'lolos' : 'di luar toleransi', catatan: catatan || '' });
+      // Asteroid: tiap ukuran, geometri varian pertama, radius tabrakan 0,85 x R
+      for (const size of ['small', 'medium', 'large', 'giant']) {
+        const a = Asteroids.list.find((x) => x.size === size), R = a.cfg.radius, c = new THREE.Vector3();
+        const g = a.mesh.geometry.attributes.position, d = [];
+        for (let i = 0; i < g.count; i++) d.push(v.fromBufferAttribute(g, i).length() * R);
+        add('asteroid ' + size + ' (R ' + R + ')', 'sedang atau fatal', R * a.hitK, pct(d, 0.75));
+      }
+      // Komet: inti, radius tabrakan 0,9 x R
+      { const cm = Comets.list[0], R = 6, d = []; const geo = (cm.mesh.isMesh ? cm.mesh : cm.mesh.children.find((o) => o.isMesh)).geometry.attributes.position;
+        for (let i = 0; i < geo.count; i++) d.push(v.fromBufferAttribute(geo, i).length() * R);
+        add('komet inti (R 6)', 'sedang', R * (Comets.hitK || 0.9), pct(d, 0.75), 'koma dan ekor tidak padat'); }
+      // Planet, bulan, Matahari: mesh dalam skala benda
+      if (SolarSystem.built) for (const b of SolarSystem.solids) {
+        const g = b.mesh.geometry.attributes.position, sc = b.mesh.scale, d = [];
+        for (let i = 0; i < g.count; i += Math.max(1, Math.floor(g.count / 600))) { v.fromBufferAttribute(g, i); d.push(Math.hypot(v.x * sc.x, v.y * sc.y, v.z * sc.z)); }
+        const vis = pct(d, b.def.lumpy ? 0.1 : 0.5) * (b.def.lumpy ? 1 : 1);
+        add(b.name, 'fatal', b.hitR || b.radius, vis, b.def.lumpy ? 'tak beraturan: dibanding permukaan terdalam (persentil 10)' : '');
+      }
+      // Kapal musuh: tiap jenis dari pool
+      const seen = new Set();
+      for (const e of Enemies.list) {
+        if (seen.has(e.type)) continue; seen.add(e.type);
+        const was = e.group.visible, pos = e.group.position.clone(); e.group.position.set(0, 0, 0);
+        const d = dists(e.group, v.set(0, 0, 0).clone());
+        e.group.position.copy(pos); e.group.visible = was;
+        add('musuh ' + e.type, e.cfg.heavy ? 'fatal' : 'sentuhan', e.contactR || e.radius, d.length ? pct(d, 0.75) : visualRadius(e.group, 0.75, true), 'radius peluru tetap ' + e.radius);
+      }
+      // Pesawat pemain
+      { const vr = visualRadius(Player.rig); add('pesawat pemain ' + Player.ship.id, 'pemain', Player.radius, vr, 'sengaja lebih kecil dari bentang sayap (hitbox pemaaf)'); }
+      // Bos: bola padat tiap bos dibangun sementara (tidak dimasukkan ke scene)
+      for (const kind of Object.keys(BOSS_DEFS)) {
+        const keep = Bosses.active;
+        if (keep) continue;
+        const b = BOSS_DEFS[kind].create(); b.kind = kind;
+        b.group.updateMatrixWorld(true);
+        // Cakupan: persen titik visual yang berada di dalam salah satu bola padat (tabrakan tak terlihat bila bola jauh lebih besar)
+        const pts = [];
+        b.group.traverse((o) => {
+          if (!o.isMesh) return; const m = Array.isArray(o.material) ? o.material[0] : o.material; if (m ? (m.transparent ? true : m.blending === THREE.AdditiveBlending) : true) return;
+          const P = o.geometry.attributes.position, I = o.geometry.index, cnt = I ? I.count : P.count, w = new THREE.Vector3(), u = new THREE.Vector3();
+          for (let i = 0; i < P.count; i++) pts.push(v.fromBufferAttribute(P, i).applyMatrix4(o.matrixWorld).clone());
+          // Titik tengah tiap segitiga agar permukaan lebar ikut terwakili
+          for (let k = 0; k + 2 < cnt; k += 3) { w.set(0, 0, 0); for (let t = 0; t < 3; t++) w.add(u.fromBufferAttribute(P, I ? I.getX(k + t) : k + t)); pts.push(w.divideScalar(3).applyMatrix4(o.matrixWorld).clone()); }
+        });
+        const cen = b.solids.map((sd) => solidCenter(sd, new THREE.Vector3()));
+        let inside = 0;
+        for (const q of pts) if (b.solids.some((sd, i) => q.distanceTo(cen[i]) <= sd.radius)) inside++;
+        // Ruang kosong: titik sampel di dalam bola padat yang jauh dari semua titik visual
+        const cover = inside / Math.max(1, pts.length);
+        // Kelebihan: titik acak di dalam bola padat yang jauh (lebih dari 15 persen ukuran bos) dari semua titik visual
+        let empty = 0, tries = 0;
+        for (let i = 0; i < b.solids.length ? tries < 400 : false; i = (i + 1) % b.solids.length) {
+          tries++; const sd = b.solids[i]; const q = cen[i].clone().add(new THREE.Vector3(rand() - 0.5, rand() - 0.5, rand() - 0.5).normalize().multiplyScalar(sd.radius * rand()));
+          let near = Infinity; for (const p of pts) { const dd = p.distanceToSquared(q); if (dd < near) near = dd; }
+          if (Math.sqrt(near) > b.size * 0.15) empty++;
+        }
+        const over = empty / Math.max(1, tries);
+        rows.push({ objek: 'bos ' + kind, kelas: 'fatal', visual: round2(cover), tabrakan: b.solids.length + ' bola', selisih: round2(over), status: cover >= 0.85 ? (over <= 0.15 ? 'lolos' : 'di luar toleransi') : 'di luar toleransi', catatan: 'visual = persen titik model di dalam bola padat, selisih = persen isi bola yang kosong' });
+        if (b.dispose) b.dispose();
+        b.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+      }
+      return rows;
+    },
     bossLog() { return BossLog.load(); },
     // Efisiensi tembakan bot (D2): peluru keluar, peluru kena bos, damage ke bos
     botAccuracy() { return { shots: BossStats.shots || 0, hits: BossStats.hits || 0, blocked: BossStats.blockedShots || 0, dmg: Math.round(BossStats.dmg || 0), kills: Game.kills }; },
@@ -14722,11 +15008,11 @@ const GameHooks = {
         const items = [
           ['kerikil es (R 0,6)', 0.6, D.es, false], ['puing batu (R 1,5)', 1.5, D.batu, false], ['asteroid kecil (R 3)', 3, D.batu, false],
           ['asteroid sedang (R 6)', 6, D.batu, false], ['asteroid besar (R 11)', 11, D.batu, false], ['asteroid logam besar (R 14)', 14, D.logam, false],
-          ['asteroid raksasa (R 18)', 18, D.batu, false], ['komet (R 6)', 6, D.komet, false],
+          ['asteroid raksasa (R 18)', 18, D.batu, false], ['komet (R 6)', 6, D.komet, false], ['asteroid sedang besar (R 7,5)', 7.5, D.batu, false], ['asteroid ambang (R 8)', 8, D.batu, false],
           ['bulan Phobos', 7, D.batu, true], ['planet Mars', 120, D.batu, true], ['daratan atau air', 1000, D.batu, true], ['bos', 20, D.logam, true]];
         const rows = [];
         for (const [name, R, dens, fatal] of items) for (const [sp, v] of [['rendah', 40], ['dasar', 70], ['nitro', 128], ['ekstrem', 600]]) {
-          const c = Collision.classify(R, dens, v, fatal, Rs);
+          const c = Collision.classify(R, dens, v, fatal, Rs, Player.visualR);
           rows.push({ benda: name, kecepatan: sp, v, tier: c.tier, alasan: c.reason, ratio: c.ratio, energi: c.energy, persen: c.pct,
             mudah: round2(Math.min(100, c.pct * (c.tier === 'sedang' || c.tier === 'pantul' ? COLLISION_TIERS.difficulty.mudah : 1))), sulit: round2(Math.min(100, c.pct * (c.tier === 'sedang' || c.tier === 'pantul' ? COLLISION_TIERS.difficulty.sulit : 1))) });
         }

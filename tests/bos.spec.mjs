@@ -200,3 +200,34 @@ for (const [w, h, hp] of [[568, 320, true], [844, 390, true], [932, 430, true], 
   });
 }
 
+// ---------- D4: hitbox sesuai bentuk dan indikator bahaya fatal ----------
+test('D4: semua hitbox dalam toleransi 15 persen (kecuali hitbox pemain yang sengaja pemaaf), bos tercakup bola padat', async ({ page }) => {
+  await play(page, 'mars');
+  const rows = await dbg(page, 'hitboxAudit');
+  const bad = rows.filter((r) => r.status !== 'lolos' ? !r.objek.startsWith('pesawat pemain') : false);
+  expect(bad, JSON.stringify(bad)).toEqual([]);
+  expect(rows.length).toBeGreaterThan(30);
+  expect(await dbg(page, 'showHitboxes', true)).toBe(true);
+  expect(await dbg(page, 'showHitboxes', false)).toBe(false);
+});
+
+test('D4: indikator BELOK SEKARANG muncul sebelum benda fatal di jalur, tidak muncul untuk benda yang tidak fatal', async ({ page }) => {
+  await play(page, 'bumi', { query: 'kualitas=rendah' });
+  await page.evaluate(() => { const d = window.__game.debug; d.clearAsteroids(); d.setAsteroidDensity(0); });
+  // Asteroid sedang (R 6) tepat di jalur: tidak fatal, tanpa indikator
+  await dbg(page, 'spawnAsteroid', 'medium', 120, 0, 0, 'rock');
+  await page.waitForTimeout(200);
+  let f = await dbg(page, 'fatalWatch');
+  expect(f.hit).toBe(false);
+  expect(f.warning === 'BELOK SEKARANG').toBe(false);
+  await page.evaluate(() => window.__game.debug.clearAsteroids());
+  // Asteroid besar (R 11) di jalur: fatal, indikator muncul dengan sisa waktu kurang dari 2,5 detik
+  await dbg(page, 'spawnAsteroid', 'large', 140, 0, 0, 'rock');
+  await page.waitForTimeout(200);
+  f = await dbg(page, 'fatalWatch');
+  expect(f.hit).toBe(true);
+  expect(f.ttc).toBeLessThan(2.5);
+  expect(f.warning).toBe('BELOK SEKARANG');
+  expect(f.edge).toBe(true);
+  expect(f.visualR).toBeGreaterThan(3);
+});

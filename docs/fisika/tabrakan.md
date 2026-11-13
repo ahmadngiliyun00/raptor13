@@ -36,8 +36,8 @@ Semua angka ada di `COLLISION_TIERS` (`index.html`) dan bisa diubah saat uji lew
 
 | Tingkat | Syarat | Hasil |
 | --- | --- | --- |
-| FATAL | Kelas fatal: planet, bulan, Matahari, daratan, laut, gunung, pilar, bos, kapal berat (kapal induk, menara). Atau R minimal 6,9 x R_pesawat (sekitar 18). Atau E minimal 1500 | Pesawat hancur seperti sebelumnya (pesan penyebab sama) |
-| SEDANG | R antara 0,75 dan 6,9 x R_pesawat dan E di bawah 1500 | clamp(6,2 x E^0,4, 2, 60) persen HP maksimum, dikali kesulitan. Kebal tabrakan 0,8 detik. Pesawat terdorong keluar dari benda, kecepatan turun 4 sampai 30 persen, hidung terdorong menjauh. Kamera bergetar kecil (mati bila Kurangi gerakan atau Getar kamera dimatikan). Benda pecah |
+| FATAL | Kelas fatal: planet, bulan, Matahari, daratan, laut, gunung, pilar, bos, kapal berat (kapal induk, menara). Atau R minimal 2 x radius visual pesawat (sekitar 7,7 untuk Starfighter, sejak 2.3.1). Atau E minimal 1500 | Pesawat hancur seperti sebelumnya (pesan penyebab sama) |
+| SEDANG | R antara 0,75 x R_pesawat dan 2 x radius visual pesawat, E di bawah 1500 | clamp(6,2 x E^0,4, 2, 60) persen HP maksimum, dikali kesulitan. Kebal tabrakan 0,8 detik. Pesawat terdorong keluar dari benda, kecepatan turun 4 sampai 30 persen, hidung terdorong menjauh. Kamera bergetar kecil (mati bila Kurangi gerakan atau Getar kamera dimatikan). Benda pecah |
 | PANTUL | R antara 0,3 dan 0,75 x R_pesawat | 1 sampai 3 persen HP maksimum, naik dengan E. Tanpa kebal global. Benda pecah, pesawat tidak terhenti |
 | KECIL | R di bawah 0,3 x R_pesawat (sekitar 0,78) | Tanpa damage. Hanya percikan dan suara. Benda pecah |
 
@@ -45,11 +45,28 @@ Kesulitan hanya memengaruhi tingkat sedang dan pantul: Mudah x0,75, Normal x1,0,
 ini menggantikan pengali damage umum, bukan menambahnya. Tabrakan fatal tetap fatal di semua kesulitan.
 Kartu Peredam tetap mengurangi damage tabrakan 40 persen.
 
-**Kenapa ambang fatal 6,9 x R_pesawat, bukan 2 x seperti contoh di spesifikasi.** Dengan 2 x R_pesawat
-(R 5,2), asteroid sedang (R 6) dan besar (R 11) di medan Bumi menjadi fatal. Padahal keduanya mencakup
-52 persen asteroid yang muncul, jadi game akan jauh lebih sulit dan bertentangan dengan laporan pemilik.
-Nilai 6,9 x R_pesawat sama dengan ambang asteroid raksasa yang sudah disepakati (R 18). Benda yang lebih
-kecil tetap bisa fatal lewat energi: batu logam besar yang ditabrak pada kecepatan sangat tinggi.
+**Ambang fatal (diubah di 2.3.1, D4).** Versi 2.3.0 memakai 6,9 x radius tabrakan pesawat (R 18), agar asteroid
+sedang dan besar tidak fatal. Pemeriksaan konsistensi visual menunjukkan itu tidak konsisten: asteroid besar
+(R 11, radius visual 10) tampak sekitar 2,6 kali ukuran pesawat (radius visual Starfighter 3,83), tetapi
+tidak fatal. Ambang kini **2 x radius visual pesawat**, sama dengan contoh awal spesifikasi tetapi diukur dari
+bentuk kapal yang terlihat, bukan dari radius tabrakan pemaaf 2,6. Hasilnya:
+
+- benda seukuran pesawat atau lebih kecil (asteroid kecil R 3, sedang R 6) hanya merusak;
+- benda yang tampak jauh lebih besar dari pesawat (R 7,7 ke atas: asteroid besar, raksasa, batu sabuk besar)
+  fatal.
+
+Ambang kerikil dan puing tetap relatif terhadap radius tabrakan.
+
+Supaya ini tidak terasa tiba-tiba, ada **indikator bahaya fatal**. Benda fatal yang berada di jalur tabrakan
+dalam 2,5 detik:
+
+- memunculkan peringatan BELOK SEKARANG (chip di mode HP, teks di desktop, lewat saluran peringatan yang sama
+  dengan TARIK NAIK, jadi tidak dobel);
+- memunculkan ikon bahaya di tepi layar dengan panah ke arah menghindar;
+- membuat benda memerah halus.
+
+Benda yang tidak fatal tidak memicu indikator (diuji di `tests/bos.spec.mjs`, D4). Pemain yang ingin lebih
+longgar bisa mematikan opsi Tabrakan fatal (mode latihan).
 
 **Kalibrasi.** Eksponen 0,4 dan a = 6,2 dipilih agar damage pada kecepatan dasar mendekati nilai lama untuk
 ukuran standar Bumi:
@@ -97,10 +114,12 @@ Persen HP maksimum pada kesulitan Normal. Kecepatan relatif dalam satuan per det
 | puing batu (R 1,5) | pantul, 1,11% | pantul, 1,33% | pantul, 2,11% | pantul, 3% |
 | asteroid kecil (R 3) | sedang, 5,23% | sedang, 8,18% | sedang, 13,25% | sedang, 45,6% |
 | asteroid sedang (R 6) | sedang, 12% | sedang, 18,78% | sedang, 30,44% | sedang, 60% |
-| asteroid besar (R 11) | sedang, 24,85% | sedang, 38,88% | sedang, 60% | FATAL (energi) |
-| asteroid logam besar (R 14) | sedang, 43,1% | sedang, 60% | sedang, 60% | FATAL (energi) |
+| asteroid besar (R 11) | FATAL (ukuran) | FATAL (ukuran) | FATAL (ukuran) | FATAL (ukuran) |
+| asteroid logam besar (R 14) | FATAL (ukuran) | FATAL (ukuran) | FATAL (ukuran) | FATAL (ukuran) |
 | asteroid raksasa (R 18) | FATAL (ukuran) | FATAL (ukuran) | FATAL (ukuran) | FATAL (ukuran) |
 | komet (R 6) | sedang, 6,68% | sedang, 10,45% | sedang, 16,93% | sedang, 58,28% |
+| asteroid sedang besar (R 7,5) | sedang, 15,69% | sedang, 24,55% | sedang, 39,79% | FATAL (energi) |
+| asteroid ambang (R 8) | FATAL (ukuran) | FATAL (ukuran) | FATAL (ukuran) | FATAL (ukuran) |
 | bulan Phobos | FATAL (kelas) | FATAL (kelas) | FATAL (kelas) | FATAL (kelas) |
 | planet Mars | FATAL (kelas) | FATAL (kelas) | FATAL (kelas) | FATAL (kelas) |
 | daratan atau air | FATAL (kelas) | FATAL (kelas) | FATAL (kelas) | FATAL (kelas) |
@@ -122,12 +141,12 @@ fatal adalah 40 HP.
 | 1,5 | batu | 70 | 1,17 | 1 | pantul | 1,33% | tidak |
 | 3 | batu | 70 | 1,17 | 1 | sedang | 8,18% | tidak |
 | 6 | batu | 70 | 1,17 | 1 | sedang | 18,78% | tidak |
-| 11 | batu | 70 | 1,17 | 1 | sedang | 38,88% | tidak |
-| 11 | batu | 128 | 2,13 | 1 | sedang | 60% | tidak |
-| 14 | logam | 128 | 2,13 | 1 | sedang | 60% | tidak |
+| 11 | batu | 70 | 1,17 | 1 | fatal | 40% (mode latihan) | ya |
+| 11 | batu | 128 | 2,13 | 1 | fatal | 40% (mode latihan) | ya |
+| 14 | logam | 128 | 2,13 | 1 | fatal | 40% (mode latihan) | ya |
 | 18 | batu | 70 | 1,17 | 1 | fatal | 40% (mode latihan) | ya |
 | 0,6 | es | 2000 | 33,33 | 1 | kecil | 0% | tidak |
-| 3 | batu | 2000 | 33,33 | 1 | fatal (energi 1630) | 40% (mode latihan) | ya |
+| 3 | batu | 2000 | 33,33 | 1 | fatal | 40% (mode latihan) | ya |
 | 6 | batu | 2000 | 33,33 | 1 | fatal | 40% (mode latihan) | ya |
 | 18 | batu | 2000 | 33,33 | 1 | fatal | 40% (mode latihan) | ya |
 | 0,6 | es | 6000 | 100 | 1 | kecil | 0% | tidak |
@@ -152,3 +171,14 @@ pada kecepatan sangat tinggi tetap fatal.
 
 Yang tidak diubah sesuai aturan: perilaku peluru, damage senjata, HP musuh, dan damage sentuhan kapal musuh
 (drone kamikaze 18, rudal 16, dan seterusnya; kapal berat tetap fatal).
+
+## Pembaruan 2.3.1 (D4)
+
+Audit hitbox seluruh benda ada di `docs/fisika/audit-hitbox.md`. Ringkasan perubahan:
+
+- radius tabrakan asteroid dan komet dari geometrinya;
+- Phobos dan Deimos tepat di permukaan terdalam;
+- radius sentuh badan musuh sesuai bentuk, sedangkan radius peluru tetap;
+- bola padat bos mengikuti bentuk;
+- ambang fatal 2 x radius visual pesawat;
+- indikator bahaya fatal.
