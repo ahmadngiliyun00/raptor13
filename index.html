@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-yYz3Hpc3UOUWinM396CZRB7ULtNW+VJfCOGQfG3ZMEY='; style-src 'self' 'sha256-rhKzdNu9PU3tJKXO1hJS0uJ48UaRKKzXN1FOU3OQJks='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-zldR6zH0SQ3Z355eimrnBie/o/tchxI30fMMtk4z1FE='; style-src 'self' 'sha256-rhKzdNu9PU3tJKXO1hJS0uJ48UaRKKzXN1FOU3OQJks='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -2281,7 +2281,7 @@ function applyDamage(entity, amount, source, x, y, z) {
 const Worlds = { active: null, list: {} };
 
 // Saklar debug (dipakai uji otomatis lewat window.__game)
-const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
+const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
 
 // Uji tabrakan segmen (gerak peluru satu frame) terhadap bola, tanpa alokasi
 function segmentHitsSphere(ax, ay, az, bx, by, bz, cx, cy, cz, r) {
@@ -8005,6 +8005,7 @@ const Bosses = {
     b.time += dt;
     for (const p of b.parts) { p.sync(); if (p.hpBarTimer > 0) p.hpBarTimer -= dt; }
     b.update(dt);
+    if (BossStats.on ? this.active : false) BossStats.track(this.active, dt);
     if (this.active) this.updateBar();
   },
   // Peluru pemain terhadap bagian bos (dipanggil dari updateCombat)
@@ -8054,6 +8055,7 @@ const Bosses = {
       s.obj.getWorldPosition(_vd);
       const r = s.radius + pr;
       if (_vd.distanceToSquared(P) < r * r) {
+        if (BossStats.on ? b.time - BossStats.lastContact > 1 : false) { BossStats.contacts++; BossStats.lastContact = b.time; }
         hardImpact('Menabrak ' + b.name, () => { _vb.subVectors(P, _vd).normalize(); P.copy(_vd).addScaledVector(_vb, r + 6); Player.pitchUpAfterBounce(); });
         return;
       }
@@ -8063,6 +8065,7 @@ const Bosses = {
     const b = this.active;
     if (!b ? true : b.dead) return;
     b.dead = true;
+    if (BossStats.on) BossStats.defeatAt = BossStats.time;
     const P = (b.anchor || b.group).position;
     for (let i = 0; i < 8; i++) FX.explosion(P.x + randRange(-1, 1) * b.size, P.y + randRange(-0.5, 0.5) * b.size, P.z + randRange(-1, 1) * b.size, 2.2);
     Stars.burst(P.x, P.y, P.z, 10);
@@ -8096,6 +8099,68 @@ const Bosses = {
     Events.emit('enemyShot', from);
   },
 };
+
+/* Metrik pelacakan bos (B1, B5): posisi bos relatif terhadap arah pemain. Kerucut depan 60 derajat
+   (30 derajat dari hidung), ekor = kerucut 120 derajat di belakang (lebih dari 120 derajat dari hidung),
+   runtun terlama di ekor, lintasan lewat (bos berpindah dari depan ke belakang dalam jarak 500),
+   jendela rentan, waktu di dalam benda padat, waktu tertutup benda atau medan, waktu di luar layar,
+   dan waktu sampai bos kalah. Hanya aktif lewat hook debug (tanpa biaya saat bermain biasa). */
+const BossStats = {
+  on: false, _p: new THREE.Vector3(), _d: new THREE.Vector3(),
+  reset() {
+    this.time = 0; this.front = 0; this.rear = 0; this.streak = 0; this.maxRear = 0; this.overshoots = 0; this.vulnWindows = 0; this.vulnTime = 0;
+    this.inside = 0; this.occluded = 0; this.offscreen = 0; this.distSum = 0; this.lastAhead = null; this.defeatAt = null; this.minPx = Infinity; this.pxSum = 0;
+    this.contacts = 0; this.lastContact = -9;
+  },
+  // Garis kamera ke titik terhalang planet, bulan, Matahari (angkasa) atau medan (Bumi)
+  blocked(a, b) {
+    if (Worlds.active === SpaceWorld) {
+      if (!SolarSystem.built) return false;
+      const u = this._d.copy(b).sub(a), len = u.length();
+      u.divideScalar(len || 1);
+      for (const s of SolarSystem.solids) {
+        const ox = s.pos.x - a.x, oy = s.pos.y - a.y, oz = s.pos.z - a.z, t = ox * u.x + oy * u.y + oz * u.z;
+        if (t < 0 ? true : t > len) continue;
+        if (ox * ox + oy * oy + oz * oz - t * t < s.radius * s.radius) return true;
+      }
+      return false;
+    }
+    for (let k = 1; k < 12; k++) {
+      const t = k / 12, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t, z = a.z + (b.z - a.z) * t;
+      if (y < groundHeightAt(x, z)) return true;
+    }
+    return false;
+  },
+  track(b, dt) {
+    const A = (b.anchor || b.group).position, P = Player.pos, F = Player.forward;
+    const dx = A.x - P.x, dy = A.y - P.y, dz = A.z - P.z, d = Math.hypot(dx, dy, dz) || 1;
+    const c = (dx * F.x + dy * F.y + dz * F.z) / d;
+    this.time += dt; this.distSum += d * dt;
+    if (c > 0.866) this.front += dt;
+    if (c < -0.5) { this.rear += dt; this.streak += dt; if (this.streak > this.maxRear) this.maxRear = this.streak; } else this.streak = 0;
+    const ahead = c > 0;
+    if (this.lastAhead === true ? (ahead ? false : d < 500) : false) this.overshoots++;
+    this.lastAhead = ahead;
+    if (b.vuln > 0) this.vulnTime += dt;
+    if (Worlds.active === SpaceWorld ? SolarSystem.built : false) {
+      if (SolarSystem.inside(A.x, A.y, A.z, 0)) this.inside += dt;
+      else if (this.blocked(camera.position, A)) this.occluded += dt;
+    } else if (this.blocked(camera.position, A)) this.occluded += dt;
+    // Ukuran bos di layar (piksel): diameter sudut bola bos dibanding tinggi layar
+    const p = this._p.copy(A).project(camera);
+    if (p.z > 1 ? true : Math.max(Math.abs(p.x), Math.abs(p.y)) > 1) this.offscreen += dt;
+    const px = (b.size * 2) / (camera.position.distanceTo(A) * 2 * Math.tan(camera.fov * Math.PI / 360)) * window.innerHeight;
+    this.pxSum += px * dt; if (px < this.minPx) this.minPx = px;
+  },
+  summary() {
+    const T = Math.max(this.time, 1e-6), pct = (v) => Math.round(v / T * 1000) / 10;
+    return { time: round2(this.time), frontPct: pct(this.front), rearPct: pct(this.rear), maxRearStreak: round2(this.maxRear),
+      overshootsPerMin: round2(this.overshoots / (T / 60)), vulnWindows: this.vulnWindows, vulnPct: pct(this.vulnTime),
+      insideBodyPct: pct(this.inside), occludedPct: pct(this.occluded), offscreenPct: pct(this.offscreen),
+      contactsPerMin: round2(this.contacts / (T / 60)), meanDist: Math.round(this.distSum / T), meanPx: Math.round(this.pxSum / T), defeatAt: this.defeatAt === null ? null : round2(this.defeatAt) };
+  },
+};
+BossStats.reset();
 
 // Model bos dari loft dan lathe
 function buildBossMiner() {
@@ -12761,6 +12826,12 @@ const AutoInput = {
       if (front < 0) d2 *= 9;
       if (d2 < best) { best = d2; target = e; }
     }
+    // Uji bos (B1, B5): bot memburu bagian bos yang bisa ditembak; hanya lewat hook debug.bossSim
+    if (Debug.botBoss === 'jelajah') target = null;   // bot jelajah: tidak membidik, hanya meliuk (kecenderungan bos sendiri)
+    else if (Debug.botBoss ? Bosses.active : false) {
+      const b = Bosses.active, part = b.parts.find((x) => x.active ? (x.hittable ? x.hittable() : true) : false);
+      target = { pos: part ? part.pos : (b.anchor || b.group).position };
+    }
     if (target) {
       const want = Math.atan2(-(target.pos.x - P.x), -(target.pos.z - P.z));
       this.yaw = clamp(wrapAngle(want - Player.yaw) * 2.5, -1, 1);
@@ -13379,6 +13450,102 @@ const GameHooks = {
     savedSession() { return SessionSave.peek(); },
     clearSession() { SessionSave.clear(); return true; },
     startBoss(kind) { return Bosses.start(kind); },
+    // Simulasi bot melawan bos (B1, B5): langkah tetap 1/60 detik, kebal, bot memburu bos, gelombang
+    // dimatikan (anak buah bos tetap muncul). Mengembalikan BossStats.summary().
+    bossSim(kind, seconds = 180, opts = {}) {
+      if (Game.state !== 'playing') return null;
+      const godBefore = Debug.god, enBefore = Debug.enemiesEnabled;
+      Debug.enemiesEnabled = false; Enemies.reset(); Bosses.clear();
+      if (opts.difficulty ? Object.hasOwn(CONFIG.difficulty.levels, opts.difficulty) : false) Game.difficultyKey = opts.difficulty;
+      BossStats.reset(); BossStats.on = true;
+      Debug.god = true; Debug.autoInput = true; Debug.botBoss = opts.bot === 'jelajah' ? 'jelajah' : 'buru';
+      Bosses.start(kind);
+      if (Bosses.active) Bosses.active.onDefeat = null;
+      Cutscene.skip();
+      const steps = Math.round(seconds * 60), t0 = performance.now();
+      let ultUsed = 0;
+      for (let i = 0; i < steps; i++) {
+        if (Game.state === 'cutscene') Cutscene.skip();
+        if (Game.state !== 'playing' ? true : !Bosses.active) break;
+        // Bot memakai ultimate saat penuh dan bos di depan (fase 4 naga hanya tumbang oleh ultimate)
+        if (Debug.botBoss === 'buru' ? (Player.ult >= 1 ? BossStats.lastAhead === true : false) : false) { if (Ultimate.fire()) ultUsed++; }
+        update(1 / 60);
+        if (opts.renderEvery ? i % opts.renderEvery === 0 : false) render();
+      }
+      const r = BossStats.summary();
+      r.kind = kind; r.bot = Debug.botBoss; r.difficulty = Game.difficultyKey; r.alive = !!Bosses.active; r.phase = Bosses.active ? Bosses.active.phase : null; r.ultUsed = ultUsed;
+      r.msPerStep = round2((performance.now() - t0) / steps);
+      BossStats.on = false; Debug.botBoss = false; Debug.autoInput = false; Debug.god = godBefore; Debug.enemiesEnabled = enBefore;
+      Controls.reset();
+      if (!opts.keep) Bosses.clear();
+      return r;
+    },
+    // Uji keterlihatan bos (B1, B2): bos diletakkan di depan pemain pada jarak dist, kamera chase
+    // diperbarui, lalu scene dirender dua kali (dengan dan tanpa bos) dan piksel kanvas dibandingkan.
+    // Mengembalikan jumlah piksel bos yang terlihat, kontras luminans rata-rata dan maksimum,
+    // ukuran kotak batas di layar, dan perkiraan ukuran bos di layar.
+    bossProbe(opts = {}) {
+      if (!(Game.state === 'playing' ? true : Game.state === 'paused')) return null;
+      const kind = opts.kind || 'hunter', dist = opts.dist || 400;
+      if (Bosses.active ? Bosses.active.kind !== kind : false) Bosses.clear();
+      if (!Bosses.active) { Bosses.start(kind); Cutscene.skip(); if (Game.state === 'cutscene') return null; }
+      const b = Bosses.active, A = (b.anchor || b.group).position, P = Player.pos, F = Player.forward;
+      const up = Player._up || _AX_Y;
+      const target = _va.copy(P).addScaledVector(F, dist).addScaledVector(up, dist * (opts.elev === undefined ? 0.08 : opts.elev)).addScaledVector(Player._right || _AX_X, dist * (opts.side || 0));
+      const delta = _vb.copy(target).sub(A);
+      if (b.trail) { b.head.position.add(delta); for (const sg of b.segs) sg.position.add(delta); for (const tp of b.trail) tp.add(delta); }
+      else b.group.position.add(delta);
+      if (!b.trail) { b.dir.copy(P).sub(b.group.position).normalize(); b.group.lookAt(_vc.copy(b.group.position).sub(b.dir)); }
+      for (const p of b.parts) p.sync();
+      if (opts.bloom !== undefined) Save.settings.bloom = !!opts.bloom;
+      CamRig.update(1 / 60);
+      Worlds.active.follow();
+      if (typeof BossFX !== 'undefined') BossFX.update(0);
+      const gl = renderer.getContext(), W = renderer.domElement.width, H = renderer.domElement.height;
+      const read = () => { render(); const buf = new Uint8Array(W * H * 4); gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, buf); return buf; };
+      const on = read();
+      const hideList = [b.group, ...(b.decoys || []).map((d) => d.obj)];
+      if (typeof BossFX !== 'undefined') hideList.push(...BossFX.objects());
+      const vis = hideList.map((o) => o.visible);
+      for (const o of hideList) o.visible = false;
+      const off = read();
+      hideList.forEach((o, i) => { o.visible = vis[i]; });
+      let n = 0, sum = 0, max = 0, x0 = W, y0 = H, x1 = -1, y1 = -1;
+      for (let i = 0, k = 0; i < on.length; i += 4, k++) {
+        const la = on[i] * 0.2126 + on[i + 1] * 0.7152 + on[i + 2] * 0.0722, lb = off[i] * 0.2126 + off[i + 1] * 0.7152 + off[i + 2] * 0.0722;
+        const dc = Math.max(Math.abs(on[i] - off[i]), Math.abs(on[i + 1] - off[i + 1]), Math.abs(on[i + 2] - off[i + 2]));
+        if (dc < 20) continue;
+        n++; const dl = Math.abs(la - lb); sum += dl; if (dl > max) max = dl;
+        const x = k % W, y = (k - x) / W;
+        if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+      const pr = renderer.getPixelRatio(), d = camera.position.distanceTo(A);
+      const expectPx = (b.size * 2) / (d * 2 * Math.tan(camera.fov * Math.PI / 360)) * window.innerHeight;
+      const proj = _vc.copy(A).project(camera);
+      return { kind, dist, world: Worlds.active.id, area: Worlds.active === SpaceWorld ? SpaceWorld.area : 'bumi', bloom: Post.wanted, quality: CONFIG.qualityPreset,
+        pixels: Math.round(n / (pr * pr)), meanContrast: n ? round2(sum / n / 255) : 0, maxContrast: round2(max / 255),
+        boxW: x1 >= 0 ? Math.round((x1 - x0 + 1) / pr) : 0, boxH: y1 >= 0 ? Math.round((y1 - y0 + 1) / pr) : 0, expectPx: round2(expectPx), camDist: Math.round(d),
+        onScreen: proj.z < 1 ? Math.max(Math.abs(proj.x), Math.abs(proj.y)) <= 1 : false, camFar: Math.round(camera.far),
+        insideBody: Worlds.active === SpaceWorld ? !!SolarSystem.inside(A.x, A.y, A.z, 0) : false, blocked: BossStats.blocked(camera.position, A),
+        fogged: scene.fog ? round2(clamp((d - scene.fog.near) / Math.max(1, scene.fog.far - scene.fog.near), 0, 1)) : 0 };
+    },
+    bossMetrics() { return BossStats.summary(); },
+    // Pemeriksaan B1 butir d dan g: piksel bos dengan dan tanpa frustum culling, matriks non-finite di grup bos
+    bossChecks(opts = {}) {
+      const b = Bosses.active;
+      if (!b) return null;
+      let nf = 0;
+      b.group.traverse((o) => { for (const e of o.matrixWorld.elements) if (!Number.isFinite(e)) { nf++; break; } });
+      if (opts.scanOnly) return { nonFinite: nf, x: round2((b.anchor || b.group).position.x) };
+      const a = this.bossProbe({ ...opts, kind: b.kind });
+      const meshes = []; b.group.traverse((o) => { if (o.isMesh) meshes.push(o); });
+      const keep = meshes.map((o) => o.frustumCulled); for (const o of meshes) o.frustumCulled = false;
+      const c = this.bossProbe({ ...opts, kind: b.kind });
+      meshes.forEach((o, i) => { o.frustumCulled = keep[i]; });
+      let nonFinite = 0;
+      b.group.traverse((o) => { for (const e of o.matrixWorld.elements) if (!Number.isFinite(e)) { nonFinite++; break; } });
+      return { kind: b.kind, culled: a.pixels, unculled: c.pixels, nonFinite };
+    },
     bossState() {
       const b = Bosses.active;
       if (!b) return null;
