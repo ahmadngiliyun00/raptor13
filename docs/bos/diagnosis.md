@@ -95,3 +95,50 @@ permainan biasa setiap sentuhan adalah tabrakan fatal).
 | Sang Naga Vanta | c (jarak 1200 di beberapa dunia), perilaku (tubuh panjang menyapu pemain, kepala di belakang) | 83 piksel di jarak 1200; bot buru: 9,3 sentuhan per menit; bot jelajah: 5 persen di depan | rim merah, kontur satu draw call (BatchedMesh), ikon tengkorak naga, siklus lewat depan dengan jarak aman tubuh |
 
 Hasil setelah perbaikan dicatat di bagian bawah berkas ini (B2) dan di `docs/bos/perilaku.md` (B5).
+
+## Hasil setelah perbaikan keterlihatan (B2)
+
+Perubahan: material bos disalin dengan emissive 22 persen warna sendiri dan rim fresnel berwarna khas
+(Penjaga jingga, Penambang emas, Pemburu magenta, Naga merah), kabut Bumi hanya 35 persen pada bos, far kamera
+Bumi diperlebar sejauh bos (maksimal 2,5 kali), bos didorong keluar dari planet dan bulan, dan kontur siluet
+menyala. Kontur adalah geometri gabungan bos yang digelembungkan beberapa piksel layar (tebal tetap di jarak
+berapa pun), digambar BackSide setelah semua objek buram dengan kedalaman didorong menjauh sepanjang sinar
+pandang, sehingga hanya tampak di atas latar dan tidak menutupi bagian bos sendiri. Opsi **Sorotan bos**
+(tab Grafis): Mati, Halus (bawaan, 1,8 piksel), Kuat (3,2 piksel, lebih terang). Di medan Bumi kontur dibuat
+lebih gelap dan pekat karena latarnya terang. Umpan tiruan Pemburu Agung tidak diberi kontur, jadi bos asli
+selalu bisa dibedakan. Bos yang di layar lebih kecil dari 14 piksel diberi titik bercahaya (`#boss-dot`).
+
+Biaya: **tepat satu draw call tambahan per bos** (`debug.bossFx()`: Pemburu 81 menjadi 82, Naga 87 menjadi 88;
+Sang Naga Vanta memakai `BatchedMesh` dengan 19 instans, kepala dan 18 segmen, dalam satu panggilan
+multi-draw). Kontur aktif juga di kualitas Rendah. Shader bos dan kontur dikompilasi di layar muat
+(`Warmup`), jadi kemunculan bos pertama tidak tersendat.
+
+Ringkasan 576 pengukuran: **jelas 498 (sebelumnya 278), samar 75 (214), tidak terlihat 3 (84)**.
+Data: `docs/bos/data/probe-sesudah-b2.json`, screenshot: `docs/bos/screenshots/sesudah-b2/`.
+
+| Bos | Jarak | Piksel tampak (median angkasa) | Kontras rata-rata | Medan Bumi (piksel) | Kualitas Rendah | Dunia samar atau tidak terlihat |
+| --- | --- | --- | --- | --- | --- | --- |
+| Penjaga Raksasa | 50 | 6268 (3184) | 0,37 (0,18) | 6453 | 6067 | tidak ada |
+| Penjaga Raksasa | 150 | 993 (354) | 0,45 (0,14) | 1089 | 915 | 4 dari 12 |
+| Penjaga Raksasa | 400 | 248 (30) | 0,56 (0,13) | 294 | 216 | 6 dari 12 |
+| Penjaga Raksasa | 1200 | 74 (6) | 0,64 (0,14) | 95 (0) | 62 | 12 dari 12 |
+| Penambang Raksasa | 50 | 12883 (10710) | 0,35 (0,13) | 12643 | 12211 | 1 dari 12 |
+| Penambang Raksasa | 150 | 1785 (1094) | 0,36 (0,12) | 1861 | 1693 | tidak ada |
+| Penambang Raksasa | 400 | 338 (153) | 0,44 (0,11) | 378 | 315 | 1 dari 12 |
+| Penambang Raksasa | 1200 | 76 (18) | 0,56 (0,11) | 93 (0) | 64 | 9 dari 12 |
+| Pemburu Agung | 50 | 1674 (759) | 0,39 (0,20) | 1820 | 1529 | tidak ada |
+| Pemburu Agung | 150 | 365 (98) | 0,44 (0,16) | 391 | 322 | tidak ada |
+| Pemburu Agung | 400 | 111 (20) | 0,51 (0,12) | 137 | 96 | 2 dari 12 |
+| Pemburu Agung | 1200 | 38 (1) | 0,56 (0,06) | 50 (0) | 34 | 12 dari 12 |
+| Sang Naga Vanta | 50 | 28259 (28170) | 0,26 (0,23) | 25243 | 28125 | 1 dari 12 |
+| Sang Naga Vanta | 150 | 4120 (4117) | 0,29 (0,23) | 2964 | 4053 | tidak ada |
+| Sang Naga Vanta | 400 | 656 (652) | 0,35 (0,22) | 253 | 629 | tidak ada |
+| Sang Naga Vanta | 1200 | 84 (83) | 0,52 (0,20) | 8 (0) | 76 | 3 dari 12 |
+
+Angka dalam kurung adalah nilai sebelum perbaikan. Yang masih "samar" di jarak 1200 adalah bos yang memang
+hanya 7 sampai 14 piksel tinggi di layar 720 piksel (kontrasnya sudah 0,52 sampai 0,64); untuk jarak ini
+pelacakan bergantung pada penanda di atas bos, panah tepi layar, dan radar (B3, B4). Naga di medan Bumi pada
+jarak 1200 dan kualitas Tinggi tertutup lapisan awan stratus (bos diuji 96 satuan di atas pemain, setinggi
+awan 205 sampai 248); pada kualitas Rendah yang awannya lebih sedikit Naga tampak 76 piksel. Dalam permainan
+Naga hanya muncul di Pluto. Bloom kini menambah piksel tampak (rata-rata 4770) karena kontur dan rim cukup
+terang untuk berpendar, sebelumnya mengurangi 76.

@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-zldR6zH0SQ3Z355eimrnBie/o/tchxI30fMMtk4z1FE='; style-src 'self' 'sha256-rhKzdNu9PU3tJKXO1hJS0uJ48UaRKKzXN1FOU3OQJks='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-qqjRyDsTARMhNWUbsaxEKJNRzwCeQCPoQYEeaNyUQeA='; style-src 'self' 'sha256-I90K1rLckrlWfc01uWCiTeEuiQdPYuWpl5fsTtXP/8g='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -315,6 +315,7 @@
   #piko-text b { color: var(--ui-accent); margin-right: 4px; }
   .ind.pickup { border-left-color: #5dff7a; }
   #lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #ffd24a; transform-origin: center; }
+  #boss-dot { --bc: #ff4f6e; position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: radial-gradient(circle, #fff 0 18%, var(--bc) 40%, transparent 72%); box-shadow: 0 0 10px 3px var(--bc); pointer-events: none; }
   #rear-warn { position: absolute; left: 50%; bottom: calc(40px + var(--ed-b)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #ffd0d0; border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.6s steps(2) infinite; }
   #comet-warn { position: absolute; left: 50%; top: calc(94px + var(--ed-t)); transform: translateX(-50%);
@@ -960,6 +961,7 @@
   <div id="critical" class="hidden">INTEGRITAS KRITIS</div>
   <div id="reticle"><i id="hitmark"></i></div>
   <div id="lead" class="hidden"></div>
+  <div id="boss-dot" class="hidden"></div>
   <div id="piko-panel" class="hidden"><canvas id="piko-face" width="56" height="56"></canvas><p id="piko-text"></p></div>
   <div id="buffs">
     <div class="buff hidden" data-buff="overdrive"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span>OVERDRIVE</span><b>10</b></div>
@@ -1242,6 +1244,10 @@
       <span class="set-label">Bantuan bidik</span>
       <div class="seg" data-key="aimAssist">
         <button type="button" data-v="mati">Mati</button><button type="button" data-v="rendah">Rendah</button><button type="button" data-v="sedang">Sedang</button>
+      </div>
+      <span class="set-label">Sorotan bos</span>
+      <div class="seg" data-key="bossHighlight">
+        <button type="button" data-v="mati">Mati</button><button type="button" data-v="halus">Halus</button><button type="button" data-v="kuat">Kuat</button>
       </div>
       <span class="set-label">Bantuan robot</span>
       <div class="seg" data-key="robotHelp">
@@ -2030,6 +2036,7 @@ const SETTING_DEFAULTS = {
   autoLevel: true,             // penstabil otomatis
   fatalCrash: true,            // tabrakan keras langsung game over
   aimAssist: 'rendah',         // bantuan bidik: mati | rendah | sedang
+  bossHighlight: 'halus',      // sorotan bos (kontur siluet): mati | halus | kuat (B2)
   cameraRoll: false,           // kamera ikut berguling
   damageNumbers: true,
   showFps: false,
@@ -2061,6 +2068,7 @@ const SETTING_ENUMS = {
   terrain: ['space', 'earth'],
   spaceMode: ['campaign', 'free'],
   aimAssist: ['mati', 'rendah', 'sedang'],
+  bossHighlight: ['mati', 'halus', 'kuat'],
   robotHelp: ['penuh', 'ringkas', 'ikon', 'mati'],
   leftStyle: ['joystick', 'dpad'],
   cameraDistance: ['dekat', 'normal', 'jauh'],
@@ -7977,6 +7985,7 @@ const Bosses = {
     b.kind = kind; b.time = 0; b.dead = false;
     this.active = b;
     scene.add(b.group);
+    BossFX.attach(b);
     this.bar.classList.remove('hidden');
     this.barName.textContent = b.name;
     Events.emit('bossStart', kind);
@@ -7989,6 +7998,7 @@ const Bosses = {
     if (!b) return;
     scene.remove(b.group);
     if (b.dispose) b.dispose();
+    BossFX.detach();
     this.active = null;
     this.bar.classList.add('hidden');
   },
@@ -8005,6 +8015,7 @@ const Bosses = {
     b.time += dt;
     for (const p of b.parts) { p.sync(); if (p.hpBarTimer > 0) p.hpBarTimer -= dt; }
     b.update(dt);
+    if (this.active) BossFX.update(dt);
     if (BossStats.on ? this.active : false) BossStats.track(this.active, dt);
     if (this.active) this.updateBar();
   },
@@ -8579,6 +8590,236 @@ const Naga = {
         update: (dt) => { this.blastT += dt; while (this.blastI < segs.length ? this.blastT > this.blastI * 0.15 : false) { const p = segs[this.blastI++]; FX.explosion(p.x, p.y, p.z, 2.6); Sfx.explosion(1.4, 200); } } },
       { dur: 3.0, from: () => Player.pos.clone().add(new THREE.Vector3(12, 5, 16)), lookFrom: () => Player.pos.clone(), who: 'RAPTOR 13', text: 'Tata Surya aman. Raptor 13 pulang dengan kepala tegak.' },
     ] }, () => FinalScreen.show());
+  },
+};
+
+/* =====================================================================
+   KETERLIHATAN BOS (B2) - diagnosis di docs/bos/diagnosis.md. Material bos mendapat emissive dasar
+   dan rim light fresnel berwarna khas (tidak lagi hitam di latar angkasa atau saat membelakangi
+   Matahari), kabut Bumi hanya 35 persen pada bos, bidang jauh kamera Bumi diperlebar selama bos jauh,
+   bos didorong keluar dari planet, dan kontur siluet menyala: salinan geometri gabungan yang
+   digelembungkan sejauh beberapa piksel layar (tebal tetap di jarak berapa pun), BackSide, satu draw
+   call per bos (Sang Naga Vanta memakai BatchedMesh: kepala dan 18 segmen dalam satu panggilan).
+   ===================================================================== */
+const BOSS_STYLE = {
+  raksasa: { rim: 0xffa040, line: [2.2, 0.95, 0.25], css: '#ffa040', short: 'PENJAGA' },
+  miner: { rim: 0xffc45a, line: [2.3, 1.25, 0.2], css: '#ffc45a', short: 'PENAMBANG' },
+  hunter: { rim: 0xd27bff, line: [1.9, 0.45, 2.3], css: '#e07bff', short: 'PEMBURU' },
+  naga: { rim: 0xff3a5a, line: [2.5, 0.3, 0.55], css: '#ff4f6e', short: 'NAGA' },
+};
+// Tebal kontur (piksel layar) dan kecerahan per opsi Sorotan bos
+const BOSS_HIGHLIGHT = { mati: { px: 0, k: 0 }, halus: { px: 1.8, k: 1.15 }, kuat: { px: 3.2, k: 2.1 } };
+const BossLook = {
+  cache: new Map(), rimU: {}, fogU: { value: 0.35 }, _c: new THREE.Color(),
+  // Salinan material bos: emissive 22 persen warna sendiri plus sedikit warna khas, rim fresnel, kabut dikurangi
+  material(src, kind) {
+    const key = src.uuid + kind;
+    let m = this.cache.get(key);
+    if (m) return m;
+    m = src.clone();
+    const st = BOSS_STYLE[kind];
+    m.emissive.copy(m.color).multiplyScalar(0.22).add(this._c.setHex(st.rim).multiplyScalar(0.05));
+    const rim = this.rimU[kind] || (this.rimU[kind] = { value: new THREE.Color(st.rim).multiplyScalar(0.75) });
+    const fogU = this.fogU;
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uBossRim = rim; sh.uniforms.uBossFog = fogU;
+      sh.fragmentShader = 'uniform vec3 uBossRim;\nuniform float uBossFog;\n' + sh.fragmentShader
+        .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n\tfloat bossFres = 1.0 - clamp( abs( dot( normalize( normal ), normalize( vViewPosition ) ) ), 0.0, 1.0 );\n\ttotalEmissiveRadiance += uBossRim * ( bossFres * bossFres * bossFres * 1.25 );')
+        .replace('#include <fog_fragment>', '#ifdef USE_FOG\n\t#ifdef FOG_EXP2\n\tfloat fogFactor = 1.0 - exp( - fogDensity * fogDensity * vFogDepth * vFogDepth );\n\t#else\n\tfloat fogFactor = smoothstep( fogNear, fogFar, vFogDepth );\n\t#endif\n\tgl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor * uBossFog );\n#endif');
+    };
+    m.customProgramCacheKey = () => 'bossLook';
+    this.cache.set(key, m);
+    return m;
+  },
+  apply(root, kind) {
+    root.traverse((o) => { if (o.isMesh ? (o.material ? (o.material.emissive ? !o.material.isShaderMaterial : false) : false) : false) o.material = this.material(o.material, kind); });
+  },
+};
+
+// Geometri gabungan berindeks dalam ruang root, normal dihaluskan per titik yang dilas (untuk digelembungkan)
+function bossOutlineGeometry(root) {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), m = new THREE.Matrix4(), nm = new THREE.Matrix3();
+  const pos = [], nrm = [], idx = [], weld = new Map(), v = new THREE.Vector3(), n = new THREE.Vector3(), box = new THREE.Box3();
+  root.traverse((o) => {
+    if (!o.isMesh ? true : o.userData.noOutline === true) return;
+    m.multiplyMatrices(inv, o.matrixWorld); nm.getNormalMatrix(m);
+    const g = o.geometry, P = g.attributes.position, N = g.attributes.normal, I = g.index, count = I ? I.count : P.count;
+    for (let k = 0; k + 2 < count; k += 3) {
+      const ids = [0, 0, 0];
+      for (let t = 0; t < 3; t++) {
+        const i = I ? I.getX(k + t) : k + t;
+        v.fromBufferAttribute(P, i).applyMatrix4(m);
+        const key = Math.round(v.x * 50) + ',' + Math.round(v.y * 50) + ',' + Math.round(v.z * 50);
+        let id = weld.get(key);
+        if (id === undefined) { id = pos.length / 3; weld.set(key, id); pos.push(v.x, v.y, v.z); nrm.push(0, 0, 0); box.expandByPoint(v); }
+        if (N) { n.fromBufferAttribute(N, i).applyMatrix3(nm).normalize(); nrm[id * 3] += n.x; nrm[id * 3 + 1] += n.y; nrm[id * 3 + 2] += n.z; }
+        ids[t] = id;
+      }
+      if (ids[0] !== ids[1] ? (ids[1] !== ids[2] ? ids[0] !== ids[2] : false) : false) idx.push(ids[0], ids[1], ids[2]);
+    }
+  });
+  // Titik yang normalnya saling meniadakan (pelat tipis dua sisi) memakai arah dari pusat kotak
+  const c = box.getCenter(new THREE.Vector3());
+  for (let i = 0; i < nrm.length; i += 3) {
+    let x = nrm[i], y = nrm[i + 1], z = nrm[i + 2], l = Math.hypot(x, y, z);
+    if (l < 1e-3) { x = pos[i] - c.x; y = pos[i + 1] - c.y; z = pos[i + 2] - c.z; l = Math.hypot(x, y, z) || 1; }
+    nrm[i] = x / l; nrm[i + 1] = y / l; nrm[i + 2] = z / l;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  geo.setIndex(idx);
+  geo.computeBoundingSphere();
+  return geo;
+}
+const OUTLINE_VERT = /* glsl */`
+  uniform float uPx; uniform float uPxWorld; uniform float uPush;
+  #include <common>
+  #include <batching_pars_vertex>
+  void main() {
+    #include <batching_vertex>
+    mat4 mm = modelMatrix;
+    #ifdef USE_BATCHING
+    mm = modelMatrix * batchingMatrix;
+    #endif
+    vec4 vp = viewMatrix * ( mm * vec4( position, 1.0 ) );
+    vec3 vn = normalize( mat3( viewMatrix ) * normalize( mat3( mm ) * normal ) );
+    vp.xyz += vn * ( uPx * uPxWorld * max( 1.0, - vp.z ) );
+    // Kedalaman didorong menjauh sepanjang sinar pandang (ukuran di layar tetap): kontur hanya tampak di atas
+    // latar, tidak menutupi bagian bos sendiri yang tumpang tindih (segmen naga, sayap, lengan)
+    float d = max( 0.5, - vp.z );
+    vp.xyz *= ( d + uPush ) / d;
+    gl_Position = projectionMatrix * vp;
+  }`;
+const OUTLINE_FRAG = /* glsl */`
+  uniform vec3 uColor;
+  void main() {
+    gl_FragColor = vec4( uColor, 1.0 );
+    #include <colorspace_fragment>
+  }`;
+
+const BossFX = {
+  outline: null, outlineMat: null, segGeo: null, headGeo: null, _m: new THREE.Matrix4(), _p: new THREE.Vector3(), _c: new THREE.Color(),
+  dot: document.getElementById('boss-dot'), dotOn: false, baseFar: 0, farBoost: false,
+  objects() { return this.outline ? [this.outline] : []; },
+  // Objek sementara untuk pra-pemanasan shader: material bos (Phong dan Lambert berbayang datar) dan kontur
+  // (mesh biasa dan BatchedMesh), dibuang setelah dikompilasi
+  warmObjects() {
+    const g = new THREE.BoxGeometry(1, 1, 1), out = [];
+    for (const src of [BOSS_MAT.hull, VANTA.hull]) out.push(new THREE.Mesh(g, BossLook.material(src, 'naga')));
+    out.push(new THREE.Mesh(g, this.material()));
+    const bm = new THREE.BatchedMesh(1, 64, 128, this.material());
+    bm.addInstance(bm.addGeometry(g));
+    out.push(bm);
+    for (const o of out) { o.position.copy(camera.position).add(_va.set(0, 0, -30).applyQuaternion(camera.quaternion)); o.frustumCulled = false; }
+    return out;
+  },
+  material() {
+    if (this.outlineMat) return this.outlineMat;
+    this.outlineMat = new THREE.ShaderMaterial({
+      uniforms: { uPx: { value: 1.8 }, uPxWorld: { value: 0.001 }, uPush: { value: 10 }, uColor: { value: new THREE.Color(2, 0.6, 0.3) } },
+      vertexShader: OUTLINE_VERT, fragmentShader: OUTLINE_FRAG, side: THREE.BackSide, depthWrite: false, fog: false,
+    });
+    return this.outlineMat;
+  },
+  attach(b) {
+    BossLook.apply(b.group, b.kind);
+    const mat = this.material();
+    if (b.kind === 'naga') {
+      if (!this.headGeo) {
+        // Geometri bersih (tanpa perisai, inti fase, lampu turret) dari model baru yang tidak dimasukkan ke scene
+        this.headGeo = bossOutlineGeometry(buildDragonHead());
+        const seg = buildDragonSegment(0, CONFIG.bosses.naga.segments); seg.scale.setScalar(1);
+        this.segGeo = bossOutlineGeometry(seg);
+      }
+      const nv = this.headGeo.attributes.position.count + this.segGeo.attributes.position.count;
+      const ni = this.headGeo.index.count + this.segGeo.index.count;
+      const bm = new THREE.BatchedMesh(1 + b.segs.length, nv, ni, mat);
+      const gh = bm.addGeometry(this.headGeo), gs = bm.addGeometry(this.segGeo);
+      b.outlineIds = [bm.addInstance(gh)];
+      for (let i = 0; i < b.segs.length; i++) b.outlineIds.push(bm.addInstance(gs));
+      bm.perObjectFrustumCulled = false; bm.frustumCulled = false; bm.sortObjects = false;
+      this.outline = bm;
+    } else {
+      // Bos kaku: satu mesh gabungan yang mengikuti matriks grup (bukan anak grup, agar tidak ikut tersalin ke umpan tiruan)
+      const geo = bossOutlineGeometry(b.group);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.matrixAutoUpdate = false; mesh.frustumCulled = false;
+      this.outline = mesh;
+    }
+    this.outline.name = 'bossOutline';
+    this.outline.renderOrder = 6;   // setelah semua objek buram: uji kedalaman terhadap bos dan latar yang sudah tergambar
+    mat.uniforms.uPush.value = b.kind === 'naga' ? 70 : b.size * 1.2;
+    scene.add(this.outline);
+    // Bos tidak boleh muncul di dalam planet atau bulan
+    this.pushOut(b);
+    this.update(0);
+  },
+  detach() {
+    if (this.outline) {
+      scene.remove(this.outline);
+      if (this.outline.isBatchedMesh) this.outline.dispose(); else this.outline.geometry.dispose();
+      this.outline = null;
+    }
+    this.showDot(false);
+    this.restoreFar();
+  },
+  pushOut(b) {
+    if (Worlds.active !== SpaceWorld) return;
+    const A = (b.anchor || b.group).position;
+    if (b.trail) {
+      // Naga: kepala didorong; tubuh mengikuti jejak kepala dengan sendirinya
+      const before = this._p.copy(A);
+      if (SpaceWorld.push(A, b.size * 0.4)) { const d = _vd.copy(A).sub(before); if (d.lengthSq() > 4e4) { for (const sg of b.segs) sg.position.add(d); for (const tp of b.trail) tp.add(d); } }
+    } else SpaceWorld.push(A, b.size * 0.6);
+  },
+  // Bidang jauh Bumi (sekitar 1000 di Tinggi, 500 di Rendah) memotong bos yang jauh: diperlebar selama perlu
+  updateFar(b) {
+    if (Worlds.active !== EarthWorld) { this.restoreFar(); return; }
+    if (!this.farBoost) this.baseFar = camera.far;
+    const need = camera.position.distanceTo((b.anchor || b.group).position) + b.size * 2.5;
+    const far = clamp(need, this.baseFar, this.baseFar * 2.5);
+    if (far > this.baseFar + 1 ? Math.abs(far - camera.far) > camera.far * 0.04 : this.farBoost) {
+      camera.far = far; camera.updateProjectionMatrix(); this.farBoost = far > this.baseFar + 1;
+    }
+  },
+  restoreFar() {
+    if (!this.farBoost) return;
+    this.farBoost = false;
+    camera.far = this.baseFar; camera.updateProjectionMatrix();
+  },
+  showDot(v) { if (v !== this.dotOn) { this.dotOn = v; this.dot.classList.toggle('hidden', !v); } },
+  update(dt) {
+    const b = Bosses.active;
+    if (!b ? true : !this.outline) return;
+    this.pushOut(b);
+    this.updateFar(b);
+    const H = BOSS_HIGHLIGHT[Save.settings.bossHighlight] || BOSS_HIGHLIGHT.halus, st = BOSS_STYLE[b.kind], u = this.outlineMat.uniforms;
+    this.outline.visible = H.px > 0 ? b.group.visible : false;
+    // Latar Bumi terang (langit dan kabut): kontur lebih gelap dan pekat agar kontras luminans tetap tinggi
+    const earth = Worlds.active === EarthWorld;
+    u.uPx.value = H.px * (earth ? 1.3 : 1);
+    u.uPxWorld.value = 2 * Math.tan(camera.fov * Math.PI / 360) / Math.max(1, window.innerHeight);
+    const pulse = Save.settings.reduceMotion ? 1 : 0.82 + 0.18 * Math.sin(b.time * 3.2);
+    const gold = b.vuln > 0 ? 0.5 + 0.5 * Math.sin(b.time * 14) : 0;
+    u.uColor.value.setRGB(st.line[0], st.line[1], st.line[2]).lerp(this._c.setRGB(2.4, 1.9, 0.4), gold).multiplyScalar(earth ? 0.32 * pulse : H.k * pulse);
+    if (this.outline.isBatchedMesh) {
+      b.head.updateMatrixWorld();
+      this.outline.setMatrixAt(b.outlineIds[0], b.head.matrixWorld);
+      for (let i = 0; i < b.segs.length; i++) { b.segs[i].updateMatrixWorld(); this.outline.setMatrixAt(b.outlineIds[i + 1], b.segs[i].matrixWorld); }
+    } else { b.group.updateMatrixWorld(); this.outline.matrix.copy(b.group.matrixWorld); this.outline.matrixWorldNeedsUpdate = true; }
+    // Penanda piksel minimum: bos di layar tetapi lebih kecil dari sekitar 14 piksel diberi titik bercahaya
+    const A = (b.anchor || b.group).position, p = this._p.copy(A).project(camera);
+    const onScreen = p.z < 1 ? Math.max(Math.abs(p.x), Math.abs(p.y)) <= 1 : false;
+    const px = (b.size * 2) / (Math.max(1, camera.position.distanceTo(A)) * 2 * Math.tan(camera.fov * Math.PI / 360)) * window.innerHeight;
+    const show = onScreen ? (px < 14 ? Game.state === 'playing' : false) : false;
+    this.showDot(show);
+    if (show) {
+      const x = Math.round((p.x + 1) * 0.5 * window.innerWidth), y = Math.round((1 - p.y) * 0.5 * window.innerHeight);
+      if (changed('bossDot', x * 100000 + y)) this.dot.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+      if (changed('bossDotColor', b.kind)) this.dot.style.setProperty('--bc', st.css);
+    }
   },
 };
 
@@ -11943,7 +12184,7 @@ const Settings = {
     document.getElementById('quality-note').classList.toggle('hidden', s.quality === this.bootQuality);
   },
   // Bagian tiap baris pengaturan untuk tampilan bertab di layar pendek (H6)
-  SECTIONS: { terrain: 'umum', difficulty: 'umum', asteroidDensity: 'umum', aimAssist: 'umum', robotHelp: 'umum',
+  SECTIONS: { terrain: 'umum', difficulty: 'umum', asteroidDensity: 'umum', aimAssist: 'umum', robotHelp: 'umum', bossHighlight: 'grafis',
     volMaster: 'suara', volSfx: 'suara', volEngine: 'suara', volMusic: 'suara', music: 'suara',
     controlMode: 'kontrol', leftStyle: 'kontrol', controlSize: 'kontrol', controlTransparency: 'kontrol', leftHanded: 'kontrol', invertPitch: 'kontrol',
     quality: 'grafis', cameraDistance: 'grafis', cameraShake: 'grafis', perfMode: 'grafis', fpsCap: 'lainnya', resolution: 'lainnya' },
@@ -13530,6 +13771,16 @@ const GameHooks = {
         fogged: scene.fog ? round2(clamp((d - scene.fog.near) / Math.max(1, scene.fog.far - scene.fog.near), 0, 1)) : 0 };
     },
     bossMetrics() { return BossStats.summary(); },
+    // Kontur bos (B2): jenis objek, terlihat, tebal piksel, dan jumlah draw call satu frame dengan dan tanpa kontur
+    bossFx() {
+      const o = BossFX.outline;
+      if (!o) return null;
+      const ai = renderer.info.autoReset; renderer.info.autoReset = false;
+      const calls = () => { renderer.info.reset(); renderer.render(scene, camera); return renderer.info.render.calls; };
+      const vis = o.visible, withOutline = calls(); o.visible = false; const without = calls(); o.visible = vis;
+      renderer.info.autoReset = ai;
+      return { type: o.isBatchedMesh ? 'BatchedMesh' : 'Mesh', visible: vis, px: BossFX.outlineMat.uniforms.uPx.value, instances: o.isBatchedMesh ? o.instanceCount : 1, callsWith: withOutline, callsWithout: without, extra: withOutline - without, multiDraw: !!renderer.extensions.get('WEBGL_multi_draw') };
+    },
     // Pemeriksaan B1 butir d dan g: piksel bos dengan dan tanpa frustum culling, matriks non-finite di grup bos
     bossChecks(opts = {}) {
       const b = Bosses.active;
@@ -13674,11 +13925,11 @@ const GameHooks = {
       let objects = 0;
       scene.traverse(() => { objects++; });
       // Bos yang sedang hidup bukan kebocoran: objeknya tidak dihitung (dilepas saat bos hancur)
-      if (Bosses.active) { Bosses.active.group.traverse(() => { objects--; }); if (Bosses.active.decoys) for (const d of Bosses.active.decoys) d.obj.traverse(() => { objects--; }); }
+      if (Bosses.active) { Bosses.active.group.traverse(() => { objects--; }); if (Bosses.active.decoys) for (const d of Bosses.active.decoys) d.obj.traverse(() => { objects--; }); objects -= BossFX.objects().length; }
       const m = renderer.info.memory;
       return {
         sceneObjects: objects,
-        sceneChildren: scene.children.length - (Bosses.active ? 1 + (Bosses.active.decoys ? Bosses.active.decoys.length : 0) : 0),
+        sceneChildren: scene.children.length - (Bosses.active ? 1 + (Bosses.active.decoys ? Bosses.active.decoys.length : 0) + BossFX.objects().length : 0),
         geometries: m.geometries,
         textures: m.textures,
         programs: renderer.info.programs ? renderer.info.programs.length : 0,
@@ -14354,9 +14605,12 @@ const Warmup = {
   ms: 0, textures: 0,
   run() {
     const t0 = performance.now(), hidden = [];
+    const bossWarm = BossFX.warmObjects();   // material dan kontur bos (B2) agar bos pertama tidak tersendat
+    for (const o of bossWarm) scene.add(o);
     scene.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
     try { renderer.compile(scene, camera); } catch (err) { /* dikompilasi saat dipakai */ }
     for (const o of hidden) o.visible = false;
+    for (const o of bossWarm) { scene.remove(o); if (o.isBatchedMesh) o.dispose(); else o.geometry.dispose(); }
     const seen = new Set();
     const tex = (v) => { if (v ? (v.isTexture ? !seen.has(v) : false) : false) { seen.add(v); try { renderer.initTexture(v); } catch (err) { /* abaikan */ } } };
     scene.traverse((o) => {
