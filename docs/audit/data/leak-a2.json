@@ -1,0 +1,241 @@
+{
+  "restartBefore": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 61,
+    "textures": 59,
+    "programs": 44,
+    "listeners": 72,
+    "heapMB": 10.7,
+    "audioSources": 14,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1911,
+    "jsEventListeners": 162,
+    "audioState": "running"
+  },
+  "restartAfter": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 61,
+    "textures": 59,
+    "programs": 44,
+    "listeners": 72,
+    "heapMB": 11.2,
+    "audioSources": 15,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1909,
+    "jsEventListeners": 163,
+    "audioState": "running"
+  },
+  "stageBefore": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 61,
+    "textures": 59,
+    "programs": 45,
+    "listeners": 72,
+    "heapMB": 11.52,
+    "audioSources": 18,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1912,
+    "jsEventListeners": 166,
+    "audioState": "running"
+  },
+  "stageAfter": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 69,
+    "textures": 59,
+    "programs": 47,
+    "listeners": 72,
+    "heapMB": 11.75,
+    "audioSources": 26,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1906,
+    "jsEventListeners": 175,
+    "audioState": "running"
+  },
+  "soakBefore": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 78,
+    "textures": 59,
+    "programs": 47,
+    "listeners": 72,
+    "heapMB": 11.91,
+    "audioSources": 39,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1941,
+    "jsEventListeners": 206,
+    "audioState": "running"
+  },
+  "soakSeries": [
+    {
+      "geometries": 88,
+      "programs": 47,
+      "wave": 2,
+      "enemies": 3,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 11.97
+    },
+    {
+      "geometries": 98,
+      "programs": 47,
+      "wave": 3,
+      "enemies": 6,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 12.22
+    },
+    {
+      "geometries": 98,
+      "programs": 47,
+      "wave": 3,
+      "enemies": 1,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 12
+    },
+    {
+      "geometries": 128,
+      "programs": 48,
+      "wave": 4,
+      "enemies": 8,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 12.34
+    },
+    {
+      "geometries": 128,
+      "programs": 48,
+      "wave": 4,
+      "enemies": 7,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 12.2
+    },
+    {
+      "geometries": 160,
+      "programs": 50,
+      "wave": 5,
+      "enemies": 21,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 12.3
+    },
+    {
+      "geometries": 160,
+      "programs": 50,
+      "wave": 5,
+      "enemies": 18,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 12.68
+    },
+    {
+      "geometries": 172,
+      "programs": 50,
+      "wave": 6,
+      "enemies": 33,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 12.84
+    },
+    {
+      "geometries": 180,
+      "programs": 51,
+      "wave": 7,
+      "enemies": 33,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 13.11
+    },
+    {
+      "geometries": 182,
+      "programs": 51,
+      "wave": 7,
+      "enemies": 39,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 12.91
+    },
+    {
+      "geometries": 192,
+      "programs": 51,
+      "wave": 8,
+      "enemies": 45,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 13.24
+    },
+    {
+      "geometries": 192,
+      "programs": 51,
+      "wave": 8,
+      "enemies": 45,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 13.21
+    },
+    {
+      "geometries": 192,
+      "programs": 51,
+      "wave": 9,
+      "enemies": 30,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 13.08
+    },
+    {
+      "geometries": 192,
+      "programs": 51,
+      "wave": 9,
+      "enemies": 34,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 13.22
+    },
+    {
+      "geometries": 192,
+      "programs": 51,
+      "wave": 10,
+      "enemies": 32,
+      "state": "playing",
+      "pool": 97,
+      "heapMB": 13.03
+    }
+  ],
+  "soakAfter": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 182,
+    "textures": 59,
+    "programs": 51,
+    "listeners": 72,
+    "heapMB": 12.91,
+    "audioSources": 22,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1931,
+    "jsEventListeners": 172,
+    "audioState": "running"
+  }
+}

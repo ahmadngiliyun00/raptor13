@@ -4,18 +4,23 @@ import { test as base, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+// Hook uji (window.__game) hanya aktif dengan ?debug=1 (A3); parameter lain digabung lewat URLSearchParams
+const gameUrl = (q = '') => { const p = new URLSearchParams(String(q).replace(/^\?/, '')); p.set('debug', '1'); return '/index.html?' + p.toString(); };
+
+
 const SHOT_DIR = fileURLToPath(new URL('../docs/screenshots/', import.meta.url));
 mkdirSync(SHOT_DIR, { recursive: true });
 
-const THREE_CDN = 'https://cdn.jsdelivr.net/npm/three@0.187.0/';
 
 // Pesan performa dari driver GL perangkat lunak (SwiftShader) saat screenshot, bukan dari game
 const isDriverNoise = (text) => /GL Driver Message|GPU stall due to ReadPixels/.test(text);
 
 // Fixture: setiap uji otomatis gagal bila ada console error atau warning, error halaman,
-// atau request ke aset di luar localhost dan Three.js di CDN.
+// atau request ke luar localhost (Three.js sudah ditanam lokal di vendor/).
 const test = base.extend({
   page: async ({ page }, use) => {
+    // Baterai laptop penguji tidak boleh memicu mode hemat otomatis di tengah uji
+    await page.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, 'getBattery', { value: undefined, configurable: true }); } catch (err) { /* abaikan */ } });
     const problems = [];
     const external = [];
     page.on('console', (m) => {
@@ -29,12 +34,11 @@ const test = base.extend({
       if (url.startsWith('data:')) return;
       const host = new URL(url).hostname;
       if (host === 'localhost' || host === '127.0.0.1') return;
-      if (url.startsWith(THREE_CDN)) return;
       external.push(url);
     });
     await use(page);
     expect(problems, 'console harus bersih').toEqual([]);
-    expect(external, 'tidak boleh ada aset eksternal selain Three.js').toEqual([]);
+    expect(external, 'tidak boleh ada permintaan ke luar (Three.js ditanam lokal)').toEqual([]);
   },
 });
 
@@ -43,7 +47,7 @@ const snap = (page) => page.evaluate(() => window.__game.snapshot());
 const dbg = (page, fn, ...args) => page.evaluate(([f, a]) => window.__game.debug[f](...a), [fn, args]);
 
 async function open(page, query = '') {
-  await page.goto(`/index.html${query}`);
+  await page.goto(gameUrl(query));
   await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
 }
 
@@ -740,13 +744,13 @@ test('pesawat penembak menembak dan melukai pemain', async ({ page }) => {
   await expect.poll(async () => (await snap(page)).health, { timeout: 8000 }).toBeLessThan(100);
 });
 
-test('tidak ada kebocoran objek setelah 10 kali restart', async ({ page }) => {
+test('tidak ada kebocoran objek setelah 20 kali restart', async ({ page }) => {
   await start(page, { enemies: true });
   // Pemanasan: semua jenis objek sempat tampil sehingga geometri sudah terunggah ke GPU
   await dbg(page, 'simulate', 60);
   await page.waitForTimeout(300);
   const base0 = await dbg(page, 'resources');
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 20; i++) {
     await page.keyboard.press('KeyR');
     await dbg(page, 'simulate', 8);
     await page.waitForTimeout(150);
@@ -839,7 +843,7 @@ test('screenshot menu, gameplay dan game over', async ({ page }) => {
 
 test('pratinjau jet: 6 sudut, gameplay bank penuh, dan jumlah segitiga di bawah 8000', async ({ page }) => {
   await page.setViewportSize({ width: 960, height: 600 });
-  await page.goto('/index.html?jetpreview=1');
+  await page.goto(gameUrl('?jetpreview=1'));
   await page.waitForFunction(() => window.__jetPreview);
   const tris = await page.evaluate(() => window.__jetPreview.triangles);
   expect(tris).toBeLessThan(8000);
@@ -867,7 +871,7 @@ test('pratinjau jet: 6 sudut, gameplay bank penuh, dan jumlah segitiga di bawah 
 for (const id of ['starfighter', 'interceptor', 'gunship']) {
   test(`A3: pratinjau ${id} di bawah 9000 segitiga dengan sayap dinamis`, async ({ page }) => {
     await page.setViewportSize({ width: 960, height: 600 });
-    await page.goto(`/index.html?shippreview=${id}`);
+    await page.goto(gameUrl(`shippreview=${id}`));
     await page.waitForFunction(() => window.__shipPreview);
     expect(await page.evaluate(() => window.__shipPreview.triangles)).toBeLessThan(9000);
     const normal = await page.evaluate(() => window.__shipPreview.setState({ nitro: 0, brake: 0, turn: 0 }));
@@ -929,7 +933,7 @@ test('A4: kartu Piko Perbaikan Otomatis dan Peredam bekerja', async ({ page }) =
 
 test('A4: pratinjau Piko dari 3 sudut', async ({ page }) => {
   await page.setViewportSize({ width: 960, height: 600 });
-  await page.goto('/index.html?shippreview=piko');
+  await page.goto(gameUrl('?shippreview=piko'));
   await page.waitForFunction(() => window.__shipPreview);
   for (const view of ['front', 'three_quarter_front', 'side']) {
     await page.evaluate((v) => window.__shipPreview.setView(v), view);
@@ -1236,7 +1240,7 @@ test('B11: Jelajah Bebas, peta Tab menampilkan orbit dan warp sinematik ke area 
 
 test('S9 dan A5: galeri ?gallery=1 menampilkan semua jenis musuh dengan anggaran segitiga wajar', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto('/index.html?gallery=1');
+  await page.goto(gameUrl('?gallery=1'));
   await page.waitForFunction(() => window.__gallery);
   const g = await page.evaluate(() => ({ types: window.__gallery.types, tris: window.__gallery.triangles }));
   // 8 jenis ancaman ditambah 6 kapal Sindikat Vanta (beberapa berbagi peran), plus ranjau dan rudal

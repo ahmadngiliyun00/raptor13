@@ -13,3 +13,11 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# rahasia dan konfigurasi lokal (jangan pernah dilacak)
+.env
+.env.*
+*.pem
+*.key
+*.p12
+.claude/

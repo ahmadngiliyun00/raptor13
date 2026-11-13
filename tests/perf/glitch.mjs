@@ -42,6 +42,7 @@ try {
     const q = new URLSearchParams({ debug: '1' });
     await page.goto(`http://localhost:${PORT}/index.html?${q}`);
     await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
+    await page.evaluate(() => window.__game.debug.ignoreBattery?.(true));
     const lost = await page.evaluate(() => { window.__lost = 0; document.querySelector('canvas').addEventListener('webglcontextlost', () => { window.__lost++; }); return 0; });
     if (OFF.length) await page.evaluate((list) => { for (const f of list) window.__game.debug.feature?.(f, false); }, OFF);
     await page.keyboard.press('Shift');

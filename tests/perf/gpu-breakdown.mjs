@@ -39,6 +39,7 @@ try {
     const page = await ctx.newPage();
     await page.goto(`http://localhost:${PORT}/index.html?debug=1`);
     await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
+    await page.evaluate(() => window.__game.debug.ignoreBattery?.(true));
     if (scene !== 'menu') {
       await page.evaluate((s) => {
         const g = window.__game;

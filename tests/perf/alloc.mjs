@@ -28,6 +28,7 @@ try {
     const cdp = await ctx.newCDPSession(page);
     await page.goto(`http://localhost:${PORT}/index.html?debug=1`);
     await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
+    await page.evaluate(() => window.__game.debug.ignoreBattery?.(true));
     await page.keyboard.press('Shift');
     if (scene !== 'menu') {
       await page.evaluate((s) => {

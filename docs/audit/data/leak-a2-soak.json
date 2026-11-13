@@ -1,0 +1,226 @@
+{
+  "restartBefore": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 61,
+    "textures": 59,
+    "programs": 44,
+    "listeners": 72,
+    "heapMB": 10.64,
+    "audioSources": 14,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1911,
+    "jsEventListeners": 162,
+    "audioState": "running"
+  },
+  "restartAfter": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 61,
+    "textures": 59,
+    "programs": 44,
+    "listeners": 72,
+    "heapMB": 11.24,
+    "audioSources": 16,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1909,
+    "jsEventListeners": 164,
+    "audioState": "running"
+  },
+  "stageBefore": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 61,
+    "textures": 59,
+    "programs": 45,
+    "listeners": 72,
+    "heapMB": 11.52,
+    "audioSources": 19,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1914,
+    "jsEventListeners": 167,
+    "audioState": "running"
+  },
+  "stageAfter": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 69,
+    "textures": 59,
+    "programs": 47,
+    "listeners": 72,
+    "heapMB": 11.69,
+    "audioSources": 25,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1908,
+    "jsEventListeners": 174,
+    "audioState": "running"
+  },
+  "soakBefore": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 79,
+    "textures": 59,
+    "programs": 47,
+    "listeners": 72,
+    "heapMB": 11.96,
+    "audioSources": 37,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1936,
+    "jsEventListeners": 204,
+    "audioState": "running"
+  },
+  "soakSeries": [
+    {
+      "geometries": 95,
+      "programs": 47,
+      "wave": 3,
+      "enemies": 5,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 95,
+      "programs": 47,
+      "wave": 3,
+      "enemies": 1,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 104,
+      "programs": 47,
+      "wave": 4,
+      "enemies": 11,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 127,
+      "programs": 48,
+      "wave": 4,
+      "enemies": 10,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 134,
+      "programs": 50,
+      "wave": 5,
+      "enemies": 20,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 162,
+      "programs": 50,
+      "wave": 5,
+      "enemies": 25,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 162,
+      "programs": 50,
+      "wave": 6,
+      "enemies": 35,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 180,
+      "programs": 51,
+      "wave": 6,
+      "enemies": 42,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 190,
+      "programs": 51,
+      "wave": 7,
+      "enemies": 42,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 190,
+      "programs": 51,
+      "wave": 7,
+      "enemies": 35,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 190,
+      "programs": 51,
+      "wave": 8,
+      "enemies": 37,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 190,
+      "programs": 51,
+      "wave": 8,
+      "enemies": 28,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 190,
+      "programs": 51,
+      "wave": 9,
+      "enemies": 40,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 190,
+      "programs": 51,
+      "wave": 9,
+      "enemies": 43,
+      "state": "playing",
+      "pool": 97
+    },
+    {
+      "geometries": 190,
+      "programs": 51,
+      "wave": 10,
+      "enemies": 42,
+      "state": "playing",
+      "pool": 97
+    }
+  ],
+  "soakAfter": {
+    "sceneObjects": 1182,
+    "sceneChildren": 277,
+    "geometries": 190,
+    "textures": 59,
+    "programs": 51,
+    "listeners": 72,
+    "heapMB": 13.31,
+    "audioSources": 25,
+    "timers": {
+      "timeouts": 0,
+      "intervals": 0
+    },
+    "domNodes": 1939,
+    "jsEventListeners": 184,
+    "audioState": "running"
+  }
+}

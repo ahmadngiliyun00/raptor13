@@ -59,6 +59,7 @@ function startServer() {
 
 async function waitMenu(page) {
   await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
+  await page.evaluate(() => window.__game.debug.ignoreBattery?.(true));
 }
 
 // Persiapan skenario: menu (attract), Bumi (bot, musuh aktif), angkasa ramai (gelombang 8, asteroid tambahan)

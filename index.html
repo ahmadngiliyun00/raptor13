@@ -2,6 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-O9+/SKMIAHrAal2RV50cSU6/BBSCCYWxvA6bx+8FR3c='; style-src 'self' 'sha256-brrVMxIPX2S4QhLQxdyWa0QsIPrTFHX75sD8oAVnF64='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -405,6 +406,11 @@
   .man.ready { border-color: rgba(255, 154, 60, 0.7); }
   .man.active { background: rgba(255, 154, 60, 0.45); }
   body.mode-hp #maneuvers { display: none; }
+  #gl-lost { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 90; padding: 12px 18px; border-radius: 8px;
+    background: rgba(6, 10, 18, 0.9); color: #e8f6ff; border: 1px solid rgba(120, 200, 255, 0.4); font-weight: 700; letter-spacing: 0.06em; }
+  #gl-lost.hidden { display: none; }
+  .card.fatal { max-width: 520px; text-align: left; }
+  .card.fatal p { line-height: 1.5; margin: 8px 0 0; }
   #perf-overlay { position: fixed; left: max(var(--sa-l, 8px), 8px); top: 50%; transform: translateY(-50%); z-index: 60; margin: 0; padding: 6px 8px;
     font: 11px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: #cfe8ff; background: rgba(4, 8, 14, 0.78);
     border: 1px solid rgba(120, 200, 255, 0.3); border-radius: 6px; pointer-events: none; white-space: pre; }
@@ -862,8 +868,22 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.187.0/examples/jsm/"
+    "three": "./vendor/three-0.187.0/build/three.module.js",
+    "three/addons/": "./vendor/three-0.187.0/examples/jsm/"
+  },
+  "integrity": {
+    "./vendor/three-0.187.0/build/three.module.js": "sha384-T/E3B9AvPtLn5PKD7aTSFqizQcA4kHDfU0lub7u0fvM4w9BMGcSb3yI7r5LqMAMn",
+    "./vendor/three-0.187.0/build/three.core.js": "sha384-drH6BueSlcvoXCwAqWkNJvXwu2Ax3mnGOmZnIXaomedIw+uXSP9Bf/XIUINgLUW+",
+    "./vendor/three-0.187.0/examples/jsm/postprocessing/EffectComposer.js": "sha384-9Rdp95mYHRj8gGxPz4TqkDaCUh8rd67b7V5slkjz7GA9uNXtykhptQdEPPOocbUn",
+    "./vendor/three-0.187.0/examples/jsm/postprocessing/RenderPass.js": "sha384-uXlYrFHzQTAiW5xsJFs0kB/Pym7jA0qunZ+aS1V25CJ1MjaKbgNQv5SjoEzNoa4F",
+    "./vendor/three-0.187.0/examples/jsm/postprocessing/UnrealBloomPass.js": "sha384-J699EvlO1FVuoaUhw+StnAgeSEEK6d2YjxWcmFt5WIQznsMXDgyfAY5Q4F7fhSgn",
+    "./vendor/three-0.187.0/examples/jsm/postprocessing/OutputPass.js": "sha384-3IFYrRLOw90S3gt5Xi3JVTJrETpklthjLSmnmeyqxQmh1knUIaGPwbRsk35kgNoW",
+    "./vendor/three-0.187.0/examples/jsm/postprocessing/ShaderPass.js": "sha384-0DjIyth2/18aCmCo4x7GEOqSJTu3uNx5ptRg+rlkZ7zs9MlNfUXVEhbUuzVzglaG",
+    "./vendor/three-0.187.0/examples/jsm/postprocessing/MaskPass.js": "sha384-5MFlCMNYgjI2KQDXH12DjwyKtWiXRsrFMMGKIP3pCQemWtt1INLwPKwZDF0TEKG9",
+    "./vendor/three-0.187.0/examples/jsm/postprocessing/Pass.js": "sha384-927X5fcqlqKPsXZV1w3tv5BZx797OXX3D/TDJk0FHwJd12z58B5aqS77g5LZoprI",
+    "./vendor/three-0.187.0/examples/jsm/shaders/CopyShader.js": "sha384-Hxod3deUgRexb42wOr+7J8ySu/QNr1oXlCfY9bivrSKBseng+R34eirHq/Rvvxee",
+    "./vendor/three-0.187.0/examples/jsm/shaders/LuminosityHighPassShader.js": "sha384-pJrfb1+CmauCtIjocA5YIJaosvBlTpTYBJLn6km9pktlMGoyTXhviuXjgzV2jcns",
+    "./vendor/three-0.187.0/examples/jsm/shaders/OutputShader.js": "sha384-7B5u2okAR4bArb4emcYnTiZPFpV3wPNvV3ZY9xre0xp3cNKs2TeaYiOyMDa/bDAi"
   }
 }
 </script>
@@ -1231,8 +1251,8 @@
       <dt>Mesin grafis</dt><dd>Three.js r187 (versi 0.187.0)</dd>
     </dl>
     <p class="about-line">Raptor13 dibuat dengan Three.js oleh Ahmad Ngiliyun, bantuan Claude Code.</p>
-    <p class="hint">Seluruh visual dan suara dibuat secara prosedural: geometri, tekstur, langit dan suara
-      disusun oleh kode saat game berjalan, tanpa file model, gambar, atau audio.</p>
+    <p class="hint">Seluruh visual dan suara disusun oleh kode saat game berjalan, tanpa file model, gambar, atau audio.</p>
+    <p class="hint privacy">Privasi: tanpa cookie, pelacak, atau analitik. Data hanya tersimpan di perangkat ini.</p>
     <button id="btn-about-back" class="btn" type="button">KEMBALI</button>
   </div>
 </div>
@@ -1417,6 +1437,11 @@ const QUALITY_PRESETS = {
 
 // Satu sumber nomor versi: ditampilkan di menu, Tentang, dan overlay performa (samakan dengan package.json)
 const GAME_VERSION = '2.0.0';
+// Parameter URL dibaca sekali dan divalidasi ketat (A3). Hook uji window.__game, alat pratinjau model,
+// dan galeri hanya aktif dengan ?debug=1; overlay diagnosis kotak hitam dengan ?diag=1.
+const URLQ = (() => { try { return new URLSearchParams(location.search); } catch (err) { return new URLSearchParams(''); } })();
+const DEBUG_ON = URLQ.get('debug') === '1';
+const DIAG_ON = URLQ.get('diag') === '1';
 const CONFIG = {
   qualityPreset: 'sedang',     // rendah | sedang | tinggi (bisa ditimpa lewat ?kualitas=)
   maxDelta: 0.05,              // batas atas delta time per frame (detik)
@@ -2009,17 +2034,19 @@ const Save = {
       d.settings[k] = v;
     }
     const hs = isObj(raw.highScores) ? raw.highScores : {};
-    for (const k of Object.keys(d.highScores)) if (Number.isFinite(hs[k])) d.highScores[k] = Math.max(0, Math.floor(hs[k]));
+    // Batas atas ketat: data yang dimanipulasi tidak bisa menyuntik angka ekstrem
+    const LIM = 1e12;
+    for (const k of Object.keys(d.highScores)) if (Number.isFinite(hs[k])) d.highScores[k] = Math.min(LIM, Math.max(0, Math.floor(hs[k])));
     // Kapal: pilihan per medan, kapal terbuka dan kredit (skema v3)
     const sh = isObj(raw.ships) ? raw.ships : {};
-    if (Number.isFinite(sh.credits)) d.ships.credits = Math.max(0, Math.floor(sh.credits));
+    if (Number.isFinite(sh.credits)) d.ships.credits = Math.min(1e9, Math.max(0, Math.floor(sh.credits)));
     if (Array.isArray(sh.unlocked)) for (const id of sh.unlocked) { if (SHIP_IDS.includes(id) ? !d.ships.unlocked.includes(id) : false) d.ships.unlocked.push(id); }
     const sel = isObj(sh.selected) ? sh.selected : {};
     for (const w of ['earth', 'space']) { if (SHIP_IDS.includes(sel[w]) ? d.ships.unlocked.includes(sel[w]) : false) d.ships.selected[w] = sel[w]; }
     // Migrasi v1: satu skor tertinggi dari era medan Bumi saja
-    if (Number.isFinite(raw.highScore)) d.highScores.earth = Math.max(d.highScores.earth, Math.floor(raw.highScore));
+    if (Number.isFinite(raw.highScore)) d.highScores.earth = Math.min(LIM, Math.max(d.highScores.earth, Math.floor(raw.highScore)));
     const st = isObj(raw.stats) ? raw.stats : {};
-    for (const k of Object.keys(d.stats)) if (Number.isFinite(st[k])) d.stats[k] = Math.max(0, st[k]);
+    for (const k of Object.keys(d.stats)) if (Number.isFinite(st[k])) d.stats[k] = Math.min(LIM, Math.max(0, st[k]));
     const cp = isObj(raw.campaign) ? raw.campaign : {};
     if (Number.isFinite(cp.stage)) d.campaign.stage = Math.min(10, Math.max(1, Math.floor(cp.stage)));
     if (cp.completed === true) d.campaign.completed = true;
@@ -2031,18 +2058,28 @@ const Save = {
   },
   load() {
     let raw = null;
-    const read = (key) => { try { const txt = window.localStorage.getItem(key); return txt ? JSON.parse(txt) : null; } catch (err) { return null; } };
+    const read = (key) => { try { const txt = window.localStorage.getItem(key); return txt ? (txt.length <= 200000 ? JSON.parse(txt) : null) : null; } catch (err) { return null; } };
     raw = read(SAVE_KEY);
     if (!raw) for (const k of SAVE_KEYS_OLD) { raw = read(k); if (raw) break; }   // migrasi dari skema lama
     this.data = this.sanitize(raw);
     // Migrasi sekali dari kunci skor tertinggi versi pertama (medan Bumi)
     try {
-      const old = parseInt(window.localStorage.getItem('raptor13.highscore') || '0', 10);
-      if (Number.isFinite(old)) { if (old > this.data.highScores.earth) this.data.highScores.earth = old; }
+      const old = parseInt(String(window.localStorage.getItem('raptor13.highscore') || '0').slice(0, 15), 10);
+      if (Number.isFinite(old) ? old > 0 : false) { if (old > this.data.highScores.earth) this.data.highScores.earth = Math.min(1e12, old); }
     } catch (err) { /* abaikan */ }
   },
+  storageFailed: false,
   save() {
-    try { window.localStorage.setItem(SAVE_KEY, JSON.stringify(this.data)); } catch (err) { /* penyimpanan tidak tersedia */ }
+    try { window.localStorage.setItem(SAVE_KEY, JSON.stringify(this.data)); this.storageFailed = false; }
+    catch (err) { this.reportFailure(); }   // kuota penuh, mode privat, atau penyimpanan diblokir
+  },
+  // Pemberitahuan sekali per sesi bila penyimpanan gagal (game tetap berjalan tanpa simpanan)
+  failureShown: false,
+  reportFailure() {
+    this.storageFailed = true;
+    if (this.failureShown) return;
+    this.failureShown = true;
+    setTimeout(() => { if (typeof showToast === 'function') showToast('Penyimpanan perangkat penuh atau diblokir, progres tidak tersimpan'); }, 0);
   },
   reset() {
     try {
@@ -2065,10 +2102,8 @@ CONFIG.qualityPreset = Save.settings.quality;
 
 // Pilih preset kualitas dari URL bila ada (menimpa pengaturan), misalnya index.html?kualitas=rendah
 (() => {
-  try {
-    const q = new URLSearchParams(location.search).get('kualitas');
-    if (Object.hasOwn(QUALITY_PRESETS, q || '')) CONFIG.qualityPreset = q;
-  } catch (err) { /* abaikan, pakai default */ }
+  const q = URLQ.get('kualitas');
+  if (['rendah', 'sedang', 'tinggi'].includes(q)) CONFIG.qualityPreset = q;
 })();
 const Q = QUALITY_PRESETS[CONFIG.qualityPreset];
 
@@ -2183,13 +2218,61 @@ function segmentHitsSphere(ax, ay, az, bx, by, bz, cx, cy, cz, r) {
    RENDERER, SCENE, KAMERA
    ===================================================================== */
 const container = document.getElementById('game');
-const renderer = new THREE.WebGLRenderer({ antialias: Q.antialias, powerPreference: 'high-performance' });
+// Layar galat ramah (A3): dibangun dengan textContent, menggantikan layar muat
+function fatalScreen(title, lines) {
+  const boot = document.getElementById('screen-boot');
+  const card = document.createElement('div');
+  card.className = 'card fatal';
+  card.setAttribute('role', 'alert');
+  const h = document.createElement('h2'); h.textContent = title;
+  card.appendChild(h);
+  for (const t of lines) { const p = document.createElement('p'); p.textContent = t; card.appendChild(p); }
+  boot.replaceChildren(card);
+  boot.classList.remove('hidden');
+}
+// Three.js r187 membutuhkan WebGL2. Tanpa itu game berhenti dengan pesan, bukan layar muat yang menggantung.
+const renderer = (() => {
+  try {
+    const probe = document.createElement('canvas').getContext('webgl2');
+    if (!probe) return null;
+    return new THREE.WebGLRenderer({ antialias: Q.antialias, powerPreference: 'high-performance' });
+  } catch (err) { return null; }
+})();
+if (!renderer) {
+  fatalScreen('GRAFIS 3D TIDAK TERSEDIA', [
+    'Browser atau perangkat ini tidak bisa menjalankan WebGL2, jadi RAPTOR13 tidak dapat dimuat.',
+    'Coba aktifkan akselerasi perangkat keras di pengaturan browser, perbarui browser ke versi terbaru (Chrome, Edge, Firefox, atau Safari), lalu muat ulang halaman.',
+  ]);
+  await new Promise(() => {});   // hentikan modul tanpa galat beruntun
+}
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, Q.pixelRatioMax, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 container.appendChild(renderer.domElement);
 
 renderer.shadowMap.enabled = Q.shadows;
 renderer.shadowMap.type = THREE.PCFShadowMap;
+
+// Konteks WebGL hilang (GPU direset, memori GPU habis, tab di latar terlalu lama) dan pulih (A3, A7).
+// preventDefault mengizinkan browser memulihkan; Three.js membangun ulang state GL dan mengunggah ulang
+// geometri serta tekstur saat render berikutnya; langit terpanggang dirender ulang.
+const GLState = { lost: false, lostCount: 0, restoredCount: 0, log: [] };
+renderer.domElement.addEventListener('webglcontextlost', (e) => {
+  e.preventDefault();
+  GLState.lost = true; GLState.lostCount++;
+  GLState.log.push({ t: Math.round(performance.now()), event: 'lost', state: typeof Game !== 'undefined' ? Game.state : 'boot' });
+  if (typeof Game !== 'undefined' ? Game.state === 'playing' : false) setState('paused');
+  let el = document.getElementById('gl-lost');
+  if (!el) { el = document.createElement('div'); el.id = 'gl-lost'; el.setAttribute('role', 'status'); el.textContent = 'Grafis sedang dipulihkan...'; document.body.appendChild(el); }
+  el.classList.remove('hidden');
+}, false);
+renderer.domElement.addEventListener('webglcontextrestored', () => {
+  GLState.lost = false; GLState.restoredCount++;
+  GLState.log.push({ t: Math.round(performance.now()), event: 'restored' });
+  if (typeof SkyBake !== 'undefined') SkyBake.bake();
+  onResize();
+  const el = document.getElementById('gl-lost');
+  if (el) el.classList.add('hidden');
+}, false);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, window.innerWidth / window.innerHeight, CONFIG.camera.near, 2000);
@@ -8558,7 +8641,7 @@ const Contracts = {
     const btns = this.offerList.map((k, n) => {
       const T = CONTRACT_TYPES[k.type], b = document.createElement('button');
       b.type = 'button'; b.className = 'ctcard'; b.dataset.contract = k.type;
-      b.innerHTML = '<svg viewBox="0 0 24 24"><path d="' + T.icon + '"/></svg>';
+      b.appendChild(svgIcon(T.icon));
       const h = document.createElement('b'); h.textContent = T.name;
       const p = document.createElement('span'); p.textContent = T.desc(k);
       const r = document.createElement('small'); r.textContent = 'Hadiah ' + k.reward.credits + ' kredit, ' + k.reward.xp + ' XP';
@@ -8917,8 +9000,8 @@ Radar.observe();
 // Adaptor penyimpanan: satu-satunya tempat yang perlu diganti bila game dibungkus menjadi
 // aplikasi (misalnya memakai penyimpanan native). Di browser memakai localStorage.
 const Store = {
-  get(key) { try { const t = window.localStorage.getItem(key); return t ? JSON.parse(t) : null; } catch (err) { return null; } },
-  set(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (err) { return false; } },
+  get(key) { try { const t = window.localStorage.getItem(key); return t ? (t.length <= 200000 ? JSON.parse(t) : null) : null; } catch (err) { return null; } },
+  set(key, value) { try { window.localStorage.setItem(key, JSON.stringify(value)); return true; } catch (err) { Save.reportFailure(); return false; } },
   remove(key) { try { window.localStorage.removeItem(key); } catch (err) { /* penyimpanan tidak tersedia */ } },
 };
 const SESSION_KEY = 'raptor13.session.v1';
@@ -8960,6 +9043,8 @@ const SessionSave = {
     if (!(s.world === 'space' ? true : s.world === 'earth')) return null;
     if (!isObj(s.player) ? true : !Array.isArray(s.player.pos)) return null;
     if (!Number.isFinite(s.score) ? true : !Number.isFinite(s.player.lives)) return null;
+    if (s.player.pos.length !== 3 ? true : !s.player.pos.every(Number.isFinite)) return null;
+    if (!Number.isFinite(s.savedAt)) s.savedAt = 0;
     return s;
   },
   has() { return this.peek() !== null; },
@@ -8968,11 +9053,12 @@ const SessionSave = {
   describe() {
     const s = this.peek();
     if (!s) return '';
-    const where = s.world === 'earth' ? 'Atmosfer Bumi, gelombang ' + s.wave
-      : s.spaceMode === 'campaign' ? 'Kampanye stage ' + (s.stageIdx + 1) + ' (' + CONFIG.campaign.stages[clamp(s.stageIdx, 0, 9)].name + ')' : 'Jelajah Bebas';
+    const st = Number.isFinite(s.stageIdx) ? clamp(Math.floor(s.stageIdx), 0, 9) : 0, wv = Number.isFinite(s.wave) ? clamp(Math.floor(s.wave), 0, 1000) : 0;
+    const where = s.world === 'earth' ? 'Atmosfer Bumi, gelombang ' + wv
+      : s.spaceMode === 'campaign' ? 'Kampanye stage ' + (st + 1) + ' (' + CONFIG.campaign.stages[st].name + ')' : 'Jelajah Bebas';
     const min = Math.max(0, Math.round((Date.now() - s.savedAt) / 60000));
     const ago = min < 1 ? 'baru saja' : min < 60 ? min + ' menit lalu' : Math.round(min / 60) + ' jam lalu';
-    return 'Tersimpan: ' + where + ', skor ' + fmtInt(Math.floor(s.score)) + ', ' + ago;
+    return 'Tersimpan: ' + where + ', skor ' + fmtInt(clamp(Math.floor(s.score), 0, 1e12)) + ', ' + ago;
   },
   // Simpan otomatis berkala selama bermain
   update(dt) {
@@ -8985,12 +9071,13 @@ const SessionSave = {
     const s = this.peek();
     if (!s) return false;
     const fin = (v, d) => (Number.isFinite(v) ? v : d);
+    const lim = (v, d, a, b) => clamp(fin(v, d), a, b);   // angka berhingga di dalam rentang yang wajar
     Settings.set('terrain', s.world);
     if (s.world === 'space') {
       const mode = s.spaceMode === 'campaign' ? 'campaign' : 'free';
       Settings.set('spaceMode', mode);
       Campaign.mode = mode;
-      if (SolarSystem.byId[s.area] ? true : CONFIG.fields.belts.some((b) => b.id === s.area)) SpaceWorld.area = s.area;
+      if (typeof s.area === 'string' ? (Object.hasOwn(SolarSystem.byId, s.area) ? true : CONFIG.fields.belts.some((b) => b.id === s.area)) : false) SpaceWorld.area = s.area;
     }
     Game.hasSession = false;
     if (Worlds.active.id !== s.world) setActiveWorld(s.world, fin(s.seed, CONFIG.seed));
@@ -9000,19 +9087,27 @@ const SessionSave = {
     Campaign.stageIdx = clamp(Math.floor(fin(s.stageIdx, 0)), 0, Campaign.count - 1);
     Campaign.bossDone = s.bossDone === true;
     Campaign.cleared = false;
-    Game.score = Math.max(0, fin(s.score, 0));
-    Game.time = Math.max(0, fin(s.time, 0));
-    Game.kills = Math.max(0, Math.floor(fin(s.kills, 0)));
-    Game.credits = Math.max(0, Math.floor(fin(s.credits, 0)));
-    // Kartu upgrade dan level
-    const U = s.upgrades || {};
-    for (const key of Object.keys(Player.upgrades)) { if (typeof U[key] === typeof Player.upgrades[key]) Player.upgrades[key] = U[key]; }
+    Game.score = lim(s.score, 0, 0, 1e12);
+    Game.time = lim(s.time, 0, 0, 1e7);
+    Game.kills = Math.floor(lim(s.kills, 0, 0, 1e7));
+    Game.credits = Math.floor(lim(s.credits, 0, 0, 1e9));
+    // Kartu upgrade dan level: hanya kunci yang dikenal, tipe sama, angka di dalam rentang
+    const U = (s.upgrades ? typeof s.upgrades === 'object' : false) ? s.upgrades : {};
+    const UR = { fireRate: [1, 50], damage: [1, 50], magnet: [1, 50], ultRate: [1, 50], nitroCap: [1, 50], hpBonus: [0, 5000], shieldMax: [0, 5000], companions: [0, 2] };
+    for (const key of Object.keys(Player.upgrades)) {
+      const def = Player.upgrades[key], v = U[key];
+      if (typeof v !== typeof def) continue;
+      if (typeof def === 'boolean') Player.upgrades[key] = v;
+      else if (UR[key] ? Number.isFinite(v) : false) Player.upgrades[key] = clamp(v, UR[key][0], UR[key][1]);
+    }
     Player.upgrades.companions = clamp(Math.floor(Player.upgrades.companions || 0), 0, 2);
-    const L = s.level || {};
-    Levels.level = Math.max(1, Math.floor(fin(L.level, 1)));
-    Levels.xp = Math.max(0, fin(L.xp, 0));
+    const L = (s.level ? typeof s.level === 'object' : false) ? s.level : {};
+    Levels.level = Math.floor(lim(L.level, 1, 1, 500));
+    Levels.xp = lim(L.xp, 0, 0, 1e9);
     Levels.pending = clamp(Math.floor(fin(L.pending, 0)), 0, 5);
-    Levels.picks = { ...(L.picks || {}) };
+    Levels.picks = {};
+    const PK = (L.picks ? typeof L.picks === 'object' : false) ? L.picks : {};
+    for (const c of UPGRADE_CARDS) { const v = PK[c.id]; if (Number.isInteger(v) ? v > 0 : false) Levels.picks[c.id] = Math.min(v, c.max || 500); }
     Game.xp = Levels.xp;
     Companions.sync();
     // Kapal
@@ -9024,33 +9119,36 @@ const SessionSave = {
     Player.ult = clamp(fin(p.ult, 0), 0, 1);
     Player.shield = clamp(fin(p.shield, 0), 0, Player.upgrades.shieldMax || 0);
     // Di angkasa posisi dan arah dipulihkan; di Bumi kapal mulai di titik aman (medan dimuat di sekitar titik awal)
-    if (s.world === 'space' ? p.pos.every(Number.isFinite) : false) {
+    if (s.world === 'space' ? (p.pos.every(Number.isFinite) ? Math.hypot(p.pos[0], p.pos[1], p.pos[2]) < CONFIG.solar.boundary : false) : false) {
       Player.pos.set(p.pos[0], p.pos[1], p.pos[2]);
       if (Array.isArray(p.quat) ? p.quat.every(Number.isFinite) : false) { Player.quat.set(p.quat[0], p.quat[1], p.quat[2], p.quat[3]).normalize(); Player.rig.quaternion.copy(Player.quat); }
       Player.basis(); Player.syncEuler();
       if (SolarSystem.inside(Player.pos.x, Player.pos.y, Player.pos.z, 60)) { const pose = SpaceWorld.startPose(); Player.pos.copy(pose.pos); Player.setHeading(pose.yaw); }
     }
     // Gelombang dilanjutkan dari jeda sebelum gelombang berikutnya
-    Waves.wave = Math.max(0, Math.floor(fin(s.wave, 0)));
+    Waves.wave = Math.floor(lim(s.wave, 0, 0, 1000));
     Waves.phase = 'break';
     Waves.timer = CONFIG.campaign.arrivalDelay;
     // Kontrak kampanye
     let needContract = false;
     if (Campaign.active) {
       const k = s.contract;
-      if (k ? CONTRACT_TYPES[k.type] : false) {
-        Contracts.current = { type: k.type, stage: k.stage, target: k.type === 'bersihkan' ? fin(k.target, 10) : null, progress: Math.max(0, fin(k.progress, 0)), done: k.done === true, distance: fin(k.distance, CONFIG.contracts.convoyDistance), reward: k.reward || CONTRACT_TYPES[k.type].reward(Campaign.stageIdx), t: 0, failed: false };
+      if ((k ? typeof k === 'object' : false) ? (typeof k.type === 'string' ? Object.hasOwn(CONTRACT_TYPES, k.type) : false) : false) {
+        const rw = (k.reward ? typeof k.reward === 'object' : false) ? k.reward : null;
+        const reward = rw ? { credits: Math.floor(lim(rw.credits, 0, 0, 1e6)), xp: Math.floor(lim(rw.xp, 0, 0, 1e6)) } : CONTRACT_TYPES[k.type].reward(Campaign.stageIdx);
+        Contracts.current = { type: k.type, stage: Math.floor(lim(k.stage, Campaign.stageIdx + 1, 1, 10)), target: k.type === 'bersihkan' ? Math.floor(lim(k.target, 10, 1, 1000)) : null, progress: lim(k.progress, 0, 0, 1e4), done: k.done === true, distance: lim(k.distance, CONFIG.contracts.convoyDistance, 0, 1e5), reward, t: 0, failed: false };
         const cur = Contracts.current;
         if (k.type === 'buru' ? !cur.done : false) { cur.spawnIn = 3; cur.killed = false; }
         if (k.type === 'kawal' ? (s.convoy ? !cur.done : false) : false) {
           Convoy.start(cur);
-          if (s.convoy.pos.every(Number.isFinite)) Convoy.pos.fromArray(s.convoy.pos);
-          if (s.convoy.dest.every(Number.isFinite)) Convoy.dest.fromArray(s.convoy.dest);
+          const okv = (a) => (Array.isArray(a) ? (a.length === 3 ? a.every((n) => Number.isFinite(n) ? Math.abs(n) < CONFIG.solar.boundary : false) : false) : false);
+          if (okv(s.convoy.pos)) Convoy.pos.fromArray(s.convoy.pos);
+          if (okv(s.convoy.dest)) Convoy.dest.fromArray(s.convoy.dest);
           Convoy.health.hp = clamp(fin(s.convoy.hp, CONFIG.contracts.convoyHp), 1, Convoy.health.maxHp);
           Convoy.beacon.position.copy(Convoy.dest);
         }
       } else needContract = true;
-      Contracts.stats = s.stats ? { score: fin(s.stats.score, 0), time: fin(s.stats.time, 0), kills: fin(s.stats.kills, 0), hpLost: fin(s.stats.hpLost, 0), livesLost: fin(s.stats.livesLost, 0) } : null;
+      Contracts.stats = (s.stats ? typeof s.stats === 'object' : false) ? { score: lim(s.stats.score, 0, 0, 1e12), time: lim(s.stats.time, 0, 0, 1e7), kills: lim(s.stats.kills, 0, 0, 1e7), hpLost: lim(s.stats.hpLost, 0, 0, 1e7), livesLost: lim(s.stats.livesLost, 0, 0, 100) } : null;
       if (!Contracts.stats) Contracts.beginStats();
     }
     Player.spawnInvuln = CONFIG.player.startInvuln;
@@ -10614,6 +10712,14 @@ const Music = {
    HUD - elemen DOM, ditulis hanya saat nilainya berubah
    ===================================================================== */
 const $ = (id) => document.getElementById(id);
+// Ikon SVG dari data path tetap (tanpa innerHTML)
+function svgIcon(d) {
+  const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg'), path = document.createElementNS(NS, 'path');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  path.setAttribute('d', d);
+  svg.appendChild(path);
+  return svg;
+}
 const hud = {
   root: $('hud'),
   reticle: $('reticle'),
@@ -11654,7 +11760,7 @@ const Settings = {
   SECTIONS: { terrain: 'umum', difficulty: 'umum', asteroidDensity: 'umum', aimAssist: 'umum', robotHelp: 'umum',
     volMaster: 'suara', volSfx: 'suara', volEngine: 'suara', volMusic: 'suara', music: 'suara',
     controlMode: 'kontrol', leftStyle: 'kontrol', controlSize: 'kontrol', controlTransparency: 'kontrol', leftHanded: 'kontrol', invertPitch: 'kontrol',
-    quality: 'grafis', cameraDistance: 'grafis', cameraShake: 'grafis', perfMode: 'grafis', fpsCap: 'grafis', resolution: 'grafis' },
+    quality: 'grafis', cameraDistance: 'grafis', cameraShake: 'grafis', perfMode: 'grafis', fpsCap: 'lainnya', resolution: 'lainnya' },
   tab: 'umum',
   setTab(t) {
     this.tab = t;
@@ -11782,7 +11888,7 @@ const Piko = {
     const text = this.textFor(L);
     if (Touch.enabled) Notify.push(text, { kind: 'piko', prio: L.prio + 1, key: 'piko-' + key });
     else {
-      this.textEl.innerHTML = '';
+      this.textEl.replaceChildren();
       if (text) { const b = document.createElement('b'); b.textContent = 'PIKO'; this.textEl.append(b, document.createTextNode(text)); }
       this.panel.classList.remove('hidden');
       this.showLeft = this.showTime;
@@ -12001,10 +12107,10 @@ const Viewport = {
   w: window.innerWidth, h: window.innerHeight,
   init() {
     try {
-      const q = new URLSearchParams(location.search).get('safearea');
-      if (q) {
+      const q = URLQ.get('safearea');
+      if (q ? q.length <= 40 : false) {
         const v = q.split(',').map(Number);
-        if (v.length === 4 ? v.every((n) => Number.isFinite(n) ? n >= 0 : false) : false) {
+        if (v.length === 4 ? v.every((n) => Number.isFinite(n) ? (n >= 0 ? n <= 200 : false) : false) : false) {
           this.override = v;
           ['l', 't', 'r', 'b'].forEach((k, i) => this.root.style.setProperty('--sa-' + k, 'max(' + v[i] + 'px, 8px)'));
           ['l', 't', 'r', 'b'].forEach((k, i) => this.root.style.setProperty('--ed-' + k, 'max(' + v[i] + 'px, 16px)'));
@@ -12448,11 +12554,15 @@ const Hangar = {
     document.getElementById('hangar-name').textContent = def.name;
     document.getElementById('hangar-world').textContent = def.worlds.map((w) => WORLD_LABEL[w]).join(' ');
     document.getElementById('hangar-desc').textContent = def.desc;
-    const bars = Object.entries(STAT_RANGES).map(([k, [label, lo, hi]]) => {
+    // Bar statistik dibuat sebagai elemen (tanpa innerHTML dan tanpa atribut style inline, ramah CSP)
+    const box = document.getElementById('hangar-stats');
+    box.replaceChildren();
+    for (const [k, [label, lo, hi]] of Object.entries(STAT_RANGES)) {
       const v = clamp((def.stats[k] - lo) / (hi - lo), 0.05, 1);
-      return `<span>${label}</span><i style="--v:${Math.round(v * 100)}%"></i>`;
-    });
-    document.getElementById('hangar-stats').innerHTML = bars.join('');
+      const sp = document.createElement('span'); sp.textContent = label;
+      const bar = document.createElement('i'); bar.style.setProperty('--v', Math.round(v * 100) + '%');
+      box.append(sp, bar);
+    }
     const st = document.getElementById('hangar-status');
     st.textContent = !unlocked ? `TERKUNCI, biaya ${fmtInt(def.cost)} kredit` : picked ? 'TERPILIH' : 'TERSEDIA';
     st.className = 'hangar-status ' + (!unlocked ? 'locked' : picked ? 'picked' : '');
@@ -12770,7 +12880,7 @@ const GlitchProbe = {
    ===================================================================== */
 const round2 = (v) => Math.round(v * 100) / 100;
 const _perfV2 = new THREE.Vector2();
-window.__game = {
+const GameHooks = {
   // Ringkasan state yang aman dibaca (salinan nilai, bukan referensi objek internal)
   snapshot() {
     return {
@@ -13342,6 +13452,13 @@ window.__game = {
     perfStep() { Pacer.stepDown(); return Pacer.level; },
     setResScale(v) { Pacer.setScale(Number(v) || 1); return Pacer.scale; },
     simulateSlow(ms) { Pacer.observe(ms, Pacer.targetFps()); return { scale: Pacer.scale, level: Pacer.level }; },
+    // Uji: abaikan status baterai perangkat penguji (Chromium membaca baterai asli laptop)
+    ignoreBattery(v = true) { Pacer.batteryIgnored = !!v; Pacer.lowBattery = false; Pacer.applyQuality(); return Pacer.saver; },
+    enemyPool() { return Enemies.list.length; },
+    // Simulasi konteks WebGL hilang dan pulih (uji ketahanan)
+    loseContext() { const x = renderer.getContext().getExtension('WEBGL_lose_context'); if (!x) return false; GLState.ext = x; x.loseContext(); return true; },
+    restoreContext() { if (!GLState.ext) return false; GLState.ext.restoreContext(); return true; },
+    glState() { return { lost: GLState.lost, lostCount: GLState.lostCount, restoredCount: GLState.restoredCount, isContextLost: renderer.getContext().isContextLost(), sky: SkyBake.baked }; },
     fpsOverride(v) { Pacer.override = v === null ? null : Math.max(0, Number(v) || 0); return Pacer.override; },
     setFocus(v) { Pacer.focused = !!v; Pacer.audioPolicy(); return Pacer.isStatic(); },
     placePickupAhead(type = 'repair', dist = 120) {
@@ -13350,21 +13467,24 @@ window.__game = {
     },
   },
 };
+// Hanya dipasang bila ?debug=1: tanpa parameter itu tidak ada hook global yang bisa dipakai dari console
+if (DEBUG_ON) Object.defineProperty(window, '__game', { value: GameHooks, configurable: true, enumerable: false, writable: false });
+
 
 /* =====================================================================
    PRATINJAU JET - alat kerja, aktif hanya dengan ?jetpreview=1
    Menampilkan jet saja di latar polos dengan cahaya netral dan kamera orbit.
    ===================================================================== */
 // ?jetpreview=1 (jet Raptor-J) atau ?shippreview=starfighter|interceptor|gunship|jet|piko
+// Alat kerja pengembang: hanya dengan ?debug=1, id kapal harus ada di daftar yang diizinkan
 const PREVIEW_ID = (() => {
-  try {
-    const q = new URLSearchParams(location.search);
-    if (q.get('jetpreview') === '1') return 'raptor-j';
-    if (q.get('gallery') === '1') return 'gallery';
-    const id = q.get('shippreview');
-    if (!id) return null;
-    return id === 'jet' ? 'raptor-j' : id;
-  } catch (err) { return null; }
+  if (!DEBUG_ON) return null;
+  if (URLQ.get('jetpreview') === '1') return 'raptor-j';
+  if (URLQ.get('gallery') === '1') return 'gallery';
+  const id = URLQ.get('shippreview');
+  if (!id) return null;
+  if (id === 'jet') return 'raptor-j';
+  return ['starfighter', 'interceptor', 'gunship', 'piko'].includes(id) ? id : null;
 })();
 const JET_PREVIEW = PREVIEW_ID !== null;
 const JetPreview = {
@@ -13494,7 +13614,7 @@ const Pacer = {
   next: 0, lastRaf: 0, displayMs: 16.7, dirty: true, focused: true, wasStatic: false, staticUntil: 0, hangarAt: 0,
   scale: 1, winSum: 0, winN: 0, winT: 0, slowWins: 0, goodWins: 0, cooldown: 0, raiseWait: 5, lastRaiseAt: -1e9, stuckWins: 0,
   level: 0,             // penurunan otomatis: 1 bloom mati, 2 bayangan mati dan partikel 50 persen, 3 FPS 45, 4 FPS 30 (3 dan 4 hanya perangkat sentuh)
-  toastShown: false, lowBattery: false, reducedMotion: false, resizes: 0,
+  toastShown: false, lowBattery: false, batteryIgnored: false, reducedMotion: false, resizes: 0,
   STATIC: new Set(['paused', 'map', 'levelup', 'contract', 'stageclear', 'gameover', 'final']),
   get mode() { return Save.settings.perfMode; },
   get saver() { return this.mode === 'hemat' ? true : (this.mode === 'otomatis' ? this.lowBattery : false); },
@@ -13595,7 +13715,7 @@ const Pacer = {
     // Baterai lemah dan tidak mengisi (bila API tersedia): mode Otomatis berperilaku seperti Hemat baterai
     try {
       if (navigator.getBattery) navigator.getBattery().then((b) => {
-        const upd = () => { const low = b.charging ? false : b.level <= 0.2; if (low !== this.lowBattery) { this.lowBattery = low; this.applyQuality(); } };
+        const upd = () => { const low = this.batteryIgnored ? false : (b.charging ? false : b.level <= 0.2); if (low !== this.lowBattery) { this.lowBattery = low; this.applyQuality(); } };
         upd();
         b.addEventListener('levelchange', upd);
         b.addEventListener('chargingchange', upd);
@@ -13723,7 +13843,7 @@ function frame(now) {
 Pacer.init();
 onResize();
 // Setiap pemanggilan hook uji menandai frame kotor agar layar statis ikut digambar ulang
-for (const obj of [window.__game, window.__game.debug]) {
+for (const obj of [GameHooks, GameHooks.debug]) {
   for (const k of Object.keys(obj)) {
     const f = obj[k];
     if (typeof f === 'function') obj[k] = function (...a) { Pacer.dirty = true; return f.apply(this, a); };
@@ -13756,7 +13876,7 @@ function disposeGame() {
   renderer.dispose();
   renderer.domElement.remove();
   if (Sfx.ctx) Sfx.ctx.close().catch(() => {});
-  delete window.__game;
+  if (DEBUG_ON) delete window.__game;
 }
 </script>
 </body>

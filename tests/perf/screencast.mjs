@@ -30,6 +30,7 @@ try {
   const qs = new URLSearchParams(opt.query ? String(opt.query) : ''); qs.set('debug', '1');
   await page.goto(`http://localhost:${PORT}/index.html?${qs}`);
   await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
+    await page.evaluate(() => window.__game.debug.ignoreBattery?.(true));
   if (opt.scene === 'space') {
     await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(true); g.startIn('space', 'free'); g.skipTransition(); g.debug.skipCutscene(); g.debug.autoContract(); g.debug.startWave(8); g.debug.setAutoplay(true); });
   }

@@ -4,15 +4,20 @@ import { test as base, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+// Hook uji (window.__game) hanya aktif dengan ?debug=1 (A3); parameter lain digabung lewat URLSearchParams
+const gameUrl = (q = '') => { const p = new URLSearchParams(String(q).replace(/^\?/, '')); p.set('debug', '1'); return '/index.html?' + p.toString(); };
+
+
 const SHOT_DIR = fileURLToPath(new URL('../docs/screenshots/hp/', import.meta.url));
 const SHOTS = process.env.SHOTS === '1';
 if (SHOTS) mkdirSync(SHOT_DIR, { recursive: true });
-const THREE_CDN = 'https://cdn.jsdelivr.net/npm/three@0.187.0/';
 const isDriverNoise = (text) => /GL Driver Message|GPU stall due to ReadPixels/.test(text);
 
 // Fixture yang sama dengan game.spec.mjs: gagal bila ada console error atau warning, atau aset luar
 const test = base.extend({
   page: async ({ page }, use) => {
+    // Baterai laptop penguji tidak boleh memicu mode hemat otomatis di tengah uji
+    await page.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, 'getBattery', { value: undefined, configurable: true }); } catch (err) { /* abaikan */ } });
     const problems = [];
     const external = [];
     page.on('console', (m) => {
@@ -26,12 +31,11 @@ const test = base.extend({
       if (url.startsWith('data:')) return;
       const host = new URL(url).hostname;
       if (host === 'localhost' || host === '127.0.0.1') return;
-      if (url.startsWith(THREE_CDN)) return;
       external.push(url);
     });
     await use(page);
     expect(problems, 'console harus bersih').toEqual([]);
-    expect(external, 'tidak boleh ada aset eksternal selain Three.js').toEqual([]);
+    expect(external, 'tidak boleh ada permintaan ke luar (Three.js ditanam lokal)').toEqual([]);
   },
 });
 test.use({ hasTouch: true, isMobile: true });
@@ -52,7 +56,7 @@ async function openHp(page, w, h, query = '', settings = {}) {
     d.settings = Object.assign(d.settings || {}, { controlMode: 'hp', touchPromptShown: true }, extra);
     localStorage.setItem(k, JSON.stringify(d));
   }, settings);
-  await page.goto(`/index.html${query}`);
+  await page.goto(gameUrl(query));
   await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
 }
 async function playHp(page, w, h, query = '', settings = {}, mode = 'campaign', world = 'space') {
@@ -319,7 +323,7 @@ for (const [w, h] of MATRIX) {
       expect(f.hints, name + ' petunjuk keyboard').toEqual([]);
       if (SHOTS) await page.screenshot({ path: `${SHOT_DIR}${w}x${h}-${name}.jpg`, type: 'jpeg', quality: 70 });
     };
-    const reopen = async () => { await page.goto('/index.html'); await page.waitForFunction(() => window.__game?.snapshot().state === 'menu'); };
+    const reopen = async () => { await page.goto(gameUrl()); await page.waitForFunction(() => window.__game?.snapshot().state === 'menu'); };
     await page.waitForTimeout(900);                                    // tip layar penuh tampil di menu
     await check('menu', 'screen-title');
     await page.click('#btn-start');
@@ -400,7 +404,7 @@ test('H9 layar penuh dari menu jeda, tip layar penuh di menu, overlay putar laya
 
 test('H9 deteksi perangkat: HP murni langsung mode HP tanpa pop-up, kualitas Rendah dan bloom mati', async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 });
-  await page.goto('/index.html');
+  await page.goto(gameUrl());
   await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
   const s = await snap(page);
   expect(s.settings.controlMode).toBe('hp');

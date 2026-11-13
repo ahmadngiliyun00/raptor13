@@ -36,6 +36,7 @@ try {
   const cdp = await ctx.newCDPSession(page);
   await page.goto(`http://localhost:${PORT}/index.html?debug=1`);
   await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
+    await page.evaluate(() => window.__game.debug.ignoreBattery?.(true));
   await page.keyboard.press('Shift');
   const sample = async () => {
     await cdp.send('HeapProfiler.collectGarbage');
@@ -67,12 +68,27 @@ try {
   await page.evaluate(() => window.__game.debug.setStage?.(1));
   await page.waitForTimeout(1500);
   res.stageAfter = await sample();
+  // Rendam: 5 menit simulasi bermain di angkasa (langkah tetap 1/60 detik, render tiap 30 langkah)
+  await page.evaluate(() => { const g = window.__game; g.debug.setStage?.(1); g.debug.skipCutscene(); g.debug.autoContract(); });
+  await page.evaluate(() => { const g = window.__game; g.restart(); g.skipTransition(); g.debug.skipCutscene(); g.debug.autoContract(); g.debug.simulate(20, 30); });
+  res.soakBefore = await sample();
+  res.soakSeries = [];
+  const chunks = Number(opt.soak || 10);
+  for (let i = 0; i < chunks; i++) {
+    await page.evaluate(() => { const g = window.__game; g.debug.skipCutscene(); g.debug.autoContract(); const lv = g.debug.levelState(); if (lv.state === 'levelup') g.debug.pickCard(lv.offer[0].split(':')[0]); g.debug.simulate(30, 30); });
+    const r = await page.evaluate(() => { const x = window.__game.debug.resources(); const s = window.__game.snapshot(); return { geometries: x.geometries, programs: x.programs, wave: s.wave, enemies: s.enemies, state: s.state, pool: window.__game.debug.enemyPool?.() }; });
+    r.heapMB = (await sample()).heapMB;
+    res.soakSeries.push(r);
+    if (i === 9) res.soakAfter = await sample();
+  }
+  if (!res.soakAfter) res.soakAfter = await sample();
+  console.log('deret rendam (per 30 detik):', JSON.stringify(res.soakSeries));
 } finally {
   await browser.close();
   server.kill();
 }
 writeFileSync(`${OUT}leak-${label}.json`, JSON.stringify(res, null, 2) + '\n');
 const keys = ['audioState', 'sceneObjects', 'sceneChildren', 'geometries', 'textures', 'programs', 'listeners', 'domNodes', 'jsEventListeners', 'audioSources', 'heapMB'];
-console.log('metrik\trestart sebelum\tsesudah\tstage sebelum\tsesudah');
-for (const k of keys) console.log(`${k}\t${res.restartBefore[k]}\t${res.restartAfter[k]}\t${res.stageBefore[k]}\t${res.stageAfter[k]}`);
+console.log('metrik\trestart sebelum\tsesudah\tstage sebelum\tsesudah\trendam sebelum\tsesudah 5 menit');
+for (const k of keys) console.log(`${k}\t${res.restartBefore[k]}\t${res.restartAfter[k]}\t${res.stageBefore[k]}\t${res.stageAfter[k]}\t${res.soakBefore?.[k]}\t${res.soakAfter?.[k]}`);
 console.log(`timers\t${JSON.stringify(res.restartBefore.timers)}\t${JSON.stringify(res.restartAfter.timers)}\t${JSON.stringify(res.stageBefore.timers)}\t${JSON.stringify(res.stageAfter.timers)}`);
