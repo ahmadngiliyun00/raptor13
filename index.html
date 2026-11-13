@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-qqjRyDsTARMhNWUbsaxEKJNRzwCeQCPoQYEeaNyUQeA='; style-src 'self' 'sha256-I90K1rLckrlWfc01uWCiTeEuiQdPYuWpl5fsTtXP/8g='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-MgyQiIXCQv+VF7S9kPDLgT/RmB6peagceFUopin3p9s='; style-src 'self' 'sha256-4yDrHSlPs3Nr+UBCLMTGgH1G43jAUJXnrYgh1S5GFIw='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -315,6 +315,68 @@
   #piko-text b { color: var(--ui-accent); margin-right: 4px; }
   .ind.pickup { border-left-color: #5dff7a; }
   #lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #ffd24a; transform-origin: center; }
+  /* Pelacakan bos (B3, B4) */
+  #boss-mark, #boss-edge, #boss-rear, #boss-intro, #boss-lead { --bc: #ff4f6e; pointer-events: none; }
+  #boss-mark { position: absolute; left: 0; top: 0; width: 0; height: 0; --s: 40px; }
+  #boss-mark .bm-c { position: absolute; width: 10px; height: 10px; border: 2px solid var(--bc); filter: drop-shadow(0 0 3px var(--bc)); }
+  #boss-mark .tl { left: calc(var(--s) / -2); top: calc(var(--s) / -2); border-right: 0; border-bottom: 0; }
+  #boss-mark .tr { left: calc(var(--s) / 2 - 10px); top: calc(var(--s) / -2); border-left: 0; border-bottom: 0; }
+  #boss-mark .bl { left: calc(var(--s) / -2); top: calc(var(--s) / 2 - 10px); border-right: 0; border-top: 0; }
+  #boss-mark .br { left: calc(var(--s) / 2 - 10px); top: calc(var(--s) / 2 - 10px); border-left: 0; border-top: 0; }
+  #boss-mark .bm-info { position: absolute; left: 0; bottom: calc(var(--s) / 2 + 4px); transform: translateX(calc(-50% + var(--lx, 0px))); display: flex; align-items: center; gap: 4px; white-space: nowrap;
+    font-size: 12px; font-weight: 900; letter-spacing: 0.08em; color: #fff; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+  #boss-mark .bm-ico { width: 18px; height: 18px; flex: none; }
+  #boss-mark .bm-name { color: var(--bc); }
+  #boss-mark .bm-dist { color: #e8f6ff; font-weight: 700; }
+  #boss-mark .bm-hp { position: absolute; left: 0; top: calc(var(--s) / 2 + 4px); width: clamp(36px, var(--s), 110px); height: 4px; transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.55); border: 1px solid var(--bc); border-radius: 2px; overflow: hidden; }
+  #boss-mark .bm-hp i { display: block; height: 100%; background: var(--bc); transform-origin: left center; }
+  #boss-mark .bm-vel { position: absolute; left: 0; top: 0; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 12px solid var(--bc);
+    margin: -6px 0 0 -7px; transform-origin: 7px 6px; filter: drop-shadow(0 0 3px #000); }
+  #boss-mark.near .bm-info { display: none; }
+  #boss-mark.novel .bm-vel { display: none; }
+  #boss-lead { position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid var(--bc); border-radius: 50%; opacity: 0.75; box-shadow: 0 0 4px var(--bc); }
+  #boss-lead.full { width: 20px; height: 20px; margin: -10px 0 0 -10px; opacity: 1; }
+  #boss-lead.full::before, #boss-lead.full::after { content: ''; position: absolute; left: 50%; top: 50%; background: var(--bc); }
+  #boss-lead.full::before { width: 2px; height: 28px; margin: -14px 0 0 -1px; }
+  #boss-lead.full::after { width: 28px; height: 2px; margin: -1px 0 0 -14px; }
+  #boss-mark.vuln .bm-c, #boss-edge.vuln .be-ring { border-color: #ffd24a; --bc: #ffd24a; animation: bossVuln 0.25s steps(2) infinite; }
+  @keyframes bossVuln { 50% { opacity: 0.45; } }
+  #boss-edge { position: absolute; left: 0; top: 0; width: 46px; height: 60px; margin: -23px 0 0 -23px; }
+  #boss-edge .be-ring { position: relative; width: 46px; height: 46px; border-radius: 50%; background: rgba(10, 4, 10, 0.72); border: 2px solid var(--bc); box-shadow: 0 0 10px var(--bc); animation: bossPulse 1.1s ease-in-out infinite; }
+  #boss-edge .be-ico { position: absolute; left: 7px; top: 7px; width: 28px; height: 28px; }
+  #boss-edge .be-dir { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform: rotate(var(--a, 0rad)); }
+  #boss-edge .be-dir::after { content: ''; position: absolute; left: 25px; top: -8px; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 12px solid var(--bc); filter: drop-shadow(0 0 3px var(--bc)); }
+  #boss-edge .be-dist { position: absolute; left: 50%; top: 48px; transform: translateX(-50%); font-size: 11px; font-weight: 900; white-space: nowrap; color: #fff; text-shadow: 0 1px 2px #000, 0 0 4px #000; }
+  #boss-edge .be-turn { position: absolute; right: -8px; top: -8px; width: 20px; height: 20px; padding: 2px; border-radius: 50%; background: var(--bc); fill: none; stroke: #140a12; stroke-width: 3; stroke-linecap: round; display: none; }
+  #boss-edge.turn .be-turn { display: block; }
+  #boss-edge.turn.flip .be-turn { transform: scaleX(-1); }
+  @keyframes bossPulse { 50% { box-shadow: 0 0 2px var(--bc); transform: scale(0.92); } }
+  body.reduce-motion #boss-edge .be-ring, body.reduce-motion #boss-mark.vuln .bm-c { animation: none; }
+  #boss-rear { position: absolute; left: 50%; bottom: calc(76px + var(--ed-b)); transform: translateX(-50%); display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 6px; border-radius: 16px;
+    font-size: 12px; font-weight: 900; letter-spacing: 0.1em; color: #fff; background: rgba(40, 6, 18, 0.78); border: 1px solid var(--bc); box-shadow: 0 0 10px var(--bc); }
+  #boss-rear canvas { width: 22px; height: 22px; }
+  #boss-rear svg, .alert.boss svg { width: 16px; height: 16px; fill: none; stroke: var(--bc); stroke-width: 2.6; stroke-linecap: round; }
+  body.mode-hp #boss-rear { display: none; }
+  .alert.boss { --bc: #ff4f6e; color: #fff; background: rgba(40, 6, 18, 0.78); border-color: var(--bc); }
+  .alert.boss .al-bico { width: 16px; height: 16px; flex: none; }
+  #boss-intro { position: absolute; left: 50%; top: calc(var(--ed-t) + 6px); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 8px; border-radius: 12px;
+    background: rgba(20, 6, 14, 0.92); border: 2px solid var(--bc); box-shadow: 0 0 18px var(--bc); font-size: 20px; font-weight: 900; letter-spacing: 0.14em; color: #fff; transition: opacity 0.25s; z-index: 6; }
+  #boss-intro canvas { width: 84px; height: 84px; }
+  #boss-intro .bi-name { color: var(--bc); text-shadow: 0 0 8px #000; }
+  #boss-intro.shrink { transition: transform 0.5s ease-in, opacity 0.5s ease-in; opacity: 0; }
+  body.mode-hp #boss-intro { top: var(--sa-t); gap: 6px; padding: 2px 10px 2px 4px; font-size: 13px; border-width: 1px; }
+  body.mode-hp #boss-intro canvas { width: calc(min(52px, var(--app-h, 100vh) * 0.2 - var(--sa-t) - 6px)); height: calc(min(52px, var(--app-h, 100vh) * 0.2 - var(--sa-t) - 6px)); }
+  body.reduce-motion #boss-intro.shrink { transition: opacity 0.3s; transform: translateX(-50%) !important; }
+  .bb-left { display: inline-flex; align-items: center; gap: 6px; }
+  #boss-ico { width: 22px; height: 22px; }
+  #hpx-bico { width: 16px; height: 16px; flex: none; margin-right: -2px; }
+  body.mode-hp #boss-mark .bm-info { font-size: 11px; }
+  body.mode-hp #boss-edge { width: 38px; height: 50px; margin: -19px 0 0 -19px; }
+  body.mode-hp #boss-edge .be-ring { width: 38px; height: 38px; }
+  body.mode-hp #boss-edge .be-ico { left: 6px; top: 6px; width: 22px; height: 22px; }
+  body.mode-hp #boss-edge .be-dir::after { left: 21px; }
+  body.mode-hp #boss-edge .be-dist { top: 39px; }
   #boss-dot { --bc: #ff4f6e; position: absolute; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: radial-gradient(circle, #fff 0 18%, var(--bc) 40%, transparent 72%); box-shadow: 0 0 10px 3px var(--bc); pointer-events: none; }
   #rear-warn { position: absolute; left: 50%; bottom: calc(40px + var(--ed-b)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #ffd0d0; border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.6s steps(2) infinite; }
@@ -962,6 +1024,21 @@
   <div id="reticle"><i id="hitmark"></i></div>
   <div id="lead" class="hidden"></div>
   <div id="boss-dot" class="hidden"></div>
+  <!-- Pelacakan bos (B3, B4): penanda di atas bos, panah tepi layar, indikator di belakang, pengenalan, titik bidik -->
+  <div id="boss-mark" class="hidden" aria-hidden="true">
+    <i class="bm-c tl"></i><i class="bm-c tr"></i><i class="bm-c bl"></i><i class="bm-c br"></i>
+    <div class="bm-info"><canvas class="bm-ico" width="32" height="32"></canvas><span class="bm-name"></span><span class="bm-dist"></span></div>
+    <div class="bm-hp"><i></i></div>
+    <i class="bm-vel"></i>
+  </div>
+  <div id="boss-edge" class="hidden" aria-hidden="true">
+    <div class="be-ring"><i class="be-dir"></i><canvas class="be-ico" width="56" height="56"></canvas></div>
+    <span class="be-dist"></span>
+    <svg class="be-turn" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 3v5h-5"/></svg>
+  </div>
+  <div id="boss-rear" class="hidden"><canvas class="br-ico" width="44" height="44"></canvas><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 3v5h-5"/></svg><span>BOS DI BELAKANG</span></div>
+  <div id="boss-intro" class="hidden" aria-hidden="true"><canvas class="bi-ico" width="192" height="192"></canvas><span class="bi-name"></span></div>
+  <div id="boss-lead" class="hidden"></div>
   <div id="piko-panel" class="hidden"><canvas id="piko-face" width="56" height="56"></canvas><p id="piko-text"></p></div>
   <div id="buffs">
     <div class="buff hidden" data-buff="overdrive"><svg viewBox="0 0 24 24"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg><span>OVERDRIVE</span><b>10</b></div>
@@ -969,7 +1046,7 @@
   </div>
   <div id="rear-warn" class="hidden">MUSUH DI BELAKANG</div>
   <div id="comet-warn" class="hidden">KOMET MENDEKAT</div>
-  <div id="boss-bar" class="hidden"><div class="bb-head"><span id="boss-name"></span><span id="boss-phase"></span></div><div class="bb-track"><i id="boss-fill"></i></div></div>
+  <div id="boss-bar" class="hidden"><div class="bb-head"><span class="bb-left"><canvas id="boss-ico" width="44" height="44"></canvas><span id="boss-name"></span></span><span id="boss-phase"></span></div><div class="bb-track"><i id="boss-fill"></i></div></div>
   <div id="data-panel" class="hidden" aria-live="polite">
     <span id="data-tag" class="hidden">PENEMUAN BARU</span>
     <h3 id="data-title"></h3>
@@ -987,7 +1064,7 @@
       <span class="hpx-bar thin" id="hpx-ultbar"><i id="hpx-ult"></i></span>
     </div>
   </div>
-  <div id="hpx-top" class="hpx-block"><span id="hpx-mission" class="hpx-mis"></span><span id="hpx-mult" class="hpx-mult"></span><span id="hpx-score" class="hpx-score">0</span></div>
+  <div id="hpx-top" class="hpx-block"><canvas id="hpx-bico" class="hidden" width="36" height="36"></canvas><span id="hpx-mission" class="hpx-mis"></span><span id="hpx-mult" class="hpx-mult"></span><span id="hpx-score" class="hpx-score">0</span></div>
   <div class="hud-block tl">
     <div class="row"><span class="label">NYAWA</span><span id="hearts"></span></div>
     <div class="row"><span class="label">INTEGRITAS</span><span id="hp-text" class="num">100</span></div>
@@ -1042,6 +1119,7 @@
   <!-- Mode HP (H4): satu toast notifikasi di tengah atas dan chip peringatan kritis di tepi bawah -->
   <div id="notify" class="notify" aria-live="polite"><canvas id="notify-eye" width="48" height="48"></canvas><span id="notify-text"></span></div>
   <div id="alerts" class="alerts">
+    <div class="alert boss hidden" data-alert="boss"><canvas class="al-bico" width="32" height="32"></canvas><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 3v5h-5"/></svg><span>BOS DI BELAKANG</span></div>
     <div class="alert hidden" data-alert="terrain"><svg viewBox="0 0 24 24"><path d="M12 19V5M5.5 11.5L12 5l6.5 6.5"/></svg><span>TARIK NAIK</span></div>
     <div class="alert hidden" data-alert="hp"><svg viewBox="0 0 24 24"><path d="M12 20.5C5 15 1.5 11.5 1.5 7 1.5 3.8 4 1.5 7 1.5c2.2 0 3.9 1.2 5 3 1.1-1.8 2.8-3 5-3 3 0 5.5 2.3 5.5 5.5 0 4.5-3.5 8-10.5 13.5z"/><path d="M12 8v5"/></svg><span>HP KRITIS</span></div>
     <div class="alert hidden" data-alert="rear"><svg viewBox="0 0 24 24"><path d="M12 5v14M5.5 12.5L12 19l6.5-6.5"/></svg><span>MUSUH BELAKANG</span></div>
@@ -7801,6 +7879,13 @@ const SolarMap = {
       ctx.fillRect(x - 3, y - 3, 6, 6);
       ctx.fillText(bl.name, x, y + 16);
     }
+    // Bos di dunia yang sama (B4): ikon emblem di posisinya
+    if (Bosses.active) {
+      const A = (Bosses.active.anchor || Bosses.active.group).position, [bx, by] = this.project(A.x, A.z, cx, R);
+      ctx.drawImage(BossIcons.get(Bosses.active.kind), bx - 13, by - 13, 26, 26);
+      ctx.fillStyle = BOSS_STYLE[Bosses.active.kind].css; ctx.font = 'bold 12px system-ui, sans-serif';
+      ctx.fillText('BOS', bx, by + 26);
+    }
     // Kapal: segitiga searah heading
     const [px, py] = this.project(Player.pos.x, Player.pos.z, cx, R), f = Player.forward, a = Math.atan2(f.z, f.x);
     ctx.save(); ctx.translate(px, py); ctx.rotate(a);
@@ -7977,7 +8062,7 @@ class BossPart {
 }
 
 const Bosses = {
-  active: null,
+  active: null, seen: new Set(),
   bar: document.getElementById('boss-bar'), barName: document.getElementById('boss-name'), barFill: document.getElementById('boss-fill'), barPhase: document.getElementById('boss-phase'),
   start(kind) {
     if (this.active) return false;
@@ -7986,10 +8071,12 @@ const Bosses = {
     this.active = b;
     scene.add(b.group);
     BossFX.attach(b);
+    BossHud.begin(b);
+    // Kemunculan pertama tiap bos dalam satu sesi: sorot kamera singkat dan gerak lambat sesaat (naga punya cutscene)
+    if (!this.seen.has(kind)) { this.seen.add(kind); if (kind !== 'naga') { CamRig.focusBoss(1.6); Game.slowMo = Math.max(Game.slowMo, 0.6); } }
     this.bar.classList.remove('hidden');
-    this.barName.textContent = b.name;
-    Events.emit('bossStart', kind);
-    showBanner(b.name.toUpperCase(), 2000);
+    this.barName.textContent = 'BOS: ' + b.name;
+    Events.emit('bossStart', kind);   // nama bos tampil lewat pengenalan BossHud (ikon besar di tepi atas)
     if (b.intro) b.intro();
     return true;
   },
@@ -7999,6 +8086,7 @@ const Bosses = {
     scene.remove(b.group);
     if (b.dispose) b.dispose();
     BossFX.detach();
+    BossHud.end();
     this.active = null;
     this.bar.classList.add('hidden');
   },
@@ -8014,7 +8102,7 @@ const Bosses = {
     if (!b) return;
     b.time += dt;
     for (const p of b.parts) { p.sync(); if (p.hpBarTimer > 0) p.hpBarTimer -= dt; }
-    b.update(dt);
+    if (b.pinned > 0) b.pinned -= dt; else b.update(dt);   // pinned: ditahan sebentar oleh hook uji placeBoss
     if (this.active) BossFX.update(dt);
     if (BossStats.on ? this.active : false) BossStats.track(this.active, dt);
     if (this.active) this.updateBar();
@@ -8702,7 +8790,52 @@ const OUTLINE_FRAG = /* glsl */`
 const BossFX = {
   outline: null, outlineMat: null, segGeo: null, headGeo: null, _m: new THREE.Matrix4(), _p: new THREE.Vector3(), _c: new THREE.Color(),
   dot: document.getElementById('boss-dot'), dotOn: false, baseFar: 0, farBoost: false,
-  objects() { return this.outline ? [this.outline] : []; },
+  objects() { return this.outline ? [this.outline, this.trail] : []; },
+  // Jejak bos (B4): garis titik bercahaya 3 detik terakhir (48 titik tiap 1/16 detik, buffer bergeser), satu draw call
+  TRAIL_N: 48, trail: null, trailT: 0, vel: new THREE.Vector3(), _last: new THREE.Vector3(), hasLast: false,
+  trailSrc(b) { return b.trail ? b.segs[b.segs.length - 1].position : (b.anchor || b.group).position; },
+  makeTrail(b) {
+    const N = this.TRAIL_N, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), src = this.trailSrc(b);
+    for (let i = 0; i < N; i++) { pos[i * 3] = src.x; pos[i * 3 + 1] = src.y; pos[i * 3 + 2] = src.z; }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const line = new THREE.Line(geo, this.trailMaterial());
+    line.frustumCulled = false; line.renderOrder = 4; line.name = 'bossTrail';
+    this.trailColor(b.kind);
+    return line;
+  },
+  trailMat: null,
+  trailMaterial() { return this.trailMat || (this.trailMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); },
+  trailColor(kind) {
+    const st = BOSS_STYLE[kind], c = this._c.setHex(st.rim), col = this.trail ? this.trail.geometry.attributes.color : null;
+    if (!col) return;
+    for (let i = 0; i < this.TRAIL_N; i++) { const k = Math.pow(1 - i / this.TRAIL_N, 1.5) * 1.6; col.setXYZ(i, c.r * k, c.g * k, c.b * k); }
+    col.needsUpdate = true;
+  },
+  updateTrail(b, dt) {
+    const src = this.trailSrc(b), A = (b.anchor || b.group).position;
+    // Kecepatan bos dihaluskan (dipakai panah arah gerak, titik bidik prediksi, dan radar)
+    if (this.hasLast ? dt > 0 : false) { _vd.copy(A).sub(this._last).divideScalar(dt); if (_vd.lengthSq() < 1e6) this.vel.lerp(_vd, clamp(dt * 6, 0, 1)); }
+    this._last.copy(A); this.hasLast = true;
+    const attr = this.trail.geometry.attributes.position, a = attr.array;
+    this.trailT -= dt;
+    if (this.trailT <= 0) { this.trailT = 1 / 16; a.copyWithin(3, 0, a.length - 3); }
+    a[0] = src.x; a[1] = src.y; a[2] = src.z;
+    attr.needsUpdate = true;
+  },
+  // Kompilasi material, kontur, dan jejak bos untuk status renderer dan kabut dunia aktif (lampu scene utama),
+  // agar kemunculan bos tidak menambah program shader di tengah permainan. Dipanggil di layar muat dan saat
+  // dunia berganti (status bayangan dan kabut berbeda per dunia).
+  warmed: false,
+  warm() {
+    this.warmed = true;
+    const objs = this.warmObjects(), tmp = new THREE.Scene();
+    tmp.fog = scene.fog;
+    for (const o of objs) tmp.add(o);
+    try { renderer.compile(tmp, camera, scene); } catch (err) { /* dikompilasi saat dipakai */ }
+    for (const o of objs) { tmp.remove(o); if (o.isBatchedMesh) o.dispose(); else o.geometry.dispose(); }
+  },
   // Objek sementara untuk pra-pemanasan shader: material bos (Phong dan Lambert berbayang datar) dan kontur
   // (mesh biasa dan BatchedMesh), dibuang setelah dikompilasi
   warmObjects() {
@@ -8712,6 +8845,9 @@ const BossFX = {
     const bm = new THREE.BatchedMesh(1, 64, 128, this.material());
     bm.addInstance(bm.addGeometry(g));
     out.push(bm);
+    const tg = new THREE.BufferGeometry();
+    tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3)); tg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(6), 3));
+    out.push(new THREE.Line(tg, this.trailMaterial()));
     for (const o of out) { o.position.copy(camera.position).add(_va.set(0, 0, -30).applyQuaternion(camera.quaternion)); o.frustumCulled = false; }
     return out;
   },
@@ -8748,6 +8884,8 @@ const BossFX = {
       mesh.matrixAutoUpdate = false; mesh.frustumCulled = false;
       this.outline = mesh;
     }
+    this.trail = this.makeTrail(b); this.trailColor(b.kind); this.hasLast = false; this.vel.set(0, 0, 0);
+    scene.add(this.trail);
     this.outline.name = 'bossOutline';
     this.outline.renderOrder = 6;   // setelah semua objek buram: uji kedalaman terhadap bos dan latar yang sudah tergambar
     mat.uniforms.uPush.value = b.kind === 'naga' ? 70 : b.size * 1.2;
@@ -8761,6 +8899,7 @@ const BossFX = {
       scene.remove(this.outline);
       if (this.outline.isBatchedMesh) this.outline.dispose(); else this.outline.geometry.dispose();
       this.outline = null;
+      scene.remove(this.trail); this.trail.geometry.dispose(); this.trail = null;
     }
     this.showDot(false);
     this.restoreFar();
@@ -8795,6 +8934,7 @@ const BossFX = {
     if (!b ? true : !this.outline) return;
     this.pushOut(b);
     this.updateFar(b);
+    this.updateTrail(b, dt);
     const H = BOSS_HIGHLIGHT[Save.settings.bossHighlight] || BOSS_HIGHLIGHT.halus, st = BOSS_STYLE[b.kind], u = this.outlineMat.uniforms;
     this.outline.visible = H.px > 0 ? b.group.visible : false;
     // Latar Bumi terang (langit dan kabut): kontur lebih gelap dan pekat agar kontras luminans tetap tinggi
@@ -8819,6 +8959,250 @@ const BossFX = {
       const x = Math.round((p.x + 1) * 0.5 * window.innerWidth), y = Math.round((1 - p.y) * 0.5 * window.innerHeight);
       if (changed('bossDot', x * 100000 + y)) this.dot.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
       if (changed('bossDotColor', b.kind)) this.dot.style.setProperty('--bc', st.css);
+    }
+  },
+};
+
+/* =====================================================================
+   PELACAKAN BOS (B3) - ikon emblem orisinal per bos (digambar prosedural di kanvas), penanda di atas bos
+   (braket sudut, ikon, nama, jarak, bar HP mini), panah tepi layar berikon saat bos di luar layar (arah putar
+   tercepat saat bos di belakang), indikator BOS DI BELAKANG (kerucut 120 derajat di belakang pemain),
+   pengenalan saat bos muncul (ikon besar di tepi atas lalu mengecil ke baris misi, sorot kamera singkat
+   pada kemunculan pertama tiap bos dalam satu sesi). Posisi panah tepi menghindari semua elemen HUD
+   (daftar sama dengan uji tata letak) dan zona tengah mode HP.
+   ===================================================================== */
+const BossIcons = {
+  cache: {},
+  get(kind) { if (!this.cache[kind]) this.cache[kind] = this.render(kind, 128); return this.cache[kind]; },
+  draw(target, kind) {
+    const c = target.getContext('2d');
+    c.clearRect(0, 0, target.width, target.height);
+    c.drawImage(this.get(kind), 0, 0, target.width, target.height);
+  },
+  poly(c, pts) { c.beginPath(); c.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) c.lineTo(pts[i], pts[i + 1]); c.closePath(); },
+  render(kind, S) {
+    const cv = document.createElement('canvas'); cv.width = S; cv.height = S;
+    const c = cv.getContext('2d'), col = BOSS_STYLE[kind].css, k = S / 100, P = (pts) => this.poly(c, pts);
+    c.scale(k, k); c.lineJoin = 'round'; c.lineCap = 'round';
+    // Lencana segi enam gelap bertepi warna khas
+    const hex = []; for (let i = 0; i < 6; i++) { const a = Math.PI / 6 + i * Math.PI / 3; hex.push(50 + Math.cos(a) * 46, 50 + Math.sin(a) * 46); }
+    P(hex); c.fillStyle = 'rgba(20, 8, 16, 0.94)'; c.fill(); c.lineWidth = 4; c.strokeStyle = col; c.stroke();
+    c.shadowColor = col; c.shadowBlur = 6;
+    c.fillStyle = col; c.strokeStyle = col; c.lineWidth = 3.5;
+    if (kind === 'naga') {
+      // Tengkorak naga bertanduk bergaya geometris: tanduk menyapu ke atas, mata miring, moncong dan gigi bergerigi
+      P([32, 34, 13, 10, 22, 33, 27, 42]); c.fill(); P([68, 34, 87, 10, 78, 33, 73, 42]); c.fill();
+      P([30, 32, 50, 24, 70, 32, 76, 48, 66, 62, 61, 80, 50, 87, 39, 80, 34, 62, 24, 48]); c.fillStyle = '#3d0f1d'; c.fill(); c.stroke();
+      c.fillStyle = '#fff1a8'; c.shadowColor = '#ffd24a';
+      P([33, 45, 46, 50, 44, 57, 32, 52]); c.fill(); P([67, 45, 54, 50, 56, 57, 68, 52]); c.fill();
+      c.shadowColor = col; c.lineWidth = 3;
+      c.beginPath(); c.moveTo(50, 33); c.lineTo(50, 62); c.stroke();
+      c.beginPath(); c.moveTo(45, 67); c.lineTo(47, 71); c.moveTo(55, 67); c.lineTo(53, 71); c.stroke();
+      c.beginPath(); c.moveTo(40, 75); c.lineTo(44, 81); c.lineTo(48, 75); c.lineTo(52, 81); c.lineTo(56, 75); c.lineTo(60, 81); c.stroke();
+    } else if (kind === 'raksasa') {
+      // Perisai penjaga dengan celah visor menyala dan tiga chevron
+      c.beginPath(); c.moveTo(27, 22); c.lineTo(73, 22); c.lineTo(73, 50); c.quadraticCurveTo(70, 72, 50, 85); c.quadraticCurveTo(30, 72, 27, 50); c.closePath();
+      c.fillStyle = '#3a2310'; c.fill(); c.stroke();
+      c.fillStyle = '#fff1a8'; c.shadowColor = '#ffd24a'; P([35, 47, 65, 47, 61, 55, 39, 55]); c.fill();
+      c.shadowColor = col; c.lineWidth = 3;
+      for (const y of [30, 37]) { c.beginPath(); c.moveTo(38, y); c.lineTo(50, y + 5); c.lineTo(62, y); c.stroke(); }
+      c.beginPath(); c.moveTo(50, 60); c.lineTo(50, 76); c.stroke();
+    } else if (kind === 'miner') {
+      // Roda gigi delapan gigi dengan mata bor spiral di tengah
+      const g = []; for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8, r = i % 2 ? 31 : 39; g.push(50 + Math.cos(a - 0.12) * r, 50 + Math.sin(a - 0.12) * r, 50 + Math.cos(a + 0.12) * r, 50 + Math.sin(a + 0.12) * r); }
+      P(g); c.fillStyle = '#3a2a0c'; c.fill(); c.stroke();
+      c.beginPath(); c.arc(50, 50, 21, 0, Math.PI * 2); c.fillStyle = '#140a06'; c.fill(); c.stroke();
+      P([39, 38, 61, 38, 50, 72]); c.fillStyle = '#fff1a8'; c.shadowColor = '#ffd24a'; c.fill();
+      c.shadowColor = col; c.strokeStyle = '#3a2a0c'; c.lineWidth = 2.5;
+      c.beginPath(); c.moveTo(42, 45); c.lineTo(58, 49); c.moveTo(44, 53); c.lineTo(56, 57); c.moveTo(46, 61); c.lineTo(54, 64); c.stroke();
+    } else {
+      // Pemburu: visor belah ketupat dengan dua bilah sabit menyapu dan satu mata
+      P([50, 20, 76, 50, 50, 80, 24, 50]); c.fillStyle = '#2c0d36'; c.fill(); c.stroke();
+      c.beginPath(); c.moveTo(30, 28); c.quadraticCurveTo(8, 46, 16, 72); c.quadraticCurveTo(20, 54, 33, 46); c.closePath(); c.fill();
+      c.beginPath(); c.moveTo(70, 28); c.quadraticCurveTo(92, 46, 84, 72); c.quadraticCurveTo(80, 54, 67, 46); c.closePath(); c.fill();
+      c.fillStyle = '#fff1a8'; c.shadowColor = '#ffd24a';
+      P([38, 50, 50, 43, 62, 50, 50, 57]); c.fill();
+      c.fillStyle = '#2c0d36'; c.beginPath(); c.arc(50, 50, 3.2, 0, Math.PI * 2); c.fill();
+    }
+    return cv;
+  },
+};
+const BOSS_HUD_SEL = ['#touch .tbtn', '#joy', '#dpad', '.hud-block', '.hpx-block', '#radar', '#btn-radar-map', '#notify.show', '#alerts .alert', '#piko-panel', '#data-panel', '#boss-bar', '#toolbar .tool', '#maneuvers', '#buffs .buff', '#warning', '#rear-warn', '#comet-warn', '#critical', '#boss-rear', '#hpx-status', '#hpx-buffs'];
+const BossHud = {
+  mark: document.getElementById('boss-mark'), edge: document.getElementById('boss-edge'), rearEl: document.getElementById('boss-rear'), intro: document.getElementById('boss-intro'), lead: document.getElementById('boss-lead'),
+  kind: null, rear: false, rects: [], rectT: 0, ed: { l: 16, t: 16, r: 16, b: 16 }, introT: 0, introStage: 0, state: 'none', edgePos: null,
+  _p: new THREE.Vector3(), _d: new THREE.Vector3(), _q: new THREE.Vector3(),
+  q(sel) { return document.querySelectorAll(sel); },
+  begin(b) {
+    this.kind = b.kind;
+    const st = BOSS_STYLE[b.kind];
+    for (const el of [this.mark, this.edge, this.rearEl, this.intro, this.lead, $('boss-dot'), hud.alertEls.boss]) el.style.setProperty('--bc', st.css);
+    for (const cv of [this.mark.querySelector('canvas'), this.edge.querySelector('canvas'), this.rearEl.querySelector('canvas'), this.intro.querySelector('canvas'), $('boss-ico'), $('hpx-bico'), hud.alertEls.boss.querySelector('canvas')]) BossIcons.draw(cv, b.kind);
+    this.mark.querySelector('.bm-name').textContent = st.short;
+    this.intro.querySelector('.bi-name').textContent = b.name.toUpperCase();
+    $('hpx-bico').classList.remove('hidden');
+    this.rectT = 0; this.state = 'none'; this.rear = false;
+    // Pengenalan: ikon besar di tepi atas sekitar 1,5 detik lalu mengecil ke baris misi
+    this.intro.classList.remove('hidden', 'shrink'); this.intro.style.transform = '';
+    this.introT = 1.5; this.introStage = 1;
+  },
+  end() {
+    this.kind = null; this.rear = false; this.state = 'none';
+    for (const el of [this.mark, this.edge, this.rearEl, this.intro, this.lead, $('hpx-bico')]) el.classList.add('hidden');
+    hud.last.alerts = null;
+  },
+  // Elemen HUD yang terlihat (diperbarui beberapa kali per detik, tidak tiap frame)
+  refreshRects() {
+    this.rects.length = 0;
+    for (const sel of BOSS_HUD_SEL) for (const el of this.q(sel)) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 ? r.height > 0 : false) this.rects.push(r);
+    }
+    this.ed = Viewport.edges();
+  },
+  free(x, y, w, h) {
+    const W = window.innerWidth, H = window.innerHeight, m = 4;
+    const x0 = x - w / 2 - m, x1 = x + w / 2 + m, y0 = y - h / 2 - m, y1 = y + h / 2 + m;
+    for (const r of this.rects) if (x0 < r.right ? (x1 > r.left ? (y0 < r.bottom ? y1 > r.top : false) : false) : false) return false;
+    // Mode HP: zona tengah (x 30 sampai 70 persen, y 20 sampai 80 persen) selalu bebas
+    if (Touch.enabled ? (x0 < W * 0.7 ? (x1 > W * 0.3 ? (y0 < H * 0.8 ? y1 > H * 0.2 : false) : false) : false) : false) return false;
+    return true;
+  },
+  // Titik pada lintasan tepi (persegi panjang di dalam tepi aman) terdekat dari (px, py), digeser sepanjang
+  // keliling sampai tidak menimpa elemen HUD
+  placeEdge(px, py, w, h) {
+    const W = window.innerWidth, H = window.innerHeight, e = this.ed;
+    const L = e.l + w / 2 + 2, R = W - e.r - w / 2 - 2, T = e.t + h / 2 + 2, B = H - e.b - h / 2 - 2;
+    if (R <= L ? true : B <= T) return null;
+    let x = clamp(px, L, R), y = clamp(py, T, B);
+    const dl = x - L, dr = R - x, dt = y - T, db = B - y, mn = Math.min(dl, dr, dt, db);
+    if (mn === dl) x = L; else if (mn === dr) x = R; else if (mn === dt) y = T; else y = B;
+    const Wt = R - L, Ht = B - T, P = 2 * (Wt + Ht);
+    let t0 = y === T ? x - L : x === R ? Wt + (y - T) : y === B ? Wt + Ht + (R - x) : 2 * Wt + Ht + (B - y);
+    const at = (t) => { t = ((t % P) + P) % P; if (t < Wt) return [L + t, T]; t -= Wt; if (t < Ht) return [R, T + t]; t -= Ht; if (t < Wt) return [R - t, B]; t -= Wt; return [L, B - t]; };
+    for (let k = 0; k * 8 < P / 2; k++) {
+      for (const sgn of k === 0 ? [1] : [1, -1]) {
+        const pt = at(t0 + sgn * k * 8);
+        if (this.free(pt[0], pt[1], w, h)) return pt;
+      }
+    }
+    return null;
+  },
+  show(el, v) { const hid = el.classList.contains('hidden'); if (v === hid) el.classList.toggle('hidden', !v); },
+  update(dt) {
+    const b = Bosses.active;
+    if (!b ? true : !(Game.state === 'playing' ? Player.alive : false)) {
+      if (this.state !== 'none') { this.show(this.mark, false); this.show(this.edge, false); this.show(this.rearEl, false); this.show(this.lead, false); this.state = 'none'; this.rear = false; }
+      return;
+    }
+    this.updateIntro(dt);
+    this.rectT -= dt;
+    if (this.rectT <= 0) { this.rectT = 0.3; this.refreshRects(); }
+    const W = window.innerWidth, H = window.innerHeight, A = (b.anchor || b.group).position, P = Player.pos;
+    const d = this._d.copy(A).sub(P), dist = d.length() || 1;
+    const lx = d.dot(Player._right), ly = d.dot(Player._up), lz = d.dot(Player.forward);
+    this.rear = lz / dist < -0.5;   // kerucut 120 derajat di belakang
+    const p = this._p.copy(A).project(camera);
+    const behind = p.z > 1, onScreen = behind ? false : Math.max(Math.abs(p.x), Math.abs(p.y)) <= 1;
+    const distTxt = fmtInt(Math.round(dist * 4)) + ' m';
+    this.show(this.rearEl, this.rear ? !Touch.enabled : false);
+    this.mark.classList.toggle('vuln', b.vuln > 0);
+    this.edge.classList.toggle('vuln', b.vuln > 0);
+    if (onScreen) {
+      this.state = 'mark';
+      this.show(this.edge, false); this.show(this.mark, true);
+      const x = (p.x + 1) * 0.5 * W, y = (1 - p.y) * 0.5 * H;
+      const px = (b.size * 2) / (Math.max(1, camera.position.distanceTo(A)) * 2 * Math.tan(camera.fov * Math.PI / 360)) * H;
+      const size = Math.round(clamp(px * 0.9, 26, 150) / 2) * 2;
+      if (changed('bmPos', Math.round(x) * 100000 + Math.round(y))) this.mark.style.transform = 'translate(' + Math.round(x) + 'px, ' + Math.round(y) + 'px)';
+      if (changed('bmSize', size)) this.mark.style.setProperty('--s', size + 'px');
+      // Label disembunyikan saat bos sangat dekat (memenuhi layar) atau menumpuk dengan pesawat sendiri
+      const near = size >= 150 ? true : (Touch.enabled ? Math.abs(y - H * 0.68) < H * 0.12 ? Math.abs(x - W / 2) < W * 0.12 : false : false);
+      if (changed('bmNear', near)) this.mark.classList.toggle('near', near);
+      if (changed('bmDist', distTxt)) this.mark.querySelector('.bm-dist').textContent = distTxt;
+      // Label tetap di dalam layar (geser horizontal) saat bos dekat tepi
+      const half = Touch.enabled ? 72 : 80, lx = Math.round(clamp(x, this.ed.l + half, W - this.ed.r - half) - x);
+      if (changed('bmLx', lx)) this.mark.style.setProperty('--lx', lx + 'px');
+      const r = Math.round(clamp(b.barRatio(), 0, 1) * 50) / 50;
+      if (changed('bmHp', r)) this.mark.querySelector('.bm-hp i').style.transform = 'scaleX(' + r + ')';
+      // Panah arah gerak (B4): arah proyeksi vektor kecepatan bos di layar, di tepi braket
+      const v = BossFX.vel, q = this._q.copy(A).addScaledVector(v, 0.6).project(camera);
+      const vx = (q.x - p.x) * 0.5 * W, vy = (p.y - q.y) * 0.5 * H, vl = Math.hypot(vx, vy);
+      const novel = q.z > 1 ? true : (vl < 3 ? true : v.lengthSq() < 4);
+      if (changed('bmNovel', novel)) this.mark.classList.toggle('novel', novel);
+      if (!novel) {
+        const a = Math.atan2(vy, vx), rr = size / 2 + 12, key = Math.round(a * 20) * 1000 + size;
+        if (changed('bmVel', key)) this.mark.querySelector('.bm-vel').style.transform = 'translate(' + Math.round(Math.cos(a) * rr) + 'px, ' + Math.round(Math.sin(a) * rr) + 'px) rotate(' + (a + Math.PI / 2).toFixed(2) + 'rad)';
+      }
+      this.updateLead(b, W, H);
+      return;
+    }
+    this.show(this.lead, false);
+    this.state = 'edge';
+    this.show(this.mark, false); this.show(this.edge, true);
+    let tx, ty, ang, turn = false, flip = false;
+    if (lz < 0) {
+      // Bos di belakang: panah menunjuk arah putar tercepat (kiri atau kanan, atas atau bawah)
+      turn = true;
+      if (Math.abs(lx) >= Math.abs(ly) * 0.8) { const right = lx > 0; tx = right ? W : 0; ty = H * 0.42; ang = right ? 0 : Math.PI; flip = !right; }
+      else { const up = ly > 0; tx = W / 2; ty = up ? 0 : H; ang = up ? -Math.PI / 2 : Math.PI / 2; }
+    } else {
+      let x = p.x, y = p.y;
+      if (behind) { x = -x; y = -y; if (Math.max(Math.abs(x), Math.abs(y)) < 1e-3) y = -1; }
+      const sc = 1 / Math.max(Math.abs(x), Math.abs(y), 1e-3);
+      x *= sc; y *= sc;
+      tx = (x * 0.5 + 0.5) * W; ty = (0.5 - y * 0.5) * H; ang = Math.atan2(-y, x);
+    }
+    const hp = Touch.enabled, w = hp ? 38 : 46, h = hp ? 52 : 62;
+    const pt = this.placeEdge(tx, ty, w, h);
+    if (!pt) { this.show(this.edge, false); this.edgePos = null; return; }
+    this.edgePos = pt;
+    // Arah panah dari posisi akhir menuju titik sasaran (tetap benar setelah digeser menghindari HUD)
+    if (!turn) ang = Math.atan2(ty - pt[1], tx - pt[0]);
+    const key = Math.round(pt[0]) * 100000 + Math.round(pt[1]);
+    if (changed('bePos', key)) this.edge.style.transform = 'translate(' + Math.round(pt[0]) + 'px, ' + Math.round(pt[1] - (h - w) / 2) + 'px)';
+    const a = Math.round(ang * 50) / 50;
+    if (changed('beAng', a)) this.edge.querySelector('.be-dir').style.setProperty('--a', a + 'rad');
+    if (changed('beTurn', turn * 2 + flip)) { this.edge.classList.toggle('turn', turn); this.edge.classList.toggle('flip', flip); }
+    if (changed('beDist', distTxt)) this.edge.querySelector('.be-dist').textContent = distTxt;
+  },
+  // Titik bidik prediksi (B4): tempat peluru akan mengenai bagian bos yang bisa ditembak bila menembak sekarang.
+  // Ikut opsi Bantuan bidik: Mati (tidak tampil), Rendah (halus), Sedang (penuh)
+  updateLead(b, W, H) {
+    const mode = Save.settings.aimAssist;
+    let part = null, bd = Infinity;
+    if (mode !== 'mati') for (const pt of b.parts) {
+      if (!pt.active ? true : (pt.hittable ? !pt.hittable() : false)) continue;
+      const d2 = pt.pos.distanceToSquared(Player.pos);
+      if (d2 < bd) { bd = d2; part = pt; }
+    }
+    let show = false;
+    if (part ? bd < 900 * 900 : false) {
+      const t = Math.sqrt(bd) / (CONFIG.weapons.bulletSpeed + Player.speed);
+      const q = this._q.copy(BossFX.vel).multiplyScalar(t).add(part.pos).project(camera);
+      if (q.z < 1 ? Math.max(Math.abs(q.x), Math.abs(q.y)) <= 1 : false) {
+        show = true;
+        const x = Math.round((q.x + 1) * 0.5 * W), y = Math.round((1 - q.y) * 0.5 * H);
+        if (changed('blPos', x * 100000 + y)) this.lead.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+        if (changed('blFull', mode)) this.lead.classList.toggle('full', mode === 'sedang');
+      }
+    }
+    this.show(this.lead, show);
+  },
+  updateIntro(dt) {
+    if (!this.introStage) return;
+    this.introT -= dt;
+    if (this.introStage === 1 ? this.introT <= 0 : false) {
+      // Mengecil menuju ikon di baris misi (desktop: bar bos, HP: baris misi)
+      const target = (Touch.enabled ? $('hpx-bico') : $('boss-ico')).getBoundingClientRect(), r = this.intro.getBoundingClientRect();
+      const ic = this.intro.querySelector('canvas').getBoundingClientRect();
+      const sc = target.width > 0 ? clamp(target.width / Math.max(1, ic.width), 0.1, 1) : 0.3;
+      const dx = target.width > 0 ? target.left + target.width / 2 - (ic.left + ic.width / 2) : 0, dy = target.width > 0 ? target.top + target.height / 2 - (ic.top + ic.height / 2) : -r.height;
+      this.intro.classList.add('shrink');
+      this.intro.style.transform = 'translateX(-50%) translate(' + Math.round(dx) + 'px, ' + Math.round(dy) + 'px) scale(' + sc.toFixed(2) + ')';
+      this.introStage = 2; this.introT = 0.55;
+    } else if (this.introStage === 2 ? this.introT <= 0 : false) {
+      this.intro.classList.add('hidden'); this.introStage = 0;
     }
   },
 };
@@ -9296,6 +9680,26 @@ const Radar = {
     }
     return out;
   },
+  // Bos di radar (B4): garis putus-putus dari pusat, jejak mini, garis arah gerak, dan ikon emblem
+  drawBoss(b) {
+    const c = this.dc, R = this.dR, k = this.dk, cx = this.dcx, cy = this.dcy, col = BOSS_STYLE[b.kind].css, o = this._o;
+    const pos = (p) => { this.rel(p, o); let x = o.x * k, y = o.y * k; const d = Math.hypot(x, y); if (d > R) { x *= R / d; y *= R / d; } return [cx + x, cy - y, d > R]; };
+    const [bx, by] = pos((b.anchor || b.group).position);
+    c.save();
+    c.strokeStyle = col; c.globalAlpha = 0.55; c.lineWidth = 1; c.setLineDash([3, 3]);
+    c.beginPath(); c.moveTo(cx, cy); c.lineTo(bx, by); c.stroke(); c.setLineDash([]);
+    const tr = BossFX.trail ? BossFX.trail.geometry.attributes.position.array : null;
+    if (tr) {
+      const sp = this._sp;
+      for (let i = 6; i < BossFX.TRAIL_N; i += 6) { sp.x = tr[i * 3]; sp.y = tr[i * 3 + 1]; sp.z = tr[i * 3 + 2]; const [x, y] = pos(sp); c.globalAlpha = 0.7 * (1 - i / BossFX.TRAIL_N); c.fillStyle = col; c.fillRect(x - 1, y - 1, 2, 2); }
+    }
+    const v = BossFX.vel, sp = this._sp, A = (b.anchor || b.group).position;
+    if (v.lengthSq() > 4) { sp.x = A.x + v.x * 3; sp.y = A.y + v.y * 3; sp.z = A.z + v.z * 3; const [vx, vy] = pos(sp); c.globalAlpha = 0.9; c.lineWidth = 2; c.beginPath(); c.moveTo(bx, by); c.lineTo(vx, vy); c.stroke(); }
+    c.globalAlpha = 1;
+    const s = Math.max(12, Math.round(this.size * 0.11) * 2);
+    c.drawImage(BossIcons.get(b.kind), bx - s / 2, by - s / 2, s, s);
+    c.restore();
+  },
   update(dt = 0.016) {
     if (this.needInit) { if (this.cv.clientWidth > 0) this.init(); }
     if (!this.ctx) return;
@@ -9345,7 +9749,7 @@ const Radar = {
       blip(e.pos, target ? '#ffd24a' : e.cfg.minor ? '#ff9a7a' : '#ff4a4a', e.cfg.minor ? 1.5 : Math.min(5, 2 + e.radius * 0.3), target ? 'ring' : 'dot');
       if (target) counts.target++; else counts.enemy++;
     }
-    if (Bosses.active) { blip((Bosses.active.anchor || Bosses.active.group).position, '#ff4fc8', 6, 'diamond'); counts.boss++; }
+    if (Bosses.active) { this.drawBoss(Bosses.active); counts.boss++; }
     if (WarpGate.active) { blip(WarpGate.group.position, '#6fdcff', 5, 'diamond'); counts.gate++; }
     if (Convoy.active) { blip(Convoy.pos, '#5dff9a', 4, 'square'); blip(Convoy.dest, '#5dff9a', 5, 'ring'); counts.convoy++; }
     // Panah tujuan misi di tepi radar
@@ -9716,6 +10120,7 @@ function setActiveWorld(id, seed) {
   next.reset(seed);
   Rings.reset();
   Player.setShip(selectedShip(next.id));
+  if (BossFX.warmed) BossFX.warm();   // varian shader bos untuk status dunia ini (setelah layar muat)
 }
 // Kapal terpilih untuk medan (dari save; hangar di A2 menambah pilihan)
 function selectedShip(worldId) {
@@ -10585,6 +10990,8 @@ const CamRig = {
   q: new THREE.Quaternion(),
   e: new THREE.Euler(0, 0, 0, 'YXZ'),
   chasePos: new THREE.Vector3(), chaseQuat: new THREE.Quaternion(),
+  focusT: 0, focusDur: 1, _fm: new THREE.Matrix4(), _fq: new THREE.Quaternion(),
+  focusBoss(dur) { this.focusT = dur; this.focusDur = dur; },
   cinePos: new THREE.Vector3(), cineQuat: new THREE.Quaternion(),
   // Shot sinematik: 0 orbit lambat, 1 flyby (kamera diam, pesawat melintas)
   shot: 0, shotTime: 0, flyby: new THREE.Vector3(),
@@ -10710,6 +11117,17 @@ const CamRig = {
       if (camera.position.y < minY) camera.position.y = minY;
     }
 
+    // Sorot bos (B3): kamera chase menoleh sebagian ke bos lalu kembali (kemunculan pertama, tanpa Kurangi gerakan)
+    if (this.focusT > 0) {
+      this.focusT -= dt;
+      const b = Bosses.active;
+      if (b ? (this.blend >= 1 ? !Save.settings.reduceMotion : false) : false) {
+        const k = clamp(1 - this.focusT / this.focusDur, 0, 1), w = Math.sin(k * Math.PI) * 0.55;
+        this._fm.lookAt(camera.position, (b.anchor || b.group).position, camera.up);
+        this._fq.setFromRotationMatrix(this._fm);
+        camera.quaternion.slerp(this._fq, w);
+      }
+    }
     // Getar: kombinasi sinus berfrekuensi berbeda, lebih halus dari jitter acak
     this.trauma = Math.max(0, this.trauma - C.shakeDecay * dt);
     const nf = Player.nitroFx;
@@ -11372,13 +11790,13 @@ function updateAlertsHp(hp) {
   const play = Game.state === 'playing' ? Player.alive : false;
   const F = Debug.forceAlerts;   // uji tekanan: semua peringatan dipaksa tampil
   const warn = F ? 'TARIK NAIK!' : play ? (Player.warning || '') : '';
-  const on = F ? { terrain: true, hp: true, rear: true, comet: true }
-    : { terrain: !!warn, hp: play ? hp < CONFIG.player.criticalHp : false, rear: play ? Enemies.rearThreat : false, comet: Game.state === 'playing' ? Comets.threat !== null : false };
-  const key = (on.terrain ? 1 : 0) + (on.hp ? 2 : 0) + (on.rear ? 4 : 0) + (on.comet ? 8 : 0) + '|' + warn;
+  const on = F ? { boss: !!Bosses.active, terrain: true, hp: true, rear: true, comet: true }
+    : { boss: play ? BossHud.rear : false, terrain: !!warn, hp: play ? hp < CONFIG.player.criticalHp : false, rear: play ? Enemies.rearThreat : false, comet: Game.state === 'playing' ? Comets.threat !== null : false };
+  const key = (on.terrain ? 1 : 0) + (on.hp ? 2 : 0) + (on.rear ? 4 : 0) + (on.comet ? 8 : 0) + (on.boss ? 16 : 0) + '|' + warn;
   if (!changed('alerts', key)) return;
   let shown = 0;
   const count = Object.values(on).filter(Boolean).length;
-  for (const k of ['terrain', 'hp', 'rear', 'comet']) {
+  for (const k of ['boss', 'terrain', 'hp', 'rear', 'comet']) {
     const el = hud.alertEls[k];
     el.classList.toggle('hidden', !on[k]);
     if (!on[k]) continue;
@@ -11391,7 +11809,7 @@ function updateAlertsHp(hp) {
   const act = Touch.actionsEl.getBoundingClientRect(), cx = Viewport.w / 2;
   const limits = [left, act].filter((r) => r.width > 0).map((r) => (r.right <= cx ? cx - r.right : r.left - cx) - 8);
   const maxW = Math.max(60, Math.floor(2 * Math.min(...limits, Viewport.w * 0.4)));
-  const list = ['comet', 'rear', 'hp', 'terrain'].map((k) => hud.alertEls[k]).filter((el) => !el.classList.contains('hidden'));
+  const list = ['comet', 'rear', 'hp', 'terrain', 'boss'].map((k) => hud.alertEls[k]).filter((el) => !el.classList.contains('hidden'));
   for (const el of list) { if (box.scrollWidth <= maxW) break; el.classList.add('ic-only'); }
 }
 
@@ -11444,7 +11862,7 @@ Events.on('starCollected', (kind, x, y, z) => {
 // Teks misi ringkas untuk baris tengah atas mode HP: bos, kontrak kampanye, atau gelombang
 function hpxMission() {
   const B = Bosses.active;
-  if (B) return (B.name || 'BOS').toUpperCase() + (B.phaseLabel ? ' ' + B.phaseLabel() : '');
+  if (B) return 'BOS: ' + (B.name || '').toUpperCase() + ' F' + (B.phase || 1);
   const w = Waves.wave > 0 ? 'G' + Waves.wave + (Campaign.active ? '/' + Campaign.stage.waves : '') : '';
   if (Campaign.active) { const c = Contracts.shortLabel(); return 'S' + (Campaign.stageIdx + 1) + ' ' + (c || w) + (c ? (w ? ' · ' + w : '') : ''); }
   if (Worlds.active === SpaceWorld) return 'JELAJAH' + (w ? ' · ' + w : '');
@@ -11542,6 +11960,7 @@ function updateHud(dt) {
   updateIndicators();
   updateHpBars();
   updateLeadMarker();
+  BossHud.update(dt);
   v = Game.state === 'playing' ? (Player.alive ? Enemies.rearThreat : false) : false;
   if (changed('rear', v)) $('rear-warn').classList.toggle('hidden', !v);
   v = Game.state === 'playing' ? Comets.threat !== null : false;
@@ -11912,6 +12331,7 @@ function resetWorld(seed) {
 // agar posisi pesawat dan dunia tidak melompat.
 function resetSession(keepWorld = false) {
   Bosses.clear();
+  Bosses.seen.clear();
   Campaign.beginSession();
   Game.time = 0;
   Game.score = 0;
@@ -13078,7 +13498,8 @@ const AutoInput = {
       this.yaw = clamp(wrapAngle(want - Player.yaw) * 2.5, -1, 1);
       this.pitch = clamp((Math.max(target.pos.y, ground + 40) - P.y) * 0.02 - Player.pitch * 1.6, -1, 1);
     } else {
-      this.yaw = Math.sin(t * 0.37) * 0.8;
+      // Bot jelajah uji bos: meliuk lembut seperti pemain yang terbang santai (bukan berputar-putar)
+      this.yaw = Debug.botBoss === 'jelajah' ? Math.sin(t * 0.23) * 0.3 : Math.sin(t * 0.37) * 0.8;
       this.pitch = clamp((ground + 55 - P.y) * 0.02 - Player.pitch * 1.6, -1, 1);
     }
     if (P.y < ground + 30) this.pitch = 1;   // keselamatan medan selalu menang
@@ -13696,12 +14117,14 @@ const GameHooks = {
     bossSim(kind, seconds = 180, opts = {}) {
       if (Game.state !== 'playing') return null;
       const godBefore = Debug.god, enBefore = Debug.enemiesEnabled;
-      Debug.enemiesEnabled = false; Enemies.reset(); Bosses.clear();
+      const resume = opts.resume ? (Bosses.active ? Bosses.active.kind === kind : false) : false;   // lanjutkan bos dan metrik yang sama
+      Debug.enemiesEnabled = false;
+      if (!resume) { Enemies.reset(); Bosses.clear(); }
       if (opts.difficulty ? Object.hasOwn(CONFIG.difficulty.levels, opts.difficulty) : false) Game.difficultyKey = opts.difficulty;
-      BossStats.reset(); BossStats.on = true;
+      if (!resume) BossStats.reset();
+      BossStats.on = true;
       Debug.god = true; Debug.autoInput = true; Debug.botBoss = opts.bot === 'jelajah' ? 'jelajah' : 'buru';
-      Bosses.start(kind);
-      if (Bosses.active) Bosses.active.onDefeat = null;
+      if (!resume) { Bosses.start(kind); if (Bosses.active) Bosses.active.onDefeat = null; }
       Cutscene.skip();
       const steps = Math.round(seconds * 60), t0 = performance.now();
       let ultUsed = 0;
@@ -13771,6 +14194,22 @@ const GameHooks = {
         fogged: scene.fog ? round2(clamp((d - scene.fog.near) / Math.max(1, scene.fog.far - scene.fog.near), 0, 1)) : 0 };
     },
     bossMetrics() { return BossStats.summary(); },
+    programList() { return (renderer.info.programs || []).map((p) => p.name + ' ' + String(p.cacheKey).length + ' ' + String(p.cacheKey).slice(0, 400)); },
+    // Penanda bos (B3, B4): status, kotak tiap elemen yang terlihat, dan posisi panah tepi
+    bossHud() {
+      const R = (el) => { if (!el ? true : el.classList.contains('hidden')) return null; const r = el.getBoundingClientRect(); return r.width > 0 ? { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) } : null; };
+      return { active: !!Bosses.active, state: BossHud.state, rear: BossHud.rear, mark: R(BossHud.mark), markInfo: BossHud.mark.classList.contains('near') ? null : R(BossHud.mark.querySelector('.bm-info')), edge: R(BossHud.edge), edgeTurn: BossHud.edge.classList.contains('turn'),
+        rearEl: R(BossHud.rearEl), rearChip: R(hud.alertEls.boss), intro: R(BossHud.intro), introStage: BossHud.introStage, lead: R(BossHud.lead), dot: R($('boss-dot')), mission: $('hpx-mission').textContent, barName: $('boss-name').textContent };
+    },
+    // Letakkan bos relatif terhadap pemain (koordinat lokal: kanan, atas, depan) tanpa merender (uji penanda)
+    placeBoss(lx, ly, lz) {
+      const b = Bosses.active;
+      if (!b) return false;
+      const A = (b.anchor || b.group).position, t = _va.copy(Player.pos).addScaledVector(Player._right, lx).addScaledVector(Player._up, ly).addScaledVector(Player.forward, lz), d = _vb.copy(t).sub(A);
+      if (b.trail) { b.head.position.add(d); for (const sg of b.segs) sg.position.add(d); for (const tp of b.trail) tp.add(d); } else b.group.position.add(d);
+      b.pinned = 0.5;
+      return true;
+    },
     // Kontur bos (B2): jenis objek, terlihat, tebal piksel, dan jumlah draw call satu frame dengan dan tanpa kontur
     bossFx() {
       const o = BossFX.outline;
@@ -13867,6 +14306,7 @@ const GameHooks = {
     viewArea(id) {
       const pose = SpaceWorld.startPose.call({ area: id });
       Player.pos.copy(pose.pos); Player.setHeading(pose.yaw); CamRig.reset();
+      SpaceWorld.startY = pose.pos.y;   // ketinggian jelajah autopilot ikut area baru
       return true;
     },
     setArea(id) { if (SolarSystem.byId[id] ? false : !CONFIG.fields.belts.some((b) => b.id === id)) return false; SpaceWorld.area = id; return true; },
@@ -14605,12 +15045,10 @@ const Warmup = {
   ms: 0, textures: 0,
   run() {
     const t0 = performance.now(), hidden = [];
-    const bossWarm = BossFX.warmObjects();   // material dan kontur bos (B2) agar bos pertama tidak tersendat
-    for (const o of bossWarm) scene.add(o);
     scene.traverse((o) => { if (!o.visible) { hidden.push(o); o.visible = true; } });
     try { renderer.compile(scene, camera); } catch (err) { /* dikompilasi saat dipakai */ }
     for (const o of hidden) o.visible = false;
-    for (const o of bossWarm) { scene.remove(o); if (o.isBatchedMesh) o.dispose(); else o.geometry.dispose(); }
+    BossFX.warm();
     const seen = new Set();
     const tex = (v) => { if (v ? (v.isTexture ? !seen.has(v) : false) : false) { seen.add(v); try { renderer.initTexture(v); } catch (err) { /* abaikan */ } } };
     scene.traverse((o) => {

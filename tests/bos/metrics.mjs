@@ -12,6 +12,7 @@ const label = argv.find((a) => !a.startsWith('--')) || 'run';
 const SECS = Number(opt.secs || 180);
 const SEEDS = String(opt.seeds || '4242').split(',').map(Number);
 const BOTS = String(opt.bots || 'buru,jelajah').split(',');
+const DIFFS = String(opt.diffs || 'mudah,normal,sulit').split(',');
 const PORT = Number(process.env.PERF_PORT || 4192);
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const OUT = fileURLToPath(new URL('../../docs/bos/data/', import.meta.url));
@@ -24,7 +25,7 @@ const HOME = { raksasa: 'earth', miner: 'sabuk', hunter: 'uranus', naga: 'pluto'
 const BOSSES = opt.boss ? String(opt.boss).split(',') : Object.keys(HOME);
 const rows = [];
 try {
-  for (const bot of BOTS) for (const kind of BOSSES) for (const difficulty of ['mudah', 'normal', 'sulit']) for (const seed of SEEDS) {
+  for (const bot of BOTS) for (const kind of BOSSES) for (const difficulty of DIFFS) for (const seed of SEEDS) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     await page.addInitScript(() => { try { Object.defineProperty(Navigator.prototype, 'getBattery', { value: undefined, configurable: true }); } catch (err) { /* abaikan */ } });
     await page.goto(`http://localhost:${PORT}/index.html?debug=1&kualitas=rendah`);
