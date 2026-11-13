@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-MgyQiIXCQv+VF7S9kPDLgT/RmB6peagceFUopin3p9s='; style-src 'self' 'sha256-4yDrHSlPs3Nr+UBCLMTGgH1G43jAUJXnrYgh1S5GFIw='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-7QQGJ3AmeDQ6d2r2llLZtvwQEWnec0ith5vdDL+/yh4='; style-src 'self' 'sha256-4yDrHSlPs3Nr+UBCLMTGgH1G43jAUJXnrYgh1S5GFIw='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -8133,6 +8133,8 @@ const Bosses = {
       amount = Math.min(amount, p.health.hp - floor);
     }
     p.hpBarTimer = 2;
+    // Jendela rentan (B5): damage ke bos dikali sesuai kesulitan
+    if (this.active.vuln > 0 ? !byUltimate : false) amount *= BossPilot.P().vulnMul;
     Events.emit('enemyHit', x, y, z);
     return applyDamage(p, amount, 'pemain', x, y, z);
   },
@@ -8209,7 +8211,7 @@ const BossStats = {
   reset() {
     this.time = 0; this.front = 0; this.rear = 0; this.streak = 0; this.maxRear = 0; this.overshoots = 0; this.vulnWindows = 0; this.vulnTime = 0;
     this.inside = 0; this.occluded = 0; this.offscreen = 0; this.distSum = 0; this.lastAhead = null; this.defeatAt = null; this.minPx = Infinity; this.pxSum = 0;
-    this.contacts = 0; this.lastContact = -9;
+    this.contacts = 0; this.lastContact = -9; this.modes = {};
   },
   // Garis kamera ke titik terhalang planet, bulan, Matahari (angkasa) atau medan (Bumi)
   blocked(a, b) {
@@ -8241,6 +8243,7 @@ const BossStats = {
     if (this.lastAhead === true ? (ahead ? false : d < 500) : false) this.overshoots++;
     this.lastAhead = ahead;
     if (b.vuln > 0) this.vulnTime += dt;
+    if (b.pilot) this.modes[b.pilot.mode] = (this.modes[b.pilot.mode] || 0) + dt;
     if (Worlds.active === SpaceWorld ? SolarSystem.built : false) {
       if (SolarSystem.inside(A.x, A.y, A.z, 0)) this.inside += dt;
       else if (this.blocked(camera.position, A)) this.occluded += dt;
@@ -8256,10 +8259,109 @@ const BossStats = {
     return { time: round2(this.time), frontPct: pct(this.front), rearPct: pct(this.rear), maxRearStreak: round2(this.maxRear),
       overshootsPerMin: round2(this.overshoots / (T / 60)), vulnWindows: this.vulnWindows, vulnPct: pct(this.vulnTime),
       insideBodyPct: pct(this.inside), occludedPct: pct(this.occluded), offscreenPct: pct(this.offscreen),
-      contactsPerMin: round2(this.contacts / (T / 60)), meanDist: Math.round(this.distSum / T), meanPx: Math.round(this.pxSum / T), defeatAt: this.defeatAt === null ? null : round2(this.defeatAt) };
+      modePct: Object.fromEntries(Object.entries(this.modes).map(([k, v]) => [k, pct(v)])), contactsPerMin: round2(this.contacts / (T / 60)), meanDist: Math.round(this.distSum / T), meanPx: Math.round(this.pxSum / T), defeatAt: this.defeatAt === null ? null : round2(this.defeatAt) };
   },
 };
 BossStats.reset();
+
+/* =====================================================================
+   PENGENDALI GERAK BOS (B5) - siklus serang yang memberi jendela tembak di depan pemain, bukan mengekor:
+   lead (mendekat lalu terbang di depan pemain searah dan meliuk, mudah dikejar), windup (aba-aba, khusus
+   Penambang), strafe (serang lewat depan: menuju sisi pemain dengan jarak aman dan melintasi bidang
+   pandang), overshoot (lewat dan menjauh), turn (berputar lebar dan menyusul ke depan lagi). Saat kembali
+   ke depan setelah berputar ada jendela rentan (damage ke bos dikali vulnMul, kontur dan ikon berkedip
+   emas). Bos tidak boleh berada di ekor (kerucut 120 derajat di belakang) lebih dari tailMax detik
+   berturut-turut. HP bos, damage bos, dan hadiah tidak berubah. Rincian dan metrik: docs/bos/perilaku.md.
+   ===================================================================== */
+const BOSS_PILOT = {
+  // frontShare: sasaran porsi waktu di kerucut depan 60 derajat (bot jelajah), lead: lama di depan (detik),
+  // leadDist: jarak di depan pemain, overshoot: jarak lewat sebelum berputar, turn: laju belok saat berputar,
+  // catchup: kecepatan menyusul relatif pemain, vuln: lama jendela rentan, vulnMul: pengali damage ke bos,
+  // tailMax: batas detik berturut-turut di ekor, cross: serang melintang di depan pemain (dari sisi ke sisi) alih-alih
+  // berhadapan lalu lewat ke belakang
+  mudah: { frontShare: 0.65, lead: [14, 17], leadDist: 190, overshoot: 50, turn: 2.8, catchup: 2.0, vuln: 3.0, vulnMul: 1.6, tailMax: 4, cross: true },
+  normal: { frontShare: 0.45, lead: [4.4, 5.6], leadDist: 230, overshoot: 150, turn: 2.0, catchup: 1.6, vuln: 2.2, vulnMul: 1.4, tailMax: 6 },
+  sulit: { frontShare: 0.25, lead: [2, 2.8], leadDist: 270, overshoot: 280, turn: 1.5, catchup: 1.35, vuln: 1.5, vulnMul: 1.25, tailMax: 9 },
+};
+const BossPilot = {
+  _d: new THREE.Vector3(), _t: new THREE.Vector3(), _a: new THREE.Vector3(),
+  P() { return BOSS_PILOT[Game.difficultyKey] || BOSS_PILOT.normal; },
+  // o: { clear: jarak aman lintasan dari pemain, alt: tinggi minimum di atas medan Bumi, windup: detik aba-aba
+  //      sebelum serang (0 = tanpa), strafeSpeed: kecepatan serang (unit per detik), onMode(b, mode) }
+  init(b, o) {
+    b.pilot = { mode: 'lead', t: 0, leadT: 3, side: rand() < 0.5 ? -1 : 1, tail: 0, run: 0, o };
+    b.vuln = 0;
+  },
+  set(b, mode) {
+    const pl = b.pilot, C = this.P();
+    pl.mode = mode; pl.t = 0; pl.run = 0;
+    if (mode === 'lead') pl.leadT = randRange(C.lead[0], C.lead[1]);
+    if (mode === 'turn') pl.side = -pl.side;   // bergantian sisi agar lintasan tidak selalu sama
+    if (pl.o.onMode) pl.o.onMode(b, mode);
+  },
+  // Gerakkan obj (grup bos atau kepala naga) satu langkah
+  update(b, obj, dt) {
+    const pl = b.pilot, o = pl.o, C = this.P(), P = Player.pos, F = Player.forward, R = Player._right, U = Player._up;
+    const pos = obj.position, d = this._d.copy(pos).sub(P), dist = d.length() || 1;
+    const lz = d.dot(F), cos = lz / dist, ps = Math.max(Player.speed, CONFIG.player.baseSpeed * 0.8);
+    pl.t += dt;
+    if (b.vuln > 0) b.vuln -= dt;
+    pl.tail = cos < -0.5 ? pl.tail + dt : 0;
+    const T = this._t;
+    let speed = ps, turn = 1.5;
+    if (pl.mode === 'lead') {
+      // Di depan pemain, searah dan meliuk: diperlambat bila terlalu jauh di depan, dipercepat bila tertinggal
+      // Liukan sempit (sekitar 10 derajat) agar bos tetap di kerucut depan; naga lebih jauh dan lebih tinggi agar
+      // tubuh panjangnya tidak melintang di jalur pemain
+      const ld = C.leadDist * (o.leadMul || 1);
+      T.copy(P).addScaledVector(F, ld).addScaledVector(R, Math.sin(b.time * 0.8) * 30 + pl.side * 12).addScaledVector(U, Math.sin(b.time * 0.55) * 12 + 6 + (o.leadUp || 0));
+      speed = clamp(ps - (lz - ld) * 0.5, ps * 0.7, ps * 1.4);
+      turn = 3.4;
+      if (pl.t > pl.leadT) this.set(b, o.windup > 0 ? 'windup' : 'strafe');
+    } else if (pl.mode === 'windup') {
+      // Aba-aba: melambat dan menghadap pemain sebelum menyerbu
+      T.copy(P); speed = 14; turn = 2.6;
+      if (pl.t > o.windup) this.set(b, 'strafe');
+    } else if (pl.mode === 'strafe' ? C.cross : false) {
+      // Mudah: serang melintang dari satu sisi ke sisi lain di depan pemain, tetap di kerucut depan cukup lama
+      const lx = d.dot(R);
+      T.copy(P).addScaledVector(F, C.leadDist * 0.75).addScaledVector(R, -pl.side * (o.clear + 90)).addScaledVector(U, 6 + (o.leadUp || 0) * 0.5);
+      speed = Math.max(o.strafeSpeed ? o.strafeSpeed * 0.7 : 0, ps * 1.05); turn = 2.2;
+      if (lx * -pl.side > o.clear ? true : pl.t > 6) this.set(b, 'overshoot');
+    } else if (pl.mode === 'strafe') {
+      // Serang lewat depan: menuju titik di samping pemain (jarak aman), melintasi bidang pandang
+      T.copy(P).addScaledVector(F, 30).addScaledVector(R, pl.side * o.clear).addScaledVector(U, 6);
+      speed = o.strafeSpeed || ps * 0.95; turn = 1.7;
+      if (lz < 0 ? true : pl.t > 7) this.set(b, 'overshoot');
+    } else if (pl.mode === 'overshoot') {
+      // Lewat dan menjauh lurus
+      T.copy(pos).addScaledVector(b.dir, 100); speed = Math.max(ps, o.strafeSpeed || 0); turn = 0.2;
+      pl.run += speed * dt;
+      if (pl.run > C.overshoot) this.set(b, 'turn');
+    } else {
+      // Berputar lebar lalu menyusul ke depan pemain lagi; jendela rentan saat masuk kembali ke depan
+      T.copy(P).addScaledVector(F, C.leadDist * (o.leadMul || 1) * 1.1).addScaledVector(R, pl.side * (o.clear + (C.cross ? 15 : 70))).addScaledVector(U, o.leadUp || 0);
+      // Masih di ekor: dorongan ekstra agar batas tailMax tidak terlewati
+      speed = Math.min(ps * C.catchup + (pl.tail > 0 ? 70 : 20), CONFIG.player.nitroSpeed * (pl.tail > 0 ? 1.45 : 1.15)); turn = pl.tail > 0 ? Math.max(C.turn, 2.4) : C.turn;
+      if (cos > (C.cross ? 0.75 : 0.8) ? dist < C.leadDist * (o.leadMul || 1) * 1.8 : false) {
+        this.set(b, 'lead');
+        b.vuln = C.vuln;
+        if (BossStats.on) BossStats.vulnWindows++;
+        Events.emit('bossVulnerable', b.kind);
+      }
+    }
+    // Batas ekor: terlalu lama di belakang pemain, langsung berputar dan menyusul ke depan
+    if (pl.tail > C.tailMax * 0.35 ? pl.mode !== 'turn' : false) this.set(b, 'turn');
+    // Jarak aman: bos tidak menempel atau menabrak pemain
+    if (dist < o.clear) T.addScaledVector(this._a.copy(d).divideScalar(dist), (o.clear - dist) * 4 + 40);
+    if (Worlds.active === EarthWorld) T.y = Math.max(T.y, groundHeightAt(T.x, T.z) + (o.alt || 70));
+    else if (SolarSystem.built) SpaceWorld.push(T, b.size + 30);
+    _desired.subVectors(T, pos).normalize();
+    b.dir.lerp(_desired, clamp(turn * dt, 0, 1)).normalize();
+    pos.addScaledVector(b.dir, speed * dt);
+    if (o.face !== false) obj.lookAt(_vc.copy(pos).sub(b.dir));
+  },
+};
 
 // Model bos dari loft dan lathe
 function buildBossMiner() {
@@ -8344,12 +8446,10 @@ const BOSS_DEFS = {
     group.position.set(P.x + f.x * 600, Math.max(P.y + 40, groundHeightAt(P.x + f.x * 600, P.z + f.z * 600) + 80), P.z + f.z * 600);
     b.barRatio = () => health.ratio;
     b.phaseLabel = () => 'FASE ' + b.phase;
+    BossPilot.init(b, { clear: 48, alt: 70 });
     b.update = (dt) => {
       if (b.phase === 1 ? health.ratio < 0.5 : false) { b.phase = 2; showBanner('PENJAGA RAKSASA MENGAMUK', 1500); }
-      b.angle += dt * (b.phase === 2 ? 0.32 : 0.22);
-      const t = Bosses.orbitPoint(b.angle, 320, 30, _vb);
-      t.y = Math.max(t.y, groundHeightAt(t.x, t.z) + 70);
-      Bosses.steer(b, t, CONFIG.player.baseSpeed * 0.75, 0.9, dt);
+      BossPilot.update(b, group, dt);
       b.fireCd -= dt;
       if (b.tele > 0) { b.tele -= dt; Events.emit('enemyTelegraph', group.position); if (b.tele <= 0) { for (let i = 0; i < (b.phase === 2 ? 7 : 5); i++) Bosses.shoot(group.position, 150, 8, 0.12); b.fireCd = b.phase === 2 ? 1.3 : 2.0; } }
       else if (b.fireCd <= 0 ? group.position.distanceTo(Player.pos) < 600 : false) b.tele = 0.7;
@@ -8361,7 +8461,7 @@ const BOSS_DEFS = {
   miner: { create() {
     const C = CONFIG.bosses.miner, m = buildBossMiner();
     const health = new Health(C.hp * Game.diff.enemyHp, () => Bosses.defeat());
-    const b = { name: 'Penambang Raksasa', group: m.group, dir: new THREE.Vector3(0, 0, 1), size: 20, score: 8000, credits: 200, phase: 1, angle: 0, mode: 'orbit', modeT: 3, fireCd: 2, throwCd: 4,
+    const b = { name: 'Penambang Raksasa', group: m.group, dir: new THREE.Vector3(0, 0, 1), size: 20, score: 8000, credits: 200, phase: 1, angle: 0, mode: 'orbit', modeT: 3, fireCd: 2, throwCd: 4, tele: 0, throwTele: 0,
       parts: [], solids: [], blockers: [] };
     b.parts.push(new BossPart(m.group, 11, health), new BossPart(m.drill, 6, health));
     b.solids.push({ obj: m.group, radius: 9 }, { obj: m.drill, radius: 4.5 });
@@ -8369,36 +8469,34 @@ const BOSS_DEFS = {
     m.group.position.set(P.x + f.x * 650, P.y + 40, P.z + f.z * 650);
     b.barRatio = () => health.ratio;
     b.phaseLabel = () => 'FASE ' + b.phase;
-    b.chargeTarget = new THREE.Vector3();
+    // Serbuan bor = fase serang lewat depan: aba-aba 1,3 detik (bor berputar cepat menghadap pemain), lalu menyerbu
+    // ke samping pemain dengan jarak aman (sebelumnya langsung ke posisi pemain dan sering menabrak)
+    BossPilot.init(b, { clear: 60, alt: 70, windup: 1.3, strafeSpeed: CONFIG.player.nitroSpeed * 0.8,
+      onMode: (bb, mode) => { b.mode = mode === 'windup' ? 'windup' : mode === 'strafe' ? 'charge' : 'orbit'; if (mode === 'windup') showToast('BOR BERPUTAR!'); } });
     b.update = (dt) => {
       if (b.phase === 1 ? health.ratio < 0.5 : false) { b.phase = 2; showBanner('BOR DIPERCEPAT', 1400); Piko.say('bossPhase'); }
       m.drill.rotation.z += dt * (b.mode === 'windup' ? 14 : b.mode === 'charge' ? 18 : 3);
       for (let i = 0; i < 2; i++) m.arms[i].rotation.x = Math.sin(b.time * 1.4 + i) * 0.25;
-      b.modeT -= dt;
+      BossPilot.update(b, m.group, dt);
+      if (b.mode === 'windup') Events.emit('enemyTelegraph', m.drill.getWorldPosition(_vd));
       if (b.mode === 'orbit') {
-        b.angle += dt * 0.25;
-        Bosses.steer(b, Bosses.orbitPoint(b.angle, 380, 20, _vb), CONFIG.player.baseSpeed * 0.6, 0.8, dt);
+        // Tembakan bor dengan aba-aba 0,6 detik (sebelumnya tanpa aba-aba)
         b.fireCd -= dt;
-        if (b.fireCd <= 0) { m.drill.getWorldPosition(_vd); for (let i = 0; i < 4; i++) Bosses.shoot(_vd, 140, 7, 0.1); b.fireCd = b.phase === 2 ? 1.4 : 2.2; }
-        // Fase 2: lengan melempar bongkahan batu ke arah pemain
+        if (b.tele > 0) { b.tele -= dt; m.drill.getWorldPosition(_vd); Events.emit('enemyTelegraph', _vd); if (b.tele <= 0) { for (let i = 0; i < 4; i++) Bosses.shoot(_vd, 140, 7, 0.1); b.fireCd = b.phase === 2 ? 1.4 : 2.2; } }
+        else if (b.fireCd <= 0) b.tele = 0.6;
+        // Fase 2: lengan melempar bongkahan batu ke arah pemain, dengan aba-aba 0,6 detik di kedua lengan
         b.throwCd -= dt;
-        if (b.phase === 2 ? b.throwCd <= 0 : false) {
-          b.throwCd = 3.5;
-          for (const arm of m.arms) {
-            arm.getWorldPosition(_vd);
-            const a = Asteroids.spawn('medium', _vd.x, _vd.y, _vd.z, 'rock');
-            if (a) a.vel.subVectors(Player.pos, _vd).normalize().multiplyScalar(55);
+        if (b.throwTele > 0) {
+          b.throwTele -= dt;
+          for (const arm of m.arms) Events.emit('enemyTelegraph', arm.getWorldPosition(_vd));
+          if (b.throwTele <= 0) {
+            for (const arm of m.arms) {
+              arm.getWorldPosition(_vd);
+              const a = Asteroids.spawn('medium', _vd.x, _vd.y, _vd.z, 'rock');
+              if (a) a.vel.subVectors(Player.pos, _vd).normalize().multiplyScalar(55);
+            }
           }
-        }
-        if (b.modeT <= 0) { b.mode = 'windup'; b.modeT = 1.3; showToast('BOR BERPUTAR!'); }
-      } else if (b.mode === 'windup') {
-        // Tanda: bor berputar cepat dan menghadap pemain sebelum menyerbu
-        Bosses.steer(b, Player.pos, 10, 2.5, dt);
-        Events.emit('enemyTelegraph', m.drill.getWorldPosition(_vd));
-        if (b.modeT <= 0) { b.mode = 'charge'; b.modeT = 2.2; b.chargeTarget.copy(Player.pos); }
-      } else {
-        Bosses.steer(b, _vd.copy(b.chargeTarget).addScaledVector(b.dir, 400), CONFIG.player.nitroSpeed * 0.8, 0.15, dt);
-        if (b.modeT <= 0) { b.mode = 'orbit'; b.modeT = b.phase === 2 ? 4 : 6; }
+        } else if (b.phase === 2 ? b.throwCd <= 0 : false) { b.throwCd = 3.5; b.throwTele = 0.6; }
       }
     };
     return b;
@@ -8408,7 +8506,7 @@ const BOSS_DEFS = {
   hunter: { create() {
     const C = CONFIG.bosses.hunter, m = buildBossHunter();
     const health = new Health(C.hp * Game.diff.enemyHp, () => Bosses.defeat());
-    const b = { name: 'Pemburu Agung', group: m.group, dir: new THREE.Vector3(0, 0, 1), size: 10, score: 9000, credits: 220, phase: 1, angle: 0, fireCd: 1.5, missileCd: 4, decoyCd: 0, tele: 0,
+    const b = { name: 'Pemburu Agung', group: m.group, dir: new THREE.Vector3(0, 0, 1), size: 10, score: 9000, credits: 220, phase: 1, angle: 0, fireCd: 1.5, missileCd: 4, missileTele: 0, decoyCd: 0, tele: 0,
       parts: [], solids: [], blockers: [], decoys: [] };
     b.parts.push(new BossPart(m.group, 7, health));
     b.solids.push({ obj: m.group, radius: 5 });
@@ -8435,23 +8533,24 @@ const BOSS_DEFS = {
     b.dispose = () => { for (const d of b.decoys) scene.remove(d.obj); };
     b.barRatio = () => health.ratio;
     b.phaseLabel = () => 'FASE ' + b.phase;
+    BossPilot.init(b, { clear: 42, alt: 60 });
     b.update = (dt) => {
       if (b.phase === 1 ? health.ratio < 0.5 : false) { b.phase = 2; b.decoyCd = 0; showBanner('PEMBURU AGUNG MEMANGGIL TIRUAN', 1500); Piko.say('bossPhase'); }
-      b.angle += dt * (b.phase === 2 ? 0.55 : 0.4);
-      const t = Bosses.orbitPoint(b.angle, 300 + Math.sin(b.time * 0.7) * 80, Math.sin(b.time * 0.5) * 40, _vb);
-      Bosses.steer(b, t, Math.min(Enemies.maxSpeed(), CONFIG.player.baseSpeed * 1.25), 1.4, dt);
+      BossPilot.update(b, m.group, dt);
       b.fireCd -= dt;
       if (b.tele > 0) { b.tele -= dt; Events.emit('enemyTelegraph', m.group.position); if (b.tele <= 0) { for (let i = 0; i < 3; i++) Bosses.shoot(m.group.position, 185, 8, 0.04); b.fireCd = 1.3; } }
       else if (b.fireCd <= 0) b.tele = 0.5;
+      // Rudal dengan aba-aba 0,5 detik (sebelumnya langsung meluncur)
       b.missileCd -= dt;
-      if (b.missileCd <= 0) { b.missileCd = b.phase === 2 ? 4.5 : 6; const mm = Enemies.spawn('missile', m.group.position.x, m.group.position.y, m.group.position.z); if (mm) mm.dir.copy(b.dir); }
+      if (b.missileTele > 0) { b.missileTele -= dt; Events.emit('enemyTelegraph', m.group.position); if (b.missileTele <= 0) { const mm = Enemies.spawn('missile', m.group.position.x, m.group.position.y, m.group.position.z); if (mm) mm.dir.copy(b.dir); } }
+      else if (b.missileCd <= 0) { b.missileCd = b.phase === 2 ? 4.5 : 6; b.missileTele = 0.5; }
       if (b.phase === 2) {
         b.decoyCd -= dt;
         if (b.decoyCd <= 0) { b.decoyCd = 12; b.spawnDecoys(); }
         for (const d of b.decoys) {
           if (!d.part.active) continue;
-          const a = b.angle + d.off;
-          Bosses.orbitPoint(a, 300 + Math.sin(b.time * 0.7 + d.off) * 80, Math.sin(b.time * 0.5 + d.off) * 40, _vc);
+          // Umpan terbang dalam formasi di samping bos asli (bergeser pelan)
+          _vc.copy(m.group.position).addScaledVector(Player._right, d.off * 38 + Math.sin(b.time * 0.9 + d.off) * 10).addScaledVector(Player._up, Math.sin(b.time * 0.7 + d.off * 2) * 14);
           d.obj.position.lerp(_vc, clamp(dt * 1.5, 0, 1));
           _va.subVectors(d.obj.position, _vc).normalize();
           d.obj.lookAt(_vd.copy(d.obj.position).add(_va));
@@ -8523,6 +8622,7 @@ const BOSS_DEFS = {
       b.laser.mode = 'idle'; b.laserLine.visible = false; b.laserBeam.visible = false;
       Events.emit('bossPhase', n);
     };
+    BossPilot.init(b, { clear: 90, alt: 80, leadMul: 1.35, leadUp: 30 });
     b.update = (dt) => Naga.update(b, dt);
     b.intro = () => Naga.introCutscene(b);
     b.onDefeat = () => Naga.ending(b);
@@ -8548,16 +8648,16 @@ const Naga = {
       _vc.subVectors(head.position, P).setY(0).normalize();
       target.copy(head.position).addScaledVector(_vc, 300);
       target.x += Math.sin(b.time * 0.6) * 120; target.y = P.y + Math.sin(b.time * 0.4) * 60;
-    } else {
-      b.angle += dt * (b.phase === 4 ? 0.45 : 0.28);
-      Bosses.orbitPoint(b.angle, b.phase === 4 ? 230 : 320, 40 + Math.sin(b.time * 0.5) * 50, target);
-      if (b.phase === 2 ? b.laser.mode !== 'idle' : false) { target.copy(P); speed = 15; }
     }
-    _desired.subVectors(target, head.position).normalize();
-    const turn = b.phase === 2 ? (b.laser.mode === 'fire' ? 0.35 : 1.2) : 1.0;
-    b.dir.lerp(_desired, clamp(turn * dt, 0, 1)).normalize();
-    head.position.addScaledVector(b.dir, speed * dt);
-    head.lookAt(_vc.copy(head.position).sub(b.dir));
+    if (b.phase === 3 ? true : (b.phase === 2 ? b.laser.mode !== 'idle' : false)) {
+      // Fase 3 kabur, dan bidikan laser fase 2 (melambat dan menghadap pemain) tetap memakai gerak lama
+      if (b.phase === 2) { target.copy(P); speed = 15; }
+      _desired.subVectors(target, head.position).normalize();
+      const turn = b.phase === 2 ? (b.laser.mode === 'fire' ? 0.35 : 1.2) : 1.0;
+      b.dir.lerp(_desired, clamp(turn * dt, 0, 1)).normalize();
+      head.position.addScaledVector(b.dir, speed * dt);
+      head.lookAt(_vc.copy(head.position).sub(b.dir));
+    } else BossPilot.update(b, head, dt);   // fase 1, 2, 4: siklus lewat depan (B5)
     const jaw = head.getObjectByName('jaw');
     jaw.rotation.x = b.phase >= 2 ? 0.25 + Math.sin(b.time * 3) * 0.1 : 0.05;
     // Tubuh mengikuti jejak kepala
@@ -14239,7 +14339,8 @@ const GameHooks = {
     bossState() {
       const b = Bosses.active;
       if (!b) return null;
-      return { kind: b.kind, name: b.name, phase: b.phase, bar: round2(b.barRatio()), label: b.phaseLabel ? b.phaseLabel() : '', parts: b.parts.filter((p) => p.active ? (p.hittable ? p.hittable() : true) : false).length, dist: round2((b.anchor || b.group).position.distanceTo(Player.pos)), laser: b.laser ? b.laser.mode : null };
+      return { kind: b.kind, name: b.name, phase: b.phase, bar: round2(b.barRatio()), label: b.phaseLabel ? b.phaseLabel() : '', parts: b.parts.filter((p) => p.active ? (p.hittable ? p.hittable() : true) : false).length, dist: round2((b.anchor || b.group).position.distanceTo(Player.pos)), laser: b.laser ? b.laser.mode : null,
+        pilot: b.pilot ? b.pilot.mode : null, vuln: round2(b.vuln || 0), lz: round2(_va.copy((b.anchor || b.group).position).sub(Player.pos).dot(Player.forward)) };
     },
     // Lompat ke fase tertentu (Sang Naga Vanta) tanpa cutscene peralihan
     skipToPhase(n) {
