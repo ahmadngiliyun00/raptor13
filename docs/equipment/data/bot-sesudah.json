@@ -1,0 +1,201 @@
+[
+ {
+  "difficulty": "mudah",
+  "ship": "starfighter",
+  "ids": [],
+  "seconds": 180,
+  "kills": 10,
+  "killsPerMin": 3.33,
+  "avgHpPct": 85.15,
+  "deaths": 0,
+  "damageTaken": 41.72,
+  "used": {},
+  "absorbed": 0
+ },
+ {
+  "difficulty": "mudah",
+  "ship": "gunship",
+  "ids": [],
+  "seconds": 180,
+  "kills": 11,
+  "killsPerMin": 3.67,
+  "avgHpPct": 99.66,
+  "deaths": 0,
+  "damageTaken": 14.7,
+  "used": {},
+  "absorbed": 0
+ },
+ {
+  "difficulty": "mudah",
+  "ship": "gunship",
+  "ids": [
+   "kunang",
+   "sisik",
+   "kubah"
+  ],
+  "seconds": 180,
+  "kills": 8,
+  "killsPerMin": 2.67,
+  "avgHpPct": 93.67,
+  "deaths": 0,
+  "damageTaken": 25.2,
+  "used": {
+   "kubah": 3,
+   "kunang": 4
+  },
+  "absorbed": 8
+ },
+ {
+  "difficulty": "mudah",
+  "ship": "gunship",
+  "ids": [
+   "tombak",
+   "pengacau",
+   "rajut"
+  ],
+  "seconds": 180,
+  "kills": 7,
+  "killsPerMin": 2.33,
+  "avgHpPct": 77.9,
+  "deaths": 0,
+  "damageTaken": 61.6,
+  "used": {
+   "tombak": 8,
+   "pengacau": 2
+  },
+  "absorbed": 0
+ },
+ {
+  "difficulty": "normal",
+  "ship": "starfighter",
+  "ids": [],
+  "seconds": 180,
+  "kills": 8,
+  "killsPerMin": 2.67,
+  "avgHpPct": 98.18,
+  "deaths": 0,
+  "damageTaken": 28,
+  "used": {},
+  "absorbed": 0
+ },
+ {
+  "difficulty": "normal",
+  "ship": "gunship",
+  "ids": [],
+  "seconds": 180,
+  "kills": 10,
+  "killsPerMin": 3.33,
+  "avgHpPct": 69.22,
+  "deaths": 0,
+  "damageTaken": 76,
+  "used": {},
+  "absorbed": 0
+ },
+ {
+  "difficulty": "normal",
+  "ship": "gunship",
+  "ids": [
+   "kunang",
+   "sisik",
+   "kubah"
+  ],
+  "seconds": 180,
+  "kills": 11,
+  "killsPerMin": 3.67,
+  "avgHpPct": 99.47,
+  "deaths": 0,
+  "damageTaken": 16,
+  "used": {
+   "kubah": 2,
+   "kunang": 3
+  },
+  "absorbed": 5
+ },
+ {
+  "difficulty": "normal",
+  "ship": "gunship",
+  "ids": [
+   "tombak",
+   "pengacau",
+   "rajut"
+  ],
+  "seconds": 180,
+  "kills": 11,
+  "killsPerMin": 3.67,
+  "avgHpPct": 96.06,
+  "deaths": 0,
+  "damageTaken": 20,
+  "used": {
+   "tombak": 6,
+   "pengacau": 2
+  },
+  "absorbed": 0
+ },
+ {
+  "difficulty": "sulit",
+  "ship": "starfighter",
+  "ids": [],
+  "seconds": 180,
+  "kills": 9,
+  "killsPerMin": 3,
+  "avgHpPct": 40.09,
+  "deaths": 1,
+  "damageTaken": 110.25,
+  "used": {},
+  "absorbed": 0
+ },
+ {
+  "difficulty": "sulit",
+  "ship": "gunship",
+  "ids": [],
+  "seconds": 180,
+  "kills": 9,
+  "killsPerMin": 3,
+  "avgHpPct": 90.88,
+  "deaths": 0,
+  "damageTaken": 77.24,
+  "used": {},
+  "absorbed": 0
+ },
+ {
+  "difficulty": "sulit",
+  "ship": "gunship",
+  "ids": [
+   "kunang",
+   "sisik",
+   "kubah"
+  ],
+  "seconds": 180,
+  "kills": 8,
+  "killsPerMin": 2.67,
+  "avgHpPct": 99.02,
+  "deaths": 0,
+  "damageTaken": 54,
+  "used": {
+   "kubah": 2,
+   "kunang": 3
+  },
+  "absorbed": 3
+ },
+ {
+  "difficulty": "sulit",
+  "ship": "gunship",
+  "ids": [
+   "tombak",
+   "pengacau",
+   "rajut"
+  ],
+  "seconds": 180,
+  "kills": 12,
+  "killsPerMin": 4,
+  "avgHpPct": 65.08,
+  "deaths": 1,
+  "damageTaken": 254.17,
+  "used": {
+   "tombak": 11,
+   "pengacau": 4,
+   "rajut": 1
+  },
+  "absorbed": 0
+ }
+]

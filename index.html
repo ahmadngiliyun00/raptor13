@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-i+PsohcxjUdaaKOWo4wgrBzHVeEDcSRF6OMowpKuPPU='; style-src 'self' 'sha256-9Wa+x9jDUNTTDAJ6iEt+MwuGadnpFnz6RPCho6zSGys='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-ZV9Ctm6cq8SQJh0oWK0TJp7xKwXr+USgvqBd4Dq4wqg='; style-src 'self' 'sha256-9Wa+x9jDUNTTDAJ6iEt+MwuGadnpFnz6RPCho6zSGys='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -2618,7 +2618,7 @@ function applyDamage(entity, amount, source, x, y, z) {
 const Worlds = { active: null, list: {} };
 
 // Saklar debug (dipakai uji otomatis lewat window.__game)
-const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, speedOverride: 0, frozen: false, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
+const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, equipBot: false, speedOverride: 0, frozen: false, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
 
 // Uji tabrakan segmen (gerak peluru satu frame) terhadap bola, tanpa alokasi
 function segmentHitsSphere(ax, ay, az, bx, by, bz, cx, cy, cz, r) {
@@ -11539,6 +11539,24 @@ const Equip = {
       if (f.life <= 0) { f.on = false; f.mesh.visible = false; }
     }
   },
+  // Bot uji (C6): pakai peralatan yang siap bila situasinya cocok
+  botUse() {
+    const P = Player.pos;
+    this.slots.forEach((sl, i) => {
+      if (!this.ready(sl)) return;
+      const d = this.def(sl.id);
+      let go = false;
+      if (sl.id === 'kunang') go = this.lockTargets(d).length > 0;
+      else if (sl.id === 'kubah') go = Player.sinceHit < 0.5;
+      else if (sl.id === 'tombak') go = this.lockTargets({ cone: 4, range: 1200, count: 1 }).length > 0;
+      else if (sl.id === 'pengacau') { let n = 0; const eb = Enemies.bullets; for (let k = 0; k < eb.max; k++) { if (!eb.active[k]) continue; const k3 = k * 3; if ((eb.p[k3] - P.x) ** 2 + (eb.p[k3 + 1] - P.y) ** 2 + (eb.p[k3 + 2] - P.z) ** 2 < 170 * 170) n++; } go = n >= 4; }
+      else if (sl.id === 'suar') go = Enemies.list.some((e) => (e.active ? (e.cfg.ai === 'missile' ? e.pos.distanceToSquared(P) < 260 * 260 : false) : false));
+      else if (sl.id === 'ranjau') go = Enemies.rearThreat;
+      else if (sl.id === 'rajut') go = Player.hp < Player.health.maxHp * 0.4;
+      else if (sl.id === 'magnet') go = true;
+      if (go) this.use(i);
+    });
+  },
   report() {
     return { ship: Player.ship ? Player.ship.id : null, slotsMax: SHIP_SLOTS[Player.ship ? Player.ship.id : 'starfighter'], temp: this.temp,
       slots: this.slots.map((x) => ({ id: x.id, cd: round2(x.cd), charges: x.charges, max: this.maxCharges(x.id), ready: this.ready(x), hold: round2(x.hold), temp: x.temp })),
@@ -15298,6 +15316,7 @@ const AutoInput = {
       if (front < 0) d2 *= 9;
       if (d2 < best) { best = d2; target = e; }
     }
+    if (Debug.equipBot) Equip.botUse();
     // Bot terampil dan rata-rata (D2): kendali sendiri lewat SkilledBot
     if (Debug.botBoss === 'terampil' ? true : Debug.botBoss === 'rata') { SkilledBot.update(t, this); return; }
     // Uji bos (B1, B5): bot memburu bagian bos yang bisa ditembak; hanya lewat hook debug.bossSim
@@ -16312,6 +16331,87 @@ const GameHooks = {
     setEquipSlots(n) { return HudLayout.setEquipCount(n); },
     // Peralatan (C4): status slot, loadout, statistik; equipSet memasang loadout kapal sekarang (id harus terbuka
     // kecuali unlockAll), equipUse memakai slot, equipUnlock membuka id
+    // Uji peralatan (C6): skenario terkendali per peralatan, langkah simulasi 1/60 detik, tanpa render
+    equipTest(id, scenario = 'dasar') {
+      if (Game.state !== 'playing' ? true : !EQUIPMENT_DEFS[id]) return null;
+      const d = window.__game.debug, step = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) { if (Game.state === 'levelup') Levels.choose(Levels.offer[0].id); if (Game.state !== 'playing') break; update(1 / 60); } };   // kartu level dari pembunuhan skenario sebelumnya dipilih otomatis
+      const P = Player.pos, F = Player.forward, ahead = (k, side = 0, up = 0) => _va.copy(P).addScaledVector(F, k).addScaledVector(Player._right || _AX_X, side).addScaledVector(Player._up || _AX_Y, up);
+      Debug.god = false; Debug.enemiesEnabled = false; Enemies.reset(); Player.spawnInvuln = 0; Player.hitInvuln = 0; Save.settings.fatalCrash = true;
+      d.equipSet([id]);
+      const placeEnemy = (type, v) => { const e = Enemies.spawn(type, v.x, v.y, v.z); if (e) { e.state = 'reposition'; e.dir.copy(F).negate(); } return e; };
+      const out = { id, scenario };
+      if (id === 'kunang') {
+        const a = placeEnemy('drone', ahead(260, -25)), b = placeEnemy('drone', ahead(300, 25));
+        const hp0 = [a.health.hp, b.health.hp];
+        out.locked = Equip.lockTargets(EQUIPMENT_DEFS.kunang).length; out.used = Equip.use(0); step(3);
+        out.hits = Equip.stats.missileHits; out.damage = [hp0[0] - a.health.hp, hp0[1] - b.health.hp].map(round2);
+      } else if (id === 'kubah' ? true : id === 'sisik') {
+        if (id === 'kubah') out.used = Equip.use(0);
+        const hp0 = Player.hp; let taken = 0;
+        for (let k = 0; k < 5; k++) { Player.hitInvuln = 0; taken += Player.damage(12, 'peluru'); step(0.1); }
+        out.absorbed = Equip.stats.absorbed; out.hpLost = round2(hp0 - Player.hp); out.taken = round2(taken);
+        // Skenario 'fatal': tabrakan fatal tetap fatal walau Kubah aktif atau Sisik bermuatan penuh
+        if (scenario === 'fatal') {
+          Equip.resupply(); if (id === 'kubah') Equip.use(0);
+          out.shieldBefore = round2(Equip.shieldT); out.chargesBefore = Equip.slots[0].charges;
+          Player.fatalCrash('uji');
+          out.fatalAlive = Player.alive;
+        }
+      } else if (id === 'tombak') {
+        const line = [200, 330, 460, 600].map((k) => placeEnemy('drone', ahead(k)));
+        const hp0 = line.map((e) => e.health.hp);
+        out.used = Equip.use(0, 'down'); step(1.15); Equip.use(0, 'up');
+        out.hits = Equip.stats.beamHits; out.damaged = line.filter((e, k) => e.health.hp < hp0[k] ? true : !e.active).length; out.cd = round2(Equip.slots[0].cd);
+      } else if (id === 'pengacau') {
+        for (let k = 0; k < 10; k++) { const v = ahead(60 + k * 8, randRange(-20, 20), randRange(-10, 10)); Enemies.bullets.spawn(v.x, v.y, v.z, -F.x, -F.y, -F.z, 5, 10, 8); }
+        const m = Enemies.spawn('missile', ahead(120).x, _va.y, _va.z), g = placeEnemy('gunship', ahead(250));
+        out.bulletsBefore = Enemies.bullets.alive; out.used = Equip.use(0);
+        out.bulletsAfter = Enemies.bullets.alive; out.missileGone = m ? !m.active : null; out.gunshipJammed = g ? g.empT > 0 : null; out.cleared = Equip.stats.empBullets;
+      } else if (id === 'suar') {
+        const m = Enemies.spawn('missile', ahead(-150).x, _va.y, _va.z);
+        if (m) m.dir.copy(F);
+        out.used = Equip.use(0); const hp0 = Player.hp; step(2.5);
+        out.hpLost = round2(hp0 - Player.hp); out.missileAlive = m ? m.active : null; out.lured = Equip.lureT > 0;
+      } else if (id === 'ranjau') {
+        out.used = Equip.use(0); step(0.7);
+        const mine = Equip.mines.find((x) => x.on), e = placeEnemy('drone', mine ? mine.pos : ahead(-8));
+        const hp0 = e.health.hp; step(0.3);
+        out.mineHits = Equip.stats.mineHits; out.damage = round2(hp0 - (e.active ? e.health.hp : 0)); out.charges = Equip.slots[0].charges;
+      } else if (id === 'rajut') {
+        Player.health.hp = Player.health.maxHp * 0.5; const hp0 = Player.hp;
+        out.used = Equip.use(0); step(4.2);
+        // Jumlah yang benar-benar dipulihkan Rajut (damage lain selama uji tidak mengubah angka ini)
+        out.healedPct = round2(Equip.stats.healed / Player.health.maxHp * 100); out.hpDelta = round2((Player.hp - hp0) / Player.health.maxHp * 100); out.charges = Equip.slots[0].charges;
+        out.used2 = Equip.use(0); out.used3 = Equip.use(0);
+      } else if (id === 'magnet') {
+        out.mulBefore = Equip.magnetMul(); out.used = Equip.use(0); out.mulActive = Equip.magnetMul(); step(8.2); out.mulAfter = Equip.magnetMul();
+      }
+      out.cooldown = round2(Equip.cooldownOf(id));
+      return out;
+    },
+    // Bot 3 menit (C6): dengan atau tanpa peralatan, tanpa mode kebal; nyawa 99 dan tabrakan fatal mati agar
+    // pertarungan berlanjut, kematian dihitung
+    equipBot(seconds = 180, ids = [], opts = {}) {
+      if (Game.state !== 'playing') return null;
+      const keepFatal = Save.settings.fatalCrash;
+      Debug.god = false; Debug.enemiesEnabled = true; Debug.autoInput = true; Debug.equipBot = ids.length > 0; Save.settings.fatalCrash = false;
+      Player.lives = 99;
+      window.__game.debug.equipSet(ids);
+      const k0 = Game.kills;
+      let hpSum = 0, n = 0, hits = 0, deaths = 0;
+      const onHit = (amt) => { hits += amt; }, onDeath = () => { deaths++; Player.lives = Math.max(Player.lives, 3); };
+      Events.on('playerHit', onHit); Events.on('playerDeath', onDeath);
+      for (let i = 0; i < Math.round(seconds * 60); i++) {
+        if (Game.state === 'levelup') { Levels.choose(Levels.offer[0].id); continue; }
+        if (Game.state === 'contract') { Contracts.choose(Contracts.offerList[0].type); continue; }
+        if (Game.state !== 'playing') break;
+        update(1 / 60);
+        if (i % 30 === 0) { hpSum += Player.alive ? Player.hp / Player.health.maxHp : 0; n++; }
+      }
+      Events.off('playerHit', onHit); Events.off('playerDeath', onDeath);
+      Debug.autoInput = false; Debug.equipBot = false; Save.settings.fatalCrash = keepFatal; Controls.reset();
+      return { seconds, kills: Game.kills - k0, killsPerMin: round2((Game.kills - k0) / (seconds / 60)), avgHpPct: round2(hpSum / Math.max(1, n) * 100), deaths, damageTaken: round2(hits), used: { ...Equip.stats.used }, absorbed: Equip.stats.absorbed };
+    },
     equip() { return Equip.report(); },
     equipSet(ids, unlockAll = true) { const E = Save.data.equip, ship = Player.ship.id; if (unlockAll) for (const id of EQUIP_IDS) if (!E.unlocked.includes(id)) E.unlocked.push(id); E.loadout[ship] = Array.from({ length: Math.max(SHIP_SLOTS[ship], ids.length) }, (_, i) => (EQUIP_IDS.includes(ids[i]) ? ids[i] : null)); Equip.reset(); return Equip.report(); },
     equipUse(i, phase) { return Equip.use(i, phase); },

@@ -1,0 +1,112 @@
+[
+ {
+  "id": "kunang",
+  "scenario": "dasar",
+  "locked": 2,
+  "used": true,
+  "hits": 2,
+  "damage": [
+   30,
+   30
+  ],
+  "cooldown": 30
+ },
+ {
+  "id": "kubah",
+  "scenario": "dasar",
+  "used": true,
+  "absorbed": 5,
+  "hpLost": 0,
+  "taken": 0,
+  "cooldown": 25
+ },
+ {
+  "id": "sisik",
+  "scenario": "dasar",
+  "absorbed": 3,
+  "hpLost": 24,
+  "taken": 24,
+  "cooldown": 0
+ },
+ {
+  "id": "tombak",
+  "scenario": "dasar",
+  "used": true,
+  "hits": 5,
+  "damaged": 4,
+  "cd": 9.85,
+  "cooldown": 10
+ },
+ {
+  "id": "pengacau",
+  "scenario": "dasar",
+  "bulletsBefore": 10,
+  "used": true,
+  "bulletsAfter": 0,
+  "missileGone": true,
+  "gunshipJammed": true,
+  "cleared": 10,
+  "cooldown": 35
+ },
+ {
+  "id": "suar",
+  "scenario": "dasar",
+  "used": true,
+  "hpLost": 0,
+  "missileAlive": true,
+  "lured": true,
+  "cooldown": 15
+ },
+ {
+  "id": "ranjau",
+  "scenario": "dasar",
+  "used": true,
+  "mineHits": 1,
+  "damage": 30,
+  "charges": 2,
+  "cooldown": 0
+ },
+ {
+  "id": "rajut",
+  "scenario": "dasar",
+  "used": true,
+  "healedPct": 25.1,
+  "hpDelta": 35.82,
+  "charges": 1,
+  "used2": true,
+  "used3": false,
+  "cooldown": 0
+ },
+ {
+  "id": "magnet",
+  "scenario": "dasar",
+  "mulBefore": 1,
+  "used": true,
+  "mulActive": 3,
+  "mulAfter": 1,
+  "cooldown": 20
+ },
+ {
+  "id": "kubah",
+  "scenario": "fatal",
+  "used": true,
+  "absorbed": 5,
+  "hpLost": 0,
+  "taken": 0,
+  "shieldBefore": 4,
+  "chargesBefore": 0,
+  "fatalAlive": false,
+  "cooldown": 25
+ },
+ {
+  "id": "sisik",
+  "scenario": "fatal",
+  "absorbed": 3,
+  "hpLost": 24,
+  "taken": 24,
+  "shieldBefore": 0,
+  "chargesBefore": 3,
+  "fatalAlive": false,
+  "cooldown": 0
+ }
+]
