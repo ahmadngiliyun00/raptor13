@@ -41,7 +41,7 @@
      "manAccel": 0,
      "manJerk": 0,
      "camUp": 1.864,
-     "camExcess": 0.878
+     "camExcess": 0.859
     },
     "flaggedFrames": 0,
     "firstFlags": [],
@@ -125,8 +125,8 @@
      "jerk": 0.025,
      "manAccel": 5.365,
      "manJerk": 20.22,
-     "camUp": 0.859,
-     "camExcess": 0.804
+     "camUp": 4.143,
+     "camExcess": 0.86
     },
     "flaggedFrames": 0,
     "firstFlags": [],
@@ -142,8 +142,8 @@
      "jerk": 99.32,
      "manAccel": 50.147,
      "manJerk": 509.252,
-     "camUp": 0.857,
-     "camExcess": 0.139
+     "camUp": 0.923,
+     "camExcess": 0.141
     },
     "flaggedFrames": 0,
     "firstFlags": [],
@@ -159,8 +159,42 @@
      "jerk": 0,
      "manAccel": 31.356,
      "manJerk": 364.395,
-     "camUp": 0.859,
-     "camExcess": 0.855
+     "camUp": 4.176,
+     "camExcess": 0.86
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "balik-u-kanan": {
+    "note": "manuver Putar Balik U ke kanan layar (V)",
+    "frames": 211,
+    "worst": {
+     "uncmd": 0.008,
+     "cmd": 0,
+     "accel": 0.074,
+     "jerk": 1.311,
+     "manAccel": 9.982,
+     "manJerk": 309.347,
+     "camUp": 0.416,
+     "camExcess": 0.121
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "balik-u-kiri": {
+    "note": "manuver Putar Balik U ke kiri layar (V)",
+    "frames": 211,
+    "worst": {
+     "uncmd": 0.008,
+     "cmd": 0,
+     "accel": 0.074,
+     "jerk": 1.314,
+     "manAccel": 9.982,
+     "manJerk": 309.34,
+     "camUp": 0.416,
+     "camExcess": 0.121
     },
     "flaggedFrames": 0,
     "firstFlags": [],
@@ -173,7 +207,7 @@
      "uncmd": 0.399,
      "cmd": 2.491,
      "accel": 19.682,
-     "jerk": 382.32,
+     "jerk": 382.321,
      "manAccel": 0,
      "manJerk": 0,
      "camUp": 1.32,
@@ -209,7 +243,7 @@
      "uncmd": 0.645,
      "cmd": 1.77,
      "accel": 15.088,
-     "jerk": 379.986,
+     "jerk": 379.983,
      "manAccel": 0,
      "manJerk": 0,
      "camUp": 1.194,
@@ -294,11 +328,11 @@
      "uncmd": 0,
      "cmd": 0,
      "accel": 0,
-     "jerk": 0.025,
+     "jerk": 0.029,
      "manAccel": 5.365,
      "manJerk": 20.22,
-     "camUp": 0.859,
-     "camExcess": 0.804
+     "camUp": 4.143,
+     "camExcess": 0.86
     },
     "flaggedFrames": 0,
     "firstFlags": [],
@@ -314,8 +348,8 @@
      "jerk": 99.32,
      "manAccel": 50.145,
      "manJerk": 509.218,
-     "camUp": 0.858,
-     "camExcess": 0.139
+     "camUp": 0.923,
+     "camExcess": 0.141
     },
     "flaggedFrames": 0,
     "firstFlags": [],
@@ -331,8 +365,42 @@
      "jerk": 0,
      "manAccel": 31.356,
      "manJerk": 364.395,
-     "camUp": 0.859,
-     "camExcess": 0.855
+     "camUp": 4.176,
+     "camExcess": 0.86
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "balik-u-kanan": {
+    "note": "manuver Putar Balik U ke kanan layar (V)",
+    "frames": 211,
+    "worst": {
+     "uncmd": 0.007,
+     "cmd": 0,
+     "accel": 0.067,
+     "jerk": 1.195,
+     "manAccel": 9.98,
+     "manJerk": 309.327,
+     "camUp": 0.415,
+     "camExcess": 0.121
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "balik-u-kiri": {
+    "note": "manuver Putar Balik U ke kiri layar (V)",
+    "frames": 211,
+    "worst": {
+     "uncmd": 0.007,
+     "cmd": 0,
+     "accel": 0.067,
+     "jerk": 1.195,
+     "manAccel": 9.981,
+     "manJerk": 309.32,
+     "camUp": 0.415,
+     "camExcess": 0.121
     },
     "flaggedFrames": 0,
     "firstFlags": [],

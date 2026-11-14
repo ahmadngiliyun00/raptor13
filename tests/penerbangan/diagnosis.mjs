@@ -35,6 +35,8 @@ export const SCENARIOS = {
   'loop': { segs: [[0.5, 0, 0], [0.01, 0, 0, 'loop'], [4, 0, 0]], note: 'manuver Looping (C)' },
   'gulung': { segs: [[0.5, 0, 0], [0.01, 0, 0, 'roll'], [2, 0, 0]], note: 'manuver Gulung tong (Z)' },
   'balik': { segs: [[0.5, 0, 0], [0.01, 0, 0, 'immelmann'], [3.5, 0, 0]], note: 'manuver Balik arah (X)' },
+  'balik-u-kanan': { segs: [[0.5, 0, 0], [0.01, 0, 0, 'uturn', -1], [3, 0, 0]], note: 'manuver Putar Balik U ke kanan layar (V)' },
+  'balik-u-kiri': { segs: [[0.5, 0, 0], [0.01, 0, 0, 'uturn', 1], [3, 0, 0]], note: 'manuver Putar Balik U ke kiri layar (V)' },
   'kombinasi': { segs: [[0.5, 0, 0], [0.6, 1, 1], [0.5, 0, 1], [0.6, -1, -1], [0.4, 1, 0], [3, 0, 0]], note: 'naik sambil belok, lalu turun sambil belok, lalu lepas' },
 };
 

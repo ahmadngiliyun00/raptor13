@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-98jJ7tn7r/8wF2sOy8+03pgeQQHjoYyQNs9yEfMNO6U='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-PbZ6Ucyj4vLVZ1hV+W7JpFSgrQS0hWSoFL4zPMtmAbk='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -1200,7 +1200,7 @@
     <span class="be-dist"></span>
     <svg class="be-turn" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 3v5h-5"/></svg>
   </div>
-  <div id="boss-rear" class="hidden"><canvas class="br-ico" width="44" height="44"></canvas><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 3v5h-5"/></svg><span>BOS DI BELAKANG</span></div>
+  <div id="boss-rear" class="hidden"><canvas class="br-ico" width="44" height="44"></canvas><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"/><path d="M20 3v5h-5"/></svg><span>BOS DI BELAKANG</span><kbd class="mini br-key kb-only">V</kbd></div>
   <div id="boss-intro" class="hidden" aria-hidden="true"><canvas class="bi-ico" width="192" height="192"></canvas><span class="bi-name"></span></div>
   <div id="boss-lead" class="hidden"></div>
   <div id="piko-panel" class="hidden"><canvas id="piko-face" width="56" height="56"></canvas><p id="piko-text"></p></div>
@@ -1276,6 +1276,7 @@
     <div class="man" data-man="roll"><i></i><b>Z</b><span>GULUNG</span></div>
     <div class="man" data-man="immelmann"><i></i><b>X</b><span>BALIK</span></div>
     <div class="man" data-man="loop"><i></i><b>C</b><span>LOOP</span></div>
+    <div class="man" data-man="uturn"><i></i><b>V</b><span>BALIK U</span></div>
   </div>
   <div class="eq-lock hidden" aria-hidden="true"></div>
   <div class="eq-lock hidden" aria-hidden="true"></div>
@@ -1304,7 +1305,7 @@
   </div>
   <div class="actions">
     <button class="tbtn t-man t-roll" data-man="roll" type="button" aria-label="Gulung Tong" title="Gulung Tong"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20.5 3.5v4.5H16"/></svg></button>
-    <button class="tbtn t-man t-imm" data-man="immelmann" type="button" aria-label="Balik Arah" title="Balik Arah"><svg viewBox="0 0 24 24"><path d="M7 21V10a5 5 0 0 1 10 0v5"/><path d="M13.5 12.5l3.5 3.5 3.5-3.5"/></svg></button>
+    <button class="tbtn t-man t-imm" data-man="uturn" type="button" aria-label="Balik U (joystick ke atas atau bawah: Balik vertikal)" title="Balik U, atau Balik vertikal bila joystick didorong ke atas atau bawah"><svg viewBox="0 0 24 24"><path d="M6 20V10a6 6 0 0 1 12 0v4"/><path d="M14.5 11l3.5 3.5 3.5-3.5"/></svg></button>
     <button class="tbtn t-man t-loop" data-man="loop" type="button" aria-label="Looping" title="Looping"><svg viewBox="0 0 24 24"><path d="M3 19h9"/><path d="M12 19a6 6 0 1 0-6-6v2"/><path d="M3.5 12.5L6 15l2.5-2.5"/></svg></button>
     <button class="tbtn t-ult" data-ult="1" type="button" aria-label="Ultimate" title="Ultimate"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L12 16.8l-5.8 3.5 1.6-6.6-5.2-4.4 6.8-.5z"/></svg></button>
     <button class="tbtn t-nitro" data-act="nitro" type="button" aria-label="Nitro" title="Nitro"><svg viewBox="0 0 24 24"><path d="M12 2.5c1 3.5 5.5 6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.3 1-3.8 2.2-5 0 2 .9 3.3 2.3 3.3 0-3.4.8-6.2 1-9.3z"/></svg></button>
@@ -1870,6 +1871,9 @@ const CONFIG = {
     roll: { label: 'GULUNG', key: 'Z', duration: 0.85, cooldown: 4, sideShift: 16 },   // kebal peluru selama gulungan
     immelmann: { label: 'BALIK', key: 'X', duration: 1.9, cooldown: 6 },              // setengah looping lalu setengah gulungan
     loop: { label: 'LOOP', key: 'C', duration: 2.6, cooldown: 5 },
+    // Putar Balik U (E8): belok datar miring 180 derajat; bank berbentuk lonceng sebanding laju belok (terkoordinasi),
+    // hidung didatarkan selama belok; arah dari A atau D, ancaman di belakang, atau ke kanan
+    uturn: { label: 'BALIK U', key: 'V', duration: 2.0, cooldown: 5, maxBank: 1.31, maxPitch: 1.05, maxStartBank: 1.4 },
     doubleTapWindow: 0.28,     // ketuk ganda A atau D untuk gulung tong
   },
   camera: {
@@ -3812,7 +3816,7 @@ const Player = {
   ult: 0,              // meter ultimate 0..1
   addUltimate(v) { this.ult = Math.min(1, this.ult + v * (this.upgrades.ultRate || 1)); },
   maneuver: null,                     // { type, t, dur, dir, applied }
-  cooldowns: { roll: 0, immelmann: 0, loop: 0 },
+  cooldowns: { roll: 0, immelmann: 0, loop: 0, uturn: 0 },
   get rolling() { return this.maneuver ? this.maneuver.type === 'roll' : false; },
   yaw: 0, pitch: 0, roll: 0,
   speed: 0,
@@ -3838,7 +3842,7 @@ const Player = {
     this.yaw = 0; this.pitch = 0; this.roll = 0;
     this.quat.identity();
     this.maneuver = null;
-    this.cooldowns.roll = 0; this.cooldowns.immelmann = 0; this.cooldowns.loop = 0;
+    this.cooldowns.roll = 0; this.cooldowns.immelmann = 0; this.cooldowns.loop = 0; this.cooldowns.uturn = 0;
     this.speed = C.baseSpeed * this.ship.stats.speed;
     this.health.reset(this.ship.stats.hp + (this.upgrades.hpBonus || 0));
     this.alive = true;
@@ -3966,6 +3970,25 @@ const Player = {
     this.syncEuler();
   },
 
+  // Arah Balik U (E8). dir +1 berbelok ke arah yang sama dengan menahan D (laju belok positif), -1 seperti A.
+  // Tanpa input belok: menuju bos atau ancaman terdekat di belahan belakang; tanpa keduanya: ke kanan layar.
+  uturnDir(yawIn = 0) {
+    if (yawIn !== 0) return yawIn > 0 ? 1 : -1;
+    const P = this.pos, f = this.forward;
+    let tgt = null, best = Infinity;
+    const b = Bosses.active;
+    if (b) { const bp = (b.anchor || b.group).position; if ((bp.x - P.x) * f.x + (bp.y - P.y) * f.y + (bp.z - P.z) * f.z < 0) tgt = bp; }
+    if (!tgt) for (const e of Enemies.list) {
+      if (!e.active) continue;
+      const dx = e.pos.x - P.x, dy = e.pos.y - P.y, dz = e.pos.z - P.z;
+      if (dx * f.x + dy * f.y + dz * f.z >= 0) continue;
+      const d2 = dx * dx + dy * dy + dz * dz;
+      if (d2 < best ? d2 < 900 * 900 : false) { best = d2; tgt = e.pos; }
+    }
+    // Heading bertambah (dir +1) memutar hidung ke arah -kanan pesawat; sasaran di kanan berarti dir -1
+    const side = tgt ? (tgt.x - P.x) * this._right.x + (tgt.y - P.y) * this._right.y + (tgt.z - P.z) * this._right.z : 1;
+    return side > 0 ? -1 : 1;
+  },
   // Kedekatan ke batas atas dunia (0 jauh, 1 di batas); hanya dunia yang punya batas ketinggian (Bumi)
   ceilingProx() {
     const W = Worlds.active;
@@ -3978,7 +4001,15 @@ const Player = {
     if (this.maneuver) return false;
     if (!force) { if (this.cooldowns[type] > 0) return false; }
     const M = CONFIG.maneuvers[type];
+    // Balik U hanya dari terbang yang tidak terbalik dan tidak terlalu tegak (bank dan heading terdefinisi)
+    if (type === 'uturn' ? (Math.abs(this.roll) > M.maxStartBank ? true : Math.abs(this.pitch) > M.maxPitch) : false) return false;
     this.maneuver = { type, t: 0, dur: M.duration, dir: dir < 0 ? -1 : 1, applied: 0, applied2: 0 };
+    if (type === 'uturn') {
+      const m = this.maneuver;
+      m.y0 = this.yaw; m.p0 = this.pitch; m.b0 = this.roll; m.vapor = 0;
+      m.qPrev = new THREE.Quaternion().copy(this.quat); m.e = new THREE.Euler(0, 0, 0, 'YXZ'); m.qNow = new THREE.Quaternion();
+      m.start = this.pos.clone(); m.f0 = this.forward.clone(); m.path = 0; m.prevPos = this.pos.clone(); m.maxBank = 0;
+    }
     this.cooldowns[type] = M.cooldown;
     Events.emit('maneuver', type);
     return true;
@@ -4007,6 +4038,20 @@ const Player = {
       const rTarget = this.ease(kr) * Math.PI;
       this.rotateLocal(_AX_Z, rTarget - m.applied2);
       m.applied2 = rTarget;
+    } else if (m.type === 'uturn') {
+      // Orientasi sasaran dari sudut YXZ: heading berubah pi kali smootherstep, pitch awal didatarkan, bank lonceng
+      // 16 k kuadrat (1 - k) kuadrat (sebanding laju belok), ditambah bank awal yang memudar. Diterapkan sebagai selisih
+      // dunia terhadap sasaran frame sebelumnya, sehingga sisa laju sudut tetap kontinu
+      const M = CONFIG.maneuvers.uturn, s = this.ease(k), bell = 16 * k * k * (1 - k) * (1 - k);
+      m.e.set(m.p0 * (1 - s), m.y0 + m.dir * Math.PI * s, m.b0 * (1 - s) + m.dir * M.maxBank * bell, 'YXZ');
+      m.qNow.setFromEuler(m.e);
+      _qb.copy(m.qPrev).invert().premultiply(m.qNow);
+      this.quat.premultiply(_qb);
+      m.qPrev.copy(m.qNow);
+      m.vapor = bell;
+      m.path += this.pos.distanceTo(m.prevPos); m.prevPos.copy(this.pos);
+      m.maxBank = Math.max(m.maxBank, Math.abs(this.roll));
+      if (k >= 1) { const f = this.forward; this.lastUturn = { path: m.path, maxBank: m.maxBank, dur: m.t, turn: Math.acos(clamp(f.x * m.f0.x + f.y * m.f0.y + f.z * m.f0.z, -1, 1)), exitSpeed: this.speed, dir: m.dir }; }
     } else {
       const target = this.ease(k) * Math.PI * 2;
       this.rotateLocal(_AX_X, target - m.applied);
@@ -9038,7 +9083,7 @@ const Bosses = {
 const BossStats = {
   on: false, _p: new THREE.Vector3(), _d: new THREE.Vector3(),
   reset() {
-    this.time = 0; this.front = 0; this.rear = 0; this.streak = 0; this.maxRear = 0; this.overshoots = 0; this.vulnWindows = 0; this.vulnTime = 0;
+    this.uturns = 0; this.time = 0; this.front = 0; this.rear = 0; this.streak = 0; this.maxRear = 0; this.overshoots = 0; this.vulnWindows = 0; this.vulnTime = 0;
     this.inside = 0; this.occluded = 0; this.offscreen = 0; this.distSum = 0; this.lastAhead = null; this.defeatAt = null; this.minPx = Infinity; this.pxSum = 0;
     this.contacts = 0; this.lastContact = -9; this.modes = {}; this.vulnUsed = 0; this.vulnUsedWin = -1; this.shots = 0; this.hits = 0; this.dmg = 0; this.blockedShots = 0;
   },
@@ -12666,11 +12711,13 @@ const FX = {
           -f.x * 6 + (frand() - 0.5) * 2, -f.y * 6 + (frand() - 0.5) * 2 + 0.5, -f.z * 6 + (frand() - 0.5) * 2,
           0.9 + frand() * 0.7, 0.9, 3.2, g, g, g * 1.04, 0.16, 1.2, -0.5);
       }
-      if (nf > 0.3) {
-        const vapor = this.take('vapor', 70 * nf, dt);
+      // Uap ujung sayap: saat nitro, dan saat Balik U sebanding bank (E8)
+      const vap = Math.max(nf, Player.maneuver ? (Player.maneuver.type === 'uturn' ? Player.maneuver.vapor * 0.8 : 0) : 0);
+      if (vap > 0.3 ? m.wingtips.length > 0 : false) {
+        const vapor = this.take('vapor', 70 * vap, dt);
         for (let i = 0; i < vapor; i++) {
           _va.copy(m.wingtips[i % m.wingtips.length]).applyQuaternion(q).add(P);
-          this.fire.emit(_va.x, _va.y, _va.z, 0, 0, 0, 0.35 + frand() * 0.2, 0.32, 0.5, 0.75, 0.82, 0.9, 0.35 * nf, 0, 0);
+          this.fire.emit(_va.x, _va.y, _va.z, 0, 0, 0, 0.35 + frand() * 0.2, 0.32, 0.5, 0.75, 0.82, 0.9, 0.35 * vap, 0, 0);
         }
       }
       if (Player.hp < 35) {
@@ -12805,7 +12852,7 @@ Ultimate.init();
 // Pemetaan tombol final, ditampilkan di layar judul dan Pengaturan
 const KEYMAP = [
   [['W', 'S'], 'naik dan turun'], [['A', 'D'], 'belok dan miring'], [['Spasi'], 'nitro'], [['Enter'], 'tembak'],
-  [['E'], 'ultimate'], [['Z'], 'Gulung Tong'], [['X'], 'Balik Arah'], [['C'], 'Looping'],
+  [['E'], 'ultimate'], [['Z'], 'Gulung Tong'], [['X'], 'Balik Arah'], [['C'], 'Looping'], [['V'], 'Putar Balik U (arah dari A atau D)'],
   [['Shift'], 'lihat belakang (tahan)'], [['Tab'], 'peta Tata Surya (Angkasa)'], [['P', 'Esc'], 'jeda'], [['M'], 'suara'],
   [['R'], 'mulai ulang'], [['1', '2', '3'], 'pilih kartu atau kontrak'], [['Q', 'F', 'G'], 'peralatan slot 1 sampai 3'],
 ];
@@ -12840,6 +12887,7 @@ const CamRig = {
   snapChase: true,
   offset: new THREE.Vector3(),
   prevUp: new THREE.Vector3(),   // target atas kamera frame sebelumnya (kontinuitas tanda)
+  prevShipQ: new THREE.Quaternion(0, 0, 0, 0),   // orientasi pesawat frame sebelumnya (laju putar untuk batas kamera)
   look: new THREE.Vector3(),
   q: new THREE.Quaternion(),
   e: new THREE.Euler(0, 0, 0, 'YXZ'),
@@ -12898,14 +12946,17 @@ const CamRig = {
     _cy.crossVectors(_cz, _cx);
     _cm.makeBasis(_cx, _cy, _cz);
     _cq.setFromRotationMatrix(_cm);
-    if (this.snapChase) { this.q.copy(_cq); this.snapChase = false; }
+    if (this.snapChase) { this.q.copy(_cq); this.snapChase = false; this.prevShipQ.copy(Player.quat); }
     else {
       // Laju putar kamera tidak melebihi laju putar pesawat ditambah margin (E7): target yang berpindah jauh,
       // misalnya kembali tegak setelah terbalik, dikejar dengan putaran yang terbaca, bukan sentakan
       let k = 1 - Math.exp(-C.rotLag * dt);
-      const ang = this.q.angleTo(_cq), cap = (Player.w.length() + Math.abs(Player.turnNow || 0) + C.camRateMargin) * dt;
+      // Laju putar pesawat diukur dari selisih kuaternion (berlaku juga selama manuver yang mengatur orientasi langsung)
+      const shipRate = this.prevShipQ.lengthSq() > 0.5 ? this.prevShipQ.angleTo(Player.quat) / Math.max(dt, 1e-4) : 0;
+      const ang = this.q.angleTo(_cq), cap = (shipRate + C.camRateMargin) * dt;
       if (ang * k > cap) k = cap / ang;
       this.q.slerp(_cq, k);
+      this.prevShipQ.copy(Player.quat);
     }
 
     // Lihat belakang (Shift): kamera di depan pesawat menghadap ke belakang
@@ -13334,6 +13385,8 @@ function onAudioGesture() {
 
 const distToPlayer = (p) => Math.sqrt(p.distanceToSquared(Player.pos));
 Events.on('shot', (pos, dir, k = 0, n = 1) => { if (k === 0) Sfx.shoot(n); });
+// Desir angin halus saat Balik U (E8): noise bandpass menyapu naik lalu turun selama durasi manuver
+Events.on('maneuver', (type) => { if (type === 'uturn') { Sfx.noiseBurst('bandpass', 380, 1100, 1.8, 0.035, 0.6); } });
 Events.on('enemyShot', (pos) => Sfx.enemyShoot(distToPlayer(pos)));
 Events.on('enemyHit', () => Sfx.hitMarker());
 Events.on('enemyDestroyed', (e) => Sfx.explosion(e.type === 'drone' ? 0.8 : 1.2, distToPlayer(e.pos)));
@@ -14802,6 +14855,7 @@ Events.on('gameover', () => {
 
 /* Piko: peringatan bersubtitle dan bunyi bip, dengan jeda minimum, cooldown per pesan dan prioritas */
 const PIKO_LINES = {
+  uturnTip: { text: 'Bos di belakang! Tekan V untuk Putar Balik U ke arahnya.', touch: 'Bos di belakang! Ketuk Balik untuk Putar Balik U.', mood: 'alert', prio: 2, short: 'Bos di belakang, Balik U.' },
   gunReady: { text: 'Naik level berikutnya, pilih kartu Peningkatan Senjata untuk menambah laras.', mood: 'happy', prio: 2, short: 'Ambil Peningkatan Senjata.' },
   // Saran peralatan (C5): sekali per peralatan per sesi, lewat pusat notifikasi tunggal, ikut opsi Bantuan robot
   eq_suar: { text: 'Rudal musuh mengunci kita, luncurkan Suar Kelip!', mood: 'alert', prio: 2, short: 'Rudal mengunci, pakai Suar.', key: 'suar' },
@@ -14890,6 +14944,9 @@ const Piko = {
     if (Player.health.ratio < CONFIG.player.criticalHp) this.say('hpLow');
     if (Player.warning === 'TARIK NAIK!') this.say('terrain');
     if (Player.warning === 'KELUAR BATAS MISI') this.say('boundary');
+    // Saran Balik U satu kali per sesi (E8): bos di belakang lebih dari 1,5 detik dan manuver siap
+    this.bossBehindT = BossHud.rear ? (this.bossBehindT || 0) + dt : 0;
+    if (this.bossBehindT > 1.5 ? (Player.cooldowns.uturn <= 0 ? !this.said.includes('uturnTip') : false) : false) this.say('uturnTip');
   },
 };
 Piko.drawFace();
@@ -14943,7 +15000,7 @@ Controls.addSource(Keyboard);
 // Tombol yang aksi bawaan browsernya harus dicegah (scroll, klik tombol yang sedang fokus)
 const PREVENT_CODES = new Set(['Tab', 'Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM',
-  'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC', 'KeyE', 'Tab', 'Digit1', 'Digit2', 'Digit3', 'KeyQ', 'KeyF', 'KeyG',
+  'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyE', 'Tab', 'Digit1', 'Digit2', 'Digit3', 'KeyQ', 'KeyF', 'KeyG',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 // Navigasi menu dengan keyboard: panah atas dan bawah memilih, Enter menekan, Esc menutup overlay.
 // Mengembalikan true bila tombol sudah ditangani.
@@ -15034,6 +15091,9 @@ function onKeyDown(e) {
       break;
     case 'KeyC':
       Player.startManeuver('loop');
+      break;
+    case 'KeyV':
+      Player.startManeuver('uturn', Player.uturnDir(Controls.yaw));
       break;
     case 'KeyE':
       Ultimate.fire();
@@ -15652,7 +15712,19 @@ const Touch = {
       const qb = e.target.closest('[data-eq]');
       if (qb) { e.preventDefault(); capture(qb, e); const i = Number(qb.dataset.eq); this.eqPointers.set(e.pointerId, i); Equip.use(i, Equip.isHold(i) ? 'down' : 'tap'); return; }
       const mb = e.target.closest('[data-man]');
-      if (mb) { e.preventDefault(); Player.startManeuver(mb.dataset.man, this.rollDir()); return; }
+      if (mb) {
+        e.preventDefault();
+        // Tombol Balik (E8): joystick didorong jelas ke atas atau bawah memberi Balik vertikal lama, selain itu Balik U
+        // dengan arah dari defleksi joystick ke samping, ancaman di belakang, atau ke kanan
+        if (mb.dataset.man === 'uturn') {
+          const jx = this.joy.x, jy = this.joy.y;
+          if (Math.abs(jy) > 0.55 ? Math.abs(jx) < 0.35 : false) Player.startManeuver('immelmann');
+          else Player.startManeuver('uturn', Player.uturnDir(Math.abs(jx) > 0.3 ? Controls.yaw : 0));
+          return;
+        }
+        Player.startManeuver(mb.dataset.man, this.rollDir());
+        return;
+      }
       const b = e.target.closest('[data-act]');
       if (!b) return;
       e.preventDefault();
@@ -16103,7 +16175,8 @@ const SkilledBot = {
     }
     // Bos lama di belakang: Balik Arah bila siap
     this.behindT = cosA < -0.3 ? this.behindT + 1 / 60 : 0;
-    if (this.behindT > pr.reverse ? dist < 500 : false) { if (Player.startManeuver('immelmann')) this.behindT = 0; }
+    // E8: Putar Balik U ke arah bos untuk mengatur ulang bidikan; Balik vertikal bila Balik U belum bisa
+    if (this.behindT > pr.reverse ? dist < 500 : false) { if (Player.startManeuver('uturn', Player.uturnDir(0)) ? true : Player.startManeuver('immelmann')) { this.behindT = 0; if (BossStats.on) BossStats.uturns = (BossStats.uturns || 0) + 1; } }
   },
 };
 Events.on('enemyTelegraph', (pos) => SkilledBot.onTele(pos));
@@ -16867,7 +16940,7 @@ const GameHooks = {
       }
       const r = BossStats.summary();
       r.kind = kind; r.bot = Debug.botBoss; r.difficulty = Game.difficultyKey; r.alive = !!Bosses.active; r.phase = Bosses.active ? Bosses.active.phase : null; r.ultUsed = ultUsed;
-      r.msPerStep = round2((performance.now() - t0) / steps);
+      r.msPerStep = round2((performance.now() - t0) / steps); r.uturns = BossStats.uturns || 0;
       if (real) { Events.off('damage', onDmg); Events.off('playerDeath', onDeath); Events.off('crash', onCrash); Save.settings.fatalCrash = fatalBefore; r.damageTaken = Math.round(dmgTaken); r.deaths = deaths; r.crashes = crashes; }
       BossStats.on = false; Debug.botBoss = false; Debug.autoInput = false; Debug.god = godBefore; Debug.enemiesEnabled = enBefore;
       Controls.reset();
@@ -17340,6 +17413,37 @@ const GameHooks = {
     flightTrace(cmd) { if (cmd === 'start') { FlightProbe.start(); return true; } return FlightProbe.stop(); },
     flightRun(segments, opts) { return FlightProbe.run(segments, opts); },
     flightColumns() { return FlightProbe.COLUMNS.slice(); },
+    // Putar Balik U (E8): hasil manuver terakhir (panjang jalur, bank maksimum, durasi, perubahan arah, kecepatan keluar)
+    uturnInfo() { const u = Player.lastUturn; return u ? { path: round2(u.path), maxBankDeg: round2(u.maxBank * 180 / Math.PI), dur: round2(u.dur), turnDeg: round2(u.turn * 180 / Math.PI), exitSpeed: round2(u.exitSpeed), dir: u.dir } : null; },
+    uturnDir(yawIn = 0) { return Player.uturnDir(yawIn); },
+    // Joystick sentuh sintetis (E8): x, y -1..1; null melepas
+    touchJoy(x, y) { if (x === null) { Touch.joy.id = null; Touch.joy.x = 0; Touch.joy.y = 0; } else { Touch.joy.id = 'debug'; Touch.joy.x = x; Touch.joy.y = y; } return true; },
+    // Tabrakan tetap bekerja selama Balik U: jalankan sekali di ruang kosong untuk mencari titik puncak lengkung,
+    // ulangi dari pose awal yang sama dengan batu diam di titik itu, lalu hitung tabrakan yang tercatat
+    uturnObstacleTest(dir = -1, radius = 4) {
+      if (Game.state !== 'playing') return null;
+      const keep = { god: Debug.god, fatal: Save.settings.fatalCrash };
+      Debug.god = false; Save.settings.fatalCrash = false;
+      for (const a of Asteroids.list) if (a.active) Asteroids.remove(a);
+      const P0 = Player.pos.clone(), yaw0 = Player.yaw, dur = CONFIG.maneuvers.uturn.duration;
+      const run = () => {
+        Player.pos.copy(P0); Player.setHeading(yaw0); Player.maneuver = null; Player.cooldowns.uturn = 0;
+        Player.spawnInvuln = 0; Player.hitInvuln = 0; Player.invuln = 0; Player.health.reset(Player.health.maxHp);
+        Player.startManeuver('uturn', dir, true);
+        let apex = null;
+        for (let i = 0; i < Math.round((dur + 0.3) * 60); i++) { if (Game.state !== 'playing') break; update(1 / 60); if (!apex ? Player.maneuver ? Player.maneuver.t >= dur / 2 : false : false) apex = Player.pos.clone(); }
+        return apex;
+      };
+      const apex = run();
+      const a = Asteroids.spawn(RockFields.sizeClass(radius), apex.x, apex.y, apex.z, 'rock', radius, true);
+      if (a) { a.vel.set(0, 0, 0); a.spin.set(0, 0, 0); }
+      Collision.log.length = 0; Collision.prevOk = false;
+      run();
+      const hits = Collision.log.filter((r) => r.label === 'asteroid').length;
+      if (a ? a.active : false) Asteroids.remove(a);
+      Debug.god = keep.god; Save.settings.fatalCrash = keep.fatal;
+      return { apexDist: round2(apex.distanceTo(P0)), hits, hp: round2(Player.health.hp) };
+    },
     gunTrace(cmd) { if (cmd === 'start') { Guns.trace = []; return true; } const r = Guns.trace || []; Guns.trace = null; return r; },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
     shootPlayer(dist = 60) {
@@ -17792,7 +17896,7 @@ const Tutorial = {
     { id: 'gerak', kb: 'Terbang: W dan S naik turun, A dan D belok', hp: 'Terbang: geser jempol di separuh kiri layar' },
     { id: 'tembak', kb: 'Tembak: tahan Enter', hp: 'Tembak: tahan tombol besar di kanan bawah' },
     { id: 'nitro', kb: 'Nitro: tekan Spasi untuk melesat', hp: 'Nitro: ketuk tombol api di atas tombol tembak' },
-    { id: 'manuver', kb: 'Manuver: Z Gulung Tong, X Balik Arah, C Looping', hp: 'Manuver: coba salah satu tombol panah melingkar' },
+    { id: 'manuver', kb: 'Manuver: Z Gulung Tong, X Balik Arah, C Looping, V Putar Balik U', hp: 'Manuver: coba salah satu tombol panah melingkar' },
   ],
   init() {
     this.el = document.createElement('div');

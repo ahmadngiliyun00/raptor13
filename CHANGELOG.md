@@ -43,7 +43,19 @@ Bukti pemilihan commit tiap tag ada di `docs/rilis/rencana-tag.md`.
   - Manuver memakai smootherstep.
   - Rincian di `docs/penerbangan/perbaikan.md`.
 
+- **Manuver Putar Balik U (E8).** Belok datar miring 180 derajat dalam 2 detik. Bank berbentuk lonceng sampai 75
+  derajat, terkoordinasi dengan laju belok, dan hidung didatarkan.
+  - Keyboard V: arah dari A atau D, atau menuju bos atau musuh di belakang, atau ke kanan.
+  - Sentuh: tombol Balik memberi Balik U; joystick didorong ke atas atau bawah memberi Balik vertikal lama.
+  - Cooldown 5 detik, tanpa kebal.
+  - Efek: uap sayap dan desir angin.
+  - Integrasi: Piko menempel, bot terampil memakainya setelah melewati bos, indikator BOS DI BELAKANG memberi saran
+    V, dan Piko menyarankan sekali.
+  - Rincian di `docs/penerbangan/balik-u.md`.
+
 ### Diubah
+- Tombol sentuh Balik kini berikon panah U dan secara bawaan memberi Putar Balik U. Balik vertikal tetap tersedia
+  dengan joystick didorong ke atas atau bawah, jadi jumlah tombol busur tidak bertambah.
 - Laju pitch 1,7 menjadi 1,8 rad/s untuk mengganti waktu ramp. Sudut yang ditempuh dalam 1 detik tetap setara.
 - Kurangi gerakan kini juga membuat kamera tidak ikut roll.
 - Uji "W dan S mengubah pitch" menahan W 0,7 detik, bukan 1,2 detik. Menahan 1,2 detik membawa kapal melewati puncak,

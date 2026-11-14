@@ -1,0 +1,82 @@
+{
+ "starfighter": {
+  "1": {
+   "path": 140.11,
+   "maxBankDeg": 75.05,
+   "dur": 2.02,
+   "turnDeg": 178.95,
+   "exitSpeed": 70.03,
+   "dir": 1,
+   "worst": {
+    "uncmd": 0.008,
+    "cmd": 0,
+    "accel": 0.074,
+    "jerk": 1.311,
+    "manAccel": 9.982,
+    "manJerk": 309.343,
+    "camUp": 0.416,
+    "camExcess": 0.121
+   },
+   "flagged": 0
+  },
+  "-1": {
+   "path": 140.11,
+   "maxBankDeg": 75.05,
+   "dur": 2.02,
+   "turnDeg": 178.95,
+   "exitSpeed": 70.03,
+   "dir": -1,
+   "worst": {
+    "uncmd": 0.008,
+    "cmd": 0,
+    "accel": 0.074,
+    "jerk": 1.311,
+    "manAccel": 9.982,
+    "manJerk": 309.347,
+    "camUp": 0.416,
+    "camExcess": 0.121
+   },
+   "flagged": 0
+  }
+ },
+ "raptor-j": {
+  "1": {
+   "path": 140.1,
+   "maxBankDeg": 75.06,
+   "dur": 2.02,
+   "turnDeg": 179.05,
+   "exitSpeed": 70.03,
+   "dir": 1,
+   "worst": {
+    "uncmd": 0.007,
+    "cmd": 0,
+    "accel": 0.067,
+    "jerk": 1.191,
+    "manAccel": 9.981,
+    "manJerk": 309.324,
+    "camUp": 0.415,
+    "camExcess": 0.121
+   },
+   "flagged": 0
+  },
+  "-1": {
+   "path": 140.1,
+   "maxBankDeg": 75.05,
+   "dur": 2.02,
+   "turnDeg": 179.04,
+   "exitSpeed": 70.03,
+   "dir": -1,
+   "worst": {
+    "uncmd": 0.007,
+    "cmd": 0,
+    "accel": 0.067,
+    "jerk": 1.195,
+    "manAccel": 9.98,
+    "manJerk": 309.327,
+    "camUp": 0.415,
+    "camExcess": 0.121
+   },
+   "flagged": 0
+  }
+ }
+}
