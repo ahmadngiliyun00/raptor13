@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-6hnRsaNgcoPnj7XyoAttJtakWaIx1yOkTfOMG4MD4G0='; style-src 'self' 'sha256-KeomjK4C7Jb9W83Lf5iNW8s6GTHxJaigYArT2k0lu0c='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-ze1DxqToLR/DJ1Au0NB2Dja1yuVqHrU7OMZ+muwglVY='; style-src 'self' 'sha256-C9LyLk0duUB9MhPpOKDvdRHVB61lVBkWCrzMEh8Xq+w='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -624,7 +624,7 @@
   #joy-zone { position: absolute; left: 0; top: 0; bottom: 0; width: 45%; pointer-events: auto; touch-action: none; }
   body.kidal #joy-zone { left: auto; right: 0; }
   /* Posisi diam joystick dan tombol arah (C2): pusat sekitar x 13 persen dan y 70 persen, dihitung HudLayout */
-  .joy { --jb: calc(var(--cu) * 2.6); --jt: calc(var(--cu) * 1.1);
+  .joy { --jb: calc(var(--cu) * 2.6 * var(--jsc, 1)); --jt: calc(var(--cu) * 1.1 * var(--jsc, 1));
     position: absolute; left: var(--jx, var(--sa-l)); top: var(--jy, auto); width: var(--jb); height: var(--jb); pointer-events: none;
     opacity: var(--jo2, calc(0.5 * var(--ca))); transition: opacity 0.15s; }
   .joy.active { opacity: min(1, calc(0.95 * var(--ca) + 0.1)); transition: none; }
@@ -635,7 +635,7 @@
     border-radius: 50%; background: rgba(230, 240, 250, 0.5); border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 1px rgba(10, 6, 2, 0.6), 0 2px 8px rgba(0, 0, 0, 0.35); }
   /* Gaya Tombol arah: satu cakram tetap dengan empat panah (arah dari posisi jari, termasuk diagonal) */
   .uic-terang .joy-thumb { background: rgba(46, 30, 18, 0.8); border-color: rgba(255, 240, 220, 0.95); }
-  .dpad { --jb: calc(var(--cu) * 2.6); position: absolute; left: var(--jx, var(--sa-l)); top: var(--jy, auto); width: var(--jb); height: var(--jb);
+  .dpad { --jb: calc(var(--cu) * 2.6 * var(--jsc, 1)); position: absolute; left: var(--jx, var(--sa-l)); top: var(--jy, auto); width: var(--jb); height: var(--jb);
     pointer-events: auto; touch-action: none; border-radius: 50%; opacity: var(--po2, calc(0.78 * var(--ca)));
     background: var(--pl, rgba(20, 30, 44, 0.4)); border: var(--bw, 2px) solid var(--rg, rgba(255, 255, 255, 0.4)); box-shadow: var(--ol, none); transition: background-color 0.4s, border-color 0.4s; }
   .dpad svg { position: absolute; width: 30%; height: 30%; fill: none; stroke: var(--ik, rgba(255, 255, 255, 0.9)); stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; filter: var(--sh, none); }
@@ -740,6 +740,34 @@
   .tool svg rect { fill: none !important; }
   /* H7: overlay putar layar di bawah toolbar (Suara dan Mode tetap bisa ditekan), tip layar penuh dan
      saran mode HP berupa pil kecil di tengah atas yang tidak menimpa tombol menu */
+  /* Editor tata letak HUD (C3) */
+  #hud-editor { position: fixed; inset: 0; z-index: 52; touch-action: none; -webkit-user-select: none; user-select: none;
+    background: linear-gradient(180deg, #0b1626, #04070d); }
+  #hud-editor::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0.18;
+    background-image: linear-gradient(rgba(255, 255, 255, 0.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.4) 1px, transparent 1px); background-size: 8px 8px; }
+  #hud-editor.preview::before, #hud-editor.preview .he-zone, #hud-editor.preview .he-safe { display: none; }
+  .he-zone { position: absolute; pointer-events: none; background: repeating-linear-gradient(45deg, rgba(255, 70, 70, 0.16) 0 6px, rgba(255, 70, 70, 0.05) 6px 12px); border: 1px dashed rgba(255, 110, 110, 0.6); }
+  .he-safe { position: absolute; pointer-events: none; border: 1px dashed rgba(140, 220, 255, 0.55); }
+  .he-items { position: absolute; inset: 0; }
+  .he-el { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; cursor: grab; touch-action: none;
+    background: rgba(255, 255, 255, 0.2); border: 2px solid rgba(255, 255, 255, 0.92); box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.7); }
+  .he-el::before { content: ""; position: absolute; inset: min(0px, calc((var(--d) - 44px) / 2)); border-radius: 50%; border: 1px dotted rgba(255, 255, 255, 0.3); }
+  .he-el svg { width: 56%; height: 56%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  .he-el.sel { border-color: #ffd24a; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.7), 0 0 12px rgba(255, 210, 74, 0.8); }
+  .he-el.bad { border-color: #ff4a4a; background: rgba(255, 60, 60, 0.4); }
+  .he-el.he-joy { background: rgba(255, 255, 255, 0.1); }
+  .he-bar { position: absolute; left: 50%; top: var(--sa-t); transform: translateX(-50%); display: flex; flex-direction: column; gap: 4px; align-items: center; z-index: 2; }
+  .he-row { display: flex; gap: 4px; align-items: center; }
+  .he-btn { min-height: 32px; padding: 0 9px; font: 800 11px/1 system-ui, sans-serif; letter-spacing: 0.06em; color: #e8f6ff; background: rgba(10, 20, 32, 0.92);
+    border: 1px solid rgba(160, 220, 255, 0.5); border-radius: 6px; cursor: pointer; }
+  .he-btn[aria-pressed="true"] { border-color: #ffd24a; color: #ffd24a; }
+  .he-save { color: #0b1626; background: #6ff09a; border-color: #6ff09a; }
+  .he-save:disabled { color: #8a9aa8; background: rgba(60, 70, 80, 0.9); border-color: rgba(120, 130, 140, 0.6); cursor: not-allowed; }
+  .he-msg { max-width: 220px; font-size: 11px; color: #ffb0a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .he-msg.ok { color: #9ff0b8; }
+  .he-size { position: absolute; left: 50%; bottom: calc(var(--sa-b) + 4px); transform: translateX(-50%); display: flex; gap: 8px; align-items: center; z-index: 2;
+    padding: 4px 10px; font-size: 12px; color: #e8f6ff; background: rgba(10, 20, 32, 0.92); border: 1px solid rgba(160, 220, 255, 0.5); border-radius: 8px; }
+  .he-size input { width: 140px; min-height: 28px; }
   #rotate-hint { position: fixed; inset: 0; z-index: 38; display: flex; align-items: center; justify-content: center; padding: 24px;
     background: rgba(6, 10, 18, 0.92); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   #rotate-hint.hidden { display: none; }
@@ -1220,6 +1248,29 @@
     <button class="tbtn t-fire" data-act="fire" type="button" aria-label="Tembak" title="Tembak"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg></button>
   </div>
 </div>
+<!-- Editor tata letak HUD mode HP (C3): geser tombol, ubah ukuran per elemen, validasi langsung -->
+<div id="hud-editor" class="hidden" role="dialog" aria-label="Edit tata letak HUD">
+  <div class="he-zone he-center" aria-hidden="true"></div>
+  <div class="he-zone he-top" aria-hidden="true"></div>
+  <div class="he-zone he-tl" aria-hidden="true"></div>
+  <div class="he-safe" aria-hidden="true"></div>
+  <div class="he-items"></div>
+  <div class="he-bar">
+    <div class="he-row">
+      <button type="button" class="he-btn" data-he="standar">STANDAR</button>
+      <button type="button" class="he-btn" data-he="kidal">KIDAL</button>
+      <button type="button" class="he-btn" data-he="ringkas">RINGKAS</button>
+      <button type="button" class="he-btn" data-he="reset">RESET</button>
+      <button type="button" class="he-btn" data-he="preview" aria-pressed="false">PRATINJAU</button>
+    </div>
+    <div class="he-row">
+      <span class="he-msg" role="status"></span>
+      <button type="button" class="he-btn" data-he="cancel">BATAL</button>
+      <button type="button" class="he-btn he-save" data-he="save">SIMPAN</button>
+    </div>
+  </div>
+  <div class="he-size hidden"><span class="he-size-name"></span><input type="range" min="70" max="130" step="5" aria-label="Ukuran elemen"><output></output></div>
+</div>
 <div id="rotate-hint" class="hidden" role="dialog" aria-label="Putar ke landscape">
   <div class="rot-card">
     <svg class="rot-ic" viewBox="0 0 64 64" aria-hidden="true"><rect x="22" y="8" width="20" height="36" rx="4"/><path d="M29 39h6"/><path class="rot-arrow" d="M12 46a22 22 0 0 0 30 10"/><path class="rot-arrow" d="M38 52l4 4-5 3"/></svg>
@@ -1457,6 +1508,8 @@
       </div>
       <span class="set-label">Tutorial</span>
       <div><button id="btn-tutorial" class="btn secondary small" type="button">ULANGI TUTORIAL</button></div>
+      <span class="set-label hp-only">Tata letak HUD</span>
+      <div class="hp-only"><button id="btn-hud-edit" class="btn secondary small" type="button">EDIT TATA LETAK HUD</button></div>
     </div>
     <h3 class="set-sub kb-only" data-sec="lainnya">Kontrol keyboard</h3>
     <div class="keymap kb-only" data-keymap data-sec="lainnya"></div>
@@ -13831,8 +13884,54 @@ const HUD_ARC = {
   outer: ['eq2', 'eq1', 'eq0', 'loop', 'imm', 'roll'], outerSize: 0.92, start: 92, mid: 168,
   fireX: 0.88, fireY: 0.66, bottomGap: 0.2, joyX: 0.13, joyY: 0.7,
 };
+// Tata letak kustom (C3): offset pusat (dx, dy dalam pecahan lebar dan tinggi layar, sisi tangan kanan) dan skala
+// ukuran (s) per elemen, disimpan per kelas ukuran layar dan orientasi. Skema divalidasi ketat saat dimuat.
+const HUD_LAYOUT_KEY = 'raptor13.hudlayout.v1';
+const HUD_LAYOUT_ELEMS = ['fire', 'nitro', 'ult', 'roll', 'imm', 'loop', 'eq0', 'eq1', 'eq2', 'joy'];
+const HUD_PRESETS = {
+  standar: { leftHanded: false, elems: {} },
+  kidal: { leftHanded: true, elems: {} },
+  // Ringkas: tombol sedikit lebih kecil, busur lebih rapat ke TEMBAK
+  ringkas: { leftHanded: null, elems: { fire: { s: 0.9 }, nitro: { s: 0.85 }, ult: { s: 0.85 }, roll: { s: 0.85 }, imm: { s: 0.85 }, loop: { s: 0.85 }, eq0: { s: 0.85 }, eq1: { s: 0.85 }, eq2: { s: 0.85 }, joy: { s: 0.9 } } },
+};
+const HudCustom = {
+  cache: null,
+  sizeClass() { const H = Viewport.h; return (H < 360 ? 'kecil' : H < 400 ? 'sedang' : 'besar') + '-' + (Viewport.w >= H ? 'mendatar' : 'tegak'); },
+  // Validasi satu set elemen: hanya kunci dikenal, angka hingga dalam rentang
+  clean(raw) {
+    if (!raw ? true : typeof raw !== 'object') return null;
+    const out = {};
+    for (const k of HUD_LAYOUT_ELEMS) {
+      const e = raw[k];
+      if (e === undefined) continue;
+      if (!e ? true : typeof e !== 'object') return null;
+      const dx = e.dx === undefined ? 0 : e.dx, dy = e.dy === undefined ? 0 : e.dy, sc = e.s === undefined ? 1 : e.s;
+      if (![dx, dy, sc].every((v) => (typeof v === 'number' ? Number.isFinite(v) : false))) return null;
+      if (Math.abs(dx) > 0.7 ? true : (Math.abs(dy) > 0.7 ? true : (sc < 0.7 ? true : sc > 1.3))) return null;
+      out[k] = { dx: Math.round(dx * 1000) / 1000, dy: Math.round(dy * 1000) / 1000, s: Math.round(sc * 100) / 100 };   // round2 belum terdefinisi saat dimuat
+    }
+    for (const k of Object.keys(raw)) if (!HUD_LAYOUT_ELEMS.includes(k)) return null;
+    return out;
+  },
+  load() {
+    if (this.cache) return this.cache;
+    const d = Store.get(HUD_LAYOUT_KEY), sets = {};
+    if (d ? (d.v === 1 ? (d.sets ? typeof d.sets === 'object' : false) : false) : false) {
+      for (const [cls, raw] of Object.entries(d.sets)) { if (!/^(kecil|sedang|besar)-(mendatar|tegak)$/.test(cls)) continue; const c = this.clean(raw); if (c) sets[cls] = c; }
+    }
+    this.cache = sets;
+    return sets;
+  },
+  get() { return this.load()[this.sizeClass()] || null; },
+  save(elems) {
+    const sets = this.load(), c = this.clean(elems);
+    if (!c) return false;
+    if (Object.keys(c).length) sets[this.sizeClass()] = c; else delete sets[this.sizeClass()];
+    return Store.set(HUD_LAYOUT_KEY, { v: 1, sets });
+  },
+};
 const HudLayout = {
-  eqCount: 0, last: null, sq: 1,
+  eqCount: 0, last: null, sq: 1, customState: 'bawaan',
   els: null,
   init() {
     const R = Touch.root;
@@ -13882,12 +13981,67 @@ const HudLayout = {
     // Di bawah Jeda, Suara, dan deretan buff di sisi busur (mode kidal mencerminkan radar ke kanan dan buff ke kiri)
     const topMin = ed.t + 76;
     const fireBottomGap = (H - (cy + F / 2)) / H;
-    const ok = (box.x1 - box.x0) <= W * 0.26 + 0.5 ? (box.x0 >= W * 0.7 + 1 ? (box.y0 >= topMin ? (box.y1 <= H - ed.b + 0.5 ? (box.x1 <= W - ed.r + 0.5 ? (J <= Math.min(H * 0.3, W * 0.26) ? fireBottomGap >= A.bottomGap - 0.005 : false) : false) : false) : false) : false) : false;
+    // Luas UI idle maksimal 22 persen: luas kotak tombol dan joystick ditambah perkiraan HUD tetap (strip status,
+    // baris misi, Jeda, Suara, radar, tombol peta, sekitar 19500 px persegi)
+    let area = J * J;
+    for (const k in out) { if (k.startsWith('eq') ? Number(k[2]) >= eqCount : false) continue; area += out[k].d * out[k].d; }
+    const ok = area > W * H * 0.22 - 19500 ? false : (box.x1 - box.x0) <= W * 0.26 + 0.5 ? (box.x0 >= W * 0.7 + 1 ? (box.y0 >= topMin ? (box.y1 <= H - ed.b + 0.5 ? (box.x1 <= W - ed.r + 0.5 ? (J <= Math.min(H * 0.3, W * 0.26) ? fireBottomGap >= A.bottomGap - 0.005 : false) : false) : false) : false) : false) : false;
     return { ok, u, sq, buttons: out, box, joy: { cx: jcx, cy: jcy, d: J }, fireBottomGap, names };
+  },
+  // Offset dan skala kustom di atas tata letak bawaan, lalu kotak cluster dihitung ulang
+  custom(L, elems) {
+    const W = Viewport.w, H = Viewport.h;
+    for (const k in elems) {
+      const e = elems[k], b = k === 'joy' ? L.joy : L.buttons[k];
+      if (!b) continue;
+      b.cx += (e.dx || 0) * W; b.cy += (e.dy || 0) * H; b.d *= e.s || 1;
+    }
+    const box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    for (const k in L.buttons) { const b = L.buttons[k]; box.x0 = Math.min(box.x0, b.cx - b.d / 2); box.x1 = Math.max(box.x1, b.cx + b.d / 2); box.y0 = Math.min(box.y0, b.cy - b.d / 2); box.y1 = Math.max(box.y1, b.cy + b.d / 2); }
+    L.box = box;
+    L.fireBottomGap = (H - (L.buttons.fire.cy + L.buttons.fire.d / 2)) / H;
+    return L;
+  },
+  // Zona terlarang untuk kontrol: zona tengah, pita atas (Jeda, Suara, buff, misi, status), dan radar dengan tombol peta
+  // Koordinat layar; radar dan tombol peta ada di kiri atas, atau di kanan atas saat mode kidal
+  forbidden(kidal = Save.settings.leftHanded) {
+    const W = Viewport.w, H = Viewport.h, ed = Viewport.edges();
+    return [
+      { name: 'zona tengah', x0: W * 0.3, y0: H * 0.2, x1: W * 0.7, y1: H * 0.8 },
+      { name: 'pita atas', x0: 0, y0: 0, x1: W, y1: ed.t + 76 },
+      kidal ? { name: 'radar dan peta', x0: W - ed.r - 112, y0: 0, x1: W, y1: ed.t + 112 } : { name: 'radar dan peta', x0: 0, y0: 0, x1: ed.l + 112, y1: ed.t + 122 },
+    ];
+  },
+  // Validasi tata letak (sisi tangan kanan, sebelum dicerminkan): tiap elemen di dalam tepi aman, di luar zona
+  // terlarang, dan lingkaran area sentuh (minimal 44 px) tidak bertumpuk. Kembali: daftar masalah per elemen.
+  validate(L, kidal = Save.settings.leftHanded) {
+    const W = Viewport.w, H = Viewport.h, ed = Viewport.edges(), bad = {};
+    // Zona terlarang menempel di layar, jadi posisi dicerminkan dulu saat mode kidal
+    const items = Object.entries(L.buttons).map(([k, b]) => ({ k, ...b })).concat([{ k: 'joy', ...L.joy }]).map((it) => (kidal ? { ...it, cx: W - it.cx } : it));
+    const mark = (k, why) => { if (!bad[k]) bad[k] = why; };
+    for (const it of items) {
+      const r = it.d / 2;
+      if (it.cx - r < ed.l - 0.5 ? true : (it.cy - r < ed.t - 0.5 ? true : (it.cx + r > W - ed.r + 0.5 ? true : it.cy + r > H - ed.b + 0.5))) mark(it.k, 'keluar tepi aman');
+      for (const z of this.forbidden(kidal)) if (it.cx + r > z.x0 ? (it.cx - r < z.x1 ? (it.cy + r > z.y0 ? it.cy - r < z.y1 : false) : false) : false) mark(it.k, 'masuk ' + z.name);
+    }
+    for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+      const a = items[i], b = items[j];
+      if (Math.hypot(a.cx - b.cx, a.cy - b.cy) < (this.hit(a.d) + this.hit(b.d)) / 2 + 1) { mark(a.k, 'bertumpuk dengan ' + b.k); mark(b.k, 'bertumpuk dengan ' + a.k); }
+    }
+    return bad;
   },
   apply(c) {
     if (!this.els) this.init();
-    const L = this.compute(c), kidal = Save.settings.leftHanded, W = Viewport.w;
+    let L = this.compute(c);
+    const kidal = Save.settings.leftHanded, W = Viewport.w;
+    // Tata letak kustom untuk kelas layar ini; bila tidak valid di layar sekarang, kembali ke bawaan
+    const cu = HudCustom.get();
+    this.customState = 'bawaan';
+    if (cu) {
+      const C = this.custom(this.compute(c), cu);
+      if (Object.keys(this.validate(C)).length) this.customState = 'tidak valid, kembali ke bawaan';
+      else { L = C; this.customState = 'kustom'; }
+    }
     this.last = L;
     const mx = (x) => (kidal ? W - x : x);
     const bx0 = kidal ? W - L.box.x1 : L.box.x0, by0 = L.box.y0;
@@ -13905,6 +14059,8 @@ const HudLayout = {
     const st = Touch.root.style;
     st.setProperty('--jx', (mx(L.joy.cx) - L.joy.d / 2).toFixed(1) + 'px');
     st.setProperty('--jy', (L.joy.cy - L.joy.d / 2).toFixed(1) + 'px');
+    // Ukuran joystick dan tombol arah ikut skala kustom
+    st.setProperty('--jsc', String(L.joy.d / (L.u * 2.6)));
   },
   setEquipCount(n) { this.eqCount = clamp(Math.round(n) || 0, 0, 3); Touch.applyLayout(); return this.eqCount; },
   report() {
@@ -13913,8 +14069,114 @@ const HudLayout = {
     const W = Viewport.w, H = Viewport.h;
     return { scale: Touch.scale, eq: this.eqCount, fire: { x: round2(L.buttons.fire.cx / W), y: round2(L.buttons.fire.cy / H), d: Math.round(L.buttons.fire.d) },
       fireBottomGap: round2(L.fireBottomGap), width: round2((L.box.x1 - L.box.x0) / W), height: round2((L.box.y1 - L.box.y0) / H), left: round2(L.box.x0 / W),
-      joy: { x: round2(L.joy.cx / W), y: round2(L.joy.cy / H) }, order: L.names, sq: L.sq };
+      joy: { x: round2(L.joy.cx / W), y: round2(L.joy.cy / H) }, order: L.names, sq: L.sq, custom: this.customState, cls: HudCustom.sizeClass() };
   },
+};
+
+/* =====================================================================
+   EDITOR TATA LETAK HUD (C3) - semua tombol mode HP dan joystick dapat digeser (snap ke grid 8 px) dan diubah
+   ukurannya per elemen (70 sampai 130 persen). Zona terlarang (tengah, pita atas, radar dan tombol peta) dan
+   tepi aman ditandai; elemen yang melanggar atau bertumpuk berwarna merah dan SIMPAN nonaktif sampai valid.
+   Preset Standar, Kidal, Ringkas; Reset ke bawaan; Pratinjau menyembunyikan penanda. Disimpan per kelas ukuran
+   layar dan orientasi (HudCustom). Editor memakai salinan tombol sendiri, jadi tidak memicu aksi permainan.
+   ===================================================================== */
+const HudEditor = {
+  el: document.getElementById('hud-editor'), open: false, elems: {}, sel: null, drag: null, kidal: false, nodes: {},
+  ICONS: { joy: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg>' },
+  NAMES: { fire: 'Tembak', nitro: 'Nitro', ult: 'Ultimate', roll: 'Gulung', imm: 'Balik', loop: 'Loop', eq0: 'Slot 1', eq1: 'Slot 2', eq2: 'Slot 3', joy: 'Joystick' },
+  init() {
+    const E = this.el;
+    this.items = E.querySelector('.he-items'); this.msg = E.querySelector('.he-msg'); this.saveBtn = E.querySelector('.he-save');
+    this.sizeBox = E.querySelector('.he-size'); this.sizeIn = this.sizeBox.querySelector('input'); this.sizeOut = this.sizeBox.querySelector('output'); this.sizeName = this.sizeBox.querySelector('.he-size-name');
+    onButton($('btn-hud-edit'), () => this.show());
+    for (const b of E.querySelectorAll('[data-he]')) onButton(b, () => this.action(b.dataset.he, b));
+    this.sizeIn.addEventListener('input', () => { if (!this.sel) return; this.elem(this.sel).s = Number(this.sizeIn.value) / 100; this.render(); });
+    E.addEventListener('pointerdown', (e) => {
+      const n = e.target.closest('.he-el');
+      if (!n) return;
+      e.preventDefault();
+      this.select(n.dataset.k);
+      try { n.setPointerCapture(e.pointerId); } catch (err) { /* pointer sintetis */ }
+      const e0 = this.elem(n.dataset.k);
+      this.drag = { id: e.pointerId, k: n.dataset.k, x: e.clientX, y: e.clientY, dx: e0.dx || 0, dy: e0.dy || 0 };
+    });
+    E.addEventListener('pointermove', (e) => {
+      const D = this.drag;
+      if (!D ? true : D.id !== e.pointerId) return;
+      const W = Viewport.w, H = Viewport.h, g = 8;
+      // Snap ke grid 8 px; geseran di layar dicerminkan kembali ke sisi tangan kanan saat mode kidal
+      const px = Math.round((e.clientX - D.x) / g) * g * (this.kidal ? -1 : 1), py = Math.round((e.clientY - D.y) / g) * g;
+      const it = this.elem(D.k);
+      it.dx = clamp(D.dx + px / W, -0.7, 0.7); it.dy = clamp(D.dy + py / H, -0.7, 0.7);
+      this.render();
+    });
+    const up = (e) => { if (this.drag ? this.drag.id === e.pointerId : false) this.drag = null; };
+    E.addEventListener('pointerup', up); E.addEventListener('pointercancel', up);
+  },
+  elem(k) { if (!this.elems[k]) this.elems[k] = { dx: 0, dy: 0, s: 1 }; return this.elems[k]; },
+  show() {
+    if (Save.settings.controlMode !== 'hp') return false;
+    const cur = HudCustom.get();
+    this.elems = cur ? JSON.parse(JSON.stringify(cur)) : {};
+    this.kidal = Save.settings.leftHanded;
+    this.sel = null; this.open = true;
+    this.el.classList.remove('hidden', 'preview');
+    this.el.querySelector('[data-he="preview"]').setAttribute('aria-pressed', 'false');
+    this.render();
+    return true;
+  },
+  close() { this.open = false; this.drag = null; this.el.classList.add('hidden'); },
+  select(k) { this.sel = k; this.render(); },
+  action(a, btn) {
+    if (a === 'preview') { const on = !this.el.classList.contains('preview'); this.el.classList.toggle('preview', on); btn.setAttribute('aria-pressed', String(on)); return; }
+    if (a === 'cancel') { this.close(); return; }
+    if (a === 'reset') { this.elems = {}; this.render(); return; }
+    if (a === 'save') {
+      if (Object.keys(this.check()).length) return;
+      HudCustom.save(this.elems);
+      if (Save.settings.leftHanded !== this.kidal) Settings.set('leftHanded', this.kidal);
+      Touch.applyLayout();
+      this.close();
+      return;
+    }
+    const P = HUD_PRESETS[a];
+    if (!P) return;
+    this.elems = JSON.parse(JSON.stringify(P.elems));
+    if (P.leftHanded !== null) this.kidal = P.leftHanded;
+    this.render();
+  },
+  // Tata letak yang sedang disunting: bawaan pada skala sekarang ditambah offset kustom
+  layout() { return HudLayout.custom(HudLayout.compute(Touch.scale || 1, 3, HudLayout.sq, this.kidal), this.elems); },
+  check() { return HudLayout.validate(this.layout(), this.kidal); },
+  render() {
+    if (!this.open) return;
+    const W = Viewport.w, H = Viewport.h, ed = Viewport.edges(), L = this.layout(), bad = HudLayout.validate(L, this.kidal);
+    const mx = (x) => (this.kidal ? W - x : x);
+    const zs = HudLayout.forbidden(this.kidal), zEl = [this.el.querySelector('.he-center'), this.el.querySelector('.he-top'), this.el.querySelector('.he-tl')];
+    zs.forEach((z, i) => { Object.assign(zEl[i].style, { left: z.x0 + 'px', top: z.y0 + 'px', width: (z.x1 - z.x0) + 'px', height: (z.y1 - z.y0) + 'px' }); });
+    Object.assign(this.el.querySelector('.he-safe').style, { left: ed.l + 'px', top: ed.t + 'px', right: ed.r + 'px', bottom: ed.b + 'px' });
+    const all = Object.entries(L.buttons).concat([['joy', L.joy]]);
+    for (const [k, b] of all) {
+      let n = this.nodes[k];
+      if (!n) {
+        n = document.createElement('div'); n.className = 'he-el' + (k === 'joy' ? ' he-joy' : ''); n.dataset.k = k;
+        n.setAttribute('role', 'button'); n.setAttribute('aria-label', this.NAMES[k] || k);
+        const src = k === 'joy' ? null : HudLayout.els[k];
+        if (src) { const svg = src.querySelector('svg'); if (svg) n.appendChild(svg.cloneNode(true)); } else n.innerHTML = this.ICONS.joy;
+        this.items.appendChild(n); this.nodes[k] = n;
+      }
+      Object.assign(n.style, { left: (mx(b.cx) - b.d / 2) + 'px', top: (b.cy - b.d / 2) + 'px', width: b.d + 'px', height: b.d + 'px' });
+      n.style.setProperty('--d', b.d + 'px');
+      n.classList.toggle('bad', !!bad[k]); n.classList.toggle('sel', this.sel === k);
+    }
+    const nBad = Object.keys(bad).length;
+    this.saveBtn.disabled = nBad > 0;
+    this.msg.classList.toggle('ok', nBad === 0);
+    this.msg.textContent = nBad ? (this.NAMES[Object.keys(bad)[0]] + ': ' + Object.values(bad)[0]) : 'Tata letak valid';
+    this.sizeBox.classList.toggle('hidden', !this.sel);
+    if (this.sel) { const v = Math.round((this.elem(this.sel).s || 1) * 100); this.sizeIn.value = String(v); this.sizeOut.textContent = v + '%'; this.sizeName.textContent = this.NAMES[this.sel]; }
+  },
+  report() { return { open: this.open, kidal: this.kidal, elems: JSON.parse(JSON.stringify(this.elems)), bad: this.open ? this.check() : {}, saveEnabled: !this.saveBtn.disabled }; },
 };
 
 const Touch = {
@@ -14138,6 +14400,7 @@ const Touch = {
 };
 Touch.init();
 UiContrast.init();
+HudEditor.init();
 Controls.addSource(Touch);
 
 // Mode HP dimainkan mendatar (H7): overlay putar layar yang rapi di bawah toolbar, permainan dijeda
@@ -15407,6 +15670,10 @@ const GameHooks = {
     uiContrastFeed(lum) { UiContrast.feed(lum); return UiContrast.report(); },
     // Tata letak HUD HP (C2): posisi tombol TEMBAK, lebar busur, posisi diam joystick; setEquipSlots menampilkan 0 sampai 3 slot
     hudLayout() { return HudLayout.report(); },
+    // Editor tata letak (C3): buka, terapkan preset atau offset, baca status validasi; hudLayoutStore membaca berkas tersimpan
+    hudEditor(cmd, arg) { const E = HudEditor; if (cmd === 'open') E.show(); else if (cmd === 'preset') E.action(arg); else if (cmd === 'set') { E.elems = arg; E.render(); } else if (cmd === 'save') E.action('save'); else if (cmd === 'close') E.close(); return E.report(); },
+    hudPreset(name) { const P = HUD_PRESETS[name]; if (!P) return false; HudCustom.save(P.elems); if (P.leftHanded !== null) Settings.set('leftHanded', P.leftHanded); HudCustom.cache = null; Touch.applyLayout(); return HudLayout.report(); },
+    hudLayoutStore() { return Store.get(HUD_LAYOUT_KEY); },
     setEquipSlots(n) { return HudLayout.setEquipCount(n); },
     freeze(on = true) { Debug.frozen = !!on; return Debug.frozen; },
     // force: 'pbo' membaca piksel nyata (kalibrasi, tanpa jatuh otomatis), 'heuristik' kembali ke metode utama

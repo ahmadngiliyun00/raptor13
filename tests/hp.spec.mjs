@@ -433,3 +433,89 @@ test('H9 deteksi perangkat: HP murni langsung mode HP tanpa pop-up, kualitas Ren
   expect(s.settings.robotHelp).toBe('ringkas');
   await expect(page.locator('#touch-prompt')).toBeHidden();
 });
+
+// ---------- C3: preset tata letak dan ukuran ekstrem di seluruh matriks, editor dengan validasi langsung ----------
+for (const [w, h] of MATRIX) {
+  test(`C3 preset Standar, Kidal, Ringkas dengan ukuran kontrol 70 dan 130 persen di ${w}x${h} lolos asersi`, async ({ page }) => {
+    for (const size of [70, 130]) {
+      await playHp(page, w, h, '', { controlSize: size });
+      for (const preset of ['standar', 'kidal', 'ringkas']) {
+        const r = await dbg(page, 'hudPreset', preset);
+        expect(r.custom, `${preset} ${size}`).not.toBe('tidak valid, kembali ke bawaan');
+        await dbg(page, 'setEquipSlots', 3);
+        const a = await page.evaluate(audit);
+        expectAudit(a, `${preset} ${size} ${w}x${h}`);
+        expect(a.area, `${preset} ${size} luas`).toBeLessThanOrEqual(0.22);
+        await dbg(page, 'setEquipSlots', 0);
+      }
+      await dbg(page, 'hudPreset', 'standar');
+    }
+  });
+}
+
+test('C3 editor: geser ke zona tengah membuat elemen merah dan SIMPAN nonaktif, posisi valid tersimpan per kelas layar dan dipakai setelah muat ulang', async ({ page }) => {
+  await openHp(page, 844, 390, '', { tutorialDone: true });
+  // Tombol editor ada di Pengaturan tab Akses (hanya mode HP)
+  expect(await page.locator('#btn-hud-edit').count()).toBe(1);
+  let r = await dbg(page, 'hudEditor', 'open');
+  expect(r.open).toBe(true);
+  expect(r.saveEnabled).toBe(true);
+  expect(await page.locator('#hud-editor .he-el').count()).toBe(10);   // 9 tombol (3 slot pratinjau) dan joystick
+  // Seret TEMBAK ke tengah layar dengan pointer: merah, SIMPAN nonaktif
+  const fire = await page.locator('#hud-editor .he-el[data-k="fire"]').boundingBox();
+  const drag = async (dx, dy) => page.evaluate(([x, y, dx, dy]) => {
+    const el = document.querySelector('#hud-editor .he-el[data-k="fire"]'), o = { bubbles: true, pointerId: 31, pointerType: 'touch' };
+    el.dispatchEvent(new PointerEvent('pointerdown', { ...o, clientX: x, clientY: y }));
+    el.dispatchEvent(new PointerEvent('pointermove', { ...o, clientX: x + dx, clientY: y + dy }));
+    el.dispatchEvent(new PointerEvent('pointerup', { ...o, clientX: x + dx, clientY: y + dy }));
+  }, [fire.x + fire.width / 2, fire.y + fire.height / 2, dx, dy]);
+  await drag(-330, -60);
+  r = await dbg(page, 'hudEditor');
+  expect(r.bad.fire).toContain('zona tengah');
+  expect(r.saveEnabled).toBe(false);
+  await expect(page.locator('#hud-editor .he-save')).toBeDisabled();
+  await expect(page.locator('#hud-editor .he-el[data-k="fire"]')).toHaveClass(/bad/);
+  // Posisi valid: TEMBAK 95 persen, joystick digeser sedikit ke kanan atas
+  await dbg(page, 'hudEditor', 'set', { fire: { dx: 0, dy: 0, s: 0.95 }, joy: { dx: 0.02, dy: -0.03, s: 1 } });
+  r = await dbg(page, 'hudEditor');
+  expect(r.bad).toEqual({});
+  expect(r.saveEnabled).toBe(true);
+  await dbg(page, 'hudEditor', 'save');
+  const stored = await dbg(page, 'hudLayoutStore');
+  expect(stored.v).toBe(1);
+  expect(stored.sets['sedang-mendatar'].fire).toEqual({ dx: 0, dy: 0, s: 0.95 });
+  expect(stored.sets['sedang-mendatar'].joy).toEqual({ dx: 0.02, dy: -0.03, s: 1 });
+  // Dipakai setelah muat ulang
+  await page.reload();
+  await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
+  await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); g.debug.skipCutscene(); g.debug.autoContract(); });
+  await page.waitForTimeout(500);
+  const L = await dbg(page, 'hudLayout');
+  expect(L.custom).toBe('kustom');
+  expect(L.cls).toBe('sedang-mendatar');
+  expectAudit(await page.evaluate(audit), 'kustom');
+  // Kelas layar lain (568x320, kecil) tetap bawaan
+  await page.setViewportSize({ width: 568, height: 320 });
+  await page.waitForTimeout(400);
+  expect((await dbg(page, 'hudLayout')).custom).toBe('bawaan');
+});
+
+test('C3: data tata letak rusak atau di luar rentang diabaikan, tata letak yang tidak valid di layar sekarang kembali ke bawaan', async ({ page }) => {
+  await playHp(page, 844, 390);
+  const restart = async () => {
+    await page.reload();
+    await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
+    await page.evaluate(() => { const g = window.__game; g.debug.setGod(true); g.debug.setEnemiesEnabled(false); g.startIn('space', 'campaign'); g.skipTransition(); g.debug.skipCutscene(); g.debug.autoContract(); });
+    await page.waitForTimeout(400);
+  };
+  for (const bad of ['{"v":1,"sets":{"sedang-mendatar":{"fire":{"dx":"x"}}}}', '{"v":1,"sets":{"sedang-mendatar":{"fire":{"dx":5}}}}', '{"v":1,"sets":{"sedang-mendatar":{"jahat":{"dx":0}}}}', '{"v":9}', 'bukan json']) {
+    await page.evaluate((v) => localStorage.setItem('raptor13.hudlayout.v1', v), bad);
+    await restart();
+    expect((await dbg(page, 'hudLayout')).custom, bad).toBe('bawaan');
+  }
+  // Valid secara skema tetapi menaruh TEMBAK di zona tengah: kembali ke bawaan
+  await page.evaluate(() => localStorage.setItem('raptor13.hudlayout.v1', JSON.stringify({ v: 1, sets: { 'sedang-mendatar': { fire: { dx: -0.4, dy: -0.2 } } } })));
+  await restart();
+  expect((await dbg(page, 'hudLayout')).custom).toBe('tidak valid, kembali ke bawaan');
+  expectAudit(await page.evaluate(audit), 'kembali ke bawaan');
+});

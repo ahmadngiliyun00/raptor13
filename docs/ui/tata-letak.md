@@ -97,3 +97,62 @@ memuat teks stage panjang menimpanya (sudah terjadi sebelum C2).
 
 `tests/hud.spec.mjs` memeriksa 1280x720, 1440x900, 2560x1440, 1440x900 dengan Ukuran teks Besar, dan 1280x800
 dengan Sangat besar: posisi sudut, semua blok di dalam layar, dan tanpa tumpang tindih saat semua HUD tampil.
+
+## Editor tata letak (C3)
+
+**Membuka editor.** Pengaturan, tab Akses, lalu **EDIT TATA LETAK HUD** (hanya tampil di mode HP).
+
+**Yang bisa diatur:**
+- Semua tombol mode HP, tiga slot peralatan (pratinjau), dan joystick bisa digeser.
+- Geseran menempel ke grid 8 px.
+- Ukuran tiap elemen diubah lewat slider 70 sampai 130 persen, yang muncul saat elemen dipilih.
+
+**Tanda di layar:**
+- Zona terlarang diberi arsir merah:
+  - zona tengah;
+  - pita atas (Jeda, Suara, buff, misi, status);
+  - radar dengan tombol peta (di kanan atas saat kidal).
+- Tepi aman ditandai garis putus-putus biru.
+
+**Validasi langsung.** Elemen berwarna merah bila:
+- keluar tepi aman;
+- masuk zona terlarang;
+- lingkaran area sentuhnya (minimal 44 px) bertumpuk dengan elemen lain.
+
+Pesan di bawah tombol menyebut masalah pertama. SIMPAN nonaktif sampai semua valid.
+
+**Tombol:**
+- Preset **Standar** (tata letak bawaan, tangan kanan).
+- Preset **Kidal** (dicerminkan).
+- Preset **Ringkas** (tombol 85 persen, TEMBAK 90 persen).
+- **RESET** ke bawaan.
+- **PRATINJAU** (menyembunyikan grid dan penanda).
+- **BATAL** dan **SIMPAN**.
+
+Editor memakai salinan tombol sendiri, jadi menggeser tidak memicu tembakan atau manuver.
+
+**Penyimpanan.**
+- Data disimpan di `raptor13.hudlayout.v1` (versi skema 1). Isinya offset pusat per elemen dalam pecahan
+  lebar dan tinggi layar (sisi tangan kanan) serta skala ukuran.
+- Data dipisah per kelas ukuran layar dan orientasi: tinggi di bawah 360 px "kecil", di bawah 400 px
+  "sedang", selebihnya "besar".
+- Saat dimuat, skema diperiksa ketat. Hanya kunci elemen yang dikenal yang diterima, dengan rentang:
+  - offset maksimal 0,7;
+  - skala 0,7 sampai 1,3.
+
+  Data yang rusak diabaikan.
+- Tata letak yang valid secara skema tetapi melanggar aturan di layar sekarang (misalnya terlalu dekat setelah
+  ukuran kontrol diperbesar) tidak dipakai. Game kembali ke bawaan dan statusnya terbaca di
+  `debug.hudLayout().custom`.
+
+**Uji (`tests/hp.spec.mjs`, bagian C3):**
+- Ketiga preset dengan Ukuran kontrol 70 dan 130 persen, ditambah 3 slot peralatan, lolos semua asersi tata
+  letak di matriks 568x320 sampai 932x430.
+- Alur editor diuji dengan pointer: geser ke zona tengah lalu SIMPAN nonaktif; posisi valid lalu tersimpan;
+  setelah muat ulang tata letak kustom dipakai; kelas layar lain tetap bawaan.
+- Lima bentuk data rusak diabaikan.
+
+Batas luas UI 22 persen kini juga menjadi syarat skala kontrol. Sebelumnya, Ukuran kontrol 130 persen dengan
+3 slot di 568x320 mencapai 22,3 persen.
+
+Screenshot: `docs/screenshots/c-update/editor-568x320.jpg`.
