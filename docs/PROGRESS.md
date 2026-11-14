@@ -138,7 +138,7 @@ Bagian 3 (prompt 01, versi minor 2.4.0):
 - C6 (SELESAI) Pengujian equipment dan keseimbangan
 - C7 (SELESAI) Persistensi dan keamanan data baru
 - C8 (SELESAI) Open source (lisensi, kontribusi, templat, CI, arsitektur, roadmap)
-- C9 PWA
+- C9 (SELESAI) PWA
 - C10 Android Capacitor (APK)
 - C11 Workflow rilis APK
 - C12 iOS

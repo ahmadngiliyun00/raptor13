@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-OagVWz6h9p9vmEWaf3mWVnWGXP5mGyku19zToElMX1w='; style-src 'self' 'sha256-9Wa+x9jDUNTTDAJ6iEt+MwuGadnpFnz6RPCho6zSGys='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-6qFm3HKzKsVJRpJ00I7yMr6II5EeIK5gfmLSSmhsc9o='; style-src 'self' 'sha256-IrJT55BDD4aS/NT6MuVre7XrrXke0GI/I//EvgqVk7M='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -807,6 +807,9 @@
     animation: rotPhone 2.4s ease-in-out infinite; transform-origin: 50% 45%; }
   @keyframes rotPhone { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
   body.portrait-hp #toolbar { display: flex !important; }
+  #pwa-update { position: fixed; z-index: 46; left: 50%; bottom: max(var(--ed-b), 12px); transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px 6px 14px; font-size: 13px; color: #e8f6ff; background: rgba(8, 14, 24, 0.94); border: 1px solid rgba(160, 220, 255, 0.55); border-radius: 10px; }
+  #pwa-update .btn.small { min-height: 36px; }
   #fs-tip { position: fixed; z-index: 45; top: var(--ed-t); left: 50%; transform: translateX(-50%); max-width: min(380px, calc(100vw - 200px));
     display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; background: rgba(10, 18, 28, 0.92); border: 1px solid var(--ui-line);
     border-radius: 20px; font-size: 12px; line-height: 1.25; }
@@ -1319,6 +1322,12 @@
     <span>Mode HP dimainkan mendatar. Permainan dijeda sampai layar diputar.</span>
   </div>
 </div>
+<!-- PWA (C9): versi baru tersedia, tidak memuat ulang paksa saat bermain -->
+<div id="pwa-update" class="hidden" role="status">
+  <span>Versi baru tersedia</span>
+  <button id="pwa-reload" class="btn small" type="button">MUAT ULANG</button>
+  <button id="pwa-later" class="fs-x" type="button" aria-label="Nanti"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+</div>
 <div id="fs-tip" class="hidden" role="status">
   <span id="fs-tip-text">Main di layar penuh?</span>
   <button id="fs-tip-go" class="btn" type="button">LAYAR PENUH</button>
@@ -1372,6 +1381,7 @@
       <button id="btn-atlas" class="btn secondary" type="button">PENEMUAN</button>
       <button id="btn-settings" class="btn secondary" type="button">PENGATURAN</button>
       <button id="btn-about" class="btn secondary" type="button">TENTANG</button>
+      <button id="btn-install" class="btn secondary hidden" type="button">PASANG APLIKASI</button>
     </nav>
     <div class="title-foot"><span>Skor tertinggi: <b id="title-best">0</b></span></div>
     <div class="keymap keys-hint kb-only" data-keymap></div>
@@ -16335,7 +16345,7 @@ const GameHooks = {
     // Uji peralatan (C6): skenario terkendali per peralatan, langkah simulasi 1/60 detik, tanpa render
     equipTest(id, scenario = 'dasar') {
       if (Game.state !== 'playing' ? true : !EQUIPMENT_DEFS[id]) return null;
-      const d = window.__game.debug, step = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) { if (Game.state === 'levelup') Levels.choose(Levels.offer[0].id); if (Game.state !== 'playing') break; update(1 / 60); } };   // kartu level dari pembunuhan skenario sebelumnya dipilih otomatis
+      const d = window.__game.debug, step = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) { if (Game.state === 'levelup') Levels.choose(Levels.offer[0].id); if (Game.state !== 'playing') break; update(1 / 60); } if (Game.state === 'levelup') Levels.choose(Levels.offer[0].id); };   // kartu level dari pembunuhan skenario sebelumnya dipilih otomatis
       const P = Player.pos, F = Player.forward, ahead = (k, side = 0, up = 0) => _va.copy(P).addScaledVector(F, k).addScaledVector(Player._right || _AX_X, side).addScaledVector(Player._up || _AX_Y, up);
       if (Game.state === 'levelup') Levels.choose(Levels.offer[0].id);
       Levels.pending = 0;   // kartu level dari skenario sebelumnya tidak boleh menyela skenario ini
@@ -16421,6 +16431,8 @@ const GameHooks = {
     equipUnlock(id) { return Equip.unlock(id, 'debug'); },
     equipGrant(id) { return Equip.grantTemp(id); },
     equipResupply() { Equip.resupply(); return Equip.report(); },
+    // PWA (C9): status pendaftaran service worker, kontrol halaman, versi menunggu, tombol pasang
+    pwa() { return Pwa.report(); },
     freeze(on = true) { Debug.frozen = !!on; return Debug.frozen; },
     // force: 'pbo' membaca piksel nyata (kalibrasi, tanpa jatuh otomatis), 'heuristik' kembali ke metode utama
     uiContrast(force) { const U = UiContrast; if (force === 'heuristik') { U.fallback('dipaksa lewat debug'); U.forced = false; } if (force === 'pbo') { U.method = 'pbo'; U.reason = 'kalibrasi lewat debug'; U.forced = true; U.costs = []; } return U.report(); },
@@ -17142,6 +17154,63 @@ const AudioUnlock = {
   },
 };
 
+/* =====================================================================
+   PWA (C9) - service worker (sw.js, cache terikat GAME_VERSION, network-first untuk halaman, cache-first untuk
+   ikon dan vendor), toast Versi baru tersedia (hanya di menu, jeda, atau layar akhir; tidak pernah memuat ulang
+   paksa saat bermain), tombol Pasang aplikasi lewat beforeinstallprompt (Android Chrome, hanya bila belum
+   terpasang). Petunjuk Tambahkan ke Layar Utama untuk iOS ditangani Fullscreen.offer. Saat ?debug=1 service
+   worker hanya didaftarkan bila ada &sw=1 agar uji lain tidak terpengaruh cache.
+   ===================================================================== */
+const Pwa = {
+  reg: null, waiting: null, deferred: null, dismissed: false, state: 'mati', reloading: false,
+  native() { return !!(window.Capacitor ? window.Capacitor.isNativePlatform ? window.Capacitor.isNativePlatform() : false : false); },
+  standalone() { try { return window.matchMedia('(display-mode: standalone)').matches ? true : (window.matchMedia('(display-mode: fullscreen)').matches ? true : navigator.standalone === true); } catch (err) { return false; } },
+  init() {
+    onButton($('pwa-reload'), () => this.apply());
+    onButton($('pwa-later'), () => { this.dismissed = true; $('pwa-update').classList.add('hidden'); });
+    onButton($('btn-install'), () => this.install());
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      if (this.native() ? true : this.standalone()) return;
+      this.deferred = e;
+      $('btn-install').classList.remove('hidden');
+    });
+    window.addEventListener('appinstalled', () => { this.deferred = null; $('btn-install').classList.add('hidden'); });
+    const allowed = DEBUG_ON ? URLQ.get('sw') === '1' : true;
+    if (!('serviceWorker' in navigator) ? true : (!/^https?:$/.test(location.protocol) ? true : (this.native() ? true : !allowed))) return;
+    this.state = 'mendaftar';
+    navigator.serviceWorker.register('./sw.js?v=' + GAME_VERSION).then((reg) => {
+      this.reg = reg; this.state = 'terdaftar';
+      const watch = (w) => { if (!w) return; w.addEventListener('statechange', () => { if (w.state === 'installed' ? !!navigator.serviceWorker.controller : false) this.waiting = w; }); };
+      if (reg.waiting ? !!navigator.serviceWorker.controller : false) this.waiting = reg.waiting;
+      watch(reg.installing);
+      reg.addEventListener('updatefound', () => watch(reg.installing));
+    }).catch(() => { this.state = 'gagal'; });
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (this.reloading) location.reload(); });
+    setInterval(() => this.update(), 1000);
+  },
+  install() {
+    const d = this.deferred;
+    if (!d) return false;
+    this.deferred = null; $('btn-install').classList.add('hidden');
+    d.prompt();
+    return true;
+  },
+  apply() {
+    if (!this.waiting) return false;
+    this.reloading = true;
+    this.waiting.postMessage('aktifkan');
+    return true;
+  },
+  // Toast versi baru hanya di luar permainan aktif (diperiksa tiap detik lewat setInterval di init)
+  update() {
+    const calm = Game.state === 'menu' ? true : (Game.state === 'paused' ? true : Game.state === 'gameover');
+    const show = this.waiting ? (calm ? !this.dismissed : false) : false;
+    $('pwa-update').classList.toggle('hidden', !show);
+  },
+  report() { return { state: this.state, controlled: !!(navigator.serviceWorker ? navigator.serviceWorker.controller : null), waiting: !!this.waiting, installButton: !$('btn-install').classList.contains('hidden'), standalone: this.standalone() }; },
+};
+
 /* Diagnosis kotak hitam di perangkat asli (?diag=1, A7): GlitchProbe aktif terus, overlay kecil berisi
    piksel NaN terakhir, status konteks WebGL, ukuran target render, pixel ratio, dan jumlah frame dengan
    blok hitam; tombol mengunduh log JSON untuk dikirim ke pengembang. */
@@ -17282,6 +17351,7 @@ function frame(now) {
 Pacer.init();
 onResize();
 Diag.init();
+Pwa.init();
 Tutorial.init();
 AudioUnlock.init();
 A11y.apply(Save.settings);

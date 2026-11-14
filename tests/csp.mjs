@@ -43,7 +43,7 @@ export function policy(html) {
     "media-src 'self' data: blob:",
     "connect-src 'none'",
     "font-src 'none'",
-    "worker-src 'none'",
+    "worker-src 'self'",
     "manifest-src 'self'",
     "object-src 'none'",
     "frame-src 'none'",

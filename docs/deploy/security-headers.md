@@ -53,7 +53,7 @@ autoindex off;
 
 # Berkas tersembunyi (kecuali ACME) dan berkas pengembangan
 location ~ /\.(?!well-known/) { deny all; return 404; }
-location ~ ^/(docs|tests|node_modules|test-results|playwright-report)(/|$) { return 404; }
+location ~ ^/(docs|tests|scripts|mobile|node_modules|test-results|playwright-report)(/|$) { return 404; }
 location ~ ^/(package\.json|package-lock\.json|playwright\.config\.mjs|README\.md|CHANGELOG\.md)$ { return 404; }
 
 add_header Strict-Transport-Security "max-age=31536000" always;
@@ -63,11 +63,13 @@ add_header X-Frame-Options "DENY" always;
 add_header Cross-Origin-Opener-Policy "same-origin" always;
 add_header Cross-Origin-Resource-Policy "same-origin" always;
 add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), bluetooth=(), hid=(), midi=(), magnetometer=(), gyroscope=(), accelerometer=(), display-capture=(), browsing-topics=(), interest-cohort=(), fullscreen=(self), screen-wake-lock=(self), autoplay=(self)" always;
-add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self'; font-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self'; font-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests" always;
 
 location = /index.html { add_header Cache-Control "no-cache" always; }
 location ~ ^/vendor/three-0\.187\.0/ { add_header Cache-Control "public, max-age=31536000, immutable" always; }
 location = /manifest.webmanifest { default_type application/manifest+json; add_header Cache-Control "no-cache" always; }
+# Service worker (2.4.0): selalu divalidasi ulang agar versi baru cepat ditemukan
+location = /sw.js { add_header Cache-Control "no-cache" always; }
 
 gzip on;
 gzip_types text/css text/javascript application/javascript application/json application/manifest+json image/svg+xml;
