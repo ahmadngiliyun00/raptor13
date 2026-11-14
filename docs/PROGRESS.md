@@ -140,7 +140,7 @@ Bagian 3 (prompt 01, versi minor 2.4.0):
 - C8 (SELESAI) Open source (lisensi, kontribusi, templat, CI, arsitektur, roadmap)
 - C9 (SELESAI) PWA
 - C10 (SELESAI) Android Capacitor (APK)
-- C11 Workflow rilis APK
+- C11 (SELESAI) Workflow rilis APK
 - C12 iOS
 - C13 Regresi, versi, rilis
 - C14 Verifikasi akhir
