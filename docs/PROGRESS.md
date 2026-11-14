@@ -130,7 +130,7 @@ SELF-REVIEW D1 sampai D7 (2.3.1):
   selama bagian antrean, lalu lolos 4 kali berturut-turut.
 
 Bagian 3 (prompt 01, versi minor 2.4.0):
-- C1 Kontras UI adaptif
+- C1 (SELESAI) Kontras UI adaptif
 - C2 Tata letak HUD baru (busur tombol)
 - C3 Editor tata letak HUD
 - C4 Data dan aturan equipment

@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-RsJ2Q3BzPOyEsAw6SnqVhEaO0CkJxDLgNcQry79k8To='; style-src 'self' 'sha256-WSznB5BZplStaVJ2Mpt+fYWiGvdfhZQHhpD64SXwsqE='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-83z3QbYoKJ+scdbF3G57d7LAArBMtysyQ/vsaqqGFVE='; style-src 'self' 'sha256-48NzFtyR4JAmquLd1zG7BInlhtlqFWoFpQ8brrMbezI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -572,16 +572,29 @@
      menimpa tombol lain karena jarak antar tombol dihitung dari besar hit slop. */
   html { touch-action: manipulation; }
   #touch { position: fixed; left: 0; top: 0; width: 100%; height: var(--app-h); z-index: 15; pointer-events: none; }
+  /* Kontras UI adaptif (C1). Tiap kelompok (kiri, kanan, pita atas) mendapat kelas uic-gelap (latar gelap:
+     pelat putih transparan) atau uic-terang (latar terang: pelat cokelat arang). Nilai --pl (pelat netral),
+     --rg (cincin), --ik (ikon), --sh (bayangan ikon), dan pelat berwarna per tombol. Kontras Tinggi menaikkan
+     alpha dan tebal tepi. Transisi 400 ms agar pergantian tidak berkedip. */
+  .uic-gelap { --pl: rgba(255, 255, 255, calc(0.22 * var(--ca, 1))); --rg: rgba(255, 255, 255, 0.92); --ik: #ffffff; --sh: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.85));
+    --pf: rgba(255, 92, 60, calc(0.42 * var(--ca, 1))); --rf: rgba(255, 214, 200, 0.95); --pn: rgba(255, 150, 40, calc(0.36 * var(--ca, 1))); --rn: rgba(255, 226, 180, 0.95);
+    --pu: rgba(214, 70, 175, calc(0.4 * var(--ca, 1))); --bw: 2px; --po: 1; --po2: 1; --ol: 0 0 0 2px rgba(0, 0, 0, 0.78); --jo: 0.9; --jo2: 0.95; }
+  .uic-terang { --pl: rgba(40, 26, 16, calc(0.66 * var(--ca, 1))); --rg: rgba(255, 240, 220, 0.92); --ik: #fff4e2; --sh: drop-shadow(0 0 1.5px rgba(20, 10, 4, 0.95));
+    --pf: rgba(120, 28, 16, calc(0.74 * var(--ca, 1))); --rf: rgba(255, 210, 192, 0.95); --pn: rgba(104, 56, 8, calc(0.72 * var(--ca, 1))); --rn: rgba(255, 226, 180, 0.95);
+    --pu: rgba(92, 20, 74, calc(0.72 * var(--ca, 1))); --bw: 2px; --po: 1; --po2: 1; --ol: 0 0 0 2px rgba(18, 10, 4, 0.92); --jo: 0.92; --jo2: 0.95; }
+  body.uic-tinggi .uic-gelap { --pl: rgba(255, 255, 255, calc(0.34 * var(--ca, 1))); --pf: rgba(255, 80, 50, calc(0.58 * var(--ca, 1))); --pn: rgba(255, 150, 40, calc(0.5 * var(--ca, 1))); --pu: rgba(214, 70, 175, calc(0.55 * var(--ca, 1))); --bw: 3px; --ol: 0 0 0 2px rgba(0, 0, 0, 0.85); --jo: 1; }
+  body.uic-tinggi .uic-terang { --pl: rgba(30, 18, 10, calc(0.82 * var(--ca, 1))); --pf: rgba(110, 22, 12, calc(0.86 * var(--ca, 1))); --pn: rgba(90, 46, 6, calc(0.86 * var(--ca, 1))); --pu: rgba(80, 16, 64, calc(0.86 * var(--ca, 1))); --bw: 3px; --ol: 0 0 0 2.5px rgba(10, 6, 2, 0.95); --jo: 1; }
   #touch .tbtn {
     position: absolute; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none;
     -webkit-touch-callout: none; display: flex; align-items: center; justify-content: center; padding: 0;
     width: var(--sz); height: var(--sz); inset-inline-end: var(--x); bottom: var(--y);
-    color: rgba(255, 255, 255, 0.92); background: rgba(20, 30, 44, 0.4); border: 2px solid rgba(255, 255, 255, 0.4);
-    border-radius: 50%; opacity: calc(0.78 * var(--ca)); transition: opacity 0.12s, transform 0.08s;
+    color: var(--ik, #fff); background: var(--pl, rgba(20, 30, 44, 0.4)); border: var(--bw, 2px) solid var(--rg, rgba(255, 255, 255, 0.4));
+    border-radius: 50%; box-shadow: var(--ol, none); opacity: var(--po2, calc(0.78 * var(--ca))); transition: opacity 0.12s, transform 0.08s, background-color 0.4s, border-color 0.4s, color 0.4s;
   }
   #touch .tbtn::before { content: ""; position: absolute; inset: min(0px, calc((var(--sz) - 44px) / 2)); border-radius: 50%; }
-  #touch .tbtn svg { width: 56%; height: 56%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-  #touch .tbtn.on { opacity: 1; background: rgba(255, 154, 60, 0.6); border-color: #ffd08a; transform: scale(0.94); }
+  #touch .tbtn svg { width: 56%; height: 56%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; filter: var(--sh, none); }
+  /* Keadaan tekan jelas di kedua mode: lebih terang, skala 0,94 */
+  #touch .tbtn.on { opacity: 1; background: rgba(255, 154, 60, 0.72); border-color: #ffd08a; transform: scale(0.94); filter: brightness(1.18); }
   /* Cluster aksi kanan bawah: TEMBAK di pojok, NITRO di atasnya, grid 2x2 manuver dan ultimate di kirinya */
   .actions {
     --s: var(--cu); --n: calc(var(--cu) * 1.1); --f: calc(var(--cu) * 1.4);
@@ -593,36 +606,37 @@
     height: max(calc(var(--s) * 2 + var(--gs)), calc(var(--n) + var(--gn) + var(--f)));
   }
   body.kidal .actions { right: auto; left: var(--sa-l); direction: rtl; }
-  #touch .t-fire { --sz: var(--f); --x: 0px; --y: 0px; background: rgba(255, 90, 60, 0.42); border-color: rgba(255, 170, 150, 0.75); }
-  #touch .t-fire.on { background: rgba(255, 90, 60, 0.8); }
-  #touch .t-nitro { --sz: var(--n); --x: calc((var(--f) - var(--n)) / 2); --y: calc(var(--f) + var(--gn)); background: rgba(255, 150, 40, 0.34); border-color: rgba(255, 200, 120, 0.65); }
+  #touch .t-fire { --sz: var(--f); --x: 0px; --y: 0px; background: var(--pf, rgba(255, 90, 60, 0.42)); border-color: var(--rf, rgba(255, 170, 150, 0.75)); }
+  #touch .t-fire.on { background: rgba(255, 90, 60, 0.85); }
+  #touch .t-nitro { --sz: var(--n); --x: calc((var(--f) - var(--n)) / 2); --y: calc(var(--f) + var(--gn)); background: var(--pn, rgba(255, 150, 40, 0.34)); border-color: var(--rn, rgba(255, 200, 120, 0.65)); }
   #touch .t-roll { --sz: var(--s); --x: calc(var(--f) + var(--gf) + var(--s) + var(--gs)); --y: calc(var(--s) + var(--gs)); }
   #touch .t-imm { --sz: var(--s); --x: calc(var(--f) + var(--gf)); --y: calc(var(--s) + var(--gs)); }
   #touch .t-loop { --sz: var(--s); --x: calc(var(--f) + var(--gf) + var(--s) + var(--gs)); --y: 0px; }
-  #touch .t-ult { --sz: var(--s); --x: calc(var(--f) + var(--gf)); --y: 0px; background: rgba(200, 60, 160, 0.34); }
+  #touch .t-ult { --sz: var(--s); --x: calc(var(--f) + var(--gf)); --y: 0px; background: var(--pu, rgba(200, 60, 160, 0.34)); }
   #touch .t-man { border-radius: 30%; }
   #touch .t-man::before { border-radius: 30%; }
-  #touch .t-man.cool { opacity: calc(0.35 * var(--ca)); }
+  #touch .t-man.cool { opacity: calc(0.35 * var(--ca)); border-style: dashed; }
   #touch .t-ult.ready { opacity: 1; background: rgba(255, 80, 200, 0.75); border-color: #ffc0f0; box-shadow: 0 0 14px rgba(255, 90, 210, 0.6); }
   /* Joystick analog melayang: posisi bawaan samar di kiri bawah, pindah ke titik sentuh pertama */
   #joy-zone { position: absolute; left: 0; top: 0; bottom: 0; width: 45%; pointer-events: auto; touch-action: none; }
   body.kidal #joy-zone { left: auto; right: 0; }
   .joy { --jb: calc(var(--cu) * 2.6); --jt: calc(var(--cu) * 1.1);
     position: absolute; left: var(--sa-l); bottom: var(--sa-b); width: var(--jb); height: var(--jb); pointer-events: none;
-    opacity: calc(0.5 * var(--ca)); transition: opacity 0.15s; }
+    opacity: var(--jo2, calc(0.5 * var(--ca))); transition: opacity 0.15s; }
   body.kidal .joy { left: auto; right: var(--sa-r); }
   .joy.active { opacity: min(1, calc(0.95 * var(--ca) + 0.1)); transition: none; }
-  .joy-base { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.4);
-    background: radial-gradient(circle, rgba(20, 30, 44, 0.18) 0 40%, rgba(20, 30, 44, 0.42) 100%); }
+  .joy-base { position: absolute; inset: 0; border-radius: 50%; border: var(--bw, 2px) solid var(--rg, rgba(255, 255, 255, 0.4));
+    background: var(--pl, rgba(20, 30, 44, 0.4)); box-shadow: var(--ol, none); transition: background-color 0.4s, border-color 0.4s; }
   .joy-base::after { content: ""; position: absolute; inset: 30%; border-radius: 50%; border: 1px dashed rgba(255, 255, 255, 0.25); }
   .joy-thumb { position: absolute; left: 50%; top: 50%; width: var(--jt); height: var(--jt); margin: calc(var(--jt) / -2) 0 0 calc(var(--jt) / -2);
-    border-radius: 50%; background: rgba(230, 240, 250, 0.42); border: 2px solid rgba(255, 255, 255, 0.75); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35); }
+    border-radius: 50%; background: rgba(230, 240, 250, 0.5); border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 1px rgba(10, 6, 2, 0.6), 0 2px 8px rgba(0, 0, 0, 0.35); }
   /* Gaya Tombol arah: satu cakram tetap dengan empat panah (arah dari posisi jari, termasuk diagonal) */
+  .uic-terang .joy-thumb { background: rgba(46, 30, 18, 0.8); border-color: rgba(255, 240, 220, 0.95); }
   .dpad { --jb: calc(var(--cu) * 2.6); position: absolute; left: var(--sa-l); bottom: var(--sa-b); width: var(--jb); height: var(--jb);
-    pointer-events: auto; touch-action: none; border-radius: 50%; opacity: calc(0.78 * var(--ca));
-    background: rgba(20, 30, 44, 0.4); border: 2px solid rgba(255, 255, 255, 0.4); }
+    pointer-events: auto; touch-action: none; border-radius: 50%; opacity: var(--po2, calc(0.78 * var(--ca)));
+    background: var(--pl, rgba(20, 30, 44, 0.4)); border: var(--bw, 2px) solid var(--rg, rgba(255, 255, 255, 0.4)); box-shadow: var(--ol, none); transition: background-color 0.4s, border-color 0.4s; }
   body.kidal .dpad { left: auto; right: var(--sa-r); }
-  .dpad svg { position: absolute; width: 30%; height: 30%; fill: none; stroke: rgba(255, 255, 255, 0.9); stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  .dpad svg { position: absolute; width: 30%; height: 30%; fill: none; stroke: var(--ik, rgba(255, 255, 255, 0.9)); stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; filter: var(--sh, none); }
   .dpad .d-up { left: 35%; top: 4%; } .dpad .d-down { left: 35%; bottom: 4%; } .dpad .d-left { left: 4%; top: 35%; } .dpad .d-right { right: 4%; top: 35%; }
   .dpad svg.on { stroke: #ffb45c; }
   .dpad.on { opacity: 1; }
@@ -630,7 +644,9 @@
      baris misi tengah atas (maks 220x26). Kanan atas hanya Jeda dan Suara, radar kecil di bawahnya. */
   .hpx-block { display: none; }
   body.mode-hp .hud-block { display: none; }
-  body.mode-hp .hpx-block { display: flex; position: absolute; background: rgba(8, 14, 24, 0.58); border: 1px solid var(--ui-line); border-radius: 6px; }
+  body.mode-hp .hpx-block { display: flex; position: absolute; background: rgba(8, 14, 24, 0.58); border: 1px solid var(--ui-line); border-radius: 6px; transition: background-color 0.4s; }
+  body.mode-hp #hud.uic-atas-terang .hpx-block { background: rgba(26, 16, 8, 0.76); text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9); }
+  body.uic-tinggi.mode-hp #hud .hpx-block { background: rgba(6, 8, 12, 0.85); border-width: 2px; }
   #hpx-status { left: var(--sa-l); top: var(--sa-t); width: 146px; flex-direction: column; gap: 3px; padding: 3px 7px; line-height: 1; }
   #hpx-status .hpx-r { height: 11px; }
   .hpx-r { display: flex; align-items: center; gap: 5px; min-height: 0; }
@@ -1412,6 +1428,10 @@
       <div class="seg" data-key="textSize">
         <button type="button" data-v="normal">Normal</button><button type="button" data-v="besar">Besar</button><button type="button" data-v="sangat">Sangat besar</button>
       </div>
+      <span class="set-label">Kontras UI</span>
+      <div class="seg" data-key="uiContrast">
+        <button type="button" data-v="otomatis">Otomatis</button><button type="button" data-v="terang">Selalu terang</button><button type="button" data-v="gelap">Selalu gelap</button><button type="button" data-v="tinggi">Tinggi</button>
+      </div>
       <span class="set-label">Kenyamanan</span>
       <div class="tog-list">
         <label class="tog"><input type="checkbox" data-key="reduceMotion"> Kurangi gerakan<small class="tog-note"> (tanpa getar kamera, kilatan diredam, tanpa kedip)</small></label>
@@ -2157,6 +2177,7 @@ const SETTING_DEFAULTS = {
   fatalCrash: true,            // tabrakan keras langsung game over
   aimAssist: 'rendah',         // bantuan bidik: mati | rendah | sedang
   bossHighlight: 'halus',      // sorotan bos (kontur siluet): mati | halus | kuat (B2)
+  uiContrast: 'otomatis',      // kontras tombol: otomatis (ikut kecerahan latar) | terang (pelat putih) | gelap (pelat cokelat) | tinggi (C1)
   cameraRoll: false,           // kamera ikut berguling
   damageNumbers: true,
   showFps: false,
@@ -2189,6 +2210,7 @@ const SETTING_ENUMS = {
   spaceMode: ['campaign', 'free'],
   aimAssist: ['mati', 'rendah', 'sedang'],
   bossHighlight: ['mati', 'halus', 'kuat'],
+  uiContrast: ['otomatis', 'terang', 'gelap', 'tinggi'],
   robotHelp: ['penuh', 'ringkas', 'ikon', 'mati'],
   leftStyle: ['joystick', 'dpad'],
   cameraDistance: ['dekat', 'normal', 'jauh'],
@@ -2410,7 +2432,7 @@ function applyDamage(entity, amount, source, x, y, z) {
 const Worlds = { active: null, list: {} };
 
 // Saklar debug (dipakai uji otomatis lewat window.__game)
-const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, speedOverride: 0, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
+const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, speedOverride: 0, frozen: false, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
 
 // Uji tabrakan segmen (gerak peluru satu frame) terhadap bola, tanpa alokasi
 function segmentHitsSphere(ax, ay, az, bx, by, bz, cx, cy, cz, r) {
@@ -12484,6 +12506,7 @@ function updateHud(dt) {
   updateHpBars();
   updateLeadMarker();
   BossHud.update(dt);
+  UiContrast.update(dt);
   HitSide.update(dt);
   updateDangerEdge(dt);
   v = Game.state === 'playing' ? (Player.alive ? Enemies.rearThreat : false) : false;
@@ -13085,6 +13108,197 @@ Events.on('gameover', () => {
    PENGATURAN - panel overlay, tersimpan otomatis lewat Save
    ===================================================================== */
 const DENSITY_LABELS = ['Sedikit', 'Normal', 'Banyak'];
+/* =====================================================================
+   KONTRAS UI ADAPTIF (C1) - kecerahan latar di belakang tiga kelompok UI (zona kontrol kiri, zona kontrol
+   kanan, pita HUD atas) diperkirakan 2,5 kali per detik. Wilayah kiri dan kanan diambil dari kotak kontrol
+   yang sebenarnya, jadi ikut tata letak dan ukuran kontrol.
+   Keputusan metode (diukur di Mac Apple Silicon, Chrome, 844x390):
+   - drawImage canvas game ke canvas 2D kecil: 2,2 ms per cuplik, dan hanya benar bila dipanggil di frame
+     render yang sama. Ditolak.
+   - readPixels asinkron ke pixel buffer object dengan fenceSync: 0,4 sampai 0,8 ms per cuplik (kirim 0,2,
+     baca 0,4), di atas batas 0,3 ms, dan Chrome mencatat peringatan performa readback. Disimpan hanya sebagai
+     alat kalibrasi lewat debug.uiContrast('pbo').
+   - Metode utama: heuristik state game. Tiga sinar dari kamera per wilayah diuji terhadap langit, medan, awan
+     (Bumi) dan benda angkasa yang tersinari Matahari (angkasa); biaya di bawah 0,05 ms tanpa akses GPU. Hasil
+     kontras metode ini sama dengan pembacaan piksel di 13 skenario uji (docs/ui/kontras.md).
+   Luma (sRGB terenkode, 0 sampai 1) dihaluskan rata-rata bergerak dengan histeresis: di bawah 0,25 latar
+   gelap, di atas 0,45 latar terang, di antaranya mode lama dipertahankan.
+   ===================================================================== */
+const UiContrast = {
+  REG: { kiri: [0.02, 0.5, 0.32, 0.96], kanan: [0.66, 0.42, 0.98, 0.96], atas: [0.14, 0.02, 0.86, 0.16] },
+  NAMES: ['kiri', 'kanan', 'atas'],
+  lum: { kiri: 0.05, kanan: 0.05, atas: 0.05 }, mode: { kiri: 'gelap', kanan: 'gelap', atas: 'gelap' },
+  method: 'heuristik', reason: 'bawaan: cuplik piksel di atas 0,3 ms', forced: false, t: 0, want: false, pending: null, pbo: null, buf: new Uint8Array(18 * 16),
+  costs: [], samples: 0, switches: 0, issueMs: 0, lastCost: 0, _vals: new Float32Array(6), rectT: 0,
+  els: null, _r: new THREE.Raycaster(), _v: new THREE.Vector3(), _n: new THREE.Vector3(),
+  setting() { return Save.settings.uiContrast || 'otomatis'; },
+  init() {
+    this.els = { kiri: [$('joy'), $('dpad')], kanan: [document.querySelector('#touch .actions')], atas: [$('hud')] };
+    this.applySetting();
+  },
+  applySetting() {
+    if (!this.els) return;
+    const st = this.setting();
+    document.body.classList.toggle('uic-tinggi', st === 'tinggi');
+    if (st === 'terang' ? true : st === 'gelap') for (const k of this.NAMES) this.mode[k] = st === 'terang' ? 'gelap' : 'terang';
+    // Kembali ke Otomatis atau Tinggi: mode langsung dihitung ulang dari luma terakhir
+    else if (this.samples > 0) for (const k of this.NAMES) { const L = this.lum[k]; if (L < 0.25) this.mode[k] = 'gelap'; else if (L > 0.45) this.mode[k] = 'terang'; }
+    this.paint();
+  },
+  // Mode per kelompok ke kelas CSS: uic-gelap (latar gelap, pelat terang) atau uic-terang (latar terang, pelat gelap)
+  paint() {
+    for (const k of this.NAMES) {
+      const m = this.mode[k];
+      for (const el of this.els[k]) {
+        if (!el) continue;
+        if (k === 'atas') { el.classList.toggle('uic-atas-terang', m === 'terang'); continue; }
+        el.classList.toggle('uic-gelap', m !== 'terang'); el.classList.toggle('uic-terang', m === 'terang');
+      }
+    }
+  },
+  active() {
+    const st = this.setting();
+    return (st === 'otomatis' ? true : st === 'tinggi') ? (Game.state === 'playing' ? true : Game.state === 'paused') : false;
+  },
+  update(dt) {
+    if (!this.els ? true : !this.active()) return;
+    if (this.pending) this.poll();
+    this.rectT -= dt;
+    if (this.rectT <= 0) { this.rectT = 2; this.refreshRegions(); }
+    this.t -= dt;
+    if (this.t <= 0) {
+      this.t = 0.4;   // 2,5 Hz
+      if (this.method === 'pbo') { if (!this.pending) this.want = true; }
+      else { const t0 = performance.now(); const h = this.heuristic(); this.lastCost = performance.now() - t0; this.feed(h); }
+    }
+  },
+  // Wilayah cuplik = kotak kelompok kontrol yang sebenarnya (ikut tata letak, ukuran kontrol, mode kidal, dan editor)
+  refreshRegions() {
+    const W = Math.max(1, Layout.w), H = Math.max(1, Layout.h);
+    for (const k of ['kiri', 'kanan']) {
+      const el = this.els[k].find((e) => (e ? !e.classList.contains('hidden') : false));
+      const r = el ? el.getBoundingClientRect() : null;
+      if (!r ? true : r.width < 8) continue;
+      const reg = this.REG[k];
+      reg[0] = clamp(r.left / W, 0, 1); reg[1] = clamp(r.top / H, 0, 1); reg[2] = clamp(r.right / W, 0, 1); reg[3] = clamp(r.bottom / H, 0, 1);
+    }
+  },
+  // Dipanggil tepat setelah render(): framebuffer masih utuh, readPixels ke PBO tidak menunggu GPU
+  afterRender() {
+    if (!this.want) return;
+    this.want = false;
+    const gl = renderer.getContext();
+    const t0 = performance.now();
+    try {
+      if (!this.pbo) { this.pbo = gl.createBuffer(); gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.pbo); gl.bufferData(gl.PIXEL_PACK_BUFFER, this.buf.byteLength, gl.STREAM_READ); }
+      else gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.pbo);
+      gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+      const W = renderer.domElement.width, H = renderer.domElement.height;
+      let k = 0;
+      for (const name of this.NAMES) {
+        const r = this.REG[name];
+        for (let j = 0; j < 2; j++) for (let i = 0; i < 3; i++) {
+          const x = Math.round((r[0] + (r[2] - r[0]) * (i + 0.5) / 3) * W), y = Math.round((1 - (r[1] + (r[3] - r[1]) * (j + 0.5) / 2)) * H);
+          gl.readPixels(clamp(x, 0, W - 2), clamp(y, 0, H - 2), 2, 2, gl.RGBA, gl.UNSIGNED_BYTE, k * 16); k++;
+        }
+      }
+      gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+      this.pending = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+      gl.flush();   // tanpa gl.getError(): panggilan itu sinkron ke proses GPU dan sendiri bisa 1 sampai 2 ms
+    } catch (err) { this.fallback('WebGL menolak readPixels ke PBO'); return; }
+    this.issueMs = performance.now() - t0;
+  },
+  poll() {
+    const gl = renderer.getContext();
+    if (gl.getSyncParameter(this.pending, gl.SYNC_STATUS) !== gl.SIGNALED) return;
+    const t0 = performance.now();
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.pbo);
+    gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, this.buf);
+    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
+    gl.deleteSync(this.pending); this.pending = null;
+    this.readMs = performance.now() - t0;
+    const cost = this.issueMs + this.readMs;
+    this.lastCost = cost; this.costs.push(cost); if (this.costs.length > 30) this.costs.shift();
+    // Biaya median di atas 0,3 ms setelah 12 cuplik: beralih ke heuristik
+    if (this.forced ? false : this.costs.length >= 12) { const m = this.costs.slice().sort((a, b) => a - b)[this.costs.length >> 1]; if (m > 0.3) { this.fallback('biaya cuplik median ' + m.toFixed(2) + ' ms di atas 0,3 ms'); return; } }
+    const b = this.buf, out = {};
+    // Persentil 75 dari 6 petak per wilayah: satu bagian terang di balik sebuah tombol (misalnya cincin Saturnus)
+    // sudah cukup untuk memilih pelat gelap, karena pelat gelap bercincin terang tetap terbaca di latar gelap
+    let k = 0;
+    const v = this._vals;
+    for (const name of this.NAMES) {
+      for (let p = 0; p < 6; p++, k++) { let sum = 0; for (let q = 0; q < 4; q++) { const o = k * 16 + q * 4; sum += (b[o] * 0.2126 + b[o + 1] * 0.7152 + b[o + 2] * 0.0722) / 255; } v[p] = sum / 4; }
+      v.sort(); out[name] = v[4];
+    }
+    this.feed(out);
+  },
+  fallback(why) {
+    this.method = 'heuristik'; this.reason = why;
+    if (this.pending) { try { renderer.getContext().deleteSync(this.pending); } catch (err) { /* abaikan */ } this.pending = null; }
+  },
+  feed(out) {
+    this.samples++;
+    const st = this.setting(), auto = st === 'otomatis' ? true : st === 'tinggi';
+    let changedAny = false;
+    for (const k of this.NAMES) {
+      this.lum[k] = this.samples === 1 ? out[k] : this.lum[k] * 0.5 + out[k] * 0.5;
+      if (!auto) continue;
+      const prev = this.mode[k], L = this.lum[k];
+      const next = L < 0.25 ? 'gelap' : L > 0.45 ? 'terang' : prev;
+      if (next !== prev) { this.mode[k] = next; this.switches++; changedAny = true; }
+    }
+    if (changedAny) this.paint();
+  },
+  // Cadangan tanpa membaca piksel: sinar dari kamera melalui pusat tiap wilayah
+  heuristic() {
+    // Tiga sinar per wilayah (tengah dan dua titik bawah), diambil yang paling terang, setara persentil atas petak PBO
+    const out = {}, R = this._r;
+    for (const k of this.NAMES) {
+      const r = this.REG[k];
+      let best = 0;
+      for (const [fx, fy] of [[0.5, 0.5], [0.2, 0.8], [0.8, 0.8]]) {
+        const x = r[0] + (r[2] - r[0]) * fx, y = r[1] + (r[3] - r[1]) * fy;
+        R.setFromCamera(this._n.set(x * 2 - 1, 1 - y * 2, 0), camera);
+        best = Math.max(best, this.rayLuma(R.ray.origin, R.ray.direction));
+      }
+      out[k] = best;
+    }
+    return out;
+  },
+  rayLuma(o, d) {
+    if (Worlds.active === EarthWorld) {
+      if (Clouds.veil > 0.35) return 0.75;
+      // Langit terang bila sinar naik atau medan jauh; medan dan laut sedang-gelap
+      if (d.y > -0.02) return 0.62;
+      const v = this._v;
+      for (let s = 30; s < 900; s *= 1.6) { v.copy(o).addScaledVector(d, s); if (v.y < groundHeightAt(v.x, v.z)) return v.y > 160 ? 0.7 : 0.5; }   // luma medan bersinar matahari terukur 0,45 sampai 0,6
+      return 0.55;
+    }
+    // Angkasa: planet yang tersinari Matahari terang, sisi malam dan ruang kosong gelap
+    let best = Infinity, lum = 0.04;
+    for (const b of SolarSystem.solids) {
+      const R = b.hitR || b.radius, ox = o.x - b.pos.x, oy = o.y - b.pos.y, oz = o.z - b.pos.z;
+      const bq = ox * d.x + oy * d.y + oz * d.z, c = ox * ox + oy * oy + oz * oz - R * R, disc = bq * bq - c;
+      if (disc < 0) continue;
+      const t = -bq - Math.sqrt(disc);
+      if (!(t > 0) ? true : t >= best) continue;
+      best = t;
+      if (b.def.kind === 'sun') { lum = 1; continue; }
+      const n = this._n.set(o.x + d.x * t - b.pos.x, o.y + d.y * t - b.pos.y, o.z + d.z * t - b.pos.z).normalize();
+      const sun = this._v.copy(SolarSystem.sunPos).sub(b.pos).normalize();
+      const a = b.def.atmo ? (b.def.atmo[0] * 0.2126 + b.def.atmo[1] * 0.7152 + b.def.atmo[2] * 0.0722) : 0.45;
+      lum = 0.04 + a * 0.85 * Math.max(0, n.dot(sun));
+    }
+    return lum;
+  },
+  report() {
+    const c = this.costs.slice().sort((a, b) => a - b);
+    return { setting: this.setting(), method: this.method, reason: this.reason, lum: { kiri: round2(this.lum.kiri), kanan: round2(this.lum.kanan), atas: round2(this.lum.atas) },
+      mode: { ...this.mode }, samples: this.samples, switches: this.switches, costMedMs: c.length ? round2(c[c.length >> 1]) : null, lastMs: round2(this.lastCost), issueMs: round2(this.issueMs), readMs: round2(this.readMs || 0), costMaxMs: c.length ? round2(c[c.length - 1]) : null,
+      classes: { kanan: this.els ? this.els.kanan[0].className : '', atas: this.els ? this.els.atas[0].classList.contains('uic-atas-terang') : false } };
+  },
+};
+
 const Settings = {
   el: document.getElementById('screen-settings'),
   bootQuality: CONFIG.qualityPreset,
@@ -13099,6 +13313,7 @@ const Settings = {
     CamRig.cameraRoll = s.cameraRoll;
     Player.autoLevel = s.autoLevel;
     hud.showDamageNumbers = s.damageNumbers;
+    UiContrast.applySetting();
     document.getElementById('fps').classList.toggle('hidden', !s.showFps);
     if (Game.muted !== s.muted) { Game.muted = s.muted; ui.btnMute.setAttribute('aria-pressed', String(Game.muted)); }
     Sfx.applyVolumes();
@@ -13808,6 +14023,7 @@ const Touch = {
   },
 };
 Touch.init();
+UiContrast.init();
 Controls.addSource(Touch);
 
 // Mode HP dimainkan mendatar (H7): overlay putar layar yang rapi di bawah toolbar, permainan dijeda
@@ -14702,6 +14918,7 @@ const GameHooks = {
         sa: { l: px('var(--sa-l)'), t: px('var(--sa-t)'), r: px('var(--sa-r)'), b: px('var(--sa-b)') }, ed: Viewport.edges(), override: Viewport.override };
     },
     // Ubah satu pengaturan lewat jalur yang sama dengan panel Pengaturan
+    getSetting(key) { return Object.hasOwn(SETTING_DEFAULTS, key) ? Save.settings[key] : undefined; },
     setSetting(key, value) { if (!Object.hasOwn(SETTING_DEFAULTS, key)) return false; Settings.set(key, value); return Save.settings[key]; },
     // Kotak pesawat pemain di layar dalam pecahan lebar dan tinggi (H5)
     planeFrame() {
@@ -15060,6 +15277,12 @@ const GameHooks = {
     },
     collisionConfig(patch) { if (patch ? typeof patch === 'object' : false) for (const k of Object.keys(patch)) if (Object.hasOwn(COLLISION_TIERS, k) ? typeof COLLISION_TIERS[k] === typeof patch[k] : false) COLLISION_TIERS[k] = patch[k]; return JSON.parse(JSON.stringify(COLLISION_TIERS)); },
     programList() { return (renderer.info.programs || []).map((p) => p.name + ' ' + String(p.cacheKey).length + ' ' + String(p.cacheKey).slice(0, 400)); },
+    // Kontras UI adaptif (C1): metode, luma tiap wilayah, mode, biaya cuplik; force: 'heuristik' memaksa cadangan
+    // Suapkan luma buatan ke penghalus dan histeresis kontras (uji kedip)
+    uiContrastFeed(lum) { UiContrast.feed(lum); return UiContrast.report(); },
+    freeze(on = true) { Debug.frozen = !!on; return Debug.frozen; },
+    // force: 'pbo' membaca piksel nyata (kalibrasi, tanpa jatuh otomatis), 'heuristik' kembali ke metode utama
+    uiContrast(force) { const U = UiContrast; if (force === 'heuristik') { U.fallback('dipaksa lewat debug'); U.forced = false; } if (force === 'pbo') { U.method = 'pbo'; U.reason = 'kalibrasi lewat debug'; U.forced = true; U.costs = []; } return U.report(); },
     // Penanda bos (B3, B4): status, kotak tiap elemen yang terlihat, dan posisi panah tepi
     bossHud() {
       const R = (el) => { if (!el ? true : el.classList.contains('hidden')) return null; const r = el.getBoundingClientRect(); return r.width > 0 ? { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) } : null; };
@@ -15889,6 +16112,7 @@ function frame(now) {
   const raw = Math.max((now - lastTime) / 1000, 0);
   let dt = Math.min(raw, CONFIG.maxDelta);
   if (!(dt >= 0)) dt = 0;   // NaN dari jam yang melompat tidak boleh masuk simulasi (A7)
+  if (Debug.frozen) dt = 0;  // debug.freeze: dunia diam, render tetap berjalan (screenshot berpasangan uji kontras C1)
   if (Game.slowMo > 0) { Game.slowMo -= dt; dt *= CONFIG.collision.slowMotionScale; }   // gerak lambat saat hancur
   lastTime = now;
   Game.frame++;
@@ -15898,6 +16122,7 @@ function frame(now) {
   if (draw) {
     renderer.info.reset();
     render();
+    UiContrast.afterRender();
     Perf.renders++;
     Pacer.dirty = false;
     const ri = renderer.info.render;

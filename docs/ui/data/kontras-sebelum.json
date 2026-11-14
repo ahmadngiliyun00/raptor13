@@ -1,0 +1,743 @@
+[
+ {
+  "scene": "Bumi siang",
+  "world": "earth",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.188,
+    "bg": 0.16,
+    "icon": 0.599,
+    "iconPlate": 2.72,
+    "plateBg": 1.05,
+    "edgeIn": 1.61,
+    "edgeOutBg": 1.12,
+    "edgeBg": 1.61
+   },
+   "nitro": {
+    "plate": 0.189,
+    "bg": 0.152,
+    "icon": 0.532,
+    "iconPlate": 2.43,
+    "plateBg": 1.18,
+    "edgeIn": 1.8,
+    "edgeOutBg": 1.09,
+    "edgeBg": 1.8
+   },
+   "ultimate": {
+    "plate": 0.133,
+    "bg": 0.149,
+    "icon": 0.526,
+    "iconPlate": 3.14,
+    "plateBg": 1.1,
+    "edgeIn": 1.51,
+    "edgeOutBg": 1.09,
+    "edgeBg": 1.51
+   },
+   "gulung": {
+    "plate": 0.1,
+    "bg": 0.149,
+    "icon": 0.524,
+    "iconPlate": 3.82,
+    "plateBg": 1.31,
+    "edgeIn": 1.48,
+    "edgeOutBg": 1.07,
+    "edgeBg": 1.48
+   },
+   "joystick": {
+    "plate": 0.132,
+    "bg": 0.12,
+    "icon": 0.343,
+    "iconPlate": 2.16,
+    "plateBg": 1.2,
+    "edgeIn": 1.25,
+    "edgeOutBg": 1.12,
+    "edgeBg": 1.25
+   }
+  }
+ },
+ {
+  "scene": "Bumi menunduk ke medan",
+  "world": "earth",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.183,
+    "bg": 0.147,
+    "icon": 0.588,
+    "iconPlate": 2.74,
+    "plateBg": 1.13,
+    "edgeIn": 1.68,
+    "edgeOutBg": 1.13,
+    "edgeBg": 1.68
+   },
+   "nitro": {
+    "plate": 0.227,
+    "bg": 0.154,
+    "icon": 0.588,
+    "iconPlate": 2.31,
+    "plateBg": 1.22,
+    "edgeIn": 1.77,
+    "edgeOutBg": 1.16,
+    "edgeBg": 1.77
+   },
+   "ultimate": {
+    "plate": 0.128,
+    "bg": 0.122,
+    "icon": 0.535,
+    "iconPlate": 3.28,
+    "plateBg": 1.05,
+    "edgeIn": 1.71,
+    "edgeOutBg": 1.16,
+    "edgeBg": 1.71
+   },
+   "gulung": {
+    "plate": 0.085,
+    "bg": 0.124,
+    "icon": 0.505,
+    "iconPlate": 4.11,
+    "plateBg": 1.31,
+    "edgeIn": 1.45,
+    "edgeOutBg": 1.06,
+    "edgeBg": 1.45
+   },
+   "joystick": {
+    "plate": 0.137,
+    "bg": 0.12,
+    "icon": 0.334,
+    "iconPlate": 2.06,
+    "plateBg": 1.13,
+    "edgeIn": 1.28,
+    "edgeOutBg": 1.07,
+    "edgeBg": 1.28
+   }
+  }
+ },
+ {
+  "scene": "Bumi di dalam awan",
+  "world": "earth",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.271,
+    "bg": 0.322,
+    "icon": 0.746,
+    "iconPlate": 2.48,
+    "plateBg": 1.19,
+    "edgeIn": 1.13,
+    "edgeOutBg": 1.05,
+    "edgeBg": 1.13
+   },
+   "nitro": {
+    "plate": 0.401,
+    "bg": 0.434,
+    "icon": 0.73,
+    "iconPlate": 1.73,
+    "plateBg": 1.09,
+    "edgeIn": 1.2,
+    "edgeOutBg": 1.02,
+    "edgeBg": 1.2
+   },
+   "ultimate": {
+    "plate": 0.23,
+    "bg": 0.298,
+    "icon": 0.638,
+    "iconPlate": 2.46,
+    "plateBg": 1.16,
+    "edgeIn": 1.2,
+    "edgeOutBg": 1.05,
+    "edgeBg": 1.2
+   },
+   "gulung": {
+    "plate": 0.296,
+    "bg": 0.431,
+    "icon": 0.745,
+    "iconPlate": 2.3,
+    "plateBg": 1.58,
+    "edgeIn": 1.1,
+    "edgeOutBg": 1.01,
+    "edgeBg": 1.1
+   },
+   "joystick": {
+    "plate": 0.314,
+    "bg": 0.409,
+    "icon": 0.586,
+    "iconPlate": 1.75,
+    "plateBg": 1.18,
+    "edgeIn": 1.14,
+    "edgeOutBg": 1.04,
+    "edgeBg": 1.14
+   }
+  }
+ },
+ {
+  "scene": "Merkurius",
+  "world": "merkurius",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.033,
+    "bg": 0.008,
+    "icon": 0.433,
+    "iconPlate": 5.84,
+    "plateBg": 1.38,
+    "edgeIn": 2.16,
+    "edgeOutBg": 1.02,
+    "edgeBg": 2.16
+   },
+   "nitro": {
+    "plate": 0.172,
+    "bg": 0.197,
+    "icon": 0.512,
+    "iconPlate": 2.53,
+    "plateBg": 1.24,
+    "edgeIn": 1.5,
+    "edgeOutBg": 1.2,
+    "edgeBg": 1.5
+   },
+   "ultimate": {
+    "plate": 0.01,
+    "bg": 0.001,
+    "icon": 0.311,
+    "iconPlate": 5.99,
+    "plateBg": 1.18,
+    "edgeIn": 2.48,
+    "edgeOutBg": 1,
+    "edgeBg": 2.48
+   },
+   "gulung": {
+    "plate": 0.017,
+    "bg": 0.019,
+    "icon": 0.376,
+    "iconPlate": 6.38,
+    "plateBg": 1.03,
+    "edgeIn": 2.28,
+    "edgeOutBg": 1,
+    "edgeBg": 2.28
+   },
+   "joystick": {
+    "plate": 0.054,
+    "bg": 0.06,
+    "icon": 0.22,
+    "iconPlate": 2.6,
+    "plateBg": 1.06,
+    "edgeIn": 1.49,
+    "edgeOutBg": 1,
+    "edgeBg": 1.49
+   }
+  }
+ },
+ {
+  "scene": "Venus",
+  "world": "venus",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.022,
+    "bg": 0.165,
+    "icon": 0.351,
+    "iconPlate": 5.56,
+    "plateBg": 2.16,
+    "edgeIn": 1.26,
+    "edgeOutBg": 1.74,
+    "edgeBg": 1.74
+   },
+   "nitro": {
+    "plate": 0.152,
+    "bg": 0.225,
+    "icon": 0.499,
+    "iconPlate": 2.72,
+    "plateBg": 1.37,
+    "edgeIn": 1.22,
+    "edgeOutBg": 1.57,
+    "edgeBg": 1.57
+   },
+   "ultimate": {
+    "plate": 0.012,
+    "bg": 0.189,
+    "icon": 0.308,
+    "iconPlate": 5.81,
+    "plateBg": 2.1,
+    "edgeIn": 1.71,
+    "edgeOutBg": 1.44,
+    "edgeBg": 1.71
+   },
+   "gulung": {
+    "plate": 0.193,
+    "bg": 0.402,
+    "icon": 0.627,
+    "iconPlate": 2.79,
+    "plateBg": 1.88,
+    "edgeIn": 1.22,
+    "edgeOutBg": 1.31,
+    "edgeBg": 1.31
+   },
+   "joystick": {
+    "plate": 0.026,
+    "bg": 0.027,
+    "icon": 0.177,
+    "iconPlate": 2.99,
+    "plateBg": 1.02,
+    "edgeIn": 1.59,
+    "edgeOutBg": 1,
+    "edgeBg": 1.59
+   }
+  }
+ },
+ {
+  "scene": "Mars",
+  "world": "mars",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.082,
+    "bg": 0.075,
+    "icon": 0.457,
+    "iconPlate": 3.83,
+    "plateBg": 1.18,
+    "edgeIn": 1.95,
+    "edgeOutBg": 1.2,
+    "edgeBg": 1.95
+   },
+   "nitro": {
+    "plate": 0.139,
+    "bg": 0.103,
+    "icon": 0.495,
+    "iconPlate": 2.87,
+    "plateBg": 1.17,
+    "edgeIn": 2.12,
+    "edgeOutBg": 1.22,
+    "edgeBg": 2.12
+   },
+   "ultimate": {
+    "plate": 0.042,
+    "bg": 0.035,
+    "icon": 0.4,
+    "iconPlate": 4.87,
+    "plateBg": 1.21,
+    "edgeIn": 2.09,
+    "edgeOutBg": 1.05,
+    "edgeBg": 2.09
+   },
+   "gulung": {
+    "plate": 0.048,
+    "bg": 0.1,
+    "icon": 0.431,
+    "iconPlate": 4.89,
+    "plateBg": 1.55,
+    "edgeIn": 1.32,
+    "edgeOutBg": 1.24,
+    "edgeBg": 1.32
+   },
+   "joystick": {
+    "plate": 0.018,
+    "bg": 0.018,
+    "icon": 0.16,
+    "iconPlate": 3.09,
+    "plateBg": 1.01,
+    "edgeIn": 1.63,
+    "edgeOutBg": 1,
+    "edgeBg": 1.63
+   }
+  }
+ },
+ {
+  "scene": "Jupiter",
+  "world": "jupiter",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.02,
+    "bg": 0.001,
+    "icon": 0.346,
+    "iconPlate": 5.66,
+    "plateBg": 1.38,
+    "edgeIn": 3.35,
+    "edgeOutBg": 1,
+    "edgeBg": 3.35
+   },
+   "nitro": {
+    "plate": 0.039,
+    "bg": 0.008,
+    "icon": 0.357,
+    "iconPlate": 4.56,
+    "plateBg": 1.52,
+    "edgeIn": 3.44,
+    "edgeOutBg": 1.02,
+    "edgeBg": 3.44
+   },
+   "ultimate": {
+    "plate": 0.01,
+    "bg": 0.001,
+    "icon": 0.308,
+    "iconPlate": 5.97,
+    "plateBg": 1.18,
+    "edgeIn": 2.47,
+    "edgeOutBg": 1,
+    "edgeBg": 2.47
+   },
+   "gulung": {
+    "plate": 0.009,
+    "bg": 0.009,
+    "icon": 0.337,
+    "iconPlate": 6.56,
+    "plateBg": 1.02,
+    "edgeIn": 2.05,
+    "edgeOutBg": 1.03,
+    "edgeBg": 2.05
+   },
+   "joystick": {
+    "plate": 0.04,
+    "bg": 0.044,
+    "icon": 0.198,
+    "iconPlate": 2.75,
+    "plateBg": 1.04,
+    "edgeIn": 1.52,
+    "edgeOutBg": 1,
+    "edgeBg": 1.52
+   }
+  }
+ },
+ {
+  "scene": "Saturnus",
+  "world": "saturnus",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.021,
+    "bg": 0.001,
+    "icon": 0.347,
+    "iconPlate": 5.61,
+    "plateBg": 1.38,
+    "edgeIn": 2.89,
+    "edgeOutBg": 1.01,
+    "edgeBg": 2.89
+   },
+   "nitro": {
+    "plate": 0.09,
+    "bg": 0.042,
+    "icon": 0.699,
+    "iconPlate": 5.35,
+    "plateBg": 1.51,
+    "edgeIn": 2.19,
+    "edgeOutBg": 1.04,
+    "edgeBg": 2.19
+   },
+   "ultimate": {
+    "plate": 0.013,
+    "bg": 0.003,
+    "icon": 0.326,
+    "iconPlate": 5.97,
+    "plateBg": 1.18,
+    "edgeIn": 2.48,
+    "edgeOutBg": 1.01,
+    "edgeBg": 2.48
+   },
+   "gulung": {
+    "plate": 0.003,
+    "bg": 0.007,
+    "icon": 0.301,
+    "iconPlate": 6.6,
+    "plateBg": 1.07,
+    "edgeIn": 1.88,
+    "edgeOutBg": 1.1,
+    "edgeBg": 1.88
+   },
+   "joystick": {
+    "plate": 0.016,
+    "bg": 0.017,
+    "icon": 0.147,
+    "iconPlate": 2.97,
+    "plateBg": 1.01,
+    "edgeIn": 1.59,
+    "edgeOutBg": 1,
+    "edgeBg": 1.59
+   }
+  }
+ },
+ {
+  "scene": "Pluto",
+  "world": "pluto",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.058,
+    "bg": 0.026,
+    "icon": 0.428,
+    "iconPlate": 4.43,
+    "plateBg": 1.41,
+    "edgeIn": 2.98,
+    "edgeOutBg": 1,
+    "edgeBg": 2.98
+   },
+   "nitro": {
+    "plate": 0.027,
+    "bg": 0.003,
+    "icon": 0.327,
+    "iconPlate": 4.93,
+    "plateBg": 1.43,
+    "edgeIn": 3.44,
+    "edgeOutBg": 1,
+    "edgeBg": 3.44
+   },
+   "ultimate": {
+    "plate": 0.042,
+    "bg": 0.027,
+    "icon": 0.377,
+    "iconPlate": 4.67,
+    "plateBg": 1.19,
+    "edgeIn": 2.37,
+    "edgeOutBg": 1,
+    "edgeBg": 2.37
+   },
+   "gulung": {
+    "plate": 0.022,
+    "bg": 0.026,
+    "icon": 0.386,
+    "iconPlate": 6.08,
+    "plateBg": 1.06,
+    "edgeIn": 2.16,
+    "edgeOutBg": 1,
+    "edgeBg": 2.16
+   },
+   "joystick": {
+    "plate": 0.001,
+    "bg": 0,
+    "icon": 0.095,
+    "iconPlate": 2.85,
+    "plateBg": 1.02,
+    "edgeIn": 1.48,
+    "edgeOutBg": 1,
+    "edgeBg": 1.48
+   }
+  }
+ },
+ {
+  "scene": "Jelajah Bebas (sabuk)",
+  "world": "sabuk",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.044,
+    "bg": 0.015,
+    "icon": 0.401,
+    "iconPlate": 4.79,
+    "plateBg": 1.44,
+    "edgeIn": 3.21,
+    "edgeOutBg": 1.01,
+    "edgeBg": 3.21
+   },
+   "nitro": {
+    "plate": 0.05,
+    "bg": 0.018,
+    "icon": 0.369,
+    "iconPlate": 4.18,
+    "plateBg": 1.47,
+    "edgeIn": 3.22,
+    "edgeOutBg": 1.02,
+    "edgeBg": 3.22
+   },
+   "ultimate": {
+    "plate": 0.031,
+    "bg": 0.017,
+    "icon": 0.365,
+    "iconPlate": 5.11,
+    "plateBg": 1.21,
+    "edgeIn": 2.53,
+    "edgeOutBg": 1.01,
+    "edgeBg": 2.53
+   },
+   "gulung": {
+    "plate": 0.02,
+    "bg": 0.024,
+    "icon": 0.372,
+    "iconPlate": 6.03,
+    "plateBg": 1.06,
+    "edgeIn": 2.14,
+    "edgeOutBg": 1,
+    "edgeBg": 2.14
+   },
+   "joystick": {
+    "plate": 0.002,
+    "bg": 0.001,
+    "icon": 0.095,
+    "iconPlate": 2.8,
+    "plateBg": 1.01,
+    "edgeIn": 1.48,
+    "edgeOutBg": 1,
+    "edgeBg": 1.48
+   }
+  }
+ },
+ {
+  "scene": "Venus dekat (planet memenuhi layar)",
+  "world": "venus",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.556,
+    "bg": 0.898,
+    "icon": 0.966,
+    "iconPlate": 1.68,
+    "plateBg": 1.33,
+    "edgeIn": 1.31,
+    "edgeOutBg": 1.1,
+    "edgeBg": 1.31
+   },
+   "nitro": {
+    "plate": 0.773,
+    "bg": 0.774,
+    "icon": 0.973,
+    "iconPlate": 1.24,
+    "plateBg": 1.05,
+    "edgeIn": 1.06,
+    "edgeOutBg": 1.05,
+    "edgeBg": 1.06
+   },
+   "ultimate": {
+    "plate": 0.342,
+    "bg": 0.39,
+    "icon": 0.732,
+    "iconPlate": 1.99,
+    "plateBg": 1.11,
+    "edgeIn": 1.23,
+    "edgeOutBg": 1.14,
+    "edgeBg": 1.23
+   },
+   "gulung": {
+    "plate": 0.523,
+    "bg": 0.894,
+    "icon": 0.956,
+    "iconPlate": 1.75,
+    "plateBg": 1.55,
+    "edgeIn": 1.32,
+    "edgeOutBg": 1.15,
+    "edgeBg": 1.32
+   },
+   "joystick": {
+    "plate": 0.057,
+    "bg": 0.041,
+    "icon": 0.198,
+    "iconPlate": 2.31,
+    "plateBg": 1.17,
+    "edgeIn": 1.77,
+    "edgeOutBg": 1.26,
+    "edgeBg": 1.77
+   }
+  }
+ },
+ {
+  "scene": "Jupiter dekat",
+  "world": "jupiter",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.274,
+    "bg": 0.345,
+    "icon": 0.664,
+    "iconPlate": 2.2,
+    "plateBg": 1.21,
+    "edgeIn": 1.08,
+    "edgeOutBg": 1.17,
+    "edgeBg": 1.17
+   },
+   "nitro": {
+    "plate": 0.331,
+    "bg": 0.373,
+    "icon": 0.651,
+    "iconPlate": 1.84,
+    "plateBg": 1.11,
+    "edgeIn": 1.13,
+    "edgeOutBg": 1.17,
+    "edgeBg": 1.17
+   },
+   "ultimate": {
+    "plate": 0.243,
+    "bg": 0.339,
+    "icon": 0.626,
+    "iconPlate": 2.3,
+    "plateBg": 1.33,
+    "edgeIn": 1.1,
+    "edgeOutBg": 1.17,
+    "edgeBg": 1.17
+   },
+   "gulung": {
+    "plate": 0.18,
+    "bg": 0.353,
+    "icon": 0.622,
+    "iconPlate": 2.93,
+    "plateBg": 1.75,
+    "edgeIn": 1.05,
+    "edgeOutBg": 1.16,
+    "edgeBg": 1.16
+   },
+   "joystick": {
+    "plate": 0.185,
+    "bg": 0.226,
+    "icon": 0.4,
+    "iconPlate": 1.92,
+    "plateBg": 1.18,
+    "edgeIn": 1.14,
+    "edgeOutBg": 1.03,
+    "edgeBg": 1.14
+   }
+  }
+ },
+ {
+  "scene": "Dekat Matahari",
+  "world": "merkurius",
+  "ui": null,
+  "buttons": {
+   "tembak": {
+    "plate": 0.13,
+    "bg": 0.105,
+    "icon": 0.53,
+    "iconPlate": 3.22,
+    "plateBg": 1.17,
+    "edgeIn": 2.03,
+    "edgeOutBg": 1.01,
+    "edgeBg": 2.03
+   },
+   "nitro": {
+    "plate": 0.096,
+    "bg": 0.054,
+    "icon": 0.435,
+    "iconPlate": 3.32,
+    "plateBg": 1.41,
+    "edgeIn": 2.55,
+    "edgeOutBg": 1.02,
+    "edgeBg": 2.55
+   },
+   "ultimate": {
+    "plate": 0.102,
+    "bg": 0.097,
+    "icon": 0.481,
+    "iconPlate": 3.5,
+    "plateBg": 1.04,
+    "edgeIn": 1.86,
+    "edgeOutBg": 1.02,
+    "edgeBg": 1.86
+   },
+   "gulung": {
+    "plate": 0.066,
+    "bg": 0.101,
+    "icon": 0.478,
+    "iconPlate": 4.56,
+    "plateBg": 1.3,
+    "edgeIn": 1.56,
+    "edgeOutBg": 1.02,
+    "edgeBg": 1.56
+   },
+   "joystick": {
+    "plate": 0.048,
+    "bg": 0.055,
+    "icon": 0.216,
+    "iconPlate": 2.71,
+    "plateBg": 1.07,
+    "edgeIn": 1.49,
+    "edgeOutBg": 1.03,
+    "edgeBg": 1.49
+   }
+  }
+ }
+]

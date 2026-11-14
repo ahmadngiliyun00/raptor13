@@ -1,0 +1,1068 @@
+[
+ {
+  "scene": "Bumi siang",
+  "world": "earth",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.5,
+    "kanan": 0.5,
+    "atas": 0.62
+   },
+   "mode": {
+    "kiri": "terang",
+    "kanan": "terang",
+    "atas": "terang"
+   },
+   "samples": 9,
+   "switches": 3,
+   "costMedMs": null,
+   "lastMs": 0.1,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-terang",
+    "atas": true
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.08,
+    "bg": 0.198,
+    "icon": 0.915,
+    "iconPlate": 7.42,
+    "plateBg": 1.9,
+    "edgeIn": 2.76,
+    "edgeOutBg": 3.86,
+    "edgeBg": 3.86
+   },
+   "nitro": {
+    "plate": 0.081,
+    "bg": 0.139,
+    "icon": 0.915,
+    "iconPlate": 7.34,
+    "plateBg": 1.44,
+    "edgeIn": 3.64,
+    "edgeOutBg": 3.33,
+    "edgeBg": 3.64
+   },
+   "ultimate": {
+    "plate": 0.059,
+    "bg": 0.152,
+    "icon": 0.915,
+    "iconPlate": 8.87,
+    "plateBg": 1.86,
+    "edgeIn": 3.19,
+    "edgeOutBg": 3.44,
+    "edgeBg": 3.44
+   },
+   "gulung": {
+    "plate": 0.055,
+    "bg": 0.158,
+    "icon": 0.915,
+    "iconPlate": 9.18,
+    "plateBg": 1.98,
+    "edgeIn": 3.92,
+    "edgeOutBg": 3.53,
+    "edgeBg": 3.92
+   },
+   "joystick": {
+    "plate": 0.059,
+    "bg": 0.16,
+    "icon": 0.753,
+    "iconPlate": 7.33,
+    "plateBg": 1.92,
+    "edgeIn": 3.35,
+    "edgeOutBg": 3.37,
+    "edgeBg": 3.37
+   }
+  }
+ },
+ {
+  "scene": "Bumi menunduk ke medan",
+  "world": "earth",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.5,
+    "kanan": 0.5,
+    "atas": 0.62
+   },
+   "mode": {
+    "kiri": "terang",
+    "kanan": "terang",
+    "atas": "terang"
+   },
+   "samples": 9,
+   "switches": 3,
+   "costMedMs": null,
+   "lastMs": 0,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-terang",
+    "atas": true
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.073,
+    "bg": 0.173,
+    "icon": 0.915,
+    "iconPlate": 7.84,
+    "plateBg": 1.81,
+    "edgeIn": 3.03,
+    "edgeOutBg": 3.81,
+    "edgeBg": 3.81
+   },
+   "nitro": {
+    "plate": 0.1,
+    "bg": 0.202,
+    "icon": 0.915,
+    "iconPlate": 6.43,
+    "plateBg": 1.68,
+    "edgeIn": 3.16,
+    "edgeOutBg": 3.86,
+    "edgeBg": 3.86
+   },
+   "ultimate": {
+    "plate": 0.062,
+    "bg": 0.163,
+    "icon": 0.915,
+    "iconPlate": 8.64,
+    "plateBg": 1.91,
+    "edgeIn": 3.63,
+    "edgeOutBg": 3.57,
+    "edgeBg": 3.63
+   },
+   "gulung": {
+    "plate": 0.053,
+    "bg": 0.146,
+    "icon": 0.915,
+    "iconPlate": 9.39,
+    "plateBg": 1.91,
+    "edgeIn": 4.2,
+    "edgeOutBg": 3.24,
+    "edgeBg": 4.2
+   },
+   "joystick": {
+    "plate": 0.061,
+    "bg": 0.163,
+    "icon": 0.754,
+    "iconPlate": 7.25,
+    "plateBg": 1.92,
+    "edgeIn": 3.5,
+    "edgeOutBg": 2.83,
+    "edgeBg": 3.5
+   }
+  }
+ },
+ {
+  "scene": "Bumi di dalam awan",
+  "world": "earth",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.51,
+    "kanan": 0.51,
+    "atas": 0.62
+   },
+   "mode": {
+    "kiri": "terang",
+    "kanan": "terang",
+    "atas": "terang"
+   },
+   "samples": 9,
+   "switches": 3,
+   "costMedMs": null,
+   "lastMs": 0.1,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-terang",
+    "atas": true
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.081,
+    "bg": 0.198,
+    "icon": 0.915,
+    "iconPlate": 7.38,
+    "plateBg": 1.9,
+    "edgeIn": 1.84,
+    "edgeOutBg": 4.13,
+    "edgeBg": 4.13
+   },
+   "nitro": {
+    "plate": 0.162,
+    "bg": 0.435,
+    "icon": 0.915,
+    "iconPlate": 4.55,
+    "plateBg": 2.28,
+    "edgeIn": 1.63,
+    "edgeOutBg": 7.15,
+    "edgeBg": 7.15
+   },
+   "ultimate": {
+    "plate": 0.076,
+    "bg": 0.22,
+    "icon": 0.915,
+    "iconPlate": 7.66,
+    "plateBg": 2.14,
+    "edgeIn": 2.34,
+    "edgeOutBg": 3.96,
+    "edgeBg": 3.96
+   },
+   "gulung": {
+    "plate": 0.137,
+    "bg": 0.504,
+    "icon": 0.915,
+    "iconPlate": 5.17,
+    "plateBg": 2.96,
+    "edgeIn": 1.52,
+    "edgeOutBg": 8.13,
+    "edgeBg": 8.13
+   },
+   "joystick": {
+    "plate": 0.123,
+    "bg": 0.397,
+    "icon": 0.779,
+    "iconPlate": 4.78,
+    "plateBg": 2.58,
+    "edgeIn": 2.04,
+    "edgeOutBg": 4.32,
+    "edgeBg": 4.32
+   }
+  }
+ },
+ {
+  "scene": "Merkurius",
+  "world": "merkurius",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.04,
+    "kanan": 0.04,
+    "atas": 0.04
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "gelap",
+    "atas": "gelap"
+   },
+   "samples": 9,
+   "switches": 0,
+   "costMedMs": null,
+   "lastMs": 0,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-gelap",
+    "atas": false
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.046,
+    "bg": 0.007,
+    "icon": 1,
+    "iconPlate": 10.99,
+    "plateBg": 1.63,
+    "edgeIn": 8.3,
+    "edgeOutBg": 1.12,
+    "edgeBg": 8.3
+   },
+   "nitro": {
+    "plate": 0.165,
+    "bg": 0.101,
+    "icon": 1,
+    "iconPlate": 4.89,
+    "plateBg": 1.42,
+    "edgeIn": 4.88,
+    "edgeOutBg": 2.54,
+    "edgeBg": 4.88
+   },
+   "ultimate": {
+    "plate": 0.024,
+    "bg": 0.001,
+    "icon": 1,
+    "iconPlate": 14.2,
+    "plateBg": 1.44,
+    "edgeIn": 16.88,
+    "edgeOutBg": 1.03,
+    "edgeBg": 16.88
+   },
+   "gulung": {
+    "plate": 0.072,
+    "bg": 0.019,
+    "icon": 1,
+    "iconPlate": 8.59,
+    "plateBg": 1.72,
+    "edgeIn": 9.48,
+    "edgeOutBg": 1.32,
+    "edgeBg": 9.48
+   },
+   "joystick": {
+    "plate": 0.128,
+    "bg": 0.06,
+    "icon": 0.806,
+    "iconPlate": 4.8,
+    "plateBg": 1.62,
+    "edgeIn": 7.39,
+    "edgeOutBg": 1.63,
+    "edgeBg": 7.39
+   }
+  }
+ },
+ {
+  "scene": "Venus",
+  "world": "venus",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.04,
+    "kanan": 0.04,
+    "atas": 0.04
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "gelap",
+    "atas": "gelap"
+   },
+   "samples": 9,
+   "switches": 0,
+   "costMedMs": null,
+   "lastMs": 0,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-gelap",
+    "atas": false
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.034,
+    "bg": 0.001,
+    "icon": 1,
+    "iconPlate": 12.54,
+    "plateBg": 1.63,
+    "edgeIn": 13.98,
+    "edgeOutBg": 1.02,
+    "edgeBg": 13.98
+   },
+   "nitro": {
+    "plate": 0.086,
+    "bg": 0.028,
+    "icon": 1,
+    "iconPlate": 7.72,
+    "plateBg": 1.67,
+    "edgeIn": 8.66,
+    "edgeOutBg": 1.23,
+    "edgeBg": 8.66
+   },
+   "ultimate": {
+    "plate": 0.025,
+    "bg": 0.002,
+    "icon": 1,
+    "iconPlate": 14,
+    "plateBg": 1.45,
+    "edgeIn": 17.41,
+    "edgeOutBg": 1.02,
+    "edgeBg": 17.41
+   },
+   "gulung": {
+    "plate": 0.313,
+    "bg": 0.223,
+    "icon": 1,
+    "iconPlate": 2.89,
+    "plateBg": 1.33,
+    "edgeIn": 3.2,
+    "edgeOutBg": 3.7,
+    "edgeBg": 3.7
+   },
+   "joystick": {
+    "plate": 0.083,
+    "bg": 0.027,
+    "icon": 0.799,
+    "iconPlate": 6.4,
+    "plateBg": 1.71,
+    "edgeIn": 10.34,
+    "edgeOutBg": 1.37,
+    "edgeBg": 10.34
+   }
+  }
+ },
+ {
+  "scene": "Mars",
+  "world": "mars",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.04,
+    "kanan": 0.09,
+    "atas": 0.04
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "gelap",
+    "atas": "gelap"
+   },
+   "samples": 9,
+   "switches": 0,
+   "costMedMs": null,
+   "lastMs": 0.1,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-gelap",
+    "atas": false
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.09,
+    "bg": 0.044,
+    "icon": 1,
+    "iconPlate": 7.47,
+    "plateBg": 1.48,
+    "edgeIn": 7.78,
+    "edgeOutBg": 1.6,
+    "edgeBg": 7.78
+   },
+   "nitro": {
+    "plate": 0.131,
+    "bg": 0.063,
+    "icon": 1,
+    "iconPlate": 5.81,
+    "plateBg": 1.59,
+    "edgeIn": 6.53,
+    "edgeOutBg": 2.06,
+    "edgeBg": 6.53
+   },
+   "ultimate": {
+    "plate": 0.061,
+    "bg": 0.028,
+    "icon": 1,
+    "iconPlate": 9.48,
+    "plateBg": 1.43,
+    "edgeIn": 10.37,
+    "edgeOutBg": 1.38,
+    "edgeBg": 10.37
+   },
+   "gulung": {
+    "plate": 0.151,
+    "bg": 0.078,
+    "icon": 1,
+    "iconPlate": 5.23,
+    "plateBg": 1.58,
+    "edgeIn": 7.55,
+    "edgeOutBg": 1.96,
+    "edgeBg": 7.55
+   },
+   "joystick": {
+    "plate": 0.067,
+    "bg": 0.018,
+    "icon": 0.789,
+    "iconPlate": 7.14,
+    "plateBg": 1.71,
+    "edgeIn": 11.3,
+    "edgeOutBg": 1.3,
+    "edgeBg": 11.3
+   }
+  }
+ },
+ {
+  "scene": "Jupiter",
+  "world": "jupiter",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.04,
+    "kanan": 0.04,
+    "atas": 0.04
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "gelap",
+    "atas": "gelap"
+   },
+   "samples": 9,
+   "switches": 0,
+   "costMedMs": null,
+   "lastMs": 0.1,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-gelap",
+    "atas": false
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.031,
+    "bg": 0.001,
+    "icon": 1,
+    "iconPlate": 12.94,
+    "plateBg": 1.6,
+    "edgeIn": 13.96,
+    "edgeOutBg": 1.01,
+    "edgeBg": 13.96
+   },
+   "nitro": {
+    "plate": 0.057,
+    "bg": 0.01,
+    "icon": 1,
+    "iconPlate": 9.78,
+    "plateBg": 1.79,
+    "edgeIn": 12.79,
+    "edgeOutBg": 1.16,
+    "edgeBg": 12.79
+   },
+   "ultimate": {
+    "plate": 0.023,
+    "bg": 0.001,
+    "icon": 1,
+    "iconPlate": 14.33,
+    "plateBg": 1.44,
+    "edgeIn": 16.9,
+    "edgeOutBg": 1.01,
+    "edgeBg": 16.9
+   },
+   "gulung": {
+    "plate": 0.048,
+    "bg": 0.008,
+    "icon": 1,
+    "iconPlate": 10.73,
+    "plateBg": 1.71,
+    "edgeIn": 15.25,
+    "edgeOutBg": 1.13,
+    "edgeBg": 15.25
+   },
+   "joystick": {
+    "plate": 0.107,
+    "bg": 0.044,
+    "icon": 0.805,
+    "iconPlate": 5.43,
+    "plateBg": 1.67,
+    "edgeIn": 8.3,
+    "edgeOutBg": 1.78,
+    "edgeBg": 8.3
+   }
+  }
+ },
+ {
+  "scene": "Saturnus",
+  "world": "saturnus",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.04,
+    "kanan": 0.04,
+    "atas": 0.04
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "gelap",
+    "atas": "gelap"
+   },
+   "samples": 9,
+   "switches": 0,
+   "costMedMs": null,
+   "lastMs": 0.1,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-gelap",
+    "atas": false
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.033,
+    "bg": 0.001,
+    "icon": 1,
+    "iconPlate": 12.7,
+    "plateBg": 1.62,
+    "edgeIn": 8.4,
+    "edgeOutBg": 1.02,
+    "edgeBg": 8.4
+   },
+   "nitro": {
+    "plate": 0.295,
+    "bg": 0.259,
+    "icon": 1,
+    "iconPlate": 3.04,
+    "plateBg": 1.12,
+    "edgeIn": 1.86,
+    "edgeOutBg": 3.2,
+    "edgeBg": 3.2
+   },
+   "ultimate": {
+    "plate": 0.027,
+    "bg": 0.003,
+    "icon": 1,
+    "iconPlate": 13.64,
+    "plateBg": 1.45,
+    "edgeIn": 16.68,
+    "edgeOutBg": 1.04,
+    "edgeBg": 16.68
+   },
+   "gulung": {
+    "plate": 0.031,
+    "bg": 0.002,
+    "icon": 1,
+    "iconPlate": 13,
+    "plateBg": 1.57,
+    "edgeIn": 15.32,
+    "edgeOutBg": 1.05,
+    "edgeBg": 15.32
+   },
+   "joystick": {
+    "plate": 0.064,
+    "bg": 0.017,
+    "icon": 0.785,
+    "iconPlate": 7.33,
+    "plateBg": 1.7,
+    "edgeIn": 11.27,
+    "edgeOutBg": 1.22,
+    "edgeBg": 11.27
+   }
+  }
+ },
+ {
+  "scene": "Pluto",
+  "world": "pluto",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.04,
+    "kanan": 0.04,
+    "atas": 0.14
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "gelap",
+    "atas": "gelap"
+   },
+   "samples": 9,
+   "switches": 0,
+   "costMedMs": null,
+   "lastMs": 0.1,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-gelap",
+    "atas": false
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.071,
+    "bg": 0.026,
+    "icon": 1,
+    "iconPlate": 8.66,
+    "plateBg": 1.59,
+    "edgeIn": 9.28,
+    "edgeOutBg": 1.39,
+    "edgeBg": 9.28
+   },
+   "nitro": {
+    "plate": 0.041,
+    "bg": 0.003,
+    "icon": 1,
+    "iconPlate": 11.5,
+    "plateBg": 1.71,
+    "edgeIn": 13.69,
+    "edgeOutBg": 1.11,
+    "edgeBg": 13.69
+   },
+   "ultimate": {
+    "plate": 0.06,
+    "bg": 0.027,
+    "icon": 1,
+    "iconPlate": 9.55,
+    "plateBg": 1.43,
+    "edgeIn": 10.88,
+    "edgeOutBg": 1.4,
+    "edgeBg": 10.88
+   },
+   "gulung": {
+    "plate": 0.084,
+    "bg": 0.026,
+    "icon": 1,
+    "iconPlate": 7.82,
+    "plateBg": 1.76,
+    "edgeIn": 12.31,
+    "edgeOutBg": 1.35,
+    "edgeBg": 12.31
+   },
+   "joystick": {
+    "plate": 0.024,
+    "bg": 0,
+    "icon": 0.759,
+    "iconPlate": 10.92,
+    "plateBg": 1.48,
+    "edgeIn": 16.36,
+    "edgeOutBg": 1,
+    "edgeBg": 16.36
+   }
+  }
+ },
+ {
+  "scene": "Jelajah Bebas (sabuk)",
+  "world": "sabuk",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.04,
+    "kanan": 0.04,
+    "atas": 0.04
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "gelap",
+    "atas": "gelap"
+   },
+   "samples": 9,
+   "switches": 0,
+   "costMedMs": null,
+   "lastMs": 0,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-gelap",
+    "atas": false
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.057,
+    "bg": 0.014,
+    "icon": 1,
+    "iconPlate": 9.81,
+    "plateBg": 1.66,
+    "edgeIn": 10.8,
+    "edgeOutBg": 1.2,
+    "edgeBg": 10.8
+   },
+   "nitro": {
+    "plate": 0.068,
+    "bg": 0.017,
+    "icon": 1,
+    "iconPlate": 8.89,
+    "plateBg": 1.75,
+    "edgeIn": 11.29,
+    "edgeOutBg": 1.3,
+    "edgeBg": 11.29
+   },
+   "ultimate": {
+    "plate": 0.049,
+    "bg": 0.017,
+    "icon": 1,
+    "iconPlate": 10.63,
+    "plateBg": 1.49,
+    "edgeIn": 13.3,
+    "edgeOutBg": 1.25,
+    "edgeBg": 13.3
+   },
+   "gulung": {
+    "plate": 0.08,
+    "bg": 0.024,
+    "icon": 1,
+    "iconPlate": 8.06,
+    "plateBg": 1.76,
+    "edgeIn": 12.37,
+    "edgeOutBg": 1.39,
+    "edgeBg": 12.37
+   },
+   "joystick": {
+    "plate": 0.027,
+    "bg": 0.001,
+    "icon": 0.759,
+    "iconPlate": 10.45,
+    "plateBg": 1.51,
+    "edgeIn": 14.74,
+    "edgeOutBg": 1.08,
+    "edgeBg": 14.74
+   }
+  }
+ },
+ {
+  "scene": "Venus dekat (planet memenuhi layar)",
+  "world": "venus",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.18,
+    "kanan": 0.45,
+    "atas": 0.05
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "terang",
+    "atas": "gelap"
+   },
+   "samples": 9,
+   "switches": 3,
+   "costMedMs": null,
+   "lastMs": 0,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-terang",
+    "atas": false
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.205,
+    "bg": 0.778,
+    "icon": 0.915,
+    "iconPlate": 3.78,
+    "plateBg": 3.25,
+    "edgeIn": 1.41,
+    "edgeOutBg": 8.65,
+    "edgeBg": 8.65
+   },
+   "nitro": {
+    "plate": 0.215,
+    "bg": 0.666,
+    "icon": 0.915,
+    "iconPlate": 3.64,
+    "plateBg": 2.7,
+    "edgeIn": 1.4,
+    "edgeOutBg": 6.75,
+    "edgeBg": 6.75
+   },
+   "ultimate": {
+    "plate": 0.134,
+    "bg": 0.469,
+    "icon": 0.915,
+    "iconPlate": 5.25,
+    "plateBg": 2.83,
+    "edgeIn": 1.49,
+    "edgeOutBg": 7.01,
+    "edgeBg": 7.01
+   },
+   "gulung": {
+    "plate": 0.237,
+    "bg": 0.97,
+    "icon": 0.915,
+    "iconPlate": 3.36,
+    "plateBg": 3.56,
+    "edgeIn": 1.21,
+    "edgeOutBg": 10.01,
+    "edgeBg": 10.01
+   },
+   "joystick": {
+    "plate": 0.147,
+    "bg": 0.075,
+    "icon": 0.808,
+    "iconPlate": 4.37,
+    "plateBg": 1.58,
+    "edgeIn": 6.37,
+    "edgeOutBg": 2.22,
+    "edgeBg": 6.37
+   }
+  }
+ },
+ {
+  "scene": "Jupiter dekat",
+  "world": "jupiter",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.43,
+    "kanan": 0.51,
+    "atas": 0.5
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "terang",
+    "atas": "terang"
+   },
+   "samples": 9,
+   "switches": 2,
+   "costMedMs": null,
+   "lastMs": 0,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-terang",
+    "atas": true
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.104,
+    "bg": 0.268,
+    "icon": 0.915,
+    "iconPlate": 6.28,
+    "plateBg": 2.07,
+    "edgeIn": 2.21,
+    "edgeOutBg": 5.39,
+    "edgeBg": 5.39
+   },
+   "nitro": {
+    "plate": 0.126,
+    "bg": 0.289,
+    "icon": 0.915,
+    "iconPlate": 5.47,
+    "plateBg": 1.91,
+    "edgeIn": 2.3,
+    "edgeOutBg": 5.65,
+    "edgeBg": 5.65
+   },
+   "ultimate": {
+    "plate": 0.09,
+    "bg": 0.26,
+    "icon": 0.915,
+    "iconPlate": 6.88,
+    "plateBg": 2.21,
+    "edgeIn": 2.65,
+    "edgeOutBg": 5.26,
+    "edgeBg": 5.26
+   },
+   "gulung": {
+    "plate": 0.084,
+    "bg": 0.268,
+    "icon": 0.915,
+    "iconPlate": 7.2,
+    "plateBg": 2.4,
+    "edgeIn": 2.56,
+    "edgeOutBg": 5.39,
+    "edgeBg": 5.39
+   },
+   "joystick": {
+    "plate": 0.3,
+    "bg": 0.216,
+    "icon": 0.873,
+    "iconPlate": 2.63,
+    "plateBg": 1.32,
+    "edgeIn": 3.48,
+    "edgeOutBg": 4.05,
+    "edgeBg": 4.05
+   }
+  }
+ },
+ {
+  "scene": "Dekat Matahari",
+  "world": "merkurius",
+  "ui": {
+   "setting": "otomatis",
+   "method": "heuristik",
+   "reason": "bawaan: cuplik piksel di atas 0,3 ms",
+   "lum": {
+    "kiri": 0.04,
+    "kanan": 0.04,
+    "atas": 1
+   },
+   "mode": {
+    "kiri": "gelap",
+    "kanan": "gelap",
+    "atas": "terang"
+   },
+   "samples": 9,
+   "switches": 1,
+   "costMedMs": null,
+   "lastMs": 0,
+   "issueMs": 0,
+   "readMs": 0,
+   "costMaxMs": null,
+   "classes": {
+    "kanan": "actions uic-gelap",
+    "atas": true
+   }
+  },
+  "buttons": {
+   "tembak": {
+    "plate": 0.141,
+    "bg": 0.102,
+    "icon": 1,
+    "iconPlate": 5.5,
+    "plateBg": 1.25,
+    "edgeIn": 5,
+    "edgeOutBg": 2.4,
+    "edgeBg": 5
+   },
+   "nitro": {
+    "plate": 0.114,
+    "bg": 0.051,
+    "icon": 1,
+    "iconPlate": 6.4,
+    "plateBg": 1.63,
+    "edgeIn": 7.21,
+    "edgeOutBg": 1.83,
+    "edgeBg": 7.21
+   },
+   "ultimate": {
+    "plate": 0.118,
+    "bg": 0.094,
+    "icon": 1,
+    "iconPlate": 6.26,
+    "plateBg": 1.17,
+    "edgeIn": 6.49,
+    "edgeOutBg": 2.33,
+    "edgeBg": 6.49
+   },
+   "gulung": {
+    "plate": 0.178,
+    "bg": 0.096,
+    "icon": 1,
+    "iconPlate": 4.6,
+    "plateBg": 1.56,
+    "edgeIn": 6.26,
+    "edgeOutBg": 2.54,
+    "edgeBg": 6.26
+   },
+   "joystick": {
+    "plate": 0.118,
+    "bg": 0.052,
+    "icon": 0.809,
+    "iconPlate": 5.1,
+    "plateBg": 1.66,
+    "edgeIn": 8.34,
+    "edgeOutBg": 1.84,
+    "edgeBg": 8.34
+   }
+  }
+ }
+]
