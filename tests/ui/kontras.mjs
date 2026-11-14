@@ -56,7 +56,7 @@ for (const [name, world, pose] of SCENES) {
   // UIC_FORCE=pbo: kalibrasi dengan pembacaan piksel nyata, untuk dibandingkan dengan heuristik (metode utama)
   if (process.env.UIC_FORCE) await page.evaluate((f) => window.__game.debug.uiContrast?.(f), process.env.UIC_FORCE);
   await page.waitForTimeout(3500);   // penghalusan setelah teleport (sekitar 2,5 detik) dan transisi 400 ms selesai
-  const rects = await page.evaluate((B) => { const o = {}; for (const [k, sel] of Object.entries(B)) { const el = document.querySelector(sel); if (!el) continue; const r = el.getBoundingClientRect(); if (r.width > 0) o[k] = { x: r.left, y: r.top, w: r.width, h: r.height }; } return o; }, BTNS);
+  const rects = await page.evaluate((B) => { const o = {}; for (const [k, sel] of Object.entries(B)) { const el = document.querySelector(sel); if (!el) continue; const r = el.getBoundingClientRect(); if (r.width > 0) o[k] = { x: r.left, y: r.top, w: r.width, h: r.height, sq: getComputedStyle(el).borderTopLeftRadius !== '50%' }; } return o; }, BTNS);
   const ui = await page.evaluate(() => (window.__game.debug.uiContrast ? window.__game.debug.uiContrast() : null));
   // Dua screenshot berpasangan dengan dunia dibekukan: dengan kontrol sentuh, lalu tanpa kontrol (latar asli di balik tiap piksel)
   await page.evaluate(() => window.__game.debug.freeze?.(true));
@@ -85,7 +85,7 @@ for (const [name, world, pose] of SCENES) {
       const plate = [], plateBg = [], center = [], edge = [], edgeOut = [], bgs = [];
       for (let yy = Math.floor(cy - R - 4 * sx); yy <= cy + R + 4 * sx; yy++) for (let xx = Math.floor(cx - R - 4 * sx); xx <= cx + R + 4 * sx; xx++) {
         if (xx < 0 ? true : (yy < 0 ? true : (xx >= A.w ? true : yy >= A.h))) continue;
-        const d = (k === 'gulung' ? rbox(xx - cx, yy - cy, R) : Math.hypot(xx - cx, yy - cy)) / R, i = (yy * A.w + xx) * 4;
+        const d = (rects[k].sq ? rbox(xx - cx, yy - cy, R) : Math.hypot(xx - cx, yy - cy)) / R, i = (yy * A.w + xx) * 4;
         const la = L(A.d, i), lb = L(B.d, i);
         if (d < 0.5) center.push(la);
         else if (d > 0.62 ? d < 0.8 : false) { plate.push(la); plateBg.push(ratio(la, lb)); bgs.push(lb); }

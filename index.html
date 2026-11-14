@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-83z3QbYoKJ+scdbF3G57d7LAArBMtysyQ/vsaqqGFVE='; style-src 'self' 'sha256-48NzFtyR4JAmquLd1zG7BInlhtlqFWoFpQ8brrMbezI='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-6hnRsaNgcoPnj7XyoAttJtakWaIx1yOkTfOMG4MD4G0='; style-src 'self' 'sha256-KeomjK4C7Jb9W83Lf5iNW8s6GTHxJaigYArT2k0lu0c='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -299,7 +299,7 @@
   .note { margin: 6px 0 0; font-size: 12px; color: #ffd28a; }
   .link { font: inherit; color: var(--ui-accent); background: none; border: 0; text-decoration: underline; cursor: pointer; padding: 0; }
   .btn.danger { color: #ffb0a0; border-color: rgba(255, 120, 100, 0.5); }
-  #buffs { position: absolute; left: 16px; top: calc(130px + var(--ed-t)); display: flex; flex-direction: column; gap: 6px; }
+  #buffs { position: absolute; right: 16px; top: calc(160px + var(--ed-t)); display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
   .buff { display: flex; align-items: center; gap: 8px; padding: 4px 10px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em;
     background: var(--ui-panel); border: 1px solid var(--ui-line); border-radius: 4px; }
   .buff svg { width: 16px; height: 16px; fill: currentColor; }
@@ -307,7 +307,7 @@
   .buff[data-buff="overdrive"] { color: #ffc84a; border-color: rgba(255, 190, 60, 0.6); }
   .buff[data-buff="destroyer"] { color: #d58bff; border-color: rgba(200, 100, 255, 0.6); }
   #piko-panel {
-    position: absolute; left: 16px; bottom: calc(168px + var(--ed-b)); display: flex; align-items: center; gap: 10px;
+    position: absolute; left: 16px; bottom: calc(214px + var(--ed-b)); display: flex; align-items: center; gap: 10px;
     max-width: min(380px, 42vw); padding: 6px 12px 6px 6px; background: rgba(8, 14, 24, 0.72); border: 1px solid var(--ui-line); border-radius: 8px;
   }
   #piko-face { width: 40px; height: 40px; flex: none; }
@@ -409,7 +409,7 @@
     box-shadow: 0 0 0 2px rgba(12, 4, 12, 0.85), 0 0 10px 3px var(--bc); pointer-events: none; }
   #rear-warn { position: absolute; left: 50%; bottom: calc(40px + var(--ed-b)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #ffd0d0; border: 1px solid var(--ui-bad); background: rgba(120, 0, 0, 0.35); animation: blink 0.6s steps(2) infinite; }
-  #comet-warn { position: absolute; left: 50%; top: calc(94px + var(--ed-t)); transform: translateX(-50%);
+  #comet-warn { position: absolute; left: 50%; bottom: calc(124px + var(--ed-b)); transform: translateX(-50%);
     padding: 3px 12px; font-size: 12px; font-weight: 800; letter-spacing: 0.24em; color: #d8f6ff; border: 1px solid #6fdcff; background: rgba(0, 70, 110, 0.4); animation: blink 0.5s steps(2) infinite; }
   #data-panel {
     position: absolute; right: 16px; bottom: calc(68px + var(--ed-b)); width: min(290px, 40vw); padding: 10px 14px;
@@ -427,7 +427,8 @@
   #boss-fill { display: block; height: 100%; background: linear-gradient(90deg, #ff2d6a, #ff9a3c); transform-origin: left center; }
   #screen-levelup .card, #screen-contract .card { max-width: 760px; }
   .mission { color: #9fe8ff; margin-top: 2px; }
-  #radar { position: absolute; right: 16px; top: calc(154px + var(--ed-t)); width: 150px; height: 150px; }
+  /* C2 desktop: radar di kiri atas, data terbang di bawahnya, status HP di kiri bawah, buff di kanan bawah skor */
+  #radar { position: absolute; left: 16px; top: calc(16px + var(--ed-t)); width: 150px; height: 150px; }
   .instr { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--ui-line); }
   #attitude { width: 56px; height: 56px; flex: none; }
   .instr-txt { display: grid; gap: 2px; min-width: 120px; }
@@ -587,7 +588,7 @@
   #touch .tbtn {
     position: absolute; pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none;
     -webkit-touch-callout: none; display: flex; align-items: center; justify-content: center; padding: 0;
-    width: var(--sz); height: var(--sz); inset-inline-end: var(--x); bottom: var(--y);
+    width: var(--sz); height: var(--sz); left: var(--x); top: var(--y);
     color: var(--ik, #fff); background: var(--pl, rgba(20, 30, 44, 0.4)); border: var(--bw, 2px) solid var(--rg, rgba(255, 255, 255, 0.4));
     border-radius: 50%; box-shadow: var(--ol, none); opacity: var(--po2, calc(0.78 * var(--ca))); transition: opacity 0.12s, transform 0.08s, background-color 0.4s, border-color 0.4s, color 0.4s;
   }
@@ -595,35 +596,37 @@
   #touch .tbtn svg { width: 56%; height: 56%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; filter: var(--sh, none); }
   /* Keadaan tekan jelas di kedua mode: lebih terang, skala 0,94 */
   #touch .tbtn.on { opacity: 1; background: rgba(255, 154, 60, 0.72); border-color: #ffd08a; transform: scale(0.94); filter: brightness(1.18); }
-  /* Cluster aksi kanan bawah: TEMBAK di pojok, NITRO di atasnya, grid 2x2 manuver dan ultimate di kirinya */
-  .actions {
-    --s: var(--cu); --n: calc(var(--cu) * 1.1); --f: calc(var(--cu) * 1.4);
-    --gs: max(4px, calc(45px - var(--s)));
-    --gf: max(4px, calc(max(0px, (44px - var(--s)) / 2) + max(0px, (44px - var(--f)) / 2) + 1px));
-    --gn: max(4px, calc(max(0px, (44px - var(--n)) / 2) + max(0px, (44px - var(--f)) / 2) + 1px));
-    position: absolute; right: var(--sa-r); bottom: var(--sa-b); direction: ltr;
-    width: calc(var(--s) * 2 + var(--gs) + var(--gf) + var(--f));
-    height: max(calc(var(--s) * 2 + var(--gs)), calc(var(--n) + var(--gn) + var(--f)));
-  }
-  body.kidal .actions { right: auto; left: var(--sa-l); direction: rtl; }
-  #touch .t-fire { --sz: var(--f); --x: 0px; --y: 0px; background: var(--pf, rgba(255, 90, 60, 0.42)); border-color: var(--rf, rgba(255, 170, 150, 0.75)); }
+  /* Cluster aksi (C2): TEMBAK besar sebagai jangkar (pusat sekitar x 88 persen, y 66 persen, minimal 20 persen
+     tinggi layar dari tepi bawah), tombol lain tersusun dalam busur untuk jempol: lapis dalam NITRO dan ULTIMATE,
+     lapis luar Gulung, Balik, Loop, dan slot peralatan. Posisi dan ukuran (--x, --y, --sz relatif kotak cluster)
+     dihitung HudLayout dari satuan --cu, dan dicerminkan di mode kidal. */
+  .actions { position: absolute; left: var(--ax, auto); top: var(--ay, auto); width: var(--aw, 0px); height: var(--ah, 0px); }
+  #touch .t-fire { background: var(--pf, rgba(255, 90, 60, 0.42)); border-color: var(--rf, rgba(255, 170, 150, 0.75)); }
   #touch .t-fire.on { background: rgba(255, 90, 60, 0.85); }
-  #touch .t-nitro { --sz: var(--n); --x: calc((var(--f) - var(--n)) / 2); --y: calc(var(--f) + var(--gn)); background: var(--pn, rgba(255, 150, 40, 0.34)); border-color: var(--rn, rgba(255, 200, 120, 0.65)); }
-  #touch .t-roll { --sz: var(--s); --x: calc(var(--f) + var(--gf) + var(--s) + var(--gs)); --y: calc(var(--s) + var(--gs)); }
-  #touch .t-imm { --sz: var(--s); --x: calc(var(--f) + var(--gf)); --y: calc(var(--s) + var(--gs)); }
-  #touch .t-loop { --sz: var(--s); --x: calc(var(--f) + var(--gf) + var(--s) + var(--gs)); --y: 0px; }
-  #touch .t-ult { --sz: var(--s); --x: calc(var(--f) + var(--gf)); --y: 0px; background: var(--pu, rgba(200, 60, 160, 0.34)); }
-  #touch .t-man { border-radius: 30%; }
-  #touch .t-man::before { border-radius: 30%; }
+  #touch .t-nitro { background: var(--pn, rgba(255, 150, 40, 0.34)); border-color: var(--rn, rgba(255, 200, 120, 0.65)); }
+  #touch .t-ult { background: var(--pu, rgba(200, 60, 160, 0.34)); }
+  /* Cincin pengisian ULTIMATE dan cincin cooldown slot peralatan: conic-gradient bertopeng cincin 3 px */
+  #touch .t-ult::after, #touch .t-eq::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; pointer-events: none;
+    background: conic-gradient(var(--rc, #ff7ad8) calc(var(--fill, 0) * 360deg), rgba(255, 255, 255, 0.12) 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px)); }
+  #touch .t-eq { --rc: #9fe8ff; border-radius: 50%; }
+  #touch .t-eq .eq-n { position: absolute; right: -4px; bottom: -4px; min-width: 16px; height: 16px; padding: 0 3px; font: 800 11px/16px system-ui, sans-serif;
+    color: #fff; background: rgba(10, 16, 26, 0.92); border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 8px; text-align: center; pointer-events: none; }
+  #touch .t-eq .eq-n:empty { display: none; }
+  #touch .t-eq.ready { animation: eqReady 1.6s ease-in-out infinite; }
+  @keyframes eqReady { 50% { box-shadow: var(--ol, none), 0 0 10px rgba(159, 232, 255, 0.7); } }
+  #touch .t-eq.cool { opacity: calc(0.45 * var(--ca)); }
+  /* Manuver bulat seperti tombol lain di busur (C2), dibedakan cincin dalam tipis */
+  #touch .t-man { box-shadow: var(--ol, none), inset 0 0 0 3px rgba(0, 0, 0, 0.18); }
   #touch .t-man.cool { opacity: calc(0.35 * var(--ca)); border-style: dashed; }
   #touch .t-ult.ready { opacity: 1; background: rgba(255, 80, 200, 0.75); border-color: #ffc0f0; box-shadow: 0 0 14px rgba(255, 90, 210, 0.6); }
   /* Joystick analog melayang: posisi bawaan samar di kiri bawah, pindah ke titik sentuh pertama */
   #joy-zone { position: absolute; left: 0; top: 0; bottom: 0; width: 45%; pointer-events: auto; touch-action: none; }
   body.kidal #joy-zone { left: auto; right: 0; }
+  /* Posisi diam joystick dan tombol arah (C2): pusat sekitar x 13 persen dan y 70 persen, dihitung HudLayout */
   .joy { --jb: calc(var(--cu) * 2.6); --jt: calc(var(--cu) * 1.1);
-    position: absolute; left: var(--sa-l); bottom: var(--sa-b); width: var(--jb); height: var(--jb); pointer-events: none;
+    position: absolute; left: var(--jx, var(--sa-l)); top: var(--jy, auto); width: var(--jb); height: var(--jb); pointer-events: none;
     opacity: var(--jo2, calc(0.5 * var(--ca))); transition: opacity 0.15s; }
-  body.kidal .joy { left: auto; right: var(--sa-r); }
   .joy.active { opacity: min(1, calc(0.95 * var(--ca) + 0.1)); transition: none; }
   .joy-base { position: absolute; inset: 0; border-radius: 50%; border: var(--bw, 2px) solid var(--rg, rgba(255, 255, 255, 0.4));
     background: var(--pl, rgba(20, 30, 44, 0.4)); box-shadow: var(--ol, none); transition: background-color 0.4s, border-color 0.4s; }
@@ -632,10 +635,9 @@
     border-radius: 50%; background: rgba(230, 240, 250, 0.5); border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 0 0 1px rgba(10, 6, 2, 0.6), 0 2px 8px rgba(0, 0, 0, 0.35); }
   /* Gaya Tombol arah: satu cakram tetap dengan empat panah (arah dari posisi jari, termasuk diagonal) */
   .uic-terang .joy-thumb { background: rgba(46, 30, 18, 0.8); border-color: rgba(255, 240, 220, 0.95); }
-  .dpad { --jb: calc(var(--cu) * 2.6); position: absolute; left: var(--sa-l); bottom: var(--sa-b); width: var(--jb); height: var(--jb);
+  .dpad { --jb: calc(var(--cu) * 2.6); position: absolute; left: var(--jx, var(--sa-l)); top: var(--jy, auto); width: var(--jb); height: var(--jb);
     pointer-events: auto; touch-action: none; border-radius: 50%; opacity: var(--po2, calc(0.78 * var(--ca)));
     background: var(--pl, rgba(20, 30, 44, 0.4)); border: var(--bw, 2px) solid var(--rg, rgba(255, 255, 255, 0.4)); box-shadow: var(--ol, none); transition: background-color 0.4s, border-color 0.4s; }
-  body.kidal .dpad { left: auto; right: var(--sa-r); }
   .dpad svg { position: absolute; width: 30%; height: 30%; fill: none; stroke: var(--ik, rgba(255, 255, 255, 0.9)); stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; filter: var(--sh, none); }
   .dpad .d-up { left: 35%; top: 4%; } .dpad .d-down { left: 35%; bottom: 4%; } .dpad .d-left { left: 4%; top: 35%; } .dpad .d-right { right: 4%; top: 35%; }
   .dpad svg.on { stroke: #ffb45c; }
@@ -679,12 +681,24 @@
   body.mode-hp .tool::before { content: ""; position: absolute; inset: -4px; }
   body.mode-hp .tool svg { width: 20px; height: 20px; }
   body.mode-hp.in-play #btn-mode, body.mode-hp.in-play #btn-map { display: none; }
-  body.mode-hp #radar { width: 52px; height: 52px; top: calc(var(--sa-t) + 44px); right: var(--sa-r); }
-  #btn-radar-map { position: fixed; z-index: 40; top: calc(var(--sa-t) + 52px); right: calc(var(--sa-r) + 60px); }
+  /* C2: radar bulat 56 px di kiri atas (pola game tembak mobile), tepat di bawah strip status agar keduanya tetap di
+     luar zona tengah di layar 320 px; tombol Peta Tata Surya di samping radar */
+  body.mode-hp #radar { width: 56px; height: 56px; top: calc(var(--sa-t) + 54px); left: var(--sa-l); right: auto; }
+  #btn-radar-map { position: fixed; z-index: 40; top: calc(var(--ed-t) + 16px); left: 174px; }
+  /* Tombol peta di samping radar desktop, ikut perbesaran radar oleh Ukuran teks dan layar besar */
+  body[data-text="besar"]:not(.mode-hp) #btn-radar-map { left: 202px; }
+  body[data-text="sangat"]:not(.mode-hp) #btn-radar-map { left: 222px; }
+  @media (min-width: 2200px) and (min-height: 1200px) { body[data-text="normal"]:not(.mode-hp) #btn-radar-map { left: 232px; } }
+  body.mode-hp #btn-radar-map { top: calc(var(--sa-t) + 64px); left: calc(var(--sa-l) + 64px); }
+  /* Mode kidal (C2): busur tombol di kiri, jadi radar dan tombol peta dicerminkan ke kanan atas di bawah Jeda dan
+     Suara, dan deretan buff pindah ke kiri atas di bawah strip status */
+  body.mode-hp.kidal #radar { left: auto; right: var(--sa-r); top: calc(var(--sa-t) + 44px); }
+  body.mode-hp.kidal #btn-radar-map { left: auto; right: calc(var(--sa-r) + 64px); top: calc(var(--sa-t) + 54px); }
+  body.mode-hp.kidal #buffs { right: auto; left: var(--sa-l); top: calc(var(--sa-t) + 54px) !important; }
   body.mode-hp #boss-bar { top: calc(var(--sa-t) + 26px); width: min(220px, 40vw, calc(100vw - 2 * (max(var(--sa-l), var(--sa-r)) + 154px))); }
   body.mode-hp #boss-bar .bb-head { display: none; }
   body.mode-hp #boss-bar .bb-track { height: 5px; }
-  body.mode-hp #buffs { top: calc(var(--sa-t) + 52px) !important; left: var(--sa-l); flex-direction: row; gap: 6px; }
+  body.mode-hp #buffs { top: calc(var(--sa-t) + 44px) !important; left: auto; right: var(--sa-r); flex-direction: row; gap: 6px; }
   body.mode-hp .buff { padding: 2px 6px; gap: 4px; font-size: 11px; }
   body.mode-hp .buff span { display: none; }
   body.mode-hp .buff svg { width: 13px; height: 13px; }
@@ -817,10 +831,10 @@
     position: absolute; padding: 10px 14px; background: var(--ui-panel);
     border: 1px solid var(--ui-line); border-radius: 4px; min-width: 120px;
   }
-  .hud-block.tl { left: 16px; top: 16px; width: 252px; }
+  .hud-block.tl { left: 16px; bottom: calc(16px + var(--ed-b)); width: 252px; }
   .hud-block.tc { left: 50%; top: 16px; transform: translateX(-50%); text-align: center; min-width: 140px; }
   .hud-block.tr { right: 16px; top: 16px; text-align: right; min-width: 170px; }
-  .hud-block.bl { left: 16px; bottom: 16px; }
+  .hud-block.bl { left: 16px; top: calc(178px + var(--ed-t)); }
   .hud-block.br { right: 16px; bottom: 16px; text-align: right; }
   .row { display: flex; justify-content: space-between; align-items: baseline; margin: 2px 0 4px; }
   .row + .bar { margin-bottom: 8px; }
@@ -1200,6 +1214,9 @@
     <button class="tbtn t-man t-loop" data-man="loop" type="button" aria-label="Looping" title="Looping"><svg viewBox="0 0 24 24"><path d="M3 19h9"/><path d="M12 19a6 6 0 1 0-6-6v2"/><path d="M3.5 12.5L6 15l2.5-2.5"/></svg></button>
     <button class="tbtn t-ult" data-ult="1" type="button" aria-label="Ultimate" title="Ultimate"><svg viewBox="0 0 24 24"><path d="M12 2.5l2.6 6.3 6.8.5-5.2 4.4 1.6 6.6L12 16.8l-5.8 3.5 1.6-6.6-5.2-4.4 6.8-.5z"/></svg></button>
     <button class="tbtn t-nitro" data-act="nitro" type="button" aria-label="Nitro" title="Nitro"><svg viewBox="0 0 24 24"><path d="M12 2.5c1 3.5 5.5 6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.3 1-3.8 2.2-5 0 2 .9 3.3 2.3 3.3 0-3.4.8-6.2 1-9.3z"/></svg></button>
+    <button class="tbtn t-eq hidden" data-eq="0" type="button" aria-label="Peralatan 1" title="Peralatan 1"><svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg><b class="eq-n"></b></button>
+    <button class="tbtn t-eq hidden" data-eq="1" type="button" aria-label="Peralatan 2" title="Peralatan 2"><svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg><b class="eq-n"></b></button>
+    <button class="tbtn t-eq hidden" data-eq="2" type="button" aria-label="Peralatan 3" title="Peralatan 3"><svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg><b class="eq-n"></b></button>
     <button class="tbtn t-fire" data-act="fire" type="button" aria-label="Tembak" title="Tembak"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg></button>
   </div>
 </div>
@@ -13800,6 +13817,106 @@ ZoomGuard.init();
 // (joystick, tembak, dan nitro bersamaan). Joystick analog melayang muncul di titik sentuh
 // pertama pada separuh kiri layar (kanan di mode kidal); gaya Tombol arah memakai cakram tetap.
 // Logika game tetap membaca Controls: joystick mengisi sumbu analog axPitch dan axYaw.
+/* =====================================================================
+   TATA LETAK HUD MODE HP (C2) - pola game tembak mobile orang ketiga: tombol TEMBAK besar di kanan bawah yang
+   TIDAK menempel tepi bawah (pusat sekitar x 88 persen dan y 66 persen, minimal 20 persen tinggi layar dari
+   bawah), tombol lain dalam busur untuk jempol (lapis dalam NITRO dan ULTIMATE, lapis luar Gulung, Balik,
+   Loop, dan 0 sampai 3 slot peralatan), joystick melayang dengan posisi diam di sekitar x 13 persen dan
+   y 70 persen. Jarak antarpusat tombol minimal setengah jumlah area sentuh efektif (44 px) ditambah 2 px,
+   sehingga area sentuh tidak bertumpuk. Busur dijaga di luar zona tengah (x 30 sampai 70 persen), lebar
+   cluster maksimal 26 persen, dan semua tombol di dalam tepi aman. Mode kidal mencerminkan semua posisi.
+   ===================================================================== */
+const HUD_ARC = {
+  fire: { size: 1.45 }, nitro: { size: 1.0, ring: 0, ang: 100 }, ult: { size: 1.15, ring: 0, ang: 172 },
+  outer: ['eq2', 'eq1', 'eq0', 'loop', 'imm', 'roll'], outerSize: 0.92, start: 92, mid: 168,
+  fireX: 0.88, fireY: 0.66, bottomGap: 0.2, joyX: 0.13, joyY: 0.7,
+};
+const HudLayout = {
+  eqCount: 0, last: null, sq: 1,
+  els: null,
+  init() {
+    const R = Touch.root;
+    this.els = { fire: R.querySelector('.t-fire'), nitro: R.querySelector('.t-nitro'), ult: R.querySelector('.t-ult'),
+      roll: R.querySelector('.t-roll'), imm: R.querySelector('.t-imm'), loop: R.querySelector('.t-loop'),
+      eq0: R.querySelector('[data-eq="0"]'), eq1: R.querySelector('[data-eq="1"]'), eq2: R.querySelector('[data-eq="2"]') };
+  },
+  hit(d) { return Math.max(d, 44); },
+  // Hitung posisi pusat (px layar, sisi kanan) dan ukuran tiap tombol pada skala c. Penempatan rakus: tiap tombol
+  // digeser sepanjang busur (lingkaran dalam, elips luar dengan rasio sq) sampai lingkaran area sentuhnya terpisah
+  // minimal 2 px dari semua tombol yang sudah ditempatkan. sq di bawah 1 membuat busur luar lebih tegak dan sempit,
+  // dipakai bila layar sempit (misalnya HP berponi) agar tombol tidak perlu dikecilkan.
+  compute(c, eqCount = this.eqCount, sq = this.sq, kidal = Save.settings.leftHanded) {
+    const W = Viewport.w, H = Viewport.h, ed = Viewport.edges(), A = HUD_ARC;
+    const u = clamp(H * 0.11, 34, 48) * c;
+    const F = u * A.fire.size, N = u * A.nitro.size, U = u * A.ult.size, S = u * A.outerSize, h = (d) => this.hit(d);
+    const P = { fire: { x: 0, y: 0, d: F } };
+    const free = (x, y, d) => { for (const k in P) { const o = P[k]; if (Math.hypot(x - o.x, y - o.y) < (h(d) + h(o.d)) / 2 + 2) return false; } return true; };
+    const arc = (k, rx, ry, a, d) => { for (; a <= 330; a += 1) { const t = a * Math.PI / 180, x = rx * Math.cos(t), y = -ry * Math.sin(t); if (free(x, y, d)) { P[k] = { x, y, d }; return a; } } return 330; };
+    const rI = (h(F) + Math.max(h(N), h(U))) / 2 + 2;
+    const an = arc('nitro', rI, rI, A.nitro.ang, N);
+    arc('ult', rI, rI, Math.max(A.ult.ang, an + 50), U);
+    const rO = rI + (Math.max(h(N), h(U)) + h(S)) / 2 + 2;
+    const names = A.outer.filter((k) => (k.startsWith('eq') ? Number(k[2]) < eqCount : true));
+    // Busur luar dipusatkan di sekitar 168 derajat (kiri sedikit ke atas), mulai paling tinggi 92 derajat
+    let a0 = A.start;
+    for (let it = 0; it < 3; it++) {
+      for (const k of names) delete P[k];
+      let a = a0, first = 0, last = 0;
+      names.forEach((k, i) => { a = arc(k, rO * sq, rO / sq, a, S); if (i === 0) first = a; last = a; a += 1; });
+      a0 = Math.max(A.start, A.mid - (last - first) / 2);
+    }
+    let reach = 0, low = -Infinity, high = Infinity;
+    for (const k in P) { const o = P[k]; reach = Math.max(reach, -(o.x - o.d / 2)); low = Math.max(low, o.y + o.d / 2); high = Math.min(high, o.y - o.d / 2); }
+    // Pusat TEMBAK: sekitar x 88 persen, digeser ke kanan bila busur masuk zona tengah, tetap di dalam tepi aman
+    let cx = Math.max(W * A.fireX, W * 0.7 + reach + 2);
+    cx = Math.min(cx, W - ed.r - F / 2 - 4);
+    let cy = Math.min(H * A.fireY, H * (1 - A.bottomGap) - F / 2);
+    if (cy + low > H - ed.b) cy = H - ed.b - low;   // geser ke atas bila tombol terbawah melewati tepi bawah aman
+    const out = {};
+    for (const k in P) out[k] = { cx: cx + P[k].x, cy: cy + P[k].y, d: P[k].d };
+    const box = { x0: cx - reach, y0: cy + high, x1: cx + F / 2, y1: cy + low };
+    for (const k in out) box.x1 = Math.max(box.x1, out[k].cx + out[k].d / 2);
+    // Joystick dan tombol arah: pusat diam sekitar x 13 persen, y 70 persen, di dalam tepi aman
+    const J = u * 2.6;
+    const jcx = clamp(W * A.joyX, ed.l + J / 2, W * 0.3 - J / 2), jcy = clamp(H * A.joyY, ed.t + J / 2, H - ed.b - J / 2);
+    // Di bawah Jeda, Suara, dan deretan buff di sisi busur (mode kidal mencerminkan radar ke kanan dan buff ke kiri)
+    const topMin = ed.t + 76;
+    const fireBottomGap = (H - (cy + F / 2)) / H;
+    const ok = (box.x1 - box.x0) <= W * 0.26 + 0.5 ? (box.x0 >= W * 0.7 + 1 ? (box.y0 >= topMin ? (box.y1 <= H - ed.b + 0.5 ? (box.x1 <= W - ed.r + 0.5 ? (J <= Math.min(H * 0.3, W * 0.26) ? fireBottomGap >= A.bottomGap - 0.005 : false) : false) : false) : false) : false) : false;
+    return { ok, u, sq, buttons: out, box, joy: { cx: jcx, cy: jcy, d: J }, fireBottomGap, names };
+  },
+  apply(c) {
+    if (!this.els) this.init();
+    const L = this.compute(c), kidal = Save.settings.leftHanded, W = Viewport.w;
+    this.last = L;
+    const mx = (x) => (kidal ? W - x : x);
+    const bx0 = kidal ? W - L.box.x1 : L.box.x0, by0 = L.box.y0;
+    const act = Touch.actionsEl || Touch.root.querySelector('.actions');
+    act.style.setProperty('--ax', bx0.toFixed(1) + 'px'); act.style.setProperty('--ay', by0.toFixed(1) + 'px');
+    act.style.setProperty('--aw', (L.box.x1 - L.box.x0).toFixed(1) + 'px'); act.style.setProperty('--ah', (L.box.y1 - L.box.y0).toFixed(1) + 'px');
+    for (const k in this.els) {
+      const el = this.els[k], b = L.buttons[k];
+      if (k.startsWith('eq')) el.classList.toggle('hidden', !b);
+      if (!b) continue;
+      el.style.setProperty('--sz', b.d.toFixed(1) + 'px');
+      el.style.setProperty('--x', (mx(b.cx) - b.d / 2 - bx0).toFixed(1) + 'px');
+      el.style.setProperty('--y', (b.cy - b.d / 2 - by0).toFixed(1) + 'px');
+    }
+    const st = Touch.root.style;
+    st.setProperty('--jx', (mx(L.joy.cx) - L.joy.d / 2).toFixed(1) + 'px');
+    st.setProperty('--jy', (L.joy.cy - L.joy.d / 2).toFixed(1) + 'px');
+  },
+  setEquipCount(n) { this.eqCount = clamp(Math.round(n) || 0, 0, 3); Touch.applyLayout(); return this.eqCount; },
+  report() {
+    const L = this.last;
+    if (!L) return null;
+    const W = Viewport.w, H = Viewport.h;
+    return { scale: Touch.scale, eq: this.eqCount, fire: { x: round2(L.buttons.fire.cx / W), y: round2(L.buttons.fire.cy / H), d: Math.round(L.buttons.fire.d) },
+      fireBottomGap: round2(L.fireBottomGap), width: round2((L.box.x1 - L.box.x0) / W), height: round2((L.box.y1 - L.box.y0) / H), left: round2(L.box.x0 / W),
+      joy: { x: round2(L.joy.cx / W), y: round2(L.joy.cy / H) }, order: L.names, sq: L.sq };
+  },
+};
+
 const Touch = {
   root: document.getElementById('touch'),
   zone: document.getElementById('joy-zone'),
@@ -13853,7 +13970,7 @@ const Touch = {
   // Batas atas cakram joystick: di bawah blok HUD kiri atas agar tidak menimpanya
   topLimit() {
     let y = 60;
-    for (const el of [document.getElementById('hpx-status'), document.getElementById('buffs')]) {
+    for (const el of [document.getElementById('hpx-status'), document.getElementById('radar'), document.getElementById('btn-radar-map')]) {
       const r = el.getBoundingClientRect();
       if (r.height > 0) y = Math.max(y, r.bottom + 6);
     }
@@ -13960,28 +14077,21 @@ const Touch = {
     Events.on('settings', () => this.applyLayout());
     this.applyLayout();
   },
-  // Ukuran cluster pada skala c (px), dengan rumus yang sama seperti CSS .actions dan .joy
-  measure(c) {
-    const u = clamp(Viewport.h * 0.11, 34, 48) * c;
-    const s = u, n = u * 1.1, f = u * 1.4;
-    const slop = (v) => Math.max(0, (44 - v) / 2);
-    const gs = Math.max(4, 45 - s), gf = Math.max(4, slop(s) + slop(f) + 1), gn = Math.max(4, slop(n) + slop(f) + 1);
-    return { actW: s * 2 + gs + gf + f, actH: Math.max(s * 2 + gs, n + gn + f), joy: u * 2.6 };
-  },
-  // Skala efektif: pilihan pemain, dibatasi agar tiap cluster maksimal 30 persen tinggi dan 26 persen lebar
+  // Skala efektif: pilihan pemain, dikecilkan bila busur tombol atau joystick melanggar anggaran layar (C2)
+  // Untuk tiap rasio busur luar (lingkaran, lalu elips makin tegak) dicari skala terbesar; dipakai rasio dengan skala
+  // terbesar, lingkaran diutamakan bila sama.
   fitScale() {
     const want = Save.settings.controlSize / 100;
-    // Juga: kedua cluster tetap di luar zona tengah (x 30 sampai 70 persen) setelah ditambah safe area tepi
-    const ed = Viewport.edges(), side = Viewport.w * 0.3 - Math.max(ed.l, ed.r);
-    const ok = (c) => {
-      const m = this.measure(c);
-      if (m.actH > Viewport.h * 0.3 ? true : m.actW > Math.min(Viewport.w * 0.26, side)) return false;
-      return m.joy <= Math.min(Viewport.h * 0.3, Viewport.w * 0.26, side);
-    };
-    if (ok(want)) return want;
-    let lo = 0.5, hi = want;
-    for (let i = 0; i < 18; i++) { const mid = (lo + hi) / 2; if (ok(mid)) lo = mid; else hi = mid; }
-    return Math.round(lo * 1000) / 1000;
+    let best = { c: 0, sq: 1 };
+    for (const sq of [1, 0.85, 0.72]) {
+      const ok = (c) => HudLayout.compute(c, HudLayout.eqCount, sq).ok;
+      let c = want;
+      if (!ok(want)) { let lo = 0.5, hi = want; for (let i = 0; i < 18; i++) { const mid = (lo + hi) / 2; if (ok(mid)) lo = mid; else hi = mid; } c = lo; }
+      if (c > best.c + 0.01) best = { c, sq };
+      if (c >= want) break;
+    }
+    HudLayout.sq = best.sq;
+    return Math.round(best.c * 1000) / 1000;
   },
   sizeLabel() {
     const want = Save.settings.controlSize, eff = Math.round(this.scale * 100);
@@ -13994,6 +14104,7 @@ const Touch = {
     st.setProperty('--cs', String(this.scale));
     st.setProperty('--ca', String(1 - s.controlTransparency / 100));
     document.body.classList.toggle('kidal', s.leftHanded);
+    HudLayout.apply(this.scale);
     const dp = s.leftStyle === 'dpad';
     this.dpadEl.classList.toggle('hidden', !dp);
     this.joyEl.classList.toggle('hidden', dp);
@@ -14006,6 +14117,9 @@ const Touch = {
     if (!this.ultBtn) this.ultBtn = this.root.querySelector('[data-ult]');
     const ready = Player.ult >= 1;
     if (this.ultBtn.classList.contains('ready') !== ready) this.ultBtn.classList.toggle('ready', ready);
+    // Cincin pengisian ULTIMATE (C2), dibulatkan ke 2 persen agar gaya tidak ditulis tiap frame
+    const uf = Math.round(clamp(Player.ult, 0, 1) * 50) / 50;
+    if (changed('ultFill', uf)) this.ultBtn.style.setProperty('--fill', String(uf));
     for (const b of this.manButtons) {
       const cool = Player.cooldowns[b.dataset.man] > 0;
       if (b.classList.contains('cool') !== cool) b.classList.toggle('cool', cool);
@@ -15002,10 +15116,13 @@ const GameHooks = {
         const cs = getComputedStyle(el);
         if (cs.visibility === 'hidden' ? true : cs.display === 'none') continue;
         const touch = q.startsWith('#touch') ? true : (q === '#joy' ? true : q === '#dpad');
-        let slop = 0;
-        if (q === '#touch .tbtn') slop = Math.max(0, -parseFloat(getComputedStyle(el, '::before').top) || 0);
+        let slop = 0, round = false;
+        if (q === '#touch .tbtn') { const pb = getComputedStyle(el, '::before'); slop = Math.max(0, -parseFloat(pb.top) || 0); round = pb.borderTopLeftRadius === '50%'; }
         const r = { left: r0.left - slop, top: r0.top - slop, right: r0.right + slop, bottom: r0.bottom + slop, width: r0.width + slop * 2, height: r0.height + slop * 2 };
-        items.push({ name: q + (el.dataset.act || el.dataset.man || el.id || el.className.split(' ').slice(-1)[0] || ''), r, vis: r0, touch });
+        // Tombol bulat: area sentuh efektif berupa lingkaran (browser menguji sentuhan sesuai border-radius, juga
+        // pada hit slop ::before; diperiksa dengan elementFromPoint di Chromium dan WebKit), jadi diuji sebagai lingkaran
+        const circ = round ? { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2, r: r.width / 2 } : null;
+        items.push({ name: q + (el.dataset.act || el.dataset.man || (el.dataset.eq !== undefined ? 'eq' + el.dataset.eq : '') || el.id || el.className.split(' ').slice(-1)[0] || ''), r, vis: r0, touch, circ });
       }
       const hits = [], small = [];
       for (let i = 0; i < items.length; i++) {
@@ -15013,6 +15130,14 @@ const GameHooks = {
         if (a.touch ? Math.min(a.r.width, a.r.height) < 43.5 : false) small.push(a.name + ' ' + Math.round(a.r.width));
         for (let j = i + 1; j < items.length; j++) {
           const b = items[j], pad = a.touch ? (b.touch ? 0 : 2) : (b.touch ? 2 : 0);
+          if (a.circ ? true : b.circ) {
+            const c = a.circ || b.circ, o = a.circ ? b : a;
+            let d;
+            if (o.circ) d = Math.hypot(c.x - o.circ.x, c.y - o.circ.y) - c.r - o.circ.r;
+            else d = Math.hypot(Math.max(o.r.left - c.x, 0, c.x - o.r.right), Math.max(o.r.top - c.y, 0, c.y - o.r.bottom)) - c.r;
+            if (d < pad) hits.push(a.name + ' x ' + b.name);
+            continue;
+          }
           if (a.r.left < b.r.right + pad ? (b.r.left < a.r.right + pad ? (a.r.top < b.r.bottom + pad ? b.r.top < a.r.bottom + pad : false) : false) : false) hits.push(a.name + ' x ' + b.name);
         }
       }
@@ -15280,6 +15405,9 @@ const GameHooks = {
     // Kontras UI adaptif (C1): metode, luma tiap wilayah, mode, biaya cuplik; force: 'heuristik' memaksa cadangan
     // Suapkan luma buatan ke penghalus dan histeresis kontras (uji kedip)
     uiContrastFeed(lum) { UiContrast.feed(lum); return UiContrast.report(); },
+    // Tata letak HUD HP (C2): posisi tombol TEMBAK, lebar busur, posisi diam joystick; setEquipSlots menampilkan 0 sampai 3 slot
+    hudLayout() { return HudLayout.report(); },
+    setEquipSlots(n) { return HudLayout.setEquipCount(n); },
     freeze(on = true) { Debug.frozen = !!on; return Debug.frozen; },
     // force: 'pbo' membaca piksel nyata (kalibrasi, tanpa jatuh otomatis), 'heuristik' kembali ke metode utama
     uiContrast(force) { const U = UiContrast; if (force === 'heuristik') { U.fallback('dipaksa lewat debug'); U.forced = false; } if (force === 'pbo') { U.method = 'pbo'; U.reason = 'kalibrasi lewat debug'; U.forced = true; U.costs = []; } return U.report(); },

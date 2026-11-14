@@ -121,7 +121,8 @@ function expectAudit(a, label) {
   expect(a.smallTouch, label + ' area sentuh < 44 px').toEqual([]);
   expect(a.small, label + ' teks terlalu kecil').toEqual([]);
   expect(a.hints, label + ' petunjuk keyboard').toEqual([]);
-  expect(a.act.h, label + ' tinggi cluster aksi').toBeLessThanOrEqual(0.3 + 1e-3);
+  // C2: busur tombol boleh tinggi (zona tengah hanya membatasi x 30 sampai 70 persen), lebarnya tetap maksimal 26 persen
+  expect(a.act.h, label + ' tinggi cluster aksi').toBeLessThanOrEqual(0.72 + 1e-3);
   expect(a.act.w, label + ' lebar cluster aksi').toBeLessThanOrEqual(0.26 + 1e-3);
   expect(a.left.h, label + ' tinggi kontrol kiri').toBeLessThanOrEqual(0.3 + 1e-3);
   expect(a.left.w, label + ' lebar kontrol kiri').toBeLessThanOrEqual(0.26 + 1e-3);
@@ -149,7 +150,16 @@ for (const [w, h] of MATRIX) {
       expect(pf.cy).toBeLessThan(0.8);
       expect(Math.abs(pf.cx - 0.5)).toBeLessThan(0.08);
       if (SHOTS) await page.screenshot({ path: `${SHOT_DIR}${w}x${h}${q ? '-poni' : ''}-main.jpg`, type: 'jpeg', quality: 70 });
-      // Kasus terburuk: semua elemen HUD sekaligus
+      // C2: TEMBAK tidak menempel tepi bawah (minimal 20 persen tinggi layar), pusat sekitar x 88 persen
+      const lay = await dbg(page, 'hudLayout');
+      expect(lay.fireBottomGap, 'jarak TEMBAK dari bawah').toBeGreaterThanOrEqual(0.2);
+      expect(lay.fire.x).toBeGreaterThan(0.84);
+      expect(lay.fire.x).toBeLessThan(0.95);
+      expect(lay.fire.y).toBeGreaterThan(0.55);
+      expect(lay.fire.y).toBeLessThan(0.72);
+      expect(lay.joy.x).toBeLessThan(0.2);
+      // Kasus terburuk: semua elemen HUD sekaligus, dengan 3 slot peralatan di busur
+      expect(await dbg(page, 'setEquipSlots', 3)).toBe(3);
       await dbg(page, 'stressHud');
       await page.waitForTimeout(900);
       const worst = await page.evaluate(audit);
@@ -170,6 +180,10 @@ for (const [w, h] of [[568, 320], [932, 430]]) {
       const a = await page.evaluate(audit);
       expectAudit(a, JSON.stringify(settings));
       expect(a.area).toBeLessThanOrEqual(0.22);
+      // C2: dengan 3 slot peralatan busur paling tinggi; di mode kidal tidak boleh menimpa radar dan tombol peta
+      await dbg(page, 'setEquipSlots', 3);
+      expectAudit(await page.evaluate(audit), JSON.stringify(settings) + ' 3 slot');
+      if (settings.leftHanded) { await dbg(page, 'stressHud'); await page.waitForTimeout(900); expectAudit(await page.evaluate(audit), JSON.stringify(settings) + ' 3 slot stressHud'); }
       const ts = await dbg(page, 'touchState');
       if (settings.controlSize === 130) expect(ts.scale).toBeGreaterThan(1);
       if (settings.controlSize === 70) expect(ts.scale).toBeCloseTo(0.7, 2);
