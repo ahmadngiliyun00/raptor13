@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-mJrhOyQkIEAhRWvzhXOLVtFVYGawWi1EGspAblQ/0yw='; style-src 'self' 'sha256-C9LyLk0duUB9MhPpOKDvdRHVB61lVBkWCrzMEh8Xq+w='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-i+PsohcxjUdaaKOWo4wgrBzHVeEDcSRF6OMowpKuPPU='; style-src 'self' 'sha256-9Wa+x9jDUNTTDAJ6iEt+MwuGadnpFnz6RPCho6zSGys='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -500,6 +500,35 @@
   .man b, .man span { position: relative; }
   .man b { font-family: ui-monospace, Menlo, monospace; color: var(--ui-accent); }
   .man.ready { border-color: rgba(255, 154, 60, 0.7); }
+  /* Slot peralatan desktop (C5): sebaris dengan manuver di bawah tengah, label tombol Q, F, G */
+  .man.eqm svg { position: relative; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .man.eqm.cool { opacity: 0.6; }
+  .man.eqm em { position: relative; font-style: normal; color: #9fe8ff; font-weight: 800; }
+  .man.eqm em:empty { display: none; }
+  .man.eqm.temp { border-style: dashed; }
+  /* Penanda kunci Rudal Pencari Kunang di atas sasaran */
+  .eq-lock { position: absolute; left: 0; top: 0; width: 30px; height: 30px; margin: -15px 0 0 -15px; pointer-events: none; border: 2px solid #ffd24a; border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 0 8px rgba(255, 210, 74, 0.7); animation: lockBlink 0.5s steps(2) infinite; }
+  @keyframes lockBlink { 50% { opacity: 0.35; } }
+  /* Panel peralatan di hangar (C5): slot kapal, daftar peralatan, deskripsi */
+  .hangar-info.eq-on > :not(.eqp):not(.hangar-title) { display: none; }
+  .eqp { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .eqp-slots { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .eqp-slot, .eqp-item { position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; color: #e8f6ff;
+    background: rgba(10, 20, 32, 0.85); border: 1px solid rgba(160, 220, 255, 0.45); border-radius: 8px; cursor: pointer; }
+  .eqp-slot { border-style: dashed; }
+  .eqp-slot.full { border-style: solid; }
+  .eqp-slot.sel, .eqp-item.sel { border-color: #ffd24a; box-shadow: 0 0 0 1px #ffd24a; }
+  .eqp-item.on { background: rgba(60, 120, 160, 0.55); }
+  .eqp-item.locked { opacity: 0.45; }
+  .eqp-item.r-langka { border-color: rgba(120, 190, 255, 0.8); }
+  .eqp-item.r-epik { border-color: rgba(220, 140, 255, 0.85); }
+  .eqp-slot svg, .eqp-item svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .eqp-list { display: grid; grid-template-columns: repeat(auto-fill, 44px); gap: 6px; }
+  .eqp-desc { margin: 0; font-size: 12px; line-height: 1.35; color: var(--ui-dim); min-height: 32px; }
+  .eqp-desc b { color: #fff; }
+  .eqp-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .eqp-note { margin: 0; font-size: 12px; color: #ffd28a; }
   .man.active { background: rgba(255, 154, 60, 0.45); }
   body.mode-hp #maneuvers { display: none; }
   #diag { position: fixed; right: max(var(--sa-r, 8px), 8px); top: 50%; transform: translateY(-50%); z-index: 95; padding: 8px; border-radius: 6px;
@@ -1013,6 +1042,15 @@
     .stats-bars { gap: 3px 8px; font-size: 11px; }
     .stats-bars i { height: 6px; }
     .hangar-view .arrow { min-width: 36px; min-height: 36px; padding: 6px; }
+    /* Panel peralatan ringkas (C5): ubin 36 px dengan area sentuh 44 px, deskripsi maksimal 3 baris */
+    .eqp { gap: 4px; }
+    .eqp-slots, .eqp-list { gap: 8px; }
+    .eqp-list { grid-template-columns: repeat(auto-fill, 36px); }
+    .eqp-slot, .eqp-item { width: 36px; height: 36px; }
+    .eqp-slot::before, .eqp-item::before { content: ""; position: absolute; inset: -4px; }
+    .eqp-slot svg, .eqp-item svg { width: 20px; height: 20px; }
+    .eqp-desc { font-size: 11px; line-height: 1.3; min-height: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .eqp-btns .btn.small { min-height: 30px; padding: 4px 8px; font-size: 11px; }
     /* Pengaturan bertab: baris kepala berisi tab dan KEMBALI, isi satu bagian saja */
     .card.settings { max-width: 760px; gap: 6px; max-height: calc(var(--app-h) - var(--sa-t) - var(--sa-b)); padding: 8px 14px; }
     .card.settings > h2 { display: none; }
@@ -1213,6 +1251,8 @@
     <div class="man" data-man="immelmann"><i></i><b>X</b><span>BALIK</span></div>
     <div class="man" data-man="loop"><i></i><b>C</b><span>LOOP</span></div>
   </div>
+  <div class="eq-lock hidden" aria-hidden="true"></div>
+  <div class="eq-lock hidden" aria-hidden="true"></div>
   <div id="fps" class="hidden">0 FPS</div>
   <div id="banner"></div>
   <div id="toasts"></div>
@@ -1377,11 +1417,21 @@
         <div id="hangar-stats" class="stats-bars"></div>
         <p id="hangar-status" class="hangar-status"></p>
         <p class="hint">Kredit: <b id="hangar-credits">0</b></p>
+        <div id="eqp" class="eqp hidden" aria-label="Peralatan kapal">
+          <div id="eqp-slots" class="eqp-slots"></div>
+          <div id="eqp-list" class="eqp-list"></div>
+          <p id="eqp-desc" class="eqp-desc"></p>
+          <div class="eqp-btns">
+            <button id="eqp-auto" class="btn secondary small" type="button">PASANG OTOMATIS</button>
+            <button id="eqp-clear" class="btn secondary small" type="button">LEPAS</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="row-btns">
       <button id="hangar-back" class="btn secondary" type="button">KEMBALI</button>
       <button id="hangar-buy" class="btn secondary" type="button">BUKA</button>
+      <button id="hangar-equip" class="btn secondary" type="button" aria-pressed="false">PERALATAN</button>
       <button id="hangar-pick" class="btn" type="button">PILIH</button>
     </div>
   </div>
@@ -11268,6 +11318,7 @@ const Equip = {
     for (const sl of this.slots) { if (this.def(sl.id).charges) sl.charges = this.maxCharges(sl.id); }
   },
   has(id) { return this.slots.some((x) => x.id === id); },
+  isHold(i) { const sl = this.slots[i]; return sl ? this.def(sl.id).kind === 'tahan' : false; },
   slot(id) { return this.slots.find((x) => x.id === id); },
   ready(sl) { const d = this.def(sl.id); if (d.kind === 'pasif') return sl.charges > 0; if (d.charges) return sl.charges > 0 ? sl.cd <= 0 : false; return sl.cd <= 0; },
   // Aktifkan slot ke-i (tombol HUD, Q, F, G). Peralatan tahan memakai press/release.
@@ -11497,6 +11548,185 @@ const Equip = {
   },
 };
 Equip.init();
+
+/* =====================================================================
+   UI PERALATAN (C5) - panel Peralatan di hangar (juga hangar alur mulai, yaitu layar pra-misi), tombol slot
+   di busur HUD mode HP (ikon, cincin cooldown, penghitung muatan, denyut siap), slot berlabel Q, F, G di bawah
+   tengah desktop, penanda kunci Kunang, saran Piko, suara sintesis unik, dan getar.
+   ===================================================================== */
+const EQUIP_AUTO_ORDER = ['kunang', 'sisik', 'kubah', 'tombak', 'pengacau', 'rajut', 'suar', 'ranjau', 'magnet'];
+const EquipUI = {
+  open: false, sel: 0, focus: null, t: 0, hintT: 0, lockT: 0,
+  btns: [...document.querySelectorAll('#touch [data-eq]')], locks: [...document.querySelectorAll('.eq-lock')], chips: [],
+  init() {
+    onButton($('hangar-equip'), () => this.toggle());
+    onButton($('eqp-auto'), () => this.auto());
+    onButton($('eqp-clear'), () => this.assign(null));
+    Events.on('equipSlots', () => this.syncSlots());
+    Events.on('equipUsed', (id) => { this.play(EQUIPMENT_DEFS[id].sound); Haptic.pulse(30); });
+    Events.on('equipAbsorb', (id) => { this.play(EQUIPMENT_DEFS[id === 'kubah' ? 'kubah' : 'sisik'].sound.slice(0, 1)); Haptic.pulse(24); if (id === 'sisik') Piko.say('eq_sisik'); });
+    Events.on('equipUnlocked', () => Sfx.star('gold'));
+    Events.on('equipResupply', () => { Sfx.pickup(); Haptic.pulse(20); });
+  },
+  // Suara dari data: [jenis, f0, f1, durasi, volume, tunda]; jenis noise memakai derau bandpass
+  play(spec) {
+    if (!spec) return;
+    for (const t of spec) { if (t[0] === 'noise') Sfx.noiseBurst('bandpass', t[1], t[2], t[3], t[4]); else Sfx.tone(t[0], t[1], t[2], t[3], t[4], t[5] || 0); }
+  },
+  icon(id) { const svg = svgIcon(EQUIPMENT_DEFS[id].icon); return svg; },
+  // ---------- Hangar ----------
+  toggle(on = !this.open) {
+    this.open = on;
+    $('hangar-equip').setAttribute('aria-pressed', String(on));
+    document.querySelector('.hangar-info').classList.toggle('eq-on', on);
+    $('eqp').classList.toggle('hidden', !on);
+    if (on) { this.sel = 0; this.focus = null; this.render(); }
+  },
+  ship() { return Hangar.def ? Hangar.def.id : 'starfighter'; },
+  loadout() { return Save.data.equip.loadout[this.ship()] || []; },
+  render() {
+    if (!this.open) return;
+    const ship = this.ship(), n = SHIP_SLOTS[ship], lo = this.loadout(), E = Save.data.equip, owned = Save.data.ships.unlocked.includes(ship);
+    const slots = $('eqp-slots');
+    slots.replaceChildren();
+    if (n === 0) {
+      const pv = SHIP_PASSIVE[ship], p = document.createElement('p');
+      p.className = 'eqp-note'; p.textContent = pv ? pv.label + ': ' + pv.desc : 'Kapal ini tanpa slot peralatan.';
+      slots.append(p);
+    }
+    for (let i = 0; i < n; i++) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'eqp-slot' + (lo[i] ? ' full' : '') + (i === this.sel ? ' sel' : '');
+      b.setAttribute('aria-label', 'Slot ' + (i + 1) + ': ' + (lo[i] ? EQUIPMENT_DEFS[lo[i]].name : 'kosong'));
+      b.dataset.slot = String(i);
+      if (lo[i]) b.append(this.icon(lo[i]));
+      b.addEventListener('click', () => { this.sel = i; this.focus = lo[i] || null; this.render(); });
+      slots.append(b);
+    }
+    const list = $('eqp-list');
+    list.replaceChildren(...EQUIP_IDS.map((id) => {
+      const d = EQUIPMENT_DEFS[id], open = E.unlocked.includes(id), b = document.createElement('button');
+      b.type = 'button'; b.className = 'eqp-item r-' + d.rarity + (open ? '' : ' locked') + (lo.includes(id) ? ' on' : '') + (this.focus === id ? ' sel' : '');
+      b.dataset.eq = id; b.setAttribute('aria-label', d.name + (open ? '' : ' (terkunci)'));
+      b.append(this.icon(id));
+      b.addEventListener('click', () => { this.focus = id; if (open ? (n > 0 ? owned : false) : false) this.assign(id); else this.render(); });
+      return b;
+    }));
+    const f = this.focus ? EQUIPMENT_DEFS[this.focus] : null, desc = $('eqp-desc');
+    desc.replaceChildren();
+    if (f) {
+      const b = document.createElement('b'); b.textContent = f.name;
+      const stat = f.kind === 'pasif' ? 'pasif, ' + f.charges + ' muatan' : f.charges ? f.charges + ' muatan' : 'cooldown ' + f.cooldown + ' detik';
+      const lock = E.unlocked.includes(this.focus) ? '' : ' Terkunci: ' + f.unlock + '.';
+      desc.append(b, document.createTextNode(' (' + stat + '). ' + f.desc + lock));
+    } else desc.textContent = n ? 'Pilih slot, lalu ketuk peralatan untuk memasang atau melepas.' : '';
+    $('eqp-auto').disabled = n === 0 ? true : !owned;
+    $('eqp-clear').disabled = n === 0 ? true : !lo[this.sel];
+  },
+  // Pasang id di slot terpilih; id yang sudah terpasang di slot lain ditukar; id yang sama di slot terpilih dilepas
+  assign(id) {
+    const lo = this.loadout().slice(), i = this.sel;
+    if (i >= lo.length) return;
+    if (id !== null ? lo[i] === id : false) id = null;
+    const j = id ? lo.indexOf(id) : -1;
+    if (j >= 0) lo[j] = lo[i];
+    lo[i] = id;
+    Save.data.equip.loadout[this.ship()] = lo;
+    Save.data.equip = Save.sanitizeEquip(Save.data.equip, Save.defaults().equip);
+    Save.save();
+    Sfx.click ? Sfx.click() : null;
+    if (i < lo.length - 1 ? lo[i] : false) this.sel = i + 1;
+    this.render();
+  },
+  // Rekomendasi: urutan serba guna, hanya yang terbuka
+  auto() {
+    const n = SHIP_SLOTS[this.ship()], open = EQUIP_AUTO_ORDER.filter((id) => Save.data.equip.unlocked.includes(id));
+    Save.data.equip.loadout[this.ship()] = Array.from({ length: n }, (_, i) => open[i] || null);
+    Save.save();
+    this.render();
+  },
+  // ---------- HUD ----------
+  syncSlots() {
+    const sl = Equip.slots;
+    this.btns.forEach((b, i) => {
+      const s0 = sl[i], old = b.querySelector('svg');
+      if (!s0) return;
+      if (b.dataset.id !== s0.id) { if (old) old.remove(); b.prepend(this.icon(s0.id)); b.dataset.id = s0.id; b.setAttribute('aria-label', EQUIPMENT_DEFS[s0.id].name); b.title = EQUIPMENT_DEFS[s0.id].name; }
+      b.classList.toggle('temp', !!s0.temp);
+    });
+    // Desktop: chip slot sebaris dengan manuver
+    for (const c of this.chips) c.el.remove();
+    this.chips = sl.slice(0, 3).map((s0, i) => {
+      const el = document.createElement('div'); el.className = 'man eqm' + (s0.temp ? ' temp' : '');
+      const fill = document.createElement('i'), kb = document.createElement('b'), name = document.createElement('span'), cnt = document.createElement('em');
+      kb.textContent = 'QFG'[i]; name.textContent = EQUIPMENT_DEFS[s0.id].short.toUpperCase();
+      el.append(fill, kb, this.icon(s0.id), name, cnt);
+      $('maneuvers').append(el);
+      return { el, fill, cnt };
+    });
+  },
+  update(dt) {
+    if (Game.state !== 'playing') return;
+    this.t -= dt;
+    if (this.t <= 0) {
+      this.t = 0.1;
+      Equip.slots.forEach((sl, i) => {
+        const d = EQUIPMENT_DEFS[sl.id], b = this.btns[i], c = this.chips[i];
+        const cdTot = sl.id === 'ranjau' ? d.gap : Equip.cooldownOf(sl.id);
+        const prog = sl.hold > 0 ? sl.hold / d.charge : (cdTot > 0 ? 1 - sl.cd / cdTot : 1);
+        const f = Math.round(clamp(prog, 0, 1) * 25) / 25, ready = Equip.ready(sl), cnt = d.charges ? String(sl.charges) : '';
+        if (b) {
+          if (changed('eqf' + i, f)) b.style.setProperty('--fill', String(f));
+          if (changed('eqr' + i, ready)) { b.classList.toggle('ready', ready); b.classList.toggle('cool', !ready); }
+          if (changed('eqn' + i, cnt)) b.querySelector('.eq-n').textContent = cnt;
+        }
+        if (c) {
+          if (changed('eqcf' + i, f)) c.fill.style.transform = 'scaleX(' + (1 - f) + ')';
+          if (changed('eqcr' + i, ready)) { c.el.classList.toggle('ready', ready); c.el.classList.toggle('cool', !ready); }
+          if (changed('eqcn' + i, cnt)) c.cnt.textContent = cnt;
+        }
+      });
+    }
+    this.updateLocks(dt);
+    this.hints(dt);
+  },
+  // Penanda kunci di atas sasaran saat Kunang siap
+  updateLocks(dt) {
+    this.lockT -= dt;
+    if (this.lockT > 0) return;
+    this.lockT = 0.15;
+    const sl = Equip.slot('kunang'), T = sl ? (Equip.ready(sl) ? Equip.lockTargets(EQUIPMENT_DEFS.kunang) : []) : [];
+    this.lockCount = T.length;
+    this.locks.forEach((el, k) => {
+      const pos = Equip.targetPos(T[k]);
+      if (!pos) { if (!el.classList.contains('hidden')) el.classList.add('hidden'); return; }
+      const v = Equip._v.copy(pos).project(camera);
+      if (v.z > 1) { el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+      el.style.transform = 'translate(' + Math.round((v.x + 1) * 0.5 * Layout.w) + 'px, ' + Math.round((1 - v.y) * 0.5 * Layout.h) + 'px)';
+    });
+  },
+  // Saran Piko kontekstual, sekali per peralatan per sesi (Piko.say membatasi jeda dan prioritas)
+  hints(dt) {
+    this.hintT -= dt;
+    if (this.hintT > 0 ? true : !Player.alive) return;
+    this.hintT = 0.5;
+    const ready = (id) => { const sl = Equip.slot(id); return sl ? Equip.ready(sl) : false; };
+    const once = (key) => (Piko.said.includes(key) ? false : Piko.say(key));
+    const P = Player.pos;
+    if (ready('suar')) { for (const e of Enemies.list) { if (e.active ? (e.cfg.ai === 'missile' ? e.pos.distanceToSquared(P) < 300 * 300 : false) : false) { once('eq_suar'); return; } } }
+    if (ready('rajut') ? Player.hp < Player.health.maxHp * 0.35 : false) { once('eq_rajut'); return; }
+    let near = 0;
+    const eb = Enemies.bullets;
+    for (let i = 0; i < eb.max; i++) { if (!eb.active[i]) continue; const i3 = i * 3; if ((eb.p[i3] - P.x) ** 2 + (eb.p[i3 + 1] - P.y) ** 2 + (eb.p[i3 + 2] - P.z) ** 2 < 170 * 170) near++; }
+    if (ready('pengacau') ? near >= 6 : false) { once('eq_pengacau'); return; }
+    if (ready('kubah') ? near >= 4 : false) { once('eq_kubah'); return; }
+    if (ready('ranjau') ? Enemies.rearThreat : false) { once('eq_ranjau'); return; }
+    if (ready('kunang') ? this.lockCount >= 2 : false) { once('eq_kunang'); return; }
+    if (ready('tombak')) { const T = Equip.lockTargets({ cone: 4, range: 1600, count: 3 }); if (T.length >= 2) { once('eq_tombak'); return; } }
+    if (ready('magnet') ? Stars.n > 6 : false) once('eq_magnet');
+  },
+};
 
 /* =====================================================================
    BUFF SEMENTARA - OVERDRIVE (laju tembak) dan PENGHANCUR (damage), dari pickup kristal
@@ -11897,7 +12127,7 @@ const KEYMAP = [
   [['W', 'S'], 'naik dan turun'], [['A', 'D'], 'belok dan miring'], [['Spasi'], 'nitro'], [['Enter'], 'tembak'],
   [['E'], 'ultimate'], [['Z'], 'Gulung Tong'], [['X'], 'Balik Arah'], [['C'], 'Looping'],
   [['Shift'], 'lihat belakang (tahan)'], [['Tab'], 'peta Tata Surya (Angkasa)'], [['P', 'Esc'], 'jeda'], [['M'], 'suara'],
-  [['R'], 'mulai ulang'], [['1', '2', '3'], 'pilih kartu atau kontrak'],
+  [['R'], 'mulai ulang'], [['1', '2', '3'], 'pilih kartu atau kontrak'], [['Q', 'F', 'G'], 'peralatan slot 1 sampai 3'],
 ];
 for (const box of document.querySelectorAll('[data-keymap]')) {
   box.replaceChildren(...KEYMAP.map(([keys, label]) => {
@@ -13865,6 +14095,16 @@ Events.on('gameover', () => {
 
 /* Piko: peringatan bersubtitle dan bunyi bip, dengan jeda minimum, cooldown per pesan dan prioritas */
 const PIKO_LINES = {
+  // Saran peralatan (C5): sekali per peralatan per sesi, lewat pusat notifikasi tunggal, ikut opsi Bantuan robot
+  eq_suar: { text: 'Rudal musuh mengunci kita, luncurkan Suar Kelip!', mood: 'alert', prio: 2, short: 'Rudal mengunci, pakai Suar.', key: 'suar' },
+  eq_kubah: { text: 'Tembakan deras! Nyalakan Kubah Energi.', mood: 'alert', prio: 2, short: 'Tembakan deras, pakai Kubah.' },
+  eq_rajut: { text: 'HP kita rendah, pakai Rajut Nano.', mood: 'danger', prio: 2, short: 'HP rendah, pakai Rajut.' },
+  eq_ranjau: { text: 'Ada pengejar di belakang, jatuhkan Ranjau.', mood: 'alert', prio: 2, short: 'Pengejar di belakang, jatuhkan Ranjau.' },
+  eq_pengacau: { text: 'Banyak peluru di sekitar kita, lepaskan Gelombang Pengacau.', mood: 'alert', prio: 2, short: 'Banyak peluru, pakai Pengacau.' },
+  eq_kunang: { text: 'Dua sasaran terkunci, luncurkan Kunang!', mood: 'happy', prio: 1, short: 'Sasaran terkunci, luncurkan Kunang.' },
+  eq_tombak: { text: 'Musuh berbaris di depan, tahan Tombak Magnet untuk menembus semuanya.', mood: 'happy', prio: 1, short: 'Musuh berbaris, tahan Tombak.' },
+  eq_magnet: { text: 'Banyak bintang berserakan, nyalakan Magnet Tarik.', mood: 'happy', prio: 1, short: 'Banyak bintang, pakai Magnet.' },
+  eq_sisik: { text: 'Sisik menahan satu pukulan. Muatannya pulih pelan.', mood: 'calm', prio: 1, short: 'Sisik menahan pukulan.' },
   enemyBehind: { text: 'Ada musuh di belakang kita! Coba Balik Arah dengan X.', mood: 'alert', prio: 3, short: 'Musuh di belakang! Balik Arah!', touch: 'Ada musuh di belakang kita! Coba tombol Balik Arah.' },
   hpLow: { text: 'Integritas kritis! Cari bintang perbaikan, cepat.', mood: 'danger', prio: 4, short: 'Integritas kritis! Cari perbaikan.' },
   waveStart: { text: 'Gelombang baru datang. Siap, Raptor 13?', mood: 'calm', prio: 1, short: 'Gelombang baru datang!' },
@@ -13995,7 +14235,7 @@ Controls.addSource(Keyboard);
 // Tombol yang aksi bawaan browsernya harus dicegah (scroll, klik tombol yang sedang fokus)
 const PREVENT_CODES = new Set(['Tab', 'Space', 'Enter', 'NumpadEnter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const GAME_CODES = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'Enter', 'NumpadEnter', 'KeyP', 'Escape', 'KeyR', 'KeyM',
-  'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC', 'KeyE', 'Tab', 'Digit1', 'Digit2', 'Digit3',
+  'ShiftLeft', 'ShiftRight', 'KeyZ', 'KeyX', 'KeyC', 'KeyE', 'Tab', 'Digit1', 'Digit2', 'Digit3', 'KeyQ', 'KeyF', 'KeyG',
   'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 // Navigasi menu dengan keyboard: panah atas dan bawah memilih, Enter menekan, Esc menutup overlay.
 // Mengembalikan true bila tombol sudah ditangani.
@@ -14090,6 +14330,14 @@ function onKeyDown(e) {
     case 'KeyE':
       Ultimate.fire();
       break;
+    // Peralatan (C5): Q, F, G untuk slot 1 sampai 3; Tombak Magnet diisi selama tombol ditahan
+    case 'KeyQ':
+    case 'KeyF':
+    case 'KeyG': {
+      const i = { KeyQ: 0, KeyF: 1, KeyG: 2 }[code];
+      Equip.use(i, Equip.isHold(i) ? 'down' : 'tap');
+      break;
+    }
     case 'KeyA':
     case 'KeyD': {
       // Ketuk ganda A atau D: gulung tong ke arah itu
@@ -14108,6 +14356,8 @@ function onKeyUp(e) {
   if (!GAME_CODES.has(code)) return;
   if (PREVENT_CODES.has(code)) e.preventDefault();
   Keyboard.down[code] = false;
+  const ei = { KeyQ: 0, KeyF: 1, KeyG: 2 }[code];
+  if (ei !== undefined) Equip.use(ei, 'up');
 }
 
 // Reset semua tombol saat jendela kehilangan fokus agar tidak ada tombol "nyangkut"
@@ -14458,7 +14708,7 @@ const HudLayout = {
    ===================================================================== */
 const HudEditor = {
   el: document.getElementById('hud-editor'), open: false, elems: {}, sel: null, drag: null, kidal: false, nodes: {},
-  ICONS: { joy: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9"/></svg>' },
+  ICONS: { joy: 'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z' },
   NAMES: { fire: 'Tembak', nitro: 'Nitro', ult: 'Ultimate', roll: 'Gulung', imm: 'Balik', loop: 'Loop', eq0: 'Slot 1', eq1: 'Slot 2', eq2: 'Slot 3', joy: 'Joystick' },
   init() {
     const E = this.el;
@@ -14538,7 +14788,7 @@ const HudEditor = {
         n = document.createElement('div'); n.className = 'he-el' + (k === 'joy' ? ' he-joy' : ''); n.dataset.k = k;
         n.setAttribute('role', 'button'); n.setAttribute('aria-label', this.NAMES[k] || k);
         const src = k === 'joy' ? null : HudLayout.els[k];
-        if (src) { const svg = src.querySelector('svg'); if (svg) n.appendChild(svg.cloneNode(true)); } else n.innerHTML = this.ICONS.joy;
+        if (src) { const svg = src.querySelector('svg'); if (svg) n.appendChild(svg.cloneNode(true)); } else n.appendChild(svgIcon(this.ICONS.joy));
         this.items.appendChild(n); this.nodes[k] = n;
       }
       Object.assign(n.style, { left: (mx(b.cx) - b.d / 2) + 'px', top: (b.cy - b.d / 2) + 'px', width: b.d + 'px', height: b.d + 'px' });
@@ -14563,6 +14813,7 @@ const Touch = {
   dpadEl: document.getElementById('dpad'),
   actionsEl: null,
   pointers: new Map(),     // pointerId -> aksi tombol (fire, nitro)
+  eqPointers: new Map(),   // pointerId -> indeks slot peralatan yang ditekan (C5)
   counts: { up: 0, down: 0, left: 0, right: 0, fire: 0, nitro: 0 },
   buttons: {},
   enabled: false,
@@ -14587,6 +14838,7 @@ const Touch = {
   },
   reset() {
     this.pointers.clear();
+    this.eqPointers.clear();
     for (const k in this.counts) this.counts[k] = 0;
     for (const k in this.buttons) this.buttons[k].classList.remove('on');
     this.releaseJoy();
@@ -14688,6 +14940,9 @@ const Touch = {
       }
       // Tombol ultimate dan manuver: sekali tekan
       if (e.target.closest('[data-ult]')) { e.preventDefault(); Ultimate.fire(); return; }
+      // Slot peralatan (C5): sekali tekan, atau tekan dan tahan untuk Tombak Magnet
+      const qb = e.target.closest('[data-eq]');
+      if (qb) { e.preventDefault(); capture(qb, e); const i = Number(qb.dataset.eq); this.eqPointers.set(e.pointerId, i); Equip.use(i, Equip.isHold(i) ? 'down' : 'tap'); return; }
       const mb = e.target.closest('[data-man]');
       if (mb) { e.preventDefault(); Player.startManeuver(mb.dataset.man, this.rollDir()); return; }
       const b = e.target.closest('[data-act]');
@@ -14704,6 +14959,7 @@ const Touch = {
       if (e.pointerId === this.joy.id) this.releaseJoy();
       if (e.pointerId === this.dpad.id) this.releaseDpad();
       if (this.pointers.has(e.pointerId)) this.setAction(e.pointerId, null);
+      if (this.eqPointers.has(e.pointerId)) { Equip.use(this.eqPointers.get(e.pointerId), 'up'); this.eqPointers.delete(e.pointerId); }
     };
     this.root.addEventListener('pointerdown', down);
     this.root.addEventListener('pointermove', move);
@@ -14777,6 +15033,7 @@ const Touch = {
 Touch.init();
 UiContrast.init();
 HudEditor.init();
+EquipUI.init();
 Controls.addSource(Touch);
 
 // Mode HP dimainkan mendatar (H7): overlay putar layar yang rapi di bawah toolbar, permainan dijeda
@@ -14944,7 +15201,7 @@ const Hangar = {
     const pick = document.getElementById('hangar-pick');
     if (!pick.disabled) pick.focus();
   },
-  step(d) { this.index = (this.index + d + this.list.length) % this.list.length; this.show(); },
+  step(d) { this.index = (this.index + d + this.list.length) % this.list.length; this.show(); EquipUI.sel = 0; EquipUI.focus = null; EquipUI.render(); },
   show() {
     const def = this.def, sh = this.ships;
     const unlocked = sh.unlocked.includes(def.id);
@@ -15179,6 +15436,7 @@ function update(dt) {
     Stars.update(dt);
     Ultimate.update(dt);
     Equip.update(dt);
+    EquipUI.update(dt);
     Discovery.update(dt);
     if (Player.alive) Game.score += CONFIG.score.perSecond * dt;
     else if (Player.lives > 0) {
