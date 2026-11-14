@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-ze1DxqToLR/DJ1Au0NB2Dja1yuVqHrU7OMZ+muwglVY='; style-src 'self' 'sha256-C9LyLk0duUB9MhPpOKDvdRHVB61lVBkWCrzMEh8Xq+w='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-mJrhOyQkIEAhRWvzhXOLVtFVYGawWi1EGspAblQ/0yw='; style-src 'self' 'sha256-C9LyLk0duUB9MhPpOKDvdRHVB61lVBkWCrzMEh8Xq+w='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -2231,6 +2231,53 @@ const DISCOVERY_IDS = Object.keys(BODY_FACTS);
 const SAVE_KEY = 'raptor13.v3';
 const SAVE_KEYS_OLD = ['raptor13.v2', 'raptor13.v1'];   // dibaca sekali untuk migrasi (terbaru dulu)
 const SHIP_IDS = ['raptor-j', 'starfighter', 'interceptor', 'gunship'];
+/* =====================================================================
+   PERALATAN (C4) - data, bukan kode tersebar. Semua nama, ikon (path SVG 24x24 buatan sendiri), dan suara
+   orisinal. cooldown dalam detik; charges = muatan; kind: aktif (sekali tekan), tahan (tekan dan tahan untuk
+   mengisi), pasif (terpakai otomatis), muatan (sekali tekan memakai satu muatan). Skala kesulitan di
+   EQUIP_DIFF. Tabel keseimbangan: docs/equipment/keseimbangan.md.
+   ===================================================================== */
+const EQUIPMENT_DEFS = {
+  kunang: { name: 'Rudal Pencari Kunang', short: 'Kunang', rarity: 'biasa', kind: 'aktif', cooldown: 30, count: 2, damage: 55, range: 700, cone: 25, speed: 260, turn: 3.2,
+    desc: 'Mengunci hingga 2 sasaran di kerucut depan 50 derajat lalu meluncurkan 2 rudal berjejak asap. Rudal bisa dikelabui umpan musuh.',
+    icon: 'M12 2.5c1.6 2.2 2.4 4.5 2.4 7v6.2l2.6 2.6v2.2l-3-1.4-2 1.9-2-1.9-3 1.4v-2.2l2.6-2.6V9.5c0-2.5.8-4.8 2.4-7z', unlock: 'Bawaan', sound: [['triangle', 420, 980, 0.32, 0.12], ['noise', 2600, 900, 0.5, 0.1]] },
+  kubah: { name: 'Kubah Energi', short: 'Kubah', rarity: 'langka', kind: 'aktif', cooldown: 25, duration: 4,
+    desc: 'Gelembung energi menahan semua damage biasa dan proyektil selama 4 detik. Tidak menyelamatkan dari tabrakan fatal.',
+    icon: 'M12 3a9 9 0 0 1 9 9v6H3v-6a9 9 0 0 1 9-9zM7 18v-3M12 18v-5M17 18v-3', unlock: 'Selesaikan stage 2 kampanye', sound: [['sine', 220, 660, 0.4, 0.12], ['sine', 330, 990, 0.35, 0.06, 0.05]] },
+  sisik: { name: 'Perisai Reaktif Sisik', short: 'Sisik', rarity: 'biasa', kind: 'pasif', charges: 3, regen: 40,
+    desc: 'Pasif: 3 muatan, satu muatan terpakai otomatis menahan satu kena damage atau proyektil. Pulih 1 tiap 40 detik dan penuh di stage baru. Tidak menyelamatkan dari tabrakan fatal (planet, daratan, benda raksasa, bos).',
+    icon: 'M12 2.5l7.5 3v6.2c0 4.6-3.1 8.3-7.5 9.8-4.4-1.5-7.5-5.2-7.5-9.8V5.5zM8 9l4 2.5L16 9M8 13l4 2.5 4-2.5', unlock: 'Bawaan', sound: [['square', 880, 440, 0.12, 0.06]] },
+  tombak: { name: 'Meriam Rel Tombak Magnet', short: 'Tombak', rarity: 'langka', kind: 'tahan', charge: 1.0, cooldown: 10, damage: 140, range: 1600, width: 3, assist: 3,
+    desc: 'Tekan dan tahan sekitar 1 detik untuk mengisi, lalu sinar lurus sangat jauh menembus semua musuh di jalurnya. Berbeda dari Ultimate yang lebar dan berkelanjutan.',
+    icon: 'M3 12h13M16 8l5 4-5 4M5 8v8M9 9v6', unlock: 'Selesaikan stage 3 kampanye', sound: [['sawtooth', 180, 1800, 0.25, 0.08], ['noise', 5000, 1500, 0.35, 0.12]] },
+  pengacau: { name: 'Gelombang Pengacau', short: 'Pengacau', rarity: 'epik', kind: 'aktif', cooldown: 35, radius: 170, disable: 3,
+    desc: 'Gelombang radius sedang menghancurkan proyektil dan rudal musuh di dekat kapal dan melumpuhkan tembakan musuh 3 detik.',
+    icon: 'M12 12m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M5.6 5.6a9 9 0 0 0 0 12.8M18.4 5.6a9 9 0 0 1 0 12.8M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7', unlock: 'Selesaikan stage 5 kampanye', sound: [['sine', 90, 40, 0.7, 0.3], ['noise', 900, 200, 0.6, 0.14]] },
+  suar: { name: 'Umpan Panas Suar Kelip', short: 'Suar', rarity: 'biasa', kind: 'aktif', cooldown: 15, count: 3, duration: 5, lure: 450,
+    desc: 'Meluncurkan 3 suar panas di belakang kapal. Rudal pencari musuh berbelok mengejar suar selama 5 detik.',
+    icon: 'M6 18c1-3 3-4 3-7M12 19c0-3 1.5-5 1.5-9M18 18c-1-3-3-4-3-7M9 5l.8 1.8M15 4.5l-.8 1.8M12 3v2', unlock: 'Hadiah kontrak', sound: [['triangle', 1500, 600, 0.2, 0.08], ['triangle', 1300, 500, 0.2, 0.07, 0.1], ['triangle', 1100, 400, 0.2, 0.06, 0.2]] },
+  ranjau: { name: 'Ranjau Antariksa Biji Besi', short: 'Ranjau', rarity: 'langka', kind: 'muatan', charges: 3, gap: 0.6, regen: 12, damage: 90, radius: 38, trigger: 26, life: 25,
+    desc: 'Menjatuhkan ranjau di belakang kapal (3 muatan, pulih 1 tiap 12 detik). Meledak saat musuh atau ekor bos mendekat. Ampuh melawan pengejar.',
+    icon: 'M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0-8 0M12 4v4M12 16v4M4 12h4M16 12h4M6.3 6.3l2.8 2.8M14.9 14.9l2.8 2.8M6.3 17.7l2.8-2.8M14.9 9.1l2.8-2.8', unlock: 'Hadiah kontrak', sound: [['square', 160, 120, 0.12, 0.08]] },
+  rajut: { name: 'Rajut Nano', short: 'Rajut', rarity: 'langka', kind: 'muatan', charges: 2, perStage: true, heal: 0.25, duration: 4,
+    desc: 'Memulihkan 25 persen HP maksimum selama 4 detik. 2 kali pakai per stage.',
+    icon: 'M4 12h4l2-5 4 10 2-5h4', unlock: 'Selesaikan stage 7 kampanye', sound: [['sine', 520, 780, 0.5, 0.08], ['sine', 780, 1040, 0.4, 0.05, 0.2]] },
+  magnet: { name: 'Magnet Tarik', short: 'Magnet', rarity: 'biasa', kind: 'aktif', cooldown: 20, duration: 8, mult: 3,
+    desc: 'Selama 8 detik bintang dan XP dari radius tiga kali lipat tertarik ke kapal.',
+    icon: 'M6 4v8a6 6 0 0 0 12 0V4h-4v8a2 2 0 0 1-4 0V4zM6 8h4M14 8h4', unlock: 'Temukan 6 benda angkasa', sound: [['sine', 300, 600, 0.3, 0.08], ['sine', 600, 300, 0.3, 0.05, 0.15]] },
+};
+const EQUIP_IDS = Object.keys(EQUIPMENT_DEFS);
+const EQUIP_START = ['kunang', 'sisik'];
+// Slot peralatan per kapal (semua slot generik). Starfighter 0 slot dengan sifat pasif: nitro pulih 15 persen lebih cepat.
+const SHIP_SLOTS = { 'raptor-j': 1, starfighter: 0, interceptor: 2, gunship: 3 };
+const SHIP_PASSIVE = { starfighter: { label: 'Inti Serba Guna', desc: 'Tanpa slot peralatan; nitro pulih 15 persen lebih cepat.', nitroRegen: 1.15 } };
+const EQUIP_DEFAULT_LOADOUT = { 'raptor-j': ['kunang'] };
+// Kesulitan: pengali cooldown dan tambahan muatan (Mudah lebih cepat, Sulit lebih lambat)
+const EQUIP_DIFF = { mudah: { cd: 0.85, charges: 1 }, normal: { cd: 1, charges: 0 }, sulit: { cd: 1.2, charges: -1 } };
+// Perolehan: stage kampanye yang membuka peralatan, urutan hadiah kontrak, dan tonggak penemuan
+const EQUIP_STAGE_UNLOCK = { 2: 'kubah', 3: 'tombak', 5: 'pengacau', 7: 'rajut' };
+const EQUIP_CONTRACT_UNLOCK = ['suar', 'ranjau'];
+const EQUIP_DISCOVERY_UNLOCK = { 6: 'magnet' };
 const SETTING_DEFAULTS = {
   difficulty: 'normal',        // mudah | normal | sulit
   terrain: 'space',            // medan default: space | earth
@@ -2303,6 +2350,8 @@ const Save = {
       stats: { playTime: 0, enemiesDestroyed: 0, asteroidsDestroyed: 0, gamesPlayed: 0 },
       discoveries: [],   // id benda angkasa yang pernah didekati (atlas Penemuan)
       campaign: { stage: 1, completed: false, freeArea: 'bumi', intros: [], ratings: {} },   // ratings: bintang terbaik per stage   // stage tertinggi yang terbuka
+      // Peralatan (C4, C7): id yang terbuka dan loadout per kapal (panjang = jumlah slot kapal, null = slot kosong)
+      equip: { unlocked: EQUIP_START.slice(), loadout: Object.fromEntries(SHIP_IDS.map((id) => [id, Array.from({ length: SHIP_SLOTS[id] }, (_, i) => (EQUIP_DEFAULT_LOADOUT[id] || [])[i] || null)])), contracts: 0 },
     };
   },
   // Terima hanya field yang dikenal dengan tipe dan rentang yang benar
@@ -2347,7 +2396,23 @@ const Save = {
     if (isObj(cp.ratings)) for (let n = 1; n <= 10; n++) { const v = cp.ratings[n]; if (Number.isInteger(v) ? v >= 1 ? v <= 3 : false : false) d.campaign.ratings[n] = v; }
     if (Array.isArray(cp.intros)) for (const n of cp.intros) { if (Number.isInteger(n) ? n >= 1 ? n <= 10 ? !d.campaign.intros.includes(n) : false : false : false) d.campaign.intros.push(n); }
     if (Array.isArray(raw.discoveries)) for (const id of raw.discoveries) { if (DISCOVERY_IDS.includes(id) ? !d.discoveries.includes(id) : false) d.discoveries.push(id); }
+    d.equip = this.sanitizeEquip(raw.equip, d.equip);
     return d;
+  },
+  // Peralatan (C7): hanya id yang dikenal, loadout memakai id yang terbuka, tanpa duplikat dalam satu kapal,
+  // panjang sesuai slot kapal; simpanan lama tanpa field ini mendapat bawaan
+  sanitizeEquip(raw, def) {
+    const out = { unlocked: def.unlocked.slice(), loadout: {}, contracts: 0 };
+    if (!raw ? true : typeof raw !== 'object') return def;
+    if (Array.isArray(raw.unlocked)) for (const id of raw.unlocked) { if (EQUIP_IDS.includes(id) ? !out.unlocked.includes(id) : false) out.unlocked.push(id); }
+    if (Number.isInteger(raw.contracts) ? raw.contracts >= 0 : false) out.contracts = Math.min(1e6, raw.contracts);
+    const lo = raw.loadout ? (typeof raw.loadout === 'object' ? raw.loadout : {}) : {};
+    for (const ship of SHIP_IDS) {
+      const n = SHIP_SLOTS[ship], src = Array.isArray(lo[ship]) ? lo[ship] : def.loadout[ship], arr = [];
+      for (let i = 0; i < n; i++) { const id = src[i]; arr.push(EQUIP_IDS.includes(id) ? (out.unlocked.includes(id) ? (arr.includes(id) ? null : id) : null) : null); }
+      out.loadout[ship] = arr;
+    }
+    return out;
   },
   load() {
     let raw = null;
@@ -2476,6 +2541,7 @@ class Health {
 // (HP musuh dan asteroid sudah dikalikan saat spawn). Posisi dipakai untuk angka damage dan percikan.
 const _dmgPos = new THREE.Vector3();
 function applyDamage(entity, amount, source, x, y, z) {
+  if (entity === Player ? (amount > 0 ? Equip.absorb(source) : false) : false) return 0;
   let amt = entity === Player ? amount * Game.diff.damageTaken : amount;
   // Peredam (kartu Piko): damage tabrakan ke pemain dikurangi
   if (entity === Player ? Player.upgrades.damper : false) {
@@ -3701,7 +3767,7 @@ const Player = {
       }
     } else {
       this.nitroRegenWait -= dt;
-      if (this.nitroRegenWait <= 0) this.nitro = Math.min(1, this.nitro + N.regenPerSec * dt);
+      if (this.nitroRegenWait <= 0) this.nitro = Math.min(1, this.nitro + N.regenPerSec * dt * ((SHIP_PASSIVE[this.ship.id] || {}).nitroRegen || 1));
     }
   },
   addNitro(amount) { this.nitro = Math.min(1, this.nitro + amount); },
@@ -5219,6 +5285,7 @@ const ENEMY_TYPES = Object.keys(ENEMY_BUILDERS);
 Object.assign(Enemies, {
   // Tembakan kapal penembak sesuai pola senjata dari CONFIG
   fireWeapon(e, dist, diff) {
+    if (e.empT > 0) return;   // dilumpuhkan Gelombang Pengacau (C4)
     const c = e.cfg, P = Player.pos;
     const t = dist / (c.bulletSpeed || 175);
     _va.copy(Player.vel).multiplyScalar(t * 0.8).add(P);
@@ -5434,7 +5501,9 @@ Object.assign(Enemies, {
   updateMissile(e, dt, dist) {
     const c = e.cfg;
     e.life += dt;
-    _desired.copy(_toP).normalize();
+    // Suar Kelip (C4): rudal yang dekat suar aktif berbelok ke suar terdekat
+    const lure = Equip.lureFor(e.pos);
+    if (lure) _desired.copy(lure).sub(e.pos).normalize(); else _desired.copy(_toP).normalize();
     const maxTurn = c.turnRate * dt;
     const ang = e.dir.angleTo(_desired);
     if (ang > 1e-4) e.dir.lerp(_desired, Math.min(1, maxTurn / ang)).normalize();
@@ -9842,6 +9911,9 @@ const Levels = {
       out.push(pick);
       pool.splice(pool.indexOf(pick), 1);
     }
+    // Cetak biru peralatan (C4): tiap level kelipatan 3 satu kartu diganti peralatan yang belum terbuka
+    const bp = (this.level + 1) % 3 === 0 ? Equip.blueprintCard(rnd) : null;
+    if (bp ? out.length === 3 : false) out[2] = bp;
     return out;
   },
   // Dipanggil tiap frame saat bermain: buka layar kartu bila ada level tertunda
@@ -10828,6 +10900,11 @@ const Pickups = {
         const geo = new THREE.ExtrudeGeometry(h, { depth: 0.6, bevelEnabled: false, curveSegments: 6 });
         geo.translate(0, 0, -0.3);
         spin.add(new THREE.Mesh(geo, mat));
+      } else if (type === 'supply' || type === 'gear') {
+        // Peti: kotak dengan sabuk terang
+        spin.add(new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.7, 1.7), mat));
+        const band = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.35, 1.8), new THREE.MeshBasicMaterial({ color: type === 'gear' ? 0xfff0a0 : 0xc8f4ff }));
+        spin.add(band);
       } else if (type === 'overdrive' || type === 'destroyer') {
         // Kristal berputar: dua octahedron memanjang yang saling silang
         const cg = new THREE.OctahedronGeometry(1.3, 0);
@@ -10851,6 +10928,8 @@ const Pickups = {
       scene.add(g);
       return { type, group: g, spin, active: false, baseY: 0, t: 0 };
     };
+    // Peti Suplai (isi ulang muatan peralatan) dan Peti Peralatan (satu peralatan sementara selama stage), C4
+    this.items.push(make('supply', 0x6fdcff, 0x0a3a50), make('supply', 0x6fdcff, 0x0a3a50), make('gear', 0xffd24a, 0x5a3a00));
     for (let i = 0; i < 2; i++) {
       this.items.push(make('repair', 0x46e07a, 0x0d4a1e));
       this.items.push(make('nitro', 0xff9a2a, 0x4a2400));
@@ -10907,8 +10986,10 @@ const Pickups = {
         if (it.type === 'repair') Player.heal(PU.repairAmount);
         else if (it.type === 'heart') Player.addLife();
         else if (it.type === 'overdrive' || it.type === 'destroyer') Buffs.activate(it.type);
+        else if (it.type === 'supply') Equip.resupply();
+        else if (it.type === 'gear') Equip.grantTemp();
         else Player.addNitro(PU.nitroAmount);
-        addScore(50, it.type === 'repair' ? 'PERBAIKAN' : it.type === 'heart' ? 'NYAWA' : it.type === 'nitro' ? 'NITRO' : CONFIG.buffs[it.type].label);
+        addScore(50, it.type === 'repair' ? 'PERBAIKAN' : it.type === 'heart' ? 'NYAWA' : it.type === 'nitro' ? 'NITRO' : it.type === 'supply' ? 'PETI SUPLAI' : it.type === 'gear' ? 'PETI PERALATAN' : CONFIG.buffs[it.type].label);
         Events.emit('pickup', it.type, it.group.position);
         continue;
       }
@@ -11028,7 +11109,7 @@ const Stars = {
       this.timer -= dt;
       if (this.timer <= 0) { this.cluster(); this.timer = randRange(S.clusterInterval[0], S.clusterInterval[1]); }
     }
-    const magnet = S.magnetRadius * (Player.upgrades.magnet || 1), mag2 = magnet * magnet, col2 = (S.collectRadius + Player.radius) ** 2;
+    const magnet = S.magnetRadius * (Player.upgrades.magnet || 1) * Equip.magnetMul(), mag2 = magnet * magnet, col2 = (S.collectRadius + Player.radius) ** 2;
     let n = 0;
     for (let i = 0; i < S.max; i++) {
       if (!this.active[i]) continue;
@@ -11122,6 +11203,300 @@ const Ultimate = {
     if (this.active <= 0) { this.active = 0; this.group.visible = false; }
   },
 };
+
+/* =====================================================================
+   PERALATAN DI DALAM PERMAINAN (C4) - slot dari loadout kapal (ditambah satu slot sementara dari Peti
+   Peralatan), cooldown dan muatan per slot, efek setiap peralatan, peti, dan perolehan. Semua objek visual
+   dibuat sekali (pool) dan hanya tampil saat aktif, tanpa alokasi per frame.
+   ===================================================================== */
+const Equip = {
+  slots: [], temp: null, shieldT: 0, magnetT: 0, healT: 0, healRate: 0, lureT: 0, empAnim: 0, beamT: 0, mineGap: 0,
+  missiles: [], mines: [], flares: [], stats: { used: {}, kills: 0, absorbed: 0, missileHits: 0, beamHits: 0, mineHits: 0, empBullets: 0, healed: 0 },
+  _v: new THREE.Vector3(), _w: new THREE.Vector3(), _q: new THREE.Quaternion(),
+  def(id) { return EQUIPMENT_DEFS[id]; },
+  diff() { return EQUIP_DIFF[Game.difficultyKey] || EQUIP_DIFF.normal; },
+  maxCharges(id) { const d = this.def(id); if (!d.charges) return 0; const add = this.diff().charges; return Math.max(1, d.charges + (d.perStage ? Math.min(0, add) : add)); },
+  cooldownOf(id) { return (this.def(id).cooldown || 0) * this.diff().cd; },
+  init() {
+    const add = (m) => { m.visible = false; m.frustumCulled = false; scene.add(m); return m; };
+    const mGeo = new THREE.ConeGeometry(0.45, 2.2, 6); mGeo.rotateX(-Math.PI / 2);
+    const mMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.9, 0.6), fog: false });
+    for (let i = 0; i < 6; i++) this.missiles.push({ mesh: add(new THREE.Mesh(mGeo, mMat)), on: false, pos: new THREE.Vector3(), prev: new THREE.Vector3(), dir: new THREE.Vector3(), target: null, life: 0 });
+    const nGeo = new THREE.IcosahedronGeometry(1.1, 0);
+    for (let i = 0; i < 8; i++) this.mines.push({ mesh: add(new THREE.Mesh(nGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.4, 0.3), fog: false }))), on: false, pos: new THREE.Vector3(), life: 0, arm: 0 });
+    const fGeo = new THREE.SphereGeometry(0.9, 8, 6), fMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 1.6, 0.4), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+    for (let i = 0; i < 6; i++) this.flares.push({ mesh: add(new THREE.Mesh(fGeo, fMat)), on: false, pos: new THREE.Vector3(), vel: new THREE.Vector3(), life: 0 });
+    // Gelembung Kubah: bola additive tipis menempel di kapal, tidak menutupi kapal (opacity rendah, sisi belakang)
+    this.bubble = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 3), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.35, 0.9, 1.6), transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.BackSide, fog: false }));
+    this.bubble.visible = false; this.bubble.frustumCulled = false; PlayerRig.add(this.bubble);
+    // Sinar Tombak Magnet: silinder tipis sepanjang jangkauan, memudar 0,35 detik
+    const bGeo = new THREE.CylinderGeometry(0.35, 0.35, 1, 6, 1, true); bGeo.rotateX(Math.PI / 2); bGeo.translate(0, 0, -0.5);
+    this.beam = add(new THREE.Mesh(bGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(1.2, 2.4, 3), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })));
+    // Gelombang Pengacau: bola kawat mengembang
+    this.ring = add(new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 1.4, 2.4), wireframe: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false })));
+    Events.on('stageClear', (n) => { this.onStage(); if (EQUIP_STAGE_UNLOCK[n]) this.unlock(EQUIP_STAGE_UNLOCK[n], 'stage ' + n); });
+    Events.on('contractDone', () => {
+      const E = Save.data.equip; E.contracts++; Save.save();
+      // Kontrak ke-2 dan ke-4 membuka peralatan hadiah kontrak berikutnya
+      if (E.contracts % 2 === 0) { const id = EQUIP_CONTRACT_UNLOCK.find((x) => !E.unlocked.includes(x)); if (id) this.unlock(id, 'kontrak'); }
+    });
+    Events.on('discovery', () => { const n = Save.data.discoveries.length; for (const [k, id] of Object.entries(EQUIP_DISCOVERY_UNLOCK)) if (n >= Number(k)) this.unlock(id, 'penemuan'); });
+    Events.on('enemyDestroyed', (e, byPlayer) => {
+      if (!byPlayer ? true : (e.cfg ? e.cfg.ai === 'missile' : false)) return;
+      // Peti langka dari musuh: Peti Suplai 2,5 persen (hanya bila ada peralatan), Peti Peralatan 0,6 persen
+      if (this.slots.length ? rand() < 0.025 : false) Pickups.place('supply', e.pos.x, e.pos.y, e.pos.z);
+      else if (rand() < 0.006) Pickups.place('gear', e.pos.x, e.pos.y, e.pos.z);
+    });
+    Events.on('bossDefeated', () => { if (this.slots.length) Pickups.spawnAhead('supply'); });
+  },
+  // Slot dari loadout kapal yang dipakai, ditambah slot sementara
+  reset() {
+    const ship = Player.ship ? Player.ship.id : 'starfighter', lo = (Save.data.equip.loadout[ship] || []).filter(Boolean);
+    this.temp = null;
+    this.slots = lo.map((id) => this.makeSlot(id));
+    this.shieldT = 0; this.magnetT = 0; this.healT = 0; this.lureT = 0; this.empAnim = 0; this.beamT = 0; this.mineGap = 0;
+    for (const l of [this.missiles, this.mines, this.flares]) for (const o of l) { o.on = false; o.mesh.visible = false; }
+    if (this.bubble) { this.bubble.visible = false; this.beam.visible = false; this.ring.visible = false; }
+    this.stats = { used: {}, kills: 0, absorbed: 0, missileHits: 0, beamHits: 0, mineHits: 0, empBullets: 0, healed: 0 };
+    if (typeof HudLayout !== 'undefined') HudLayout.setEquipCount(this.slots.length);
+    Events.emit('equipSlots', this.slots.length);
+  },
+  makeSlot(id, temp = false) { return { id, cd: 0, charges: this.maxCharges(id), regen: 0, hold: 0, temp }; },
+  // Stage baru: muatan per stage dan Sisik penuh, slot sementara dari Peti Peralatan berakhir
+  onStage() {
+    if (this.temp) { this.slots = this.slots.filter((x) => !x.temp); this.temp = null; HudLayout.setEquipCount(this.slots.length); Events.emit('equipSlots', this.slots.length); }
+    for (const sl of this.slots) { if (this.def(sl.id).charges) sl.charges = this.maxCharges(sl.id); }
+  },
+  has(id) { return this.slots.some((x) => x.id === id); },
+  slot(id) { return this.slots.find((x) => x.id === id); },
+  ready(sl) { const d = this.def(sl.id); if (d.kind === 'pasif') return sl.charges > 0; if (d.charges) return sl.charges > 0 ? sl.cd <= 0 : false; return sl.cd <= 0; },
+  // Aktifkan slot ke-i (tombol HUD, Q, F, G). Peralatan tahan memakai press/release.
+  use(i, phase = 'tap') {
+    const sl = this.slots[i];
+    if (!sl ? true : (Game.state !== 'playing' ? true : !Player.alive)) return false;
+    const d = this.def(sl.id);
+    if (d.kind === 'pasif') return false;
+    if (d.kind === 'tahan') {
+      if (phase === 'down') { if (sl.cd <= 0) sl.hold = 0.0001; return sl.cd <= 0; }
+      if (phase === 'up') { sl.hold = 0; return false; }
+      // Ketukan tanpa tahan (misalnya bot uji): isi lalu tembak otomatis
+      if (sl.cd > 0) return false;
+      sl.hold = 0.0001; sl.autoRelease = true; return true;
+    }
+    if (!this.ready(sl)) return false;
+    const ok = this.fire(sl, d);
+    if (!ok) return false;
+    if (d.charges) sl.charges--;
+    if (d.cooldown) sl.cd = this.cooldownOf(sl.id);
+    if (sl.id === 'ranjau') sl.cd = d.gap;
+    this.stats.used[sl.id] = (this.stats.used[sl.id] || 0) + 1;
+    Events.emit('equipUsed', sl.id);
+    return true;
+  },
+  fire(sl, d) {
+    const P = Player.pos, F = Player.forward;
+    if (sl.id === 'kunang') {
+      const T = this.lockTargets(d);
+      for (let k = 0; k < d.count; k++) {
+        const m = this.missiles.find((x) => !x.on);
+        if (!m) break;
+        m.on = true; m.life = 0; m.target = T[k % Math.max(1, T.length)] || null;
+        m.pos.copy(P).addScaledVector(Player._right || _AX_X, k ? 1.6 : -1.6).addScaledVector(F, 2); m.prev.copy(m.pos); m.dir.copy(F);
+        m.mesh.visible = true;
+      }
+      return true;
+    }
+    if (sl.id === 'kubah') { this.shieldT = d.duration; this.bubble.visible = true; this.bubble.scale.setScalar(Player.radius * 2.6); return true; }
+    if (sl.id === 'pengacau') { this.emp(d); return true; }
+    if (sl.id === 'suar') {
+      for (let k = 0; k < d.count; k++) {
+        const f = this.flares.find((x) => !x.on);
+        if (!f) break;
+        f.on = true; f.life = d.duration; f.pos.copy(P).addScaledVector(F, -6);
+        f.vel.copy(F).multiplyScalar(-40).add(this._v.set(randRange(-25, 25), randRange(-10, 18), randRange(-25, 25))).addScaledVector(Player.vel, 0.5);
+        f.mesh.visible = true;
+      }
+      this.lureT = d.duration;
+      return true;
+    }
+    if (sl.id === 'ranjau') {
+      const mn = this.mines.find((x) => !x.on);
+      if (!mn) return false;
+      mn.on = true; mn.life = d.life; mn.arm = 0.5; mn.pos.copy(P).addScaledVector(F, -8); mn.mesh.position.copy(mn.pos); mn.mesh.visible = true;
+      return true;
+    }
+    if (sl.id === 'rajut') { this.healT = d.duration; this.healRate = Player.health.maxHp * d.heal / d.duration; return true; }
+    if (sl.id === 'magnet') { this.magnetT = d.duration; return true; }
+    return false;
+  },
+  // Sasaran terkunci: musuh (bukan rudal) atau bos di kerucut depan dan jangkauan, terdekat sudut lebih dulu
+  lockTargets(d) {
+    const P = Player.pos, F = Player.forward, cosC = Math.cos(d.cone * Math.PI / 180), out = [];
+    for (const e of Enemies.list) {
+      if (!e.active ? true : (e.cfg.ai === 'missile' ? true : e.cfg.ai === 'mine')) continue;
+      const v = this._v.copy(e.pos).sub(P), dist = v.length();
+      if (dist > d.range ? true : dist < 1) continue;
+      const c = v.dot(F) / dist;
+      if (c >= cosC) out.push({ e, c });
+    }
+    const b = Bosses.active;
+    if (b) { const A = (b.anchor || b.group).position, v = this._v.copy(A).sub(P), dist = v.length(); if (dist < d.range * 1.3 ? v.dot(F) / Math.max(1, dist) >= cosC : false) out.push({ boss: b, c: 2 }); }
+    out.sort((a, b2) => b2.c - a.c);
+    return out.slice(0, d.count);
+  },
+  targetPos(t) { if (!t) return null; if (t.boss) return Bosses.active === t.boss ? (t.boss.anchor || t.boss.group).position : null; return t.e.active ? t.e.pos : null; },
+  emp(d) {
+    const P = Player.pos, eb = Enemies.bullets, r2 = d.radius * d.radius;
+    for (let i = 0; i < eb.max; i++) {
+      if (!eb.active[i]) continue;
+      const i3 = i * 3, dx = eb.p[i3] - P.x, dy = eb.p[i3 + 1] - P.y, dz = eb.p[i3 + 2] - P.z;
+      if (dx * dx + dy * dy + dz * dz < r2) { eb.kill(i); this.stats.empBullets++; }
+    }
+    for (const e of Enemies.list) {
+      if (!e.active) continue;
+      const dd = e.pos.distanceToSquared(P);
+      if (e.cfg.ai === 'missile') { if (dd < r2) { FX.explosion(e.pos.x, e.pos.y, e.pos.z, 0.6); Enemies.destroy(e, false); } continue; }
+      if (dd < r2 * 4) e.empT = d.disable;
+    }
+    this.empAnim = 0.6; this.ring.visible = true; this.ring.position.copy(P);
+  },
+  // Pasif dan Kubah: menahan damage biasa. Tabrakan fatal tidak lewat sini (Player.fatalCrash), jadi tidak tertahan.
+  absorb(source) {
+    if (!Player.alive) return false;
+    if (this.shieldT > 0) { this.stats.absorbed++; Events.emit('equipAbsorb', 'kubah'); return true; }
+    const sl = this.slot('sisik');
+    if (sl ? sl.charges > 0 : false) { sl.charges--; this.stats.absorbed++; Player.hitInvuln = Math.max(Player.hitInvuln, 0.3); Events.emit('equipAbsorb', 'sisik'); return true; }
+    return false;
+  },
+  lureFor(pos) {
+    if (this.lureT <= 0) return null;
+    const lure = EQUIPMENT_DEFS.suar.lure;
+    let best = null, bd = lure * lure;
+    for (const f of this.flares) { if (!f.on) continue; const d2 = f.pos.distanceToSquared(pos); if (d2 < bd) { bd = d2; best = f.pos; } }
+    return best;
+  },
+  magnetMul() { return this.magnetT > 0 ? EQUIPMENT_DEFS.magnet.mult : 1; },
+  // Sinar Tombak Magnet: menembus semua musuh, asteroid, dan bos di sepanjang garis; bantuan bidik 3 derajat di mode HP
+  railgun(d) {
+    const P = Player.pos, dir = this._w.copy(Player.forward);
+    if (Touch.enabled) {
+      const cosA = Math.cos(d.assist * Math.PI / 180);
+      let best = null, bc = cosA;
+      for (const e of Enemies.list) { if (!e.active) continue; const v = this._v.copy(e.pos).sub(P), dist = v.length(); if (dist > d.range) continue; const c = v.dot(dir) / Math.max(1, dist); if (c > bc) { bc = c; best = e; } }
+      if (best) dir.copy(best.pos).sub(P).normalize();
+    }
+    const hitIn = (x, y, z, r) => { const dx = x - P.x, dy = y - P.y, dz = z - P.z, t = dx * dir.x + dy * dir.y + dz * dir.z; if (t < 0 ? true : t > d.range) return false; const ex = dx - dir.x * t, ey = dy - dir.y * t, ez = dz - dir.z * t, w = d.width + r; return ex * ex + ey * ey + ez * ez < w * w; };
+    let hits = 0;
+    for (const e of Enemies.list) if (e.active) { if (hitIn(e.pos.x, e.pos.y, e.pos.z, e.radius)) { Enemies.damage(e, d.damage, e.pos.x, e.pos.y, e.pos.z); hits++; } }
+    for (const a of Asteroids.list) if (a.active) { if (hitIn(a.pos.x, a.pos.y, a.pos.z, a.radius)) { Asteroids.damage(a, d.damage, a.pos.x, a.pos.y, a.pos.z); hits++; } }
+    if (Bosses.active) { const test = (x, y, z, r) => hitIn(x, y, z, r); test.dmg = d.damage; hits += Bosses.inBeam(test) ? 1 : 0; }
+    this.stats.beamHits += hits;
+    this.beam.position.copy(P); this.beam.scale.set(1, 1, d.range); this.beam.lookAt(this._v.copy(P).sub(dir)); this.beam.visible = true; this.beamT = 0.35;
+    CamRig.addTrauma(0.35);
+    Events.emit('equipUsed', 'tombak');
+    return hits;
+  },
+  // Peti Suplai: isi ulang muatan dan hapus cooldown peralatan terpasang
+  resupply() { for (const sl of this.slots) { sl.cd = 0; if (this.def(sl.id).charges) sl.charges = this.maxCharges(sl.id); } Events.emit('equipResupply'); },
+  // Peti Peralatan: satu peralatan acak sementara selama stage (juga kapal tanpa slot); kapal 3 slot mendapat isi ulang
+  grantTemp(id) {
+    if (this.slots.length >= 3) { this.resupply(); return null; }
+    const pool = EQUIP_IDS.filter((x) => !this.has(x));
+    const pick = id || pool[Math.floor(rand() * pool.length)];
+    if (!pick) return null;
+    if (this.temp) this.slots = this.slots.filter((x) => !x.temp);
+    this.temp = pick;
+    this.slots.push(this.makeSlot(pick, true));
+    HudLayout.setEquipCount(this.slots.length);
+    Events.emit('equipSlots', this.slots.length);
+    showBanner('PERALATAN SEMENTARA: ' + this.def(pick).short.toUpperCase(), 1600);
+    return pick;
+  },
+  unlock(id, why) {
+    const E = Save.data.equip;
+    if (!EQUIP_IDS.includes(id) ? true : E.unlocked.includes(id)) return false;
+    E.unlocked.push(id); Save.save();
+    showBanner('PERALATAN BARU: ' + this.def(id).name.toUpperCase(), 2000);
+    Events.emit('equipUnlocked', id, why);
+    return true;
+  },
+  // Kartu level berisi peralatan terkunci acak (null bila semua sudah terbuka)
+  blueprintCard(rnd = rand) {
+    const locked = EQUIP_IDS.filter((x) => !Save.data.equip.unlocked.includes(x));
+    if (!locked.length) return null;
+    const id = locked[Math.floor(rnd() * locked.length)], d = this.def(id);
+    return { id: 'eq-' + id, name: 'Cetak Biru: ' + d.short, rarity: 'langka', desc: 'Membuka peralatan ' + d.name + '. Pasang di hangar sebelum misi.', apply: () => { this.unlock(id, 'level'); } };
+  },
+  update(dt) {
+    const P = Player.pos;
+    for (const sl of this.slots) {
+      const d = this.def(sl.id);
+      if (sl.cd > 0) sl.cd = Math.max(0, sl.cd - dt);
+      // Pemulihan muatan (Sisik tiap 40 detik, Ranjau tiap 12 detik); Rajut hanya per stage
+      if (d.regen ? sl.charges < this.maxCharges(sl.id) : false) { sl.regen += dt; if (sl.regen >= d.regen) { sl.regen = 0; sl.charges++; } } else sl.regen = 0;
+      if (d.kind === 'tahan' ? sl.hold > 0 : false) {
+        sl.hold += dt;
+        if (sl.hold >= d.charge) { sl.hold = 0; sl.autoRelease = false; this.railgun(d); sl.cd = this.cooldownOf(sl.id); this.stats.used.tombak = (this.stats.used.tombak || 0) + 1; }
+      }
+    }
+    if (this.shieldT > 0) { this.shieldT -= dt; this.bubble.material.opacity = 0.12 + 0.06 * Math.sin(Game.time * 9); if (this.shieldT <= 0) this.bubble.visible = false; }
+    if (this.magnetT > 0) this.magnetT -= dt;
+    if (this.healT > 0) { const h = Math.min(this.healRate * dt, Player.health.maxHp - Player.hp); if (h > 0) { Player.heal(h); this.stats.healed += h; } this.healT -= dt; }
+    if (this.lureT > 0) this.lureT -= dt;
+    if (this.beamT > 0) { this.beamT -= dt; this.beam.material.opacity = Math.max(0, this.beamT / 0.35); if (this.beamT <= 0) this.beam.visible = false; }
+    if (this.empAnim > 0) { this.empAnim -= dt; const k = 1 - this.empAnim / 0.6; this.ring.scale.setScalar(4 + k * EQUIPMENT_DEFS.pengacau.radius); this.ring.material.opacity = 0.7 * (1 - k); if (this.empAnim <= 0) this.ring.visible = false; }
+    for (const e of Enemies.list) if (e.empT > 0) e.empT -= dt;
+    // Rudal Kunang: belok ke sasaran, kena musuh atau bos lewat uji segmen
+    const K = EQUIPMENT_DEFS.kunang;
+    for (const m of this.missiles) {
+      if (!m.on) continue;
+      m.life += dt; m.prev.copy(m.pos);
+      const T = this.targetPos(m.target);
+      if (T) { const want = this._v.copy(T).sub(m.pos).normalize(), ang = m.dir.angleTo(want); if (ang > 1e-4) m.dir.lerp(want, Math.min(1, K.turn * dt / ang)).normalize(); }
+      m.pos.addScaledVector(m.dir, (K.speed + Player.speed * 0.5) * dt);
+      m.mesh.position.copy(m.pos); m.mesh.lookAt(this._w.copy(m.pos).add(m.dir));
+      if (Game.frame % 2 === 0) FX.fire.emit(m.pos.x - m.dir.x * 1.4, m.pos.y - m.dir.y * 1.4, m.pos.z - m.dir.z * 1.4, 0, 0, 0, 0.3, 1.2, 0, 0.8, 0.8, 0.8, 0.7, 0, 0);
+      let hit = false;
+      for (const e of Enemies.list) { if (!e.active ? true : e.cfg.ai === 'missile') continue; if (segmentHitsSphere(m.prev.x, m.prev.y, m.prev.z, m.pos.x, m.pos.y, m.pos.z, e.pos.x, e.pos.y, e.pos.z, e.radius + 1.5)) { Enemies.damage(e, K.damage, m.pos.x, m.pos.y, m.pos.z); hit = true; break; } }
+      if (!hit) hit = Bosses.bulletHit(m.prev.x, m.prev.y, m.prev.z, m.pos.x, m.pos.y, m.pos.z, K.damage, 1.5);
+      if (!hit) hit = Worlds.active.solidAt(m.pos.x, m.pos.y, m.pos.z);
+      if (hit ? true : m.life > 4) { if (hit) this.stats.missileHits++; FX.explosion(m.pos.x, m.pos.y, m.pos.z, hit ? 0.7 : 0.4); m.on = false; m.mesh.visible = false; }
+    }
+    // Ranjau: aktif setelah 0,5 detik, meledak saat musuh atau bos dalam radius picu
+    const R = EQUIPMENT_DEFS.ranjau;
+    for (const mn of this.mines) {
+      if (!mn.on) continue;
+      mn.life -= dt; mn.arm -= dt;
+      mn.mesh.rotation.y += dt * 2; mn.mesh.material.color.setRGB(Math.sin(Game.time * 10) > 0 ? 2.4 : 0.8, 0.35, 0.25);
+      let boom = mn.life <= 0;
+      if (mn.arm <= 0 ? !boom : false) {
+        for (const e of Enemies.list) { if (!e.active ? true : e.cfg.ai === 'missile') continue; if (e.pos.distanceToSquared(mn.pos) < (R.trigger + e.radius) ** 2) { boom = true; break; } }
+        if (!boom ? Bosses.active : false) { const b = Bosses.active; for (const p of [b.head, ...(b.segs || [])].filter(Boolean)) { if (p.getWorldPosition(this._v).distanceToSquared(mn.pos) < (R.trigger + 6) ** 2) { boom = true; break; } } if (!boom) { const A = (b.anchor || b.group).position; if (A.distanceToSquared(mn.pos) < (R.trigger + b.size * 0.6) ** 2) boom = true; } }
+      }
+      if (boom) {
+        if (mn.life > 0) {
+          for (const e of Enemies.list) { if (!e.active) continue; if (e.pos.distanceToSquared(mn.pos) < (R.radius + e.radius) ** 2) { Enemies.damage(e, R.damage, mn.pos.x, mn.pos.y, mn.pos.z); this.stats.mineHits++; } }
+          if (Bosses.active) { const test = (x, y, z, r) => this._v.set(x, y, z).distanceToSquared(mn.pos) < (R.radius + r) ** 2; test.dmg = R.damage; if (Bosses.inBeam(test)) this.stats.mineHits++; }
+        }
+        FX.explosion(mn.pos.x, mn.pos.y, mn.pos.z, mn.life > 0 ? 1.1 : 0.4); mn.on = false; mn.mesh.visible = false;
+      }
+    }
+    for (const f of this.flares) {
+      if (!f.on) continue;
+      f.life -= dt; f.vel.multiplyScalar(Math.max(0, 1 - dt * 0.8)); f.pos.addScaledVector(f.vel, dt); f.mesh.position.copy(f.pos);
+      f.mesh.scale.setScalar(0.8 + 0.4 * Math.sin(Game.time * 30 + f.life * 7));
+      if (f.life <= 0) { f.on = false; f.mesh.visible = false; }
+    }
+  },
+  report() {
+    return { ship: Player.ship ? Player.ship.id : null, slotsMax: SHIP_SLOTS[Player.ship ? Player.ship.id : 'starfighter'], temp: this.temp,
+      slots: this.slots.map((x) => ({ id: x.id, cd: round2(x.cd), charges: x.charges, max: this.maxCharges(x.id), ready: this.ready(x), hold: round2(x.hold), temp: x.temp })),
+      shield: round2(this.shieldT), magnet: round2(this.magnetT), lure: round2(this.lureT), heal: round2(this.healT),
+      missiles: this.missiles.filter((m) => m.on).length, mines: this.mines.filter((m) => m.on).length, flares: this.flares.filter((m) => m.on).length,
+      unlocked: Save.data.equip.unlocked.slice(), loadout: JSON.parse(JSON.stringify(Save.data.equip.loadout)), stats: JSON.parse(JSON.stringify(this.stats)) };
+  },
+};
+Equip.init();
 
 /* =====================================================================
    BUFF SEMENTARA - OVERDRIVE (laju tembak) dan PENGHANCUR (damage), dari pickup kristal
@@ -12975,6 +13350,7 @@ function resetSession(keepWorld = false) {
   Game.xp = 0;
   Stars.reset();
   Ultimate.reset();
+  Equip.reset();
   Piko.reset();
   Notify.reset();
   Metrics.reset();
@@ -14802,6 +15178,7 @@ function update(dt) {
     Piko.update(dt);
     Stars.update(dt);
     Ultimate.update(dt);
+    Equip.update(dt);
     Discovery.update(dt);
     if (Player.alive) Game.score += CONFIG.score.perSecond * dt;
     else if (Player.lives > 0) {
@@ -15675,6 +16052,14 @@ const GameHooks = {
     hudPreset(name) { const P = HUD_PRESETS[name]; if (!P) return false; HudCustom.save(P.elems); if (P.leftHanded !== null) Settings.set('leftHanded', P.leftHanded); HudCustom.cache = null; Touch.applyLayout(); return HudLayout.report(); },
     hudLayoutStore() { return Store.get(HUD_LAYOUT_KEY); },
     setEquipSlots(n) { return HudLayout.setEquipCount(n); },
+    // Peralatan (C4): status slot, loadout, statistik; equipSet memasang loadout kapal sekarang (id harus terbuka
+    // kecuali unlockAll), equipUse memakai slot, equipUnlock membuka id
+    equip() { return Equip.report(); },
+    equipSet(ids, unlockAll = true) { const E = Save.data.equip, ship = Player.ship.id; if (unlockAll) for (const id of EQUIP_IDS) if (!E.unlocked.includes(id)) E.unlocked.push(id); E.loadout[ship] = Array.from({ length: Math.max(SHIP_SLOTS[ship], ids.length) }, (_, i) => (EQUIP_IDS.includes(ids[i]) ? ids[i] : null)); Equip.reset(); return Equip.report(); },
+    equipUse(i, phase) { return Equip.use(i, phase); },
+    equipUnlock(id) { return Equip.unlock(id, 'debug'); },
+    equipGrant(id) { return Equip.grantTemp(id); },
+    equipResupply() { Equip.resupply(); return Equip.report(); },
     freeze(on = true) { Debug.frozen = !!on; return Debug.frozen; },
     // force: 'pbo' membaca piksel nyata (kalibrasi, tanpa jatuh otomatis), 'heuristik' kembali ke metode utama
     uiContrast(force) { const U = UiContrast; if (force === 'heuristik') { U.fallback('dipaksa lewat debug'); U.forced = false; } if (force === 'pbo') { U.method = 'pbo'; U.reason = 'kalibrasi lewat debug'; U.forced = true; U.costs = []; } return U.report(); },

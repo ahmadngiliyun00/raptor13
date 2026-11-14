@@ -133,7 +133,7 @@ Bagian 3 (prompt 01, versi minor 2.4.0):
 - C1 (SELESAI) Kontras UI adaptif
 - C2 (SELESAI) Tata letak HUD baru (busur tombol)
 - C3 (SELESAI) Editor tata letak HUD
-- C4 Data dan aturan equipment
+- C4 (SELESAI) Data dan aturan equipment
 - C5 UI equipment
 - C6 Pengujian equipment dan keseimbangan
 - C7 Persistensi dan keamanan data baru
