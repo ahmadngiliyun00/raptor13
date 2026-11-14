@@ -111,7 +111,8 @@ meleset terhadap sasaran kecil yang sangat dekat atau jauh. Hasil bot `equipBot`
 | Starfighter tanpa peralatan | 3,0 | 4,2 | 2 sampai 5 per seed |
 
 Sebarannya besar, jadi selisih ini belum pasti bermakna. E9 menilai ulang TTK bos dengan bot dan hanya menyetel
-BOSS_PILOT atau syarat perolehan bila keluar target.
+BOSS_PILOT atau syarat perolehan bila keluar target. Hasilnya: perilaku bos kini menyesuaikan tingkat senjata (`BOSS_PILOT.tier`), dan TTK Normal masuk target
+pada tingkat realistis. Lihat `docs/bos/ttk-e9.md`.
 
 ## Perolehan
 

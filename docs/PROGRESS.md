@@ -197,7 +197,7 @@ Bagian 4 (prompt 03 sisa, versi minor 2.5.0):
 - E6 (SELESAI) Diagnosis kehalusan penerbangan (`docs/penerbangan/diagnosis-halus.md`, `tests/penerbangan/diagnosis.mjs`, hook `debug.flightRun`)
 - E7 (SELESAI) Perbaikan penerbangan (`docs/penerbangan/perbaikan.md`)
 - E8 (SELESAI) Manuver Putar Balik U (`docs/penerbangan/balik-u.md`, `tests/manuver.spec.mjs`)
-- E9 Uji kehalusan, bot, TTK
+- E9 (SELESAI) Uji kehalusan, bot, TTK (`tests/kehalusan.spec.mjs`, `docs/bos/ttk-e9.md`)
 - E10 Regresi, versi, rilis, deploy bila siap
 
 ## Blok BT: petunjuk bos, tabrakan berbasis ukuran, zoom dua kali ketuk, rencana APK (permintaan pemain 13 Nov)

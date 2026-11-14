@@ -53,7 +53,17 @@ Bukti pemilihan commit tiap tag ada di `docs/rilis/rencana-tag.md`.
     V, dan Piko menyarankan sekali.
   - Rincian di `docs/penerbangan/balik-u.md`.
 
+- **Uji kehalusan otomatis (E9).** `tests/kehalusan.spec.mjs` menjalankan semua skenario E6 dan Balik U di
+  Starfighter dan Raptor-J, dan setiap metrik wajib di bawah ambang.
+
 ### Diubah
+- **Perilaku bos menyesuaikan tingkat senjata pemain (E9).** Pengali lama di depan dan lama jendela rentan per
+  kesulitan ada di `BOSS_PILOT.tier`. HP, damage bos, dan hadiah tidak berubah.
+  - TTK bot terampil Normal pada tingkat senjata realistis: Penjaga 128, Penambang 108, Pemburu 115 detik, semua dalam
+    target 90 sampai 150.
+  - Tanpa penyesuaian, nilainya 57, 83, dan 36 detik.
+  - Rincian di `docs/bos/ttk-e9.md`.
+- Skrip `tests/bos/ttk.mjs` menerima `--tier`.
 - Tombol sentuh Balik kini berikon panah U dan secara bawaan memberi Putar Balik U. Balik vertikal tetap tersedia
   dengan joystick didorong ke atas atau bawah, jadi jumlah tombol busur tidak bertambah.
 - Laju pitch 1,7 menjadi 1,8 rad/s untuk mengganti waktu ramp. Sudut yang ditempuh dalam 1 detik tetap setara.

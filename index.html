@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-PbZ6Ucyj4vLVZ1hV+W7JpFSgrQS0hWSoFL4zPMtmAbk='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-t9ThUuwVzYunN9opPppuIbSlZj+NYFxpQALn0Mcms4A='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -9156,6 +9156,14 @@ const BOSS_PILOT = {
   mudah: { frontShare: 0.65, lead: [14, 17], leadDist: 190, overshoot: 50, turn: 2.8, catchup: 2.0, vuln: 3.0, vulnMul: 1.6, tailMax: 4, cross: true },
   normal: { frontShare: 0.45, lead: [4.4, 5.6], leadDist: 230, overshoot: 150, turn: 2.0, catchup: 1.6, vuln: 2.2, vulnMul: 1.4, tailMax: 6 },
   sulit: { frontShare: 0.25, lead: [2, 2.8], leadDist: 240, overshoot: 280, turn: 1.5, catchup: 1.35, vuln: 1.5, vulnMul: 1.25, tailMax: 9 },
+  // Penyesuaian tingkat senjata pemain (E9): pengali lama di depan (lead) dan lama jendela rentan (vuln) untuk
+  // tingkat 1, 2, 3. Bos lebih cepat berpindah dari kerucut bidik saat pemain membawa lebih banyak laras, sehingga
+  // TTK per stage tetap di target tanpa mengubah HP, damage bos, atau hadiah (disetel dari tests/bos/ttk.mjs)
+  tier: {
+    mudah: { lead: [1, 0.5, 0.35], vuln: [1, 0.7, 0.5] },
+    normal: { lead: [1, 0.62, 0.55], vuln: [1, 0.8, 0.7] },
+    sulit: { lead: [1, 1, 0.85], vuln: [1, 1, 0.9] },   // lama di depan Sulit sudah pendek: hampir netral
+  },
 };
 const BossPilot = {
   _d: new THREE.Vector3(), _t: new THREE.Vector3(), _a: new THREE.Vector3(),
@@ -9169,7 +9177,7 @@ const BossPilot = {
   set(b, mode) {
     const pl = b.pilot, C = this.P();
     pl.mode = mode; pl.t = 0; pl.run = 0;
-    if (mode === 'lead') pl.leadT = randRange(C.lead[0], C.lead[1]);
+    if (mode === 'lead') pl.leadT = randRange(C.lead[0], C.lead[1]) * (BOSS_PILOT.tier[Game.difficultyKey] || BOSS_PILOT.tier.normal).lead[Guns.tier() - 1];
     if (mode === 'turn') pl.side = -pl.side;   // bergantian sisi agar lintasan tidak selalu sama
     if (pl.o.onMode) pl.o.onMode(b, mode);
   },
@@ -9222,7 +9230,7 @@ const BossPilot = {
       speed = Math.min(ps * C.catchup + (pl.tail > 0 ? (urgent ? 110 : 70) : 20), CONFIG.player.nitroSpeed * (pl.tail > 0 ? (urgent ? 1.7 : 1.45) : 1.15)); turn = pl.tail > 0 ? Math.max(C.turn, urgent ? 3.2 : 2.4) : C.turn;
       if (cos > (C.cross ? 0.75 : 0.8) ? dist < C.leadDist * (o.leadMul || 1) * 1.8 : false) {
         this.set(b, 'lead');
-        b.vuln = C.vuln * (o.vulnTime || 1); b.vulnId = (b.vulnId || 0) + 1;
+        b.vuln = C.vuln * (o.vulnTime || 1) * (BOSS_PILOT.tier[Game.difficultyKey] || BOSS_PILOT.tier.normal).vuln[Guns.tier() - 1]; b.vulnId = (b.vulnId || 0) + 1;
         if (BossStats.on) BossStats.vulnWindows++;
         Events.emit('bossVulnerable', b.kind);
       }

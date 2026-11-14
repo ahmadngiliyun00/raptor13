@@ -2,6 +2,9 @@
 // Mudah, Normal, Sulit, beberapa seed, batas 300 detik. Bot menerima kerusakan sungguhan (tanpa mode kebal;
 // tabrakan keras dicatat dalam mode latihan agar pertarungan tetap berlanjut).
 // Pemakaian: node tests/bos/ttk.mjs <label> [--seeds=1,2,3,4,5] [--boss=raksasa] [--profiles=terampil,rata] [--diffs=normal] [--secs=300]
+//   [--tier=realistis|1|2|3] (E9): tingkat senjata kapal saat bertarung. realistis = tingkat yang wajar dimiliki pemain
+//   saat bos itu muncul menurut aturan perolehan E5 (Penjaga 2, Penambang stage 5: 2, Pemburu stage 8: 3, Naga: 3).
+//   Versi tanpa senjata bertingkat (sebelum E5) mengabaikan opsi ini.
 import { chromium } from '@playwright/test';
 import { spawn } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -14,6 +17,8 @@ const SECS = Number(opt.secs || 300);
 const PROFILES = String(opt.profiles || 'terampil,rata').split(',');
 const DIFFS = String(opt.diffs || 'mudah,normal,sulit').split(',');
 const HOME = { raksasa: 'earth', miner: 'sabuk', hunter: 'uranus', naga: 'pluto' };
+const TIER_REAL = { raksasa: 2, miner: 2, hunter: 3, naga: 3 };
+const tierOf = (kind) => (opt.tier ? (opt.tier === 'realistis' ? TIER_REAL[kind] : Number(opt.tier)) : 0);
 const BOSSES = opt.boss ? String(opt.boss).split(',') : Object.keys(HOME);
 const PORT = Number(process.env.PERF_PORT || 4208);
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
@@ -29,15 +34,16 @@ try {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
     await page.goto(`http://localhost:${PORT}/index.html?` + new URLSearchParams({ debug: '1', kualitas: 'rendah' }));
     await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
-    const r = await page.evaluate(([kind, world, difficulty, seed, secs, profile]) => {
+    const r = await page.evaluate(([kind, world, difficulty, seed, secs, profile, tier]) => {
       const g = window.__game, d = g.debug;
       g.setSeed(seed); d.setEnemiesEnabled(false); d.setSetting('tutorialDone', true); d.setSetting('difficulty', difficulty);
       if (world === 'earth') g.startIn('earth'); else { d.setArea(world); g.startIn('space', 'free'); }
       g.skipTransition(); d.skipCutscene();
       if (world !== 'earth') d.viewArea(world);
+      if (tier ? typeof d.setGunTier === 'function' : false) d.setGunTier(tier);
       return d.skilledBot(kind, secs, { difficulty, seed, profile });
-    }, [kind, HOME[kind], difficulty, seed, SECS, profile]);
-    rows.push({ profile, seed, ...r });
+    }, [kind, HOME[kind], difficulty, seed, SECS, profile, tierOf(kind)]);
+    rows.push({ profile, seed, tier: tierOf(kind), ...r });
     console.log(profile, kind, difficulty, seed, 'ttk', r.defeatAt, 'dmg', r.damageTaken, 'mati', r.deaths, 'tabrak', r.crashes, 'depan', r.frontPct, 'rentan', r.vulnUsed + '/' + r.vulnWindows, 'ekor', r.maxRearStreak, 'fase', r.phase);
     await page.close();
   }
