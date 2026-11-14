@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-6qFm3HKzKsVJRpJ00I7yMr6II5EeIK5gfmLSSmhsc9o='; style-src 'self' 'sha256-IrJT55BDD4aS/NT6MuVre7XrrXke0GI/I//EvgqVk7M='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-W9bTFC1/ynVpIEmIlZcfdigaAuPYe2ImxPgSq2qs5jY='; style-src 'self' 'sha256-1vJfpY2QV0ra54EqICDdTgew8EwhCnGRFggkWA1mPPA='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -807,6 +807,18 @@
     animation: rotPhone 2.4s ease-in-out infinite; transform-origin: 50% 45%; }
   @keyframes rotPhone { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
   body.portrait-hp #toolbar { display: flex !important; }
+  /* Kartu unduh APK di kiri bawah menu (C10): kecil, tidak menutupi zona tengah atau tombol menu */
+  #apk-card { position: fixed; z-index: 44; left: max(var(--ed-l), 12px); bottom: max(var(--ed-b), 12px); width: min(300px, 34vw); display: flex; flex-direction: column; gap: 4px;
+    padding: 8px 10px; font-size: 12px; line-height: 1.35; color: #e8f6ff; background: rgba(8, 14, 24, 0.92); border: 1px solid rgba(160, 220, 255, 0.45); border-radius: 10px; }
+  #apk-card small { color: var(--ui-dim); font-size: 11px; }
+  #apk-card details { font-size: 11px; color: var(--ui-dim); }
+  #apk-card summary { cursor: pointer; color: #9fe8ff; min-height: 24px; }
+  #apk-card ol { margin: 4px 0 0; padding-left: 16px; }
+  .apk-btns { display: flex; flex-wrap: wrap; gap: 4px; }
+  .apk-btns .btn.small { min-height: 32px; padding: 4px 8px; font-size: 11px; }
+  body.mode-hp .desk-only { display: none; }
+  body.native-app #btn-pause-fs, body.native-app #fs-tip { display: none !important; }   /* aplikasi sudah layar penuh */
+  .about-links { display: flex; gap: 4px; justify-content: center; }
   #pwa-update { position: fixed; z-index: 46; left: 50%; bottom: max(var(--ed-b), 12px); transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
     padding: 6px 8px 6px 14px; font-size: 13px; color: #e8f6ff; background: rgba(8, 14, 24, 0.94); border: 1px solid rgba(160, 220, 255, 0.55); border-radius: 10px; }
   #pwa-update .btn.small { min-height: 36px; }
@@ -1039,6 +1051,8 @@
     .hangar h2 { font-size: 18px; }
     .hangar-body { gap: 10px; }
     #hangar-canvas { max-height: calc(var(--app-h) - 130px); width: auto; max-width: 100%; }
+    /* Tentang: kalimat kredit mengulang daftar di atasnya, disembunyikan agar tautan Lapor bug muat (C10) */
+    #screen-about .about-line { display: none; }
     .hangar-info { gap: 4px; }
     .hangar-title b { font-size: 16px; }
     #hangar-desc { font-size: 11px; line-height: 1.35; }
@@ -1322,6 +1336,23 @@
     <span>Mode HP dimainkan mendatar. Permainan dijeda sampai layar diputar.</span>
   </div>
 </div>
+<!-- Kartu unduh APK (C10): hanya di browser Android, bukan di aplikasi atau PWA terpasang, tidak menutupi menu -->
+<div id="apk-card" class="hidden" role="region" aria-label="Unduh aplikasi Android">
+  <b>Main lebih lancar sebagai aplikasi Android (APK)</b>
+  <small id="apk-meta"></small>
+  <details><summary>Cara pasang yang aman</summary>
+    <ol>
+      <li>Unduh hanya dari situs resmi ini atau GitHub Releases proyek.</li>
+      <li>Saat diminta, izinkan browser memasang aplikasi dari sumber tidak dikenal.</li>
+      <li>Google Play Protect bisa menampilkan peringatan karena aplikasi belum dari Google Play. Periksa checksum SHA-256 di halaman rilis sebelum memasang.</li>
+    </ol>
+  </details>
+  <div class="apk-btns">
+    <button id="apk-get" class="btn small" type="button">UNDUH</button>
+    <button id="apk-later" class="btn secondary small" type="button">NANTI</button>
+    <button id="apk-never" class="btn secondary small" type="button">JANGAN TAMPILKAN LAGI</button>
+  </div>
+</div>
 <!-- PWA (C9): versi baru tersedia, tidak memuat ulang paksa saat bermain -->
 <div id="pwa-update" class="hidden" role="status">
   <span>Versi baru tersedia</span>
@@ -1594,6 +1625,7 @@
     <p class="about-line">Raptor13 dibuat dengan Three.js oleh Ahmad Ngiliyun, bantuan Claude Code.</p>
     <p class="hint">Seluruh visual dan suara disusun oleh kode saat game berjalan, tanpa file model, gambar, atau audio.</p>
     <p class="hint privacy">Privasi: tanpa cookie, pelacak, atau analitik. Data hanya tersimpan di perangkat ini.</p>
+    <p class="hint about-links"><button id="btn-about-bug" class="link" type="button">Lapor bug</button><span class="desk-only"> · <button id="btn-about-apk" class="link" type="button">Unduh untuk Android</button></span></p>
     <button id="btn-about-back" class="btn" type="button">KEMBALI</button>
   </div>
 </div>
@@ -1716,10 +1748,11 @@
         <button id="btn-pause-fs" class="btn secondary" type="button">LAYAR PENUH</button>
         <button id="btn-pause-mode" class="btn secondary" type="button">MODE KEYBOARD</button>
         <button id="btn-pause-mute" class="btn secondary" type="button">SUARA: NYALA</button>
+        <button id="btn-pause-bug" class="btn secondary" type="button">LAPOR BUG</button>
       </div>
     </div>
     <p id="save-info" class="hint save-info"></p>
-    <p class="hint kb-only"><kbd>P</kbd> atau <kbd>Esc</kbd> lanjut, <kbd>M</kbd> suara</p>
+    <p class="hint kb-only"><kbd>P</kbd> atau <kbd>Esc</kbd> lanjut, <kbd>M</kbd> suara · <button id="btn-pause-bug-kb" class="link" type="button">Lapor bug</button></p>
   </div>
 </div>
 
@@ -2369,6 +2402,7 @@ const SETTING_DEFAULTS = {
   robotHelp: 'penuh',          // bantuan robot Piko: penuh | ringkas (bawaan di perangkat sentuh) | ikon | mati
   touchPromptShown: false,     // deteksi perangkat sentuh sudah dilakukan (otomatis atau lewat saran)
   a2hsHintShown: false,        // petunjuk Tambahkan ke Layar Utama (iOS) sudah tampil sekali
+  apkCardHidden: false,        // kartu unduh APK di menu: Jangan tampilkan lagi (C10)
   perfMode: 'otomatis',        // mode performa: otomatis | hemat (hemat baterai) | seimbang | kualitas (kualitas tinggi)
   fpsCap: 'otomatis',          // batas FPS: otomatis (60, turun di perangkat sentuh saat panas) | 30 | 60 | tanpa
   resolution: 'otomatis',      // pixel ratio maksimum: otomatis (sesuai kualitas, 1,25 di perangkat sentuh) | 1 | 1.5 | 2
@@ -16433,6 +16467,10 @@ const GameHooks = {
     equipResupply() { Equip.resupply(); return Equip.report(); },
     // PWA (C9): status pendaftaran service worker, kontrol halaman, versi menunggu, tombol pasang
     pwa() { return Pwa.report(); },
+    // Aplikasi dan distribusi (C10): status native, tombol Back, kartu APK, isi laporan bug
+    nativeInfo() { return { native: Native.on, apkCard: !$('apk-card').classList.contains('hidden'), eligible: ApkCard.eligible(), diag: Native.diagnostics() }; },
+    nativeBack() { return Native.back(); },
+    bugReport() { return Native.reportBug(); },
     freeze(on = true) { Debug.frozen = !!on; return Debug.frozen; },
     // force: 'pbo' membaca piksel nyata (kalibrasi, tanpa jatuh otomatis), 'heuristik' kembali ke metode utama
     uiContrast(force) { const U = UiContrast; if (force === 'heuristik') { U.fallback('dipaksa lewat debug'); U.forced = false; } if (force === 'pbo') { U.method = 'pbo'; U.reason = 'kalibrasi lewat debug'; U.forced = true; U.costs = []; } return U.report(); },
@@ -17088,7 +17126,7 @@ const Haptic = {
     const now = performance.now();
     if (now - this.last < gap) return;
     this.last = now;
-    try { if (navigator.vibrate) navigator.vibrate(ms); } catch (err) { /* tidak didukung */ }
+    Native.vibrate(ms);
   },
 };
 Events.on('shot', () => Haptic.pulse(8, 160));
@@ -17209,6 +17247,107 @@ const Pwa = {
     $('pwa-update').classList.toggle('hidden', !show);
   },
   report() { return { state: this.state, controlled: !!(navigator.serviceWorker ? navigator.serviceWorker.controller : null), waiting: !!this.waiting, installButton: !$('btn-install').classList.contains('hidden'), standalone: this.standalone() }; },
+};
+
+/* =====================================================================
+   APLIKASI NATIVE, KARTU APK, LAPOR BUG (C10)
+   - Native (Capacitor Android dan iOS): mode HP otomatis, tombol Back membuka Jeda (Back dua kali di menu utama
+     untuk keluar), getar lewat plugin Haptics dengan cadangan navigator.vibrate, layar tetap menyala, orientasi
+     landscape, kartu APK dan petunjuk pasang PWA disembunyikan. CSP tidak diubah: jembatan Capacitor disuntik
+     WebView (document start script atau WKUserScript), bukan skrip inline halaman.
+   - Kartu unduh APK hanya di browser Android yang bukan aplikasi dan bukan PWA terpasang; tidak di iOS dan
+     desktop (desktop cukup tautan di layar Tentang).
+   - Lapor Bug: info diagnostik tanpa data pribadi, ke FEEDBACK_FORM_URL bila diisi pemilik, selain itu ke
+     halaman New Issue GitHub dengan templat bug terisi.
+   ===================================================================== */
+const APK_URL = 'https://github.com/ahmadngiliyun00/raptor13/releases/latest/download/raptor13.apk';
+const APK_PAGE_URL = 'https://github.com/ahmadngiliyun00/raptor13/releases/latest';
+const FEEDBACK_FORM_URL = '';   // diisi pemilik: tautan Google Form atau Tally (docs/apk/formulir-beta.md)
+const ISSUE_URL = 'https://github.com/ahmadngiliyun00/raptor13/issues/new';
+// Diisi saat rilis (ukuran dan SHA-256 APK); null berarti rincian ada di halaman rilis
+const APK_INFO = null;
+const Native = {
+  on: false, lastBack: -1e9,   // bukan 0: tepat setelah dibuka performance.now masih di bawah 2 detik
+  plugin(name) { try { return window.Capacitor.Plugins[name] || null; } catch (err) { return null; } },
+  init() {
+    this.on = Pwa.native();
+    document.body.classList.toggle('native-app', this.on);
+    onButton($('btn-pause-bug'), () => this.reportBug());
+    onButton($('btn-pause-bug-kb'), () => this.reportBug());
+    onButton($('btn-about-bug'), () => this.reportBug());
+    onButton($('btn-about-apk'), () => this.open(APK_PAGE_URL));
+    ApkCard.init();
+    if (!this.on) return;
+    // Aplikasi HP: mode sentuh otomatis sekali, tanpa pop-up deteksi
+    if (!Save.settings.touchPromptShown) { Save.settings.touchPromptShown = true; Settings.set('controlMode', 'hp'); }
+    const App = this.plugin('App');
+    if (App) App.addListener('backButton', () => this.back());
+    const KA = this.plugin('KeepAwake'); if (KA) KA.keepAwake().catch(() => { /* tidak didukung */ });
+    const SO = this.plugin('ScreenOrientation'); if (SO) SO.lock({ orientation: 'landscape' }).catch(() => { /* tidak didukung */ });
+    const SB = this.plugin('StatusBar'); if (SB) SB.hide().catch(() => { /* tidak didukung */ });
+  },
+  // Back: bermain membuka Jeda, overlay ditutup, Jeda dilanjutkan; di menu utama dua kali dalam 2 detik untuk keluar
+  back() {
+    const now = performance.now();
+    if (Game.state === 'playing') { togglePause(); return 'jeda'; }
+    if (UI.overlay) { UI.closeOverlay(); return 'tutup'; }
+    if (Game.state === 'paused') { togglePause(); return 'lanjut'; }
+    if (now - this.lastBack < 2000) { const App = this.plugin('App'); if (App) App.exitApp(); return 'keluar'; }
+    this.lastBack = now;
+    showBanner('Tekan Kembali sekali lagi untuk keluar', 1600);
+    return 'konfirmasi';
+  },
+  vibrate(ms) {
+    const H = this.on ? this.plugin('Haptics') : null;
+    if (H) { H.vibrate({ duration: ms }).catch(() => { /* tidak didukung */ }); return true; }
+    try { if (navigator.vibrate) navigator.vibrate(ms); } catch (err) { /* tidak didukung */ }
+    return false;
+  },
+  open(url) {
+    const B = this.on ? this.plugin('Browser') : null;
+    if (B) { B.open({ url }).catch(() => { /* gagal */ }); return; }
+    try { window.open(url, '_blank', 'noopener'); } catch (err) { /* diblokir */ }
+  },
+  // Info diagnostik tanpa data pribadi
+  diagnostics() {
+    const p = Perf.frameMs > 0 ? Math.round(1000 / Perf.frameMs) : 0;
+    return ['Versi game: ' + GAME_VERSION + (this.on ? ' (aplikasi)' : (Pwa.standalone() ? ' (PWA terpasang)' : ' (browser)')),
+      'Mode kontrol: ' + Save.settings.controlMode, 'Kualitas grafis: ' + CONFIG.qualityPreset + ', mode performa ' + Save.settings.perfMode,
+      'Layar: ' + Layout.w + 'x' + Layout.h + ' CSS, DPR ' + (window.devicePixelRatio || 1) + ', canvas ' + renderer.domElement.width + 'x' + renderer.domElement.height,
+      'FPS rata-rata: ' + p + ', medan ' + Worlds.active.id + ', status ' + Game.state, 'Peramban: ' + navigator.userAgent].join('\n');
+  },
+  reportBug() {
+    const text = this.diagnostics();
+    try { if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => { /* izin ditolak */ }); } catch (err) { /* tidak didukung */ }
+    let url;
+    if (FEEDBACK_FORM_URL) url = FEEDBACK_FORM_URL;
+    else { const q = new URLSearchParams({ template: 'bug.yml', title: '[Bug] ', diagnostik: text, perangkat: navigator.userAgent.slice(0, 200) }); url = ISSUE_URL + '?' + q.toString(); }
+    this.lastReport = { url, text };
+    this.open(url);
+    return this.lastReport;
+  },
+};
+const ApkCard = {
+  el: $('apk-card'), sessionHidden: false,
+  eligible() {
+    if (Native.on ? true : Pwa.standalone()) return false;
+    const ua = navigator.userAgent;
+    return /Android/i.test(ua) ? !/iPhone|iPad|iPod/i.test(ua) : false;
+  },
+  init() {
+    const meta = $('apk-meta');
+    meta.textContent = 'Versi ' + GAME_VERSION + (APK_INFO ? ', ' + APK_INFO.sizeMB + ' MB, SHA-256 ' + APK_INFO.sha256.slice(0, 16) + '...' : ', ukuran dan checksum SHA-256 di halaman rilis');
+    onButton($('apk-get'), () => { Native.open(APK_URL); this.hide(); });
+    onButton($('apk-later'), () => { this.sessionHidden = true; this.hide(); });
+    onButton($('apk-never'), () => { Settings.set('apkCardHidden', true); this.hide(); });
+    setInterval(() => this.update(), 1000);
+    this.update();
+  },
+  hide() { this.el.classList.add('hidden'); },
+  update() {
+    const show = this.eligible() ? (!Save.settings.apkCardHidden ? (!this.sessionHidden ? (Game.state === 'menu' ? !UI.overlay : false) : false) : false) : false;
+    this.el.classList.toggle('hidden', !show);
+  },
 };
 
 /* Diagnosis kotak hitam di perangkat asli (?diag=1, A7): GlitchProbe aktif terus, overlay kecil berisi
@@ -17352,6 +17491,7 @@ Pacer.init();
 onResize();
 Diag.init();
 Pwa.init();
+Native.init();
 Tutorial.init();
 AudioUnlock.init();
 A11y.apply(Save.settings);

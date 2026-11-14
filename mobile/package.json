@@ -1,0 +1,26 @@
+{
+  "name": "raptor13-mobile",
+  "version": "2.3.1",
+  "private": true,
+  "description": "Pembungkus aplikasi Android dan iOS RAPTOR13 dengan Capacitor. Sumber game tetap ../index.html, disalin oleh ../scripts/sync-web.mjs.",
+  "license": "MIT",
+  "scripts": {
+    "sync": "node ../scripts/sync-web.mjs && npx cap sync",
+    "android:debug": "node ../scripts/sync-web.mjs && npx cap sync android && cd android && ./gradlew assembleDebug",
+    "android:release": "node ../scripts/sync-web.mjs && npx cap sync android && cd android && ./gradlew assembleRelease bundleRelease"
+  },
+  "dependencies": {
+    "@capacitor-community/keep-awake": "8.0.1",
+    "@capacitor/android": "8.6.2",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/haptics": "8.0.2",
+    "@capacitor/ios": "8.6.2",
+    "@capacitor/screen-orientation": "8.0.2",
+    "@capacitor/status-bar": "8.0.4"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.2"
+  }
+}

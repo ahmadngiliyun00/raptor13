@@ -1,0 +1,20 @@
+{
+  "appId": "id.my.ngiliyun.raptor13",
+  "appName": "RAPTOR13",
+  "webDir": "www",
+  "backgroundColor": "#0b1622",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#0b1622"
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#0b1622",
+    "scrollEnabled": false
+  },
+  "plugins": {
+    "StatusBar": { "overlaysWebView": true, "style": "DARK", "backgroundColor": "#00000000" }
+  }
+}

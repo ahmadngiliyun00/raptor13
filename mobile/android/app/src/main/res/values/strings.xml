@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RAPTOR13</string>
+    <string name="title_activity_main">RAPTOR13</string>
+    <string name="package_name">id.my.ngiliyun.raptor13</string>
+    <string name="custom_url_scheme">id.my.ngiliyun.raptor13</string>
+</resources>

@@ -15,8 +15,21 @@ Pemberitahuan lisensi three.js juga ada di `vendor/three-0.187.0/LICENSE`, dan d
 | --- | --- | --- |
 | @playwright/test | Apache-2.0 | Uji otomatis (`npm test`) |
 
-Bila APK Android atau proyek iOS dibuat (folder `mobile/`), Capacitor dan pluginnya akan didaftarkan di sini
-beserta lisensinya.
+## Aplikasi Android dan iOS (folder `mobile/`, ikut di dalam APK dan aplikasi iOS)
+
+| Pustaka | Versi | Lisensi |
+| --- | --- | --- |
+| @capacitor/core, @capacitor/android, @capacitor/ios, @capacitor/cli | 8.6.2 | MIT |
+| @capacitor/app | 8.1.2 | MIT |
+| @capacitor/browser | 8.0.5 | MIT |
+| @capacitor/haptics | 8.0.2 | MIT |
+| @capacitor/screen-orientation | 8.0.2 | MIT |
+| @capacitor/status-bar | 8.0.4 | MIT |
+| @capacitor-community/keep-awake | 8.0.1 | MIT |
+| AndroidX (appcompat, core, coordinatorlayout, webkit, core-splashscreen) | dari Capacitor | Apache-2.0 |
+
+Lisensi diperiksa lewat `npm view <paket> license` pada 14 November 2026. Teks lisensi lengkap tersedia di
+`mobile/node_modules/<paket>/LICENSE` setelah `npm ci` di folder `mobile/`.
 
 Semua suara disintesis dengan Web Audio. Semua model, tekstur, dan ikon dibuat oleh kode proyek ini. Tidak ada
 aset pihak ketiga lain, font eksternal, atau CDN.
