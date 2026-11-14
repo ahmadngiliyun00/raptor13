@@ -15,7 +15,23 @@ dan tanpa aset eksternal. Three.js 0.187.0 ditanam lokal di `vendor/three-0.187.
 dipetakan importmap dengan integrity sha384), semua model, tekstur, langit, dan planet dibuat prosedural
 oleh kode, dan semua suara serta musik disintesis dengan WebAudio.
 
-Versi saat ini: **2.3.1** (lihat [CHANGELOG.md](CHANGELOG.md)). Tanpa cookie, pelacak, atau analitik.
+Versi saat ini: **2.4.0** (lihat [CHANGELOG.md](CHANGELOG.md)). Tanpa cookie, pelacak, atau analitik.
+
+### Yang baru di 2.4.0
+
+- **Tombol mudah terbaca di mana pun.** Pelat tombol otomatis putih di angkasa dan cokelat arang di langit
+  Bumi atau di depan planet terang, dengan cincin ganda. Opsi Kontras UI ada di tab Akses.
+- **Tata letak HUD ala game tembak mobile.** TEMBAK besar di kanan bawah yang tidak menempel tepi, tombol lain
+  dalam busur jempol, radar di kiri atas. Atur sendiri lewat **Edit tata letak HUD**.
+- **Peralatan.** Ada 9 peralatan orisinal, dari Rudal Pencari Kunang sampai Rajut Nano. Pasang di hangar
+  sebelum misi; Gunship punya 3 slot. Desktop: tombol Q, F, G.
+- **Pasang sebagai aplikasi:**
+  - PWA yang bisa dimainkan luring;
+  - APK Android: <https://github.com/ahmadngiliyun00/raptor13/releases/latest/download/raptor13.apk>, periksa
+    `SHA256SUMS` di halaman rilis;
+  - panduan iPhone di [docs/ios/panduan-ios.md](docs/ios/panduan-ios.md).
+- **Open source.** Lisensi MIT untuk kode dan CC BY 4.0 untuk konten. Panduan kontribusi, CI, dan issue awal
+  untuk kontributor baru.
 
 ### Yang baru di 2.3.1
 
@@ -82,6 +98,17 @@ menit game tersedia di `https://ahmadngiliyun00.github.io/raptor13/`.
 
 Pemetaan yang sama tampil di layar judul dan di Pengaturan. Di perangkat sentuh dipakai mode HP,
 lihat bagian berikut.
+
+## Memasang di HP
+
+| Cara | Langkah |
+| --- | --- |
+| Android, aplikasi (APK) | Unduh `raptor13.apk` dari [halaman rilis](https://github.com/ahmadngiliyun00/raptor13/releases/latest). Izinkan browser memasang dari sumber tidak dikenal. Play Protect bisa memperingatkan karena aplikasi belum dari Google Play. Periksa SHA-256 dengan `SHA256SUMS` di halaman yang sama. Di browser Android, game menampilkan kartu unduh kecil di menu. |
+| Android, PWA | Buka situs di Chrome, lalu ketuk **PASANG APLIKASI** di menu utama |
+| iPhone | Safari, Bagikan, lalu Tambahkan ke Layar Utama. Pilihan lain lewat Xcode atau TestFlight: [docs/ios/panduan-ios.md](docs/ios/panduan-ios.md). Tidak ada APK untuk iOS. |
+
+Rincian: [docs/pwa.md](docs/pwa.md), [docs/apk/hasil-build.md](docs/apk/hasil-build.md),
+[docs/apk/keystore.md](docs/apk/keystore.md), [docs/apk/ci.md](docs/apk/ci.md).
 
 ## Mode HP (layar sentuh, landscape)
 
@@ -214,6 +241,38 @@ konfirmasi dulu. Data rusak diabaikan dengan aman.
 Semua akses penyimpanan sesi lewat adaptor `Store` (get, set, remove). Bila game nanti dibungkus
 menjadi aplikasi Android, `localStorage` tetap bekerja di dalam WebView aplikasi; bila ingin
 penyimpanan native yang lebih tahan terhadap pembersihan data, cukup adaptor itu yang diganti.
+
+## Peralatan (2.4.0)
+
+Tiap kapal punya slot peralatan:
+
+- Starfighter tanpa slot, dengan sifat pasif nitro pulih lebih cepat;
+- Raptor-J 1 slot, Kunang terpasang bawaan;
+- Interceptor 2 slot;
+- Gunship 3 slot.
+
+Pasang lewat **HANGAR**, lalu **PERALATAN**. Peralatan dipakai lewat tombol di busur HUD, atau tombol Q, F, G
+di keyboard.
+
+| Peralatan | Ringkas |
+| --- | --- |
+| Rudal Pencari Kunang | Mengunci 2 sasaran di depan, cooldown 30 detik |
+| Kubah Energi | Menahan semua damage biasa 4 detik, cooldown 25 detik |
+| Perisai Reaktif Sisik | Pasif, 3 muatan, tiap muatan menahan 1 kena |
+| Meriam Rel Tombak Magnet | Tahan 1 detik, sinar menembus semua di jalurnya, cooldown 10 detik |
+| Gelombang Pengacau | Menghapus peluru dan rudal musuh di dekat kapal, melumpuhkan tembakan musuh 3 detik |
+| Umpan Panas Suar Kelip | 3 suar yang mengalihkan rudal musuh, cooldown 15 detik |
+| Ranjau Antariksa Biji Besi | 3 ranjau di belakang kapal, ampuh melawan pengejar |
+| Rajut Nano | Pulih 25 persen HP dalam 4 detik, 2 kali per stage |
+| Magnet Tarik | Radius tarik bintang tiga kali lipat selama 8 detik |
+
+- **Perolehan:** stage kampanye, kontrak, penemuan, dan kartu Cetak Biru saat naik level.
+- **Peti Suplai:** mengisi ulang muatan.
+- **Peti Peralatan:** memberi peralatan sementara selama satu stage.
+- **Tabrakan fatal:** Kubah dan Sisik tidak menyelamatkan dari tabrakan fatal.
+
+Angka dan hasil uji bot: [docs/equipment/keseimbangan.md](docs/equipment/keseimbangan.md),
+[docs/equipment/uji.md](docs/equipment/uji.md).
 
 ## Kapal
 
@@ -478,6 +537,12 @@ __game.debug.layout()                      // layout viewport, skala zoom, resiz
 __game.debug.skilledBot('hunter', 300, { profile: 'terampil', difficulty: 'normal' })   // TTK bot terampil
 __game.debug.botAccuracy(); __game.debug.bossLog()
 __game.debug.showHitboxes(true); __game.debug.hitboxAudit(); __game.debug.fatalWatch()
+__game.debug.uiContrast()                  // kontras UI: metode, luma tiap wilayah, mode (C1)
+__game.debug.hudLayout(); __game.debug.setEquipSlots(3)   // busur tombol HP (C2)
+__game.debug.hudEditor('open'); __game.debug.hudPreset('kidal')   // editor tata letak (C3)
+__game.debug.equipSet(['kunang', 'kubah', 'tombak']); __game.debug.equipUse(0); __game.debug.equip()
+__game.debug.equipTest('pengacau'); __game.debug.equipBot(180, ['kunang', 'sisik', 'kubah'])
+__game.debug.pwa(); __game.debug.nativeInfo(); __game.debug.bugReport()
 ```
 
 ## Struktur proyek
@@ -485,27 +550,36 @@ __game.debug.showHitboxes(true); __game.debug.hitboxAudit(); __game.debug.fatalW
 ```text
 raptor13/
 ├── index.html               # seluruh game
+├── sw.js                    # service worker PWA (2.4.0)
+├── manifest.webmanifest     # manifest PWA
+├── icons/                   # ikon orisinal, termasuk maskable
 ├── vendor/three-0.187.0/    # Three.js resmi (ditanam lokal, MIT)
-├── CHANGELOG.md
-├── README.md
+├── mobile/                  # proyek Capacitor: android/ dan ios/ (2.4.0)
+├── scripts/                 # sync-web, versi mobile, ikon, deploy, sidik jari, pemeriksa gaya, rahasia, HTML
+├── .github/                 # templat issue dan PR, CI, workflow rilis APK
+├── LICENSE, LICENSE-CONTENT.md, TRADEMARKS.md, THIRD_PARTY_NOTICES.md
+├── CONTRIBUTING.md, CODE_OF_CONDUCT.md, SECURITY.md, SUPPORT.md
+├── ARCHITECTURE.md, ROADMAP.md, CHANGELOG.md, README.md
 ├── package.json             # hanya untuk tooling uji (Playwright)
 ├── playwright.config.mjs
 ├── tests/
 │   ├── game.spec.mjs        # uji gameplay
-│   ├── hp.spec.mjs          # uji mode HP
+│   ├── hp.spec.mjs          # uji mode HP dan editor tata letak
+│   ├── hud.spec.mjs         # uji tata letak desktop
+│   ├── kontras.spec.mjs     # uji kontras UI
+│   ├── equip.spec.mjs       # uji peralatan
+│   ├── pwa.spec.mjs, apk.spec.mjs   # uji PWA, kartu APK, Lapor Bug, tombol Back aplikasi
 │   ├── audit.spec.mjs       # uji audit blok A
+│   ├── bos.spec.mjs, zoom*.spec.mjs
 │   ├── csp.mjs              # hash CSP dan integrity importmap
-│   ├── perf/                # skrip pengukuran
+│   ├── bos/, ui/, equipment/, perf/   # skrip pengukuran yang menghasilkan data di docs/
 │   └── static-server.mjs    # server statis kecil tanpa dependensi
 └── docs/
     ├── PROGRESS.md          # urutan task dan catatan kerja
-    ├── SELF-REVIEW.md       # tinjauan Definition of Done
-    ├── audit/               # baseline, performa, keamanan, UI/UX, glitch, dependensi, ringkasan
-    ├── deploy/              # header keamanan server dan contoh .htaccess
-    ├── rilis/               # rencana tag dan perintah rilis
+    ├── ui/, equipment/, apk/, ios/, lisensi/, komunitas/, pwa.md   # dokumen 2.4.0
+    ├── audit/, bos/, fisika/, deploy/, rilis/
     └── screenshots/
 ```
-
 ## Keputusan desain
 
 - **Terbang quaternion bebas** dengan penstabil otomatis opsional: looping penuh mungkin, kamera
@@ -523,7 +597,8 @@ raptor13/
 
 ## Keterbatasan yang diketahui
 
-- Belum ada service worker untuk luring penuh (Three.js sudah lokal, tetapi halaman tetap dimuat dari server).
+- Mode luring lewat service worker butuh header server `worker-src 'self'` (lihat `docs/pwa.md`) sebelum aktif di situs live.
+- APK dan aplikasi iOS diuji di emulator dan simulator. Performa, panas, dan audio di HP asli belum diuji.
 - Kotak hitam berkedip di menu belum terkonfirmasi hilang di perangkat pemilik; lihat
   `docs/audit/glitch-kotak-hitam.md` dan pakai `?diag=1` untuk merekam.
 - Belum ada dukungan mouse dan gamepad. Mode HP hanya mendatar.
@@ -545,7 +620,7 @@ raptor13/
   di iPhone asli perlu dipastikan dengan langkah manual dan templat laporan di [docs/zoom-ios.md](docs/zoom-ios.md).
 - Di Sulit, bot rata-rata belum mengalahkan Penjaga, Penambang, dan Pemburu dalam 5 menit, dan Sang Naga
   Vanta belum terkalahkan bot di semua kesulitan. Perlu disetel setelah diuji manusia.
-- Aplikasi Android (APK) baru berupa rencana: [docs/apk/rencana-apk.md](docs/apk/rencana-apk.md).
+- APK Android dirilis lewat GitHub Releases (belum di Google Play): [docs/apk/rencana-apk.md](docs/apk/rencana-apk.md).
 
 ## Melapor masalah
 

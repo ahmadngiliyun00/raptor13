@@ -1,7 +1,21 @@
 # Rencana APK Android RAPTOR13 (B8, dokumen saja)
 
-Status: **rencana, belum diimplementasikan.** Tidak ada proyek Android, tombol unduh, atau perubahan
-`index.html` untuk APK di repo ini. Dokumen ini disusun 13 November 2026 untuk RAPTOR13 versi 2.3.0.
+Status per 2.4.0 (14 November 2026): **sudah diimplementasikan dengan Capacitor, bukan TWA.** Alasannya ada di
+`docs/apk/keputusan.md`: aplikasi luring penuh, plugin native, dan satu proyek untuk Android dan iOS.
+
+Hasil dan cara memakainya:
+
+| Topik | Dokumen |
+| --- | --- |
+| Hasil build dan uji emulator | `docs/apk/hasil-build.md` |
+| Keystore | `docs/apk/keystore.md` |
+| Rilis otomatis | `docs/apk/ci.md` |
+| Formulir beta | `docs/apk/formulir-beta.md` |
+| PWA | `docs/pwa.md` |
+| iOS | `docs/ios/panduan-ios.md` |
+
+Isi di bawah ini adalah rencana awal 13 November 2026 untuk versi 2.3.0, disimpan sebagai riwayat
+keputusan.
 
 ## Ringkasan rekomendasi
 

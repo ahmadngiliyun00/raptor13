@@ -82,8 +82,11 @@ jobs:
       - name: SHA256SUMS
         run: |
           cd dist
-          sha256sum * > SHA256SUMS
-          cat SHA256SUMS
+          # Tanpa secret: nama berbeda agar tidak menimpa SHA256SUMS APK bertanda tangan yang mungkin sudah dilampirkan
+          F=SHA256SUMS
+          if [ "$HAS_KEY" != "true" ]; then F=SHA256SUMS-debug; fi
+          sha256sum * > "$F"
+          cat "$F"
       - name: Lampirkan ke GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4

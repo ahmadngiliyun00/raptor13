@@ -1,6 +1,6 @@
 {
   "name": "raptor13",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "RAPTOR13 - game pesawat 3D arcade di browser, satu file index.html dengan Three.js yang ditanam lokal di vendor/.",
   "private": true,
   "type": "module",

@@ -142,7 +142,7 @@ Bagian 3 (prompt 01, versi minor 2.4.0):
 - C10 (SELESAI) Android Capacitor (APK)
 - C11 (SELESAI) Workflow rilis APK
 - C12 (SELESAI) iOS
-- C13 Regresi, versi, rilis
+- C13 (SELESAI) Regresi, versi, rilis
 - C14 Verifikasi akhir
 
 Bagian 4 (prompt 03 sisa, versi minor 2.5.0):

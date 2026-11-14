@@ -76,3 +76,20 @@ manual ada di bawah.
 7. Getar saat menembak dan terkena (opsi Getar di tab Akses).
 8. Tutup aplikasi, buka lagi: simpanan sesi dan pengaturan tetap ada.
 9. Tekan Lapor Bug di menu Jeda: halaman GitHub terbuka di browser dengan info diagnostik.
+
+## Rilis 2.4.0
+
+| Berkas | Ukuran | SHA-256 |
+| --- | --- | --- |
+| `raptor13-v2.4.0.apk` dan `raptor13.apk` | 2.404.688 byte | `083f95c2b31317ad0a84825da65f97ba2b85a40d76590eb56e5b18b029d73003` |
+| `raptor13-v2.4.0.aab` | 2.884.571 byte | `7835199c379928c8d99c4dcd2f150ca41bc910499c6da6ec78a308538bade673` |
+
+**Identitas APK:**
+- versionName 2.4.0, versionCode 20400;
+- minSdk 24, targetSdk 36;
+- sidik jari sertifikat sama dengan di atas.
+
+**Uji pembaruan di emulator:**
+- APK 2.4.0 dipasang di atas build sebelumnya (`adb install -r`, tanda tangan sama) dan berhasil.
+- Sesi tersimpan dan pengaturan tetap ada: menu menampilkan LANJUTKAN untuk sesi Jelajah Bebas sebelumnya.
+- Tanpa crash.

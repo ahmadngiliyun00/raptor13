@@ -1,6 +1,6 @@
 {
   "name": "raptor13-mobile",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "private": true,
   "description": "Pembungkus aplikasi Android dan iOS RAPTOR13 dengan Capacitor. Sumber game tetap ../index.html, disalin oleh ../scripts/sync-web.mjs.",
   "license": "MIT",

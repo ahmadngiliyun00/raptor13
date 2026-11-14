@@ -5,6 +5,93 @@ Semua perubahan penting RAPTOR13 dicatat di berkas ini. Format mengikuti
 [Semantic Versioning](https://semver.org/lang/id/). Tanggal diambil dari riwayat git (WIB, UTC+7).
 Bukti pemilihan commit tiap tag ada di `docs/rilis/rencana-tag.md`.
 
+## [2.4.0] - 2026-11-14
+
+Pembaruan besar: kontras tombol yang menyesuaikan latar, tata letak HUD baru dan editornya, sistem peralatan,
+repo siap open source, PWA, serta aplikasi Android (APK) dan iOS.
+
+### Ditambahkan
+- **Kontras UI adaptif:**
+  - tombol mode HP memakai pelat putih transparan di latar gelap dan pelat cokelat arang di latar terang;
+  - cincin ganda (terang di dalam, gelap di luar) sehingga tepi selalu terlihat;
+  - Transparansi kini hanya memudarkan pelat.
+
+  Opsi Kontras UI (Otomatis, Selalu terang, Selalu gelap, Tinggi) ada di tab Akses. Kontras tepi tombol terhadap
+  latar, diukur dari piksel nyata di 13 skenario, naik dari 1,1 sampai 1,6 menjadi 3,2 sampai 10,8
+  (`docs/ui/kontras.md`).
+- **Tata letak HUD mode HP baru:**
+  - TEMBAK besar di sekitar x 88 dan y 66 persen, tidak menempel tepi bawah (26 persen tinggi layar);
+  - tombol lain dalam busur untuk jempol: NITRO, ULTIMATE dengan cincin pengisian, Gulung, Balik, Loop, dan
+    0 sampai 3 slot peralatan;
+  - radar bulat di kiri atas, buff di kanan atas.
+
+  Luas UI saat diam 12 sampai 21 persen. Tata letak desktop juga baru: radar kiri atas, status HP kiri bawah,
+  slot peralatan berlabel Q, F, G di bawah tengah (`docs/ui/tata-letak.md`).
+- **Editor tata letak HUD** (Pengaturan, tab Akses):
+  - geser dengan snap grid dan ukuran per elemen;
+  - zona terlarang ditandai, validasi langsung (elemen merah, SIMPAN nonaktif sampai valid);
+  - preset Standar, Kidal, Ringkas;
+  - disimpan per kelas ukuran layar.
+- **Sistem peralatan**, dengan 9 peralatan orisinal:
+  - Rudal Pencari Kunang, Kubah Energi, Perisai Reaktif Sisik, Meriam Rel Tombak Magnet, Gelombang Pengacau,
+    Umpan Panas Suar Kelip, Ranjau Antariksa Biji Besi, Rajut Nano, Magnet Tarik;
+  - slot per kapal (Starfighter 0 dengan sifat pasif, Raptor-J 1, Interceptor 2, Gunship 3);
+  - panel Peralatan di hangar dan layar pra-misi;
+  - perolehan lewat stage, kontrak, penemuan, dan kartu Cetak Biru;
+  - Peti Suplai dan Peti Peralatan;
+  - saran Piko, suara sintesis unik, getar.
+
+  Kubah dan Sisik tidak menyelamatkan dari tabrakan fatal (`docs/equipment/`).
+- **PWA:**
+  - manifest dengan ikon maskable;
+  - service worker: network-first untuk halaman, cache-first untuk ikon dan pustaka, cache terikat versi;
+  - bisa dimainkan luring;
+  - toast Versi baru tersedia hanya di luar permainan;
+  - tombol Pasang aplikasi di Android.
+- **Aplikasi Android (Capacitor 8.6.2):**
+  - layar penuh imersif, landscape terkunci, layar tetap menyala;
+  - tombol Kembali membuka Jeda;
+  - ikon adaptif dan splash gelap orisinal;
+  - APK rilis bertanda tangan 2,4 MB, diuji di emulator.
+
+  Workflow GitHub Actions membangun APK dan AAB saat tag dirilis.
+- **Proyek iOS (Capacitor).** Build simulator lolos dan menu berjalan di simulator iPhone 17 Pro. Panduan PWA,
+  Xcode, dan TestFlight ada di `docs/ios/panduan-ios.md`.
+- **Tombol Lapor Bug** di menu Jeda dan layar Tentang: info diagnostik tanpa data pribadi, membuka New Issue
+  GitHub selama formulir beta belum diisi.
+- **Kartu unduh APK** di menu, hanya di browser Android.
+- **Berkas open source:**
+  - LICENSE (MIT), LICENSE-CONTENT.md (CC BY 4.0), TRADEMARKS.md, THIRD_PARTY_NOTICES.md;
+  - CONTRIBUTING.md dwibahasa dengan DCO dan kebijakan kontribusi berbantuan AI;
+  - CODE_OF_CONDUCT.md, SECURITY.md, SUPPORT.md;
+  - templat issue dan PR, CODEOWNERS, dependabot;
+  - CI dengan pemeriksa gaya, pemindai rahasia, dan validasi HTML;
+  - ARCHITECTURE.md, ROADMAP.md, 13 issue awal.
+- **Hook debug baru** (hanya `?debug=1`):
+  - `uiContrast`, `hudLayout`, `setEquipSlots`, `hudEditor`, `hudPreset`;
+  - `equip`, `equipSet`, `equipUse`, `equipTest`, `equipBot`;
+  - `pwa`, `nativeInfo`, `bugReport`, `freeze`.
+
+### Diubah
+- Tombol manuver mode HP kini bulat seperti tombol lain di busur. Pemeriksa tumpang tindih menguji area sentuh
+  tombol bulat sebagai lingkaran, sesuai hit test browser.
+- CSP: `worker-src 'self'` untuk service worker. Direktif lain tidak dilonggarkan.
+- Peringatan komet desktop dipindah ke tumpukan peringatan bawah tengah agar tidak menimpa blok misi.
+
+### Diperbaiki
+- Mode kidal dengan 3 slot peralatan sempat menimpa radar. Kini radar dan tombol peta ikut dicerminkan ke
+  kanan atas.
+- Tombol Kembali pertama di menu aplikasi tidak lagi langsung keluar.
+- Uji antrean notifikasi H9 distabilkan (rilis 2.3.1).
+
+### Diketahui
+- Situs live masih menyajikan 2.2.0 sampai `git pull` dijalankan di server. Sebelum deploy, ubah
+  `worker-src` di header CSP server menjadi `'self'` (lihat `docs/pwa.md`).
+- Frame di emulator Android diukur dengan render perangkat lunak dan tidak mewakili HP asli. Performa, panas,
+  dan audio di HP asli serta di iPhone belum diuji.
+- GitHub Secrets keystore belum diisi pemilik, jadi workflow rilis membangun APK debug. APK rilis bertanda
+  tangan 2.4.0 dibangun lokal dan dilampirkan manual.
+
 ## [2.3.1] - 2026-11-14
 
 Perbaikan bug zoom iPhone, kesiapan bos sebelum diuji pemilik, hitbox yang sesuai bentuk, dan dokumen
@@ -250,6 +337,7 @@ Generasi pertama: game pesawat jet di atas Bumi.
 - Pengaturan lengkap dan simpan lokal berversi dengan migrasi, mode HP sentuh awal, audio sintesis dengan
   bus per kategori, suite uji Playwright.
 
+[2.4.0]: https://github.com/ahmadngiliyun00/raptor13/compare/v2.3.1...v2.4.0
 [2.3.1]: https://github.com/ahmadngiliyun00/raptor13/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/ahmadngiliyun00/raptor13/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/ahmadngiliyun00/raptor13/compare/v2.1.0...v2.2.0

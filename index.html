@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-W9bTFC1/ynVpIEmIlZcfdigaAuPYe2ImxPgSq2qs5jY='; style-src 'self' 'sha256-1vJfpY2QV0ra54EqICDdTgew8EwhCnGRFggkWA1mPPA='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-6v/i4SgB0ra5QuL+EfX/xDWmNiPooyihvX3mvrv0a24='; style-src 'self' 'sha256-vPvR9uw97S3o54LbtOAC3LUT4u9heeUSocMSzjtmico='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -72,7 +72,7 @@
   "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
   "image": "https://raptor13.ngiliyun.my.id/icons/og-image.jpg",
   "url": "https://raptor13.ngiliyun.my.id/",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "datePublished": "2026-11-12",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "IDR" },
@@ -808,13 +808,14 @@
   @keyframes rotPhone { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
   body.portrait-hp #toolbar { display: flex !important; }
   /* Kartu unduh APK di kiri bawah menu (C10): kecil, tidak menutupi zona tengah atau tombol menu */
-  #apk-card { position: fixed; z-index: 44; left: max(var(--ed-l), 12px); bottom: max(var(--ed-b), 12px); width: min(300px, 34vw); display: flex; flex-direction: column; gap: 4px;
+  #apk-card { position: fixed; z-index: 44; left: max(var(--ed-l), 12px); bottom: max(var(--ed-b), 12px); width: min(330px, 40vw); display: flex; flex-direction: column; gap: 4px;
     padding: 8px 10px; font-size: 12px; line-height: 1.35; color: #e8f6ff; background: rgba(8, 14, 24, 0.92); border: 1px solid rgba(160, 220, 255, 0.45); border-radius: 10px; }
+  #apk-card b { font-size: 12px; }
   #apk-card small { color: var(--ui-dim); font-size: 11px; }
   #apk-card details { font-size: 11px; color: var(--ui-dim); }
   #apk-card summary { cursor: pointer; color: #9fe8ff; min-height: 24px; }
   #apk-card ol { margin: 4px 0 0; padding-left: 16px; }
-  .apk-btns { display: flex; flex-wrap: wrap; gap: 4px; }
+  .apk-btns { display: flex; flex-wrap: nowrap; gap: 4px; }
   .apk-btns .btn.small { min-height: 32px; padding: 4px 8px; font-size: 11px; }
   body.mode-hp .desk-only { display: none; }
   body.native-app #btn-pause-fs, body.native-app #fs-tip { display: none !important; }   /* aplikasi sudah layar penuh */
@@ -1350,7 +1351,7 @@
   <div class="apk-btns">
     <button id="apk-get" class="btn small" type="button">UNDUH</button>
     <button id="apk-later" class="btn secondary small" type="button">NANTI</button>
-    <button id="apk-never" class="btn secondary small" type="button">JANGAN TAMPILKAN LAGI</button>
+    <button id="apk-never" class="btn secondary small" type="button" aria-label="Jangan tampilkan lagi">JANGAN LAGI</button>
   </div>
 </div>
 <!-- PWA (C9): versi baru tersedia, tidak memuat ulang paksa saat bermain -->
@@ -1811,7 +1812,7 @@ const QUALITY_PRESETS = {
 };
 
 // Satu sumber nomor versi: ditampilkan di menu, Tentang, dan overlay performa (samakan dengan package.json)
-const GAME_VERSION = '2.3.1';
+const GAME_VERSION = '2.4.0';
 // Parameter URL dibaca sekali dan divalidasi ketat (A3). Hook uji window.__game, alat pratinjau model,
 // dan galeri hanya aktif dengan ?debug=1; overlay diagnosis kotak hitam dengan ?diag=1.
 const URLQ = (() => { try { return new URLSearchParams(location.search); } catch (err) { return new URLSearchParams(''); } })();
@@ -17264,7 +17265,8 @@ const APK_URL = 'https://github.com/ahmadngiliyun00/raptor13/releases/latest/dow
 const APK_PAGE_URL = 'https://github.com/ahmadngiliyun00/raptor13/releases/latest';
 const FEEDBACK_FORM_URL = '';   // diisi pemilik: tautan Google Form atau Tally (docs/apk/formulir-beta.md)
 const ISSUE_URL = 'https://github.com/ahmadngiliyun00/raptor13/issues/new';
-// Diisi saat rilis (ukuran dan SHA-256 APK); null berarti rincian ada di halaman rilis
+// Ukuran dan SHA-256 APK tidak bisa ditanam di index.html yang ikut dikemas di dalam APK itu sendiri (hash melingkar),
+// jadi kartu merujuk ke halaman rilis yang memuat SHA256SUMS; diisi hanya bila APK dibangun dari index.html terpisah
 const APK_INFO = null;
 const Native = {
   on: false, lastBack: -1e9,   // bukan 0: tepat setelah dibuka performance.now masih di bawah 2 detik
@@ -17336,7 +17338,7 @@ const ApkCard = {
   },
   init() {
     const meta = $('apk-meta');
-    meta.textContent = 'Versi ' + GAME_VERSION + (APK_INFO ? ', ' + APK_INFO.sizeMB + ' MB, SHA-256 ' + APK_INFO.sha256.slice(0, 16) + '...' : ', ukuran dan checksum SHA-256 di halaman rilis');
+    meta.textContent = 'Versi ' + GAME_VERSION + (APK_INFO ? ', ' + APK_INFO.sizeMB + ' MB, SHA-256 ' + APK_INFO.sha256.slice(0, 12) + '...' : ', ukuran dan SHA-256 di halaman rilis');
     onButton($('apk-get'), () => { Native.open(APK_URL); this.hide(); });
     onButton($('apk-later'), () => { this.sessionHidden = true; this.hide(); });
     onButton($('apk-never'), () => { Settings.set('apkCardHidden', true); this.hide(); });
