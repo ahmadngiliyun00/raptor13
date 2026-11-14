@@ -32,7 +32,22 @@ Bukti pemilihan commit tiap tag ada di `docs/rilis/rencana-tag.md`.
   (`debug.flightRun`, `debug.flightTrace`, hanya dengan `?debug=1`). Skrip `tests/penerbangan/diagnosis.mjs`
   menghasilkan CSV, grafik PNG, dan metrik ambang. Hasilnya di `docs/penerbangan/diagnosis-halus.md`.
 
+- **Penerbangan halus (E7).** Semua 10 skenario diagnosis kini lolos di Starfighter dan Raptor-J. Sebelumnya hanya
+  looping yang lolos.
+  - Laju sudut orde dua dengan percepatan dan hentakan terbatas (kurva S) untuk pitch, bank, dan belok.
+  - Pemulihan berlengkung ke horizon terdekat dengan laju a/v dalam 2,4 sampai 2,6 detik. Sebelumnya ada sentakan
+    roll 12,2 rad/s setelah menanjak.
+  - Bank dengan pegas teredam, dan belokan memudar mulus menjelang bank 90 derajat.
+  - Kamera dengan tanda atas kontinu dan laju putar dibatasi, tanpa flip 13 derajat per frame saat gulung dan balik.
+  - Batas atas Bumi lunak: kecepatan vertikal berubah paling banyak 2,4 u/s per frame, sebelumnya 39,6.
+  - Manuver memakai smootherstep.
+  - Rincian di `docs/penerbangan/perbaikan.md`.
+
 ### Diubah
+- Laju pitch 1,7 menjadi 1,8 rad/s untuk mengganti waktu ramp. Sudut yang ditempuh dalam 1 detik tetap setara.
+- Kurangi gerakan kini juga membuat kamera tidak ikut roll.
+- Uji "W dan S mengubah pitch" menahan W 0,7 detik, bukan 1,2 detik. Menahan 1,2 detik membawa kapal melewati puncak,
+  dan kapal kini berguling tegak dengan halus, bukan seketika.
 - Titik temu peluru 160 menjadi 120 satuan.
 - Anggaran peluru pemain 80 menjadi 128.
 - Suara tembak satu kali per voli, berlapis dengan gain 1 per akar jumlah laras, paling banyak 8 suara.

@@ -486,14 +486,17 @@ test('A2: save v2 lama tetap terbaca dan kapal bawaan dipakai', async ({ page })
 test('W dan S mengubah pitch dan ketinggian', async ({ page }) => {
   await start(page);
   const s0 = await snap(page);
+  // E7: W ditahan 0,7 detik (sekitar 60 derajat, belum melewati vertikal). Menahan 1,2 detik membawa kapal melewati
+  // puncak; tanpa sentakan roll lama (12 rad/s) kapal butuh sekitar 2 detik untuk berguling tegak, dan S yang ditekan
+  // saat masih terbalik memang menaikkan hidung relatif dunia (pitch relatif badan pesawat)
   await page.keyboard.down('KeyW');
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(700);
   const s1 = await snap(page);
   await page.keyboard.up('KeyW');
   expect(s1.pitch).toBeGreaterThan(0.3);
   expect(s1.position.y).toBeGreaterThan(s0.position.y + 5);
 
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(1500);
   const s2 = await snap(page);
   await page.keyboard.down('KeyS');
   await page.waitForTimeout(1200);

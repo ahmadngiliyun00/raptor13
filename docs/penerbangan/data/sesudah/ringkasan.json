@@ -1,0 +1,360 @@
+{
+ "label": "sesudah",
+ "date": "2026-11-14",
+ "thresholds": {
+  "uncmdDegPerFrame": 2,
+  "cmdDegPerFrame": 2.5,
+  "accel": 20,
+  "jerk": 400,
+  "manAccel": 60,
+  "manJerk": 1500,
+  "camUpMargin": 1,
+  "camFlipDeg": 20
+ },
+ "ships": {
+  "starfighter": {
+   "naik-tahan-lepas": {
+    "note": "tahan naik sampai sekitar 80 derajat lalu lepas",
+    "frames": 315,
+    "worst": {
+     "uncmd": 1.05,
+     "cmd": 1.891,
+     "accel": 19.5,
+     "jerk": 379.986,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.818,
+     "camExcess": 0.86
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "naik-vertikal-lepas": {
+    "note": "tahan naik melewati vertikal lalu lepas",
+    "frames": 327,
+    "worst": {
+     "uncmd": 1.904,
+     "cmd": 1.891,
+     "accel": 18.999,
+     "jerk": 379.986,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.864,
+     "camExcess": 0.878
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "turun-tahan-lepas": {
+    "note": "tahan turun sampai sekitar 80 derajat menukik lalu lepas",
+    "frames": 315,
+    "worst": {
+     "uncmd": 1.039,
+     "cmd": 1.891,
+     "accel": 19.5,
+     "jerk": 379.986,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.818,
+     "camExcess": 0.86
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "miring-kanan-lepas": {
+    "note": "tahan miring kanan lalu lepas",
+    "frames": 330,
+    "worst": {
+     "uncmd": 1.568,
+     "cmd": 2.389,
+     "accel": 19.549,
+     "jerk": 380.82,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.271,
+     "camExcess": 0.056
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "miring-kiri-lepas": {
+    "note": "tahan miring kiri lalu lepas",
+    "frames": 330,
+    "worst": {
+     "uncmd": 1.568,
+     "cmd": 2.389,
+     "accel": 19.55,
+     "jerk": 380.824,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.272,
+     "camExcess": 0.056
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "kanan-kiri-cepat": {
+    "note": "ganti arah kanan kiri cepat",
+    "frames": 258,
+    "worst": {
+     "uncmd": 1.442,
+     "cmd": 2.389,
+     "accel": 19.61,
+     "jerk": 380.824,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.272,
+     "camExcess": 0.054
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "loop": {
+    "note": "manuver Looping (C)",
+    "frames": 271,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 0,
+     "jerk": 0.025,
+     "manAccel": 5.365,
+     "manJerk": 20.22,
+     "camUp": 0.859,
+     "camExcess": 0.804
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "gulung": {
+    "note": "manuver Gulung tong (Z)",
+    "frames": 151,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 0,
+     "jerk": 99.32,
+     "manAccel": 50.147,
+     "manJerk": 509.252,
+     "camUp": 0.857,
+     "camExcess": 0.139
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "balik": {
+    "note": "manuver Balik arah (X)",
+    "frames": 241,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 0,
+     "jerk": 0,
+     "manAccel": 31.356,
+     "manJerk": 364.395,
+     "camUp": 0.859,
+     "camExcess": 0.855
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "kombinasi": {
+    "note": "naik sambil belok, lalu turun sambil belok, lalu lepas",
+    "frames": 336,
+    "worst": {
+     "uncmd": 0.399,
+     "cmd": 2.491,
+     "accel": 19.682,
+     "jerk": 382.32,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.32,
+     "camExcess": 0.226
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   }
+  },
+  "raptor-j": {
+   "naik-tahan-lepas": {
+    "note": "tahan naik sampai sekitar 80 derajat lalu lepas",
+    "frames": 315,
+    "worst": {
+     "uncmd": 1.366,
+     "cmd": 1.469,
+     "accel": 15.088,
+     "jerk": 379.986,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.049,
+     "camExcess": 0.594
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "naik-vertikal-lepas": {
+    "note": "tahan naik melewati vertikal lalu lepas",
+    "frames": 327,
+    "worst": {
+     "uncmd": 0.645,
+     "cmd": 1.77,
+     "accel": 15.088,
+     "jerk": 379.986,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.194,
+     "camExcess": 0.622
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "turun-tahan-lepas": {
+    "note": "tahan turun sampai sekitar 80 derajat menukik lalu lepas",
+    "frames": 315,
+    "worst": {
+     "uncmd": 1.05,
+     "cmd": 1.719,
+     "accel": 19.5,
+     "jerk": 379.986,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.654,
+     "camExcess": 0.86
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "miring-kanan-lepas": {
+    "note": "tahan miring kanan lalu lepas",
+    "frames": 330,
+    "worst": {
+     "uncmd": 1.512,
+     "cmd": 2.355,
+     "accel": 19.541,
+     "jerk": 380.674,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.268,
+     "camExcess": 0.058
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "miring-kiri-lepas": {
+    "note": "tahan miring kiri lalu lepas",
+    "frames": 330,
+    "worst": {
+     "uncmd": 1.512,
+     "cmd": 2.356,
+     "accel": 19.541,
+     "jerk": 380.678,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.268,
+     "camExcess": 0.058
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "kanan-kiri-cepat": {
+    "note": "ganti arah kanan kiri cepat",
+    "frames": 258,
+    "worst": {
+     "uncmd": 1.4,
+     "cmd": 2.356,
+     "accel": 19.59,
+     "jerk": 380.678,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.268,
+     "camExcess": 0.055
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "loop": {
+    "note": "manuver Looping (C)",
+    "frames": 271,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 0,
+     "jerk": 0.025,
+     "manAccel": 5.365,
+     "manJerk": 20.22,
+     "camUp": 0.859,
+     "camExcess": 0.804
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "gulung": {
+    "note": "manuver Gulung tong (Z)",
+    "frames": 151,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 0,
+     "jerk": 99.32,
+     "manAccel": 50.145,
+     "manJerk": 509.218,
+     "camUp": 0.858,
+     "camExcess": 0.139
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "balik": {
+    "note": "manuver Balik arah (X)",
+    "frames": 241,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 0,
+     "jerk": 0,
+     "manAccel": 31.356,
+     "manJerk": 364.395,
+     "camUp": 0.859,
+     "camExcess": 0.855
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "kombinasi": {
+    "note": "naik sambil belok, lalu turun sambil belok, lalu lepas",
+    "frames": 336,
+    "worst": {
+     "uncmd": 0.096,
+     "cmd": 2.404,
+     "accel": 19.528,
+     "jerk": 383.51,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.247,
+     "camExcess": 0.497
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   }
+  }
+ }
+}

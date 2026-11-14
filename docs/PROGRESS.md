@@ -195,7 +195,7 @@ Bagian 4 (prompt 03 sisa, versi minor 2.5.0):
 - E4 (SELESAI) Piko menempel (tuck)
 - E5 (SELESAI) Senjata bertingkat berbasis hardpoint (`docs/senjata/keseimbangan.md`, `tests/senjata.spec.mjs`)
 - E6 (SELESAI) Diagnosis kehalusan penerbangan (`docs/penerbangan/diagnosis-halus.md`, `tests/penerbangan/diagnosis.mjs`, hook `debug.flightRun`)
-- E7 Perbaikan penerbangan
+- E7 (SELESAI) Perbaikan penerbangan (`docs/penerbangan/perbaikan.md`)
 - E8 Manuver Putar Balik U
 - E9 Uji kehalusan, bot, TTK
 - E10 Regresi, versi, rilis, deploy bila siap

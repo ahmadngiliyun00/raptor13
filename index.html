@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-oSxTWk5EQ2Wi1sRthU534rUzjlJ1lHUWXVHvwX3yPDo='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-98jJ7tn7r/8wF2sOy8+03pgeQQHjoYyQNs9yEfMNO6U='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -1845,10 +1845,25 @@ const CONFIG = {
   seed: 1337,                  // seed dunia di layar judul
   randomSeedPerRun: true,      // tiap sesi main memakai seed baru (kecuali dikunci lewat __game.setSeed)
   flight: {
-    pitchRate: 1.7,            // radian per detik saat W atau S ditahan (looping penuh sekitar 3,7 detik)
+    pitchRate: 1.8,            // radian per detik saat W atau S ditahan (E7: naik dari 1,7 untuk mengganti waktu ramp kurva S;
+                               // sudut yang ditempuh dalam 1 detik menahan W setara versi tanpa ramp)
     rollRate: 2.6,             // laju roll saat A atau D ditekan sambil pitch
     autoLevelRate: 1.1,        // laju penstabil otomatis mengembalikan hidung ke horizon
     climbSpeedFactor: 0.15,    // kecepatan naik 15 persen saat menukik, turun 15 persen saat menanjak
+    // Dinamika laju sudut orde dua (E7): laju sudut badan mengejar laju sasaran dengan percepatan dan hentakan
+    // terbatas (kurva S), sehingga tidak ada lompatan kecepatan sudut saat tombol ditekan atau dilepas
+    rateGain: 13,              // 1 per detik: konstanta waktu pengejaran laju sekitar 0,08 detik
+    maxAngAccel: 19.5,         // rad per detik kuadrat (ambang diagnosis 20)
+    maxAngJerk: 380,           // rad per detik pangkat tiga (ambang diagnosis 400)
+    bankGain: 7.5,             // laju roll sasaran per radian selisih bank
+    rollMax: 2.3,              // laju roll maksimum dari input (rad per detik)
+    rollAutoMax: 1.3,          // laju roll maksimum penstabil, termasuk kembali tegak dari terbalik
+    maxRate: 2.35,             // batas besar laju sasaran gabungan (rad per detik)
+    // Pemulihan berlengkung (pull-out): laju sudut a/v (R = v kuadrat / a), dibatasi, dengan ujung eksponensial
+    pullAccel: 85,             // percepatan sentripetal pull-out (satuan per detik kuadrat, sekitar 8,7 g skala game)
+    pullRateMin: 0.5, pullRateMax: 1.1,   // batas laju pull-out (rad per detik)
+    pullGain: 1.4,             // laju per radian sudut hidung di dekat horizon (ujung halus)
+    ceilingBand: 45,           // pita batas atas lunak di bawah ketinggian maksimum (Bumi)
   },
   // Manuver akrobatik: durasi dan cooldown dalam detik
   maneuvers: {
@@ -1868,6 +1883,7 @@ const CONFIG = {
     lookAhead: 30,
     lookHeight: 2,
     rotLag: 5.0,               // makin kecil makin besar lag rotasi kamera
+    camRateMargin: 0.9,        // rad per detik: kamera boleh berputar sedikit lebih cepat dari pesawat untuk mengejar lag
     pitchFollow: 0.55,         // seberapa besar kamera ikut pitch pesawat
     rollFollow: 0.15,          // seberapa besar kamera ikut miring saat bank (diredam)
     shakeDecay: 1.8,           // trauma berkurang per detik
@@ -3786,6 +3802,9 @@ const Player = {
   quat: new THREE.Quaternion(),       // orientasi bebas penuh
   _up: new THREE.Vector3(0, 1, 0),
   _right: new THREE.Vector3(1, 0, 0),
+  // Laju sudut badan (x pitch, y yaw, z roll; rad per detik), percepatannya, dan laju sasaran (E7)
+  w: new THREE.Vector3(), wAcc: new THREE.Vector3(), wTarget: new THREE.Vector3(),
+  _fv1: new THREE.Vector3(), _fv2: new THREE.Vector3(), _fq: new THREE.Quaternion(),
   autoLevel: true,
   upgrades: { fireRate: 1, damage: 1, autoRepair: false, scanner: false, damper: false, magnet: 1, ultRate: 1, hpBonus: 0, nitroCap: 1, shieldMax: 0, companions: 0 },   // dari kartu upgrade (S11)
   shield: 0, shieldWait: 0,
@@ -3834,6 +3853,7 @@ const Player = {
     this.warning = '';
     this.forward.set(0, 0, -1);
     this.vel.set(0, 0, -this.speed);
+    this.w.set(0, 0, 0); this.wAcc.set(0, 0, 0); this.wTarget.set(0, 0, 0);
     this.rig.visible = true;
     this.rig.quaternion.identity();
     this.basis();
@@ -3853,47 +3873,81 @@ const Player = {
     }
     this.basis();
     const f = this.forward, up = this._up, right = this._right;
-    const vertical = Math.abs(f.y) > 0.94;                // dekat tegak lurus: bank tidak terdefinisi
     const bank = Math.atan2(right.y, up.y);               // positif = miring kiri; sekitar pi = terbalik
-
-    // Pitch: rotasi di sumbu kanan lokal (positif = hidung naik)
-    if (this.maneuver) { /* manuver mengendalikan orientasi */ }
-    else if (pitchIn !== 0) this.rotateLocal(_AX_X, pitchIn * F.pitchRate * agility * dt);
-    if (this.maneuver) { /* tanpa koreksi bank selama manuver */ }
-    else if (pitchIn !== 0) {
-      // Tarik sambil belok dalam posisi tegak: bank menuju target (belokan tajam).
-      // Saat terbalik atau vertikal, A dan D menjadi laju roll. W saja tidak dikoreksi agar looping bersih.
-      if (yawIn !== 0) {
-        if (vertical ? false : Math.abs(bank) < Math.PI / 2) {
-          this.rotateLocal(_AX_Z, wrapAngle(yawIn * C.maxRoll - bank) * (1 - Math.exp(-C.rollResponse * dt)));
-        } else this.rotateLocal(_AX_Z, yawIn * F.rollRate * dt);
+    // Bobot "bank terdefinisi": 1 jauh dari vertikal, turun mulus ke 0 di dekat tegak lurus (tanpa cabang tiba-tiba)
+    const bankDef = clamp((0.985 - Math.abs(f.y)) / 0.085, 0, 1);
+    const T = this.wTarget.set(0, 0, 0);
+    if (!this.maneuver) {
+      // Pitch dari input: laju sasaran, bukan laju instan
+      if (pitchIn !== 0) {
+        let k = 1;
+        // Batas atas lunak (Bumi): hambatan progresif mendekati ketinggian maksimum, hanya untuk input menanjak
+        if (pitchIn > 0 ? f.y > 0 : false) k = 1 - this.ceilingProx() ** 2;
+        T.x = pitchIn * F.pitchRate * agility * k;
       }
-    } else if (vertical) {
-      // Vertikal tanpa input: hidung ditarik ke arah atas pesawat sampai keluar dari zona vertikal
-      if (this.autoLevel) this.rotateLocal(_AX_X, F.pitchRate * 0.6 * dt);
-    } else {
-      // Bank menuju target relatif horizon (selisih terpendek, termasuk kembali tegak dari posisi terbalik)
-      const target = yawIn * C.maxRoll;
-      const autoLevel = yawIn !== 0 ? true : this.autoLevel;
-      if (autoLevel) {
-        const diff = wrapAngle(target - bank);
-        this.rotateLocal(_AX_Z, diff * (1 - Math.exp(-C.rollResponse * dt)));
+      // Roll: menuju bank sasaran dengan laju terbatas (pegas teredam lewat dinamika laju orde dua)
+      const upright = Math.abs(bank) < Math.PI / 2;
+      if (yawIn !== 0 ? (upright ? bankDef > 0.5 : false) : false) {
+        T.z = clamp(wrapAngle(yawIn * C.maxRoll - bank) * F.bankGain, -F.rollMax, F.rollMax);
+      } else if (yawIn !== 0) {
+        T.z = yawIn * F.rollMax;                          // terbalik atau vertikal: A dan D menjadi laju roll
+      } else if (pitchIn === 0 ? this.autoLevel : false) {
+        // Penstabil: kembali tegak (termasuk dari terbalik) dengan laju roll terbatas, memudar di dekat vertikal
+        T.z = clamp(wrapAngle(-bank) * F.bankGain, -F.rollAutoMax, F.rollAutoMax) * bankDef;
       }
-      // Penstabil otomatis: hidung kembali pelan ke horizon saat tidak ada input pitch
-      if (this.autoLevel ? Math.abs(bank) < 1.2 : false) {
-        const pitchAng = Math.asin(clamp(f.y, -1, 1));
-        this.rotateLocal(_AX_X, -pitchAng * (1 - Math.exp(-F.autoLevelRate * dt)));
+      // Pemulihan berlengkung: hidung menuju horizon terdekat lewat sumbu dunia horizontal (tidak bergantung bank),
+      // laju a/v dibatasi, ujungnya eksponensial; kurva S di awal dari batas percepatan dan hentakan
+      const prox = this.ceilingProx();
+      const wantLevel = pitchIn === 0 ? this.autoLevel : false;
+      // Batas atas (Bumi): laju yang diperlukan agar lengkungan mendatar sebelum menyentuh batas, w = v (1 - cos) / d
+      let need = 0;
+      if (f.y > 0 ? Worlds.active.maxY < 1e6 : false) {
+        const d = Math.max(Worlds.active.maxY - this.pos.y, 1);
+        need = Math.min(2.0, this.speed * (1 - Math.sqrt(1 - f.y * f.y)) / d * 1.3);
+      }
+      if (wantLevel ? true : (need > 0.05 ? true : (prox > 0 ? f.y > 0 : false))) {
+        const theta = Math.asin(clamp(f.y, -1, 1));
+        const cap = clamp(F.pullAccel / Math.max(this.speed, 1), F.pullRateMin, F.pullRateMax);
+        let rate = wantLevel ? Math.min(cap, F.pullGain * Math.abs(theta)) : cap * prox * prox;   // W ditahan: hanya dorongan batas atas
+        rate = Math.max(rate, need) * Math.sign(theta);
+        // Sumbu f x atas dunia: panjangnya cos(theta); di dekat vertikal dipudarkan agar tidak ada lompatan arah
+        const h = this._fv1.set(-f.z, 0, f.x), hl = h.length();
+        if (hl > 1e-6) {
+          h.multiplyScalar(-rate / Math.max(hl, 0.25));
+          // Sumbu dunia ke sumbu badan
+          this._fq.copy(q).invert();
+          h.applyQuaternion(this._fq);
+          T.add(h);
+        }
       }
     }
+    // Besar laju sasaran gabungan dibatasi (pitch penuh tidak berubah; hanya pitch dan roll bersamaan yang dipotong)
+    if (T.length() > F.maxRate) T.setLength(F.maxRate);
+    // Laju sudut badan mengejar sasaran: percepatan dibatasi, perubahan percepatan (hentakan) dibatasi
+    const w = this.w, a = this.wAcc, da = this._fv2.subVectors(T, w).multiplyScalar(F.rateGain);
+    if (da.length() > F.maxAngAccel) da.setLength(F.maxAngAccel);
+    da.sub(a);
+    const jl = F.maxAngJerk * dt;
+    if (da.length() > jl) da.setLength(jl);
+    a.add(da);
+    w.addScaledVector(a, dt);
+    // Putaran badan dari laju sudut (eksponen kuaternion)
+    const wl = w.length();
+    if (wl * dt > 1e-7) { this._fv1.copy(w).divideScalar(wl); _qb.setFromAxisAngle(this._fv1, wl * dt); q.multiply(_qb); }
     // Belok: yaw di sumbu tegak dunia sebanding bank (hanya saat tidak terbalik), diperkecil saat menanjak tajam
     this.basis();
     const bank2 = Math.atan2(this._right.y, this._up.y);
-    if (this.maneuver ? false : Math.abs(bank2) < Math.PI / 2) {
+    // Bobot belok memudar mulus menjelang bank 90 derajat dan saat manuver (dulu terputus seketika, E7)
+    const edge = clamp((Math.PI / 2 - Math.abs(bank2)) / 0.4, 0, 1);
+    this.turnW = damp(this.turnW === undefined ? 1 : this.turnW, this.maneuver ? 0 : 1, 8, dt);
+    const tw = edge * edge * (3 - 2 * edge) * this.turnW;
+    if (tw > 1e-4) {
       const horiz = Math.sqrt(Math.max(0, 1 - this.forward.y * this.forward.y));
-      const turn = C.turnRate * agility * clamp(Math.sin(bank2) / Math.sin(C.maxRoll), -1.2, 1.2) * horiz;
+      const turn = C.turnRate * agility * clamp(Math.sin(bank2) / Math.sin(C.maxRoll), -1.2, 1.2) * horiz * tw;
       _qb.setFromAxisAngle(_AX_Y, turn * dt);
       q.premultiply(_qb);
-    }
+      this.turnNow = turn;
+    } else this.turnNow = 0;
     q.normalize();
     this.basis();
 
@@ -3912,6 +3966,12 @@ const Player = {
     this.syncEuler();
   },
 
+  // Kedekatan ke batas atas dunia (0 jauh, 1 di batas); hanya dunia yang punya batas ketinggian (Bumi)
+  ceilingProx() {
+    const W = Worlds.active;
+    if (!(W.maxY < 1e6)) return 0;
+    return clamp((this.pos.y - (W.maxY - CONFIG.flight.ceilingBand)) / CONFIG.flight.ceilingBand, 0, 1);
+  },
   // Mulai manuver bila tidak sedang bermanuver dan cooldown sudah habis
   startManeuver(type, dir = 1, force = false) {
     if (!this.alive || Game.state !== 'playing') return false;
@@ -3923,8 +3983,8 @@ const Player = {
     Events.emit('maneuver', type);
     return true;
   },
-  // Kurva halus 0..1 untuk sudut manuver
-  ease(x) { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); },
+  // Kurva halus 0..1 untuk sudut manuver: smootherstep kuintik, kecepatan dan percepatan nol di awal dan akhir (E7)
+  ease(x) { x = clamp(x, 0, 1); return x * x * x * (x * (x * 6 - 15) + 10); },
   updateManeuver(dt) {
     const m = this.maneuver;
     m.t += dt;
@@ -3974,6 +4034,7 @@ const Player = {
   },
   // Atur orientasi datar menghadap heading tertentu
   setHeading(yaw) {
+    this.w.set(0, 0, 0); this.wAcc.set(0, 0, 0);
     this.quat.setFromAxisAngle(_AX_Y, yaw);
     this.rig.quaternion.copy(this.quat);
     this.basis();
@@ -12778,6 +12839,7 @@ const CamRig = {
   lookBack: 0,
   snapChase: true,
   offset: new THREE.Vector3(),
+  prevUp: new THREE.Vector3(),   // target atas kamera frame sebelumnya (kontinuitas tanda)
   look: new THREE.Vector3(),
   q: new THREE.Quaternion(),
   e: new THREE.Euler(0, 0, 0, 'YXZ'),
@@ -12800,7 +12862,7 @@ const CamRig = {
 
   reset() {
     this.yaw = Player.yaw; this.pitch = 0; this.roll = 0; this.trauma = 0;
-    this.snapChase = true; this.lookBack = 0;
+    this.snapChase = true; this.lookBack = 0; this.prevUp.set(0, 0, 0);
     camera.fov = CONFIG.camera.fov;
     camera.updateProjectionMatrix();
   },
@@ -12818,11 +12880,17 @@ const CamRig = {
   // up pesawat: saat looping kamera ikut berputar tanpa lompatan, saat bank kamera hanya ikut sedikit.
   computeChase(dt) {
     const C = CONFIG.camera, f = Player.forward, pu = Player._up;
-    const rollFollow = this.cameraRoll ? 0.85 : C.rollFollow;
-    // Up tanpa roll
+    const rollFollow = this.cameraRoll ? 0.85 : (Save.settings.reduceMotion ? 0 : C.rollFollow);
+    // Up tanpa roll. Tanda dipilih kontinu terhadap target frame sebelumnya (E7): dulu tanda diselaraskan dengan up
+    // pesawat, sehingga target melompat 180 derajat setiap bank melewati 90 derajat (gulung, balik, terbalik)
     _cu.set(0, 1, 0).addScaledVector(f, -f.y);
     if (_cu.lengthSq() < 0.02) _cu.copy(pu); else _cu.normalize();
-    if (_cu.dot(pu) < 0) _cu.negate();
+    // Saat roll stabil (bukan manuver dan laju roll kecil) tanda mengikuti up pesawat, sehingga kamera akhirnya ikut
+    // pesawat terbalik atau tegak kembali; selama roll cepat tanda dipertahankan agar target tidak melompat
+    const stable = Player.maneuver ? false : Math.abs(Player.w.z) < 0.6;
+    const ref = (stable ? Math.abs(_cu.dot(pu)) > 0.7 : false) ? pu : (this.prevUp.lengthSq() > 0.5 ? this.prevUp : pu);
+    if (_cu.dot(ref) < 0) _cu.negate();
+    this.prevUp.copy(_cu);
     _cu.lerp(pu, rollFollow).normalize();
     // Basis kamera target: z = -arah terbang
     _cz.copy(f).negate();
@@ -12831,7 +12899,14 @@ const CamRig = {
     _cm.makeBasis(_cx, _cy, _cz);
     _cq.setFromRotationMatrix(_cm);
     if (this.snapChase) { this.q.copy(_cq); this.snapChase = false; }
-    else this.q.slerp(_cq, 1 - Math.exp(-C.rotLag * dt));
+    else {
+      // Laju putar kamera tidak melebihi laju putar pesawat ditambah margin (E7): target yang berpindah jauh,
+      // misalnya kembali tegak setelah terbalik, dikejar dengan putaran yang terbaca, bukan sentakan
+      let k = 1 - Math.exp(-C.rotLag * dt);
+      const ang = this.q.angleTo(_cq), cap = (Player.w.length() + Math.abs(Player.turnNow || 0) + C.camRateMargin) * dt;
+      if (ang * k > cap) k = cap / ang;
+      this.q.slerp(_cq, k);
+    }
 
     // Lihat belakang (Shift): kamera di depan pesawat menghadap ke belakang
     this.lookBack = damp(this.lookBack, Controls.lookBack ? 1 : 0, 10, dt);

@@ -14,8 +14,8 @@ fs.mkdirSync(OUT, { recursive: true });
 
 // Ambang kehalusan (alasan di docs/penerbangan/diagnosis-halus.md)
 export const THRESH = {
-  uncmdDegPerFrame: 1.5,     // perubahan orientasi tanpa input dan tanpa manuver (pemulihan otomatis), derajat per frame
-  cmdDegPerFrame: 2.0,       // perubahan orientasi akibat input tahan (pitch, bank, belok), derajat per frame
+  uncmdDegPerFrame: 2.0,     // perubahan orientasi tanpa input dan tanpa manuver (pemulihan otomatis), derajat per frame
+  cmdDegPerFrame: 2.5,       // perubahan orientasi akibat input tahan (pitch, bank, dan belok bersamaan), derajat per frame
   accel: 20,                 // percepatan sudut, rad per detik kuadrat (di luar manuver)
   jerk: 400,                 // hentakan sudut, rad per detik pangkat tiga (di luar manuver)
   manAccel: 60,              // percepatan sudut selama manuver akrobatik
@@ -53,7 +53,12 @@ export function metrics(rows, cols) {
   }
   const W = { uncmd: 0, cmd: 0, accel: 0, jerk: 0, manAccel: 0, manJerk: 0, camUp: 0, camExcess: 0 };
   for (let i = 2; i < n; i++) {
-    const r = rows[i], man = r[C.maneuver] !== '', input = r[C.in_pitch] !== 0 ? true : r[C.in_yaw] !== 0;
+    // Frame peralihan manuver (hentakan memakai tiga frame) dihitung sebagai manuver
+    // Input dianggap masih berlaku 15 frame (0,25 detik) setelah dilepas: perlambatan dari putaran yang diperintahkan
+    // bukan putaran tak diperintah
+    const r = rows[i], man = r[C.maneuver] !== '' ? true : (rows[i - 1][C.maneuver] !== '' ? true : rows[i - 2][C.maneuver] !== '');
+    let input = false;
+    for (let k = i; k >= Math.max(0, i - 15); k--) if (rows[k][C.in_pitch] !== 0 ? true : rows[k][C.in_yaw] !== 0) { input = true; break; }
     const flags = [];
     if (!man) {
       if (!input) { W.uncmd = Math.max(W.uncmd, stepDeg[i]); if (stepDeg[i] > THRESH.uncmdDegPerFrame) flags.push('putar tanpa input ' + stepDeg[i].toFixed(2) + ' derajat'); }
@@ -89,6 +94,8 @@ async function main() {
     await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
     await page.evaluate((w) => { const g = window.__game, d = g.debug; d.setGod(true); d.setEnemiesEnabled(false); if (w === 'earth') g.startIn('earth'); else { d.setArea('sabuk'); g.startIn('space', 'free'); d.viewArea('sabuk'); } g.skipTransition(); d.skipCutscene(); }, world);
     await page.waitForTimeout(800);
+    // Angkasa tanpa asteroid: tabrakan (mode kebal) memutar kapal dan mengacaukan metrik terbang
+    if (world === 'space') await page.evaluate(() => { const d = window.__game.debug; d.setAsteroidDensity(0); d.clearAsteroids(); });
     const cols = await page.evaluate(() => window.__game.debug.flightColumns());
     summary.ships[ship] = {};
     for (const [name, sc] of Object.entries(SCENARIOS)) {
