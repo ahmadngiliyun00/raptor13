@@ -143,7 +143,52 @@ Bagian 3 (prompt 01, versi minor 2.4.0):
 - C11 (SELESAI) Workflow rilis APK
 - C12 (SELESAI) iOS
 - C13 (SELESAI) Regresi, versi, rilis
-- C14 Verifikasi akhir
+- C14 (SELESAI) Verifikasi akhir
+
+VERIFIKASI C1 sampai C14 terhadap Definition of Done prompt 01 (rilis 2.4.0, 14 November 2026):
+
+**Selesai:**
+- **Kontras UI otomatis bekerja.**
+  - Tepi tombol terhadap latar 3,2 sampai 10,8 di 13 skenario (sebelumnya 1,1 sampai 1,6).
+  - Opsi Kontras UI tersedia.
+  - Kurang: ikon terhadap pelat di bawah 3 di 2 kasus (manuver Gulung di Venus 2,9; jempol joystick di Jupiter
+    dekat 2,6 dengan heuristik). Metode utama heuristik, karena cuplik piksel melewati anggaran 0,3 ms.
+- **Tata letak HUD baru dan editor dengan preset.**
+  - Lolos semua asersi di 568x320 sampai 932x430 dan desktop sampai 2560x1440.
+  - Kurang: HP berponi 568x320 dengan 3 slot peralatan memakai skala kontrol 0,64.
+- **Sistem peralatan lengkap.**
+  - 9 peralatan, slot 0, 1, 2, 3, loadout di hangar dan pra-misi, tombol HUD dan Q F G, cooldown dan muatan,
+    peti, tabel keseimbangan, hasil uji bot.
+  - Drone Pendamping opsional tidak dibuat; kartu level yang sama sudah ada.
+- **Perisai tidak menyelamatkan dari tabrakan fatal** (skenario fatal diuji). Kapal 0 slot tetap layak menurut
+  bot.
+- **Semua nama dan aset orisinal.** "Perisai Energi" dan "Drone Pendamping" sudah dipakai kartu level, jadi
+  peralatan aktifnya bernama Kubah Energi.
+- **Repo siap open source.**
+  - Lisensi, pemberitahuan pihak ketiga, panduan kontribusi, kode etik, keamanan, templat, CI, arsitektur,
+    peta jalan, README.
+  - 13 issue awal berlabel, label standar, topik repo.
+- **Tanpa rahasia di repo dan riwayat.** Pemindai `--history` lolos. Keystore dan sandi di luar repo dan tidak
+  pernah dicetak.
+- **PWA berfungsi:** manifest, service worker, luring, toast versi baru, tombol pasang, petunjuk iOS.
+- **APK rilis bertanda tangan.**
+  - Ukuran 2,4 MB, lolos apksigner, minSdk 24, targetSdk 36.
+  - Diuji di emulator: pasang, pembaruan, Back, tanpa crash.
+  - Kartu APK dan Lapor Bug bekerja, dan tidak tampil di iOS, desktop, maupun aplikasi.
+- **Proyek iOS.** Build simulator lolos, menu berjalan di simulator iPhone 17 Pro, panduan jujur tersedia.
+- **Tanpa regresi.** 212 uji lolos, 0 gagal.
+- **CHANGELOG, versi, tag v2.4.0, dan GitHub Release** dengan APK, AAB, dan SHA256SUMS. Pemeriksa gaya lolos.
+
+**Langkah pemilik:**
+1. Cadangkan `~/.raptor13-secrets/raptor13-release.jks` dan baris `RAPTOR13_*` di `~/.gradle/gradle.properties`.
+2. Isi empat GitHub Secrets (`docs/apk/ci.md`).
+3. Isi `FEEDBACK_FORM_URL` (`docs/apk/formulir-beta.md`).
+4. Siapkan server lalu deploy:
+   - ubah header CSP server ke `worker-src 'self'` dan tambahkan aturan `sw.js` (`docs/pwa.md`);
+   - `git pull` di server, lalu purge Cloudflare.
+5. Bila ingin TestFlight, daftar Apple Developer Program.
+6. Uji di HP Android dan iPhone asli dengan daftar di `docs/apk/hasil-build.md` dan `docs/zoom-ios.md`.
+7. Aktifkan pengaturan repo yang direkomendasikan (`docs/komunitas/pengaturan-repo.md`).
 
 Bagian 4 (prompt 03 sisa, versi minor 2.5.0):
 - E3 Piko gerak mandiri
