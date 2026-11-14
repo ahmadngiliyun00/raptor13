@@ -32,8 +32,11 @@ jobs:
         run: npm ci
       - name: Pasang Chromium
         run: npx playwright install --with-deps chromium
+      # Runner GitHub tanpa GPU memakai SwiftShader (render perangkat lunak) yang jauh lebih lambat, jadi CI hanya
+      # menjalankan uji yang tidak peka waktu: keamanan dan hook debug (A3, D7, C7), manifest PWA, dan validasi data.
+      # Uji lengkap (lebih dari 200 uji, termasuk performa dan tata letak) dijalankan lokal dengan GPU asli.
       - name: Uji Playwright ringkas
-        run: npx playwright test tests/audit.spec.mjs tests/kontras.spec.mjs tests/equip.spec.mjs --project=chromium --grep-invert "frame rate|keseimbangan"
+        run: npx playwright test tests/audit.spec.mjs tests/equip.spec.mjs tests/pwa.spec.mjs tests/zoom-viewport.spec.mjs --project=chromium --grep "A3|C7|C9 manifest|C9 tanpa|C5 hangar|D7"
       - name: Simpan laporan bila gagal
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
