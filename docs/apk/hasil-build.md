@@ -32,6 +32,19 @@ cd mobile && npx cap sync android && cd android
 
 Ukuran dan checksum rilis 2.4.0 dicatat di catatan rilis dan di `SHA256SUMS` pada GitHub Release.
 
+**Rilis 2.5.0 (14 November 2026):**
+
+| Berkas | Isi |
+|---|---|
+| APK rilis | 2.423.432 byte, versionCode 20500, sertifikat sama (`9F:0E:...:84:68`), sehingga pembaruan dari 2.4.0 tidak menghapus data |
+| AAB rilis | 2.903.327 byte |
+| Checksum | `SHA256SUMS` di GitHub Release |
+
+**Catatan Gradle.** Di Mac pengembang, `gradle-wrapper.properties` berubah lokal ke Gradle 9.7.1 dan belum
+di-commit, kemungkinan karena Android Studio. Plugin Android 8.x gagal di Gradle 9.6 ke atas, karena memakai API
+internal yang sudah dihapus. Build 2.5.0 memakai wrapper yang ter-commit, yaitu Gradle 8.14.3. Bila ingin naik ke
+Gradle 9.6 atau lebih baru, plugin Android juga harus dinaikkan.
+
 ## Uji di emulator
 
 **Lingkungan:** AVD Pixel 10 Pro, Android API 37, arm64, tanpa jendela, GPU SwiftShader. Screenshot ada di

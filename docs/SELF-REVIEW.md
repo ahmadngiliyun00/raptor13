@@ -120,6 +120,31 @@ Screenshot sebelum dan sesudah ada di `docs/bos/screenshots/`.
 | Tidak ada regresi gameplay, kontrol, performa, keamanan, atau tata letak HP | Ya | Suite lengkap 159 uji lolos (8 uji zoom dilewati karena khusus mesin lain), console bersih termasuk CSP. Metrik bot A5: 5 dari 6 kombinasi identik; satu menyimpang karena pantulan asteroid baru, tetap jauh di bawah ambang. Performa: frame 16,67 ms di 20 skenario, kerja JS 1,59 menjadi 1,51 ms. CSP berbasis hash diperbarui dan hook tetap hanya lewat `?debug=1` |
 | CHANGELOG, versi, tag, dan rilis diperbarui, tidak ada em dash dan ampersand | Ya | CHANGELOG 2.3.0, tag beranotasi `v2.3.0`, GitHub Release RAPTOR13 2.3.0. `GAME_VERSION` dan `package.json` 2.3.0. `git grep` tanpa em dash dan ampersand di berkas teks |
 
+## Blok E (prompt 03): zoom, Piko, senjata bertingkat, kehalusan terbang, Putar Balik U (E1 sampai E10)
+
+**Bukti utama:**
+
+| Bagian | Dokumen | Uji |
+| --- | --- | --- |
+| zoom | `docs/bug/zoom-viewport.md`, `docs/zoom-ios.md` | `tests/zoom.spec.mjs`, `tests/zoom-viewport.spec.mjs` |
+| Piko | `docs/piko/gerak.md` | `tests/piko.spec.mjs` |
+| senjata | `docs/senjata/keseimbangan.md` | `tests/senjata.spec.mjs` |
+| terbang | `docs/penerbangan/diagnosis-halus.md`, `docs/penerbangan/perbaikan.md` | `tests/kehalusan.spec.mjs` |
+| Putar Balik U | `docs/penerbangan/balik-u.md` | `tests/manuver.spec.mjs` |
+| TTK bos | `docs/bos/ttk-e9.md` | - |
+
+| Butir Definition of Done | Status | Bukti atau catatan |
+| --- | --- | --- |
+| Zoom atau cubit tidak lagi merusak game di semua skala uji; bug tereproduksi lalu hilang; panduan iPhone dan overlay diag tersedia | Ya, dengan catatan | Diperbaiki sejak 2.3.1 (E1, E2). Uji zoom lintas skala 1,0 sampai 4,0 di Chromium dan WebKit lolos di regresi 2.5.0. Catatan: iPhone asli belum dicoba; langkahnya di `docs/zoom-ios.md` |
+| Pencegahan zoom aktif di kode dan di situs live, atau perintah deploy jelas | Sebagian | Aktif di kode (meta viewport, touch-action, penjaga gesture; diuji). Situs live masih versi lama karena deploy belum dikonfigurasi di sesi ini. Perintah deploy ada di `docs/deploy/panduan-deploy.md` (`scripts/deploy.sh`) |
+| Piko bergerak mandiri dengan keterlambatan dan idle hidup, menempel di sisi lambung saat nitro, manuver, dan percepatan tinggi, lalu keluar halus | Ya | Diukur dengan `debug.piko.trace`: lag beberapa frame lewat korelasi silang, idle std y di atas 0,02, menempel tepat di titik tambat dengan toleransi 0,03 di keempat kapal, minimal 0,8 detik dengan histeresis. Rekaman berurutan di `docs/screenshots/piko/` |
+| Senjata bertingkat sampai 4 laras berbasis hardpoint yang terlihat, peluru dari ujung laras, menyerang ke depan, keseimbangan dan perolehan terdokumentasi, anggaran performa terjaga | Ya | Penyimpangan asal peluru terhadap ujung laras paling besar 0,011 satuan. Perkalian titik arah dengan hidung minimal 0,9994. DPS 1,8 dan 3,14 kali. Skenario terburuk 96 peluru dari anggaran 128, kerja p95 1,6 ms. Nol kebocoran dalam 20 restart |
+| Tidak ada snap atau flip pada manuver vertikal, menanjak, menukik, bank, dan belok samping; semua metrik di bawah ambang; pull-out berlengkung | Ya | Sebelumnya 2 dari 20 skenario lolos, sekarang 24 dari 24 (termasuk Balik U). Lonjakan terburuk 11,6 menjadi 1,9 derajat per frame. Percepatan sudut 732 menjadi 19,5 rad/s kuadrat. Kamera flip 13 derajat per frame hilang. Pemulihan 2,4 sampai 2,6 detik |
+| Putar Balik U berfungsi di keyboard dan sentuh, halus, terintegrasi dengan Piko, bot, dan HUD tanpa melanggar asersi layout | Ya | Terukur: belok 179 derajat, bank 75, durasi 2,02 detik, nol frame melewati ambang. Tombol sentuh Balik digabung, sehingga jumlah tombol busur tetap dan uji tata letak HP lolos. Bot terampil memakai Balik U |
+| TTK bos per stage tetap dalam target setelah perubahan, tanpa mengubah HP atau damage | Ya untuk Normal, dengan catatan | Bot terampil Normal: 128, 108, 115 detik (target 90 sampai 150), lewat `BOSS_PILOT.tier`. Sulit: 148, 207, 113, sedikit di luar di dua bos, tetapi lebih dekat ke target dari sebelumnya. Mudah tetap lebih cepat dari target, seperti sebelum E5. Naga tetap tidak terkalahkan oleh bot (masalah lama) |
+| Semua tes lolos, tanpa regresi performa, keamanan, atau tata letak | Ya | Regresi penuh 2.5.0: lihat CHANGELOG. 9 uji dilewati karena khusus mesin lain atau peka waktu di SwiftShader. Performa 4 laras dengan Piko dibanding E4: 60 FPS, kerja rata-rata 1,74 menjadi 1,78 ms, draw call 131 menjadi 141 |
+| CHANGELOG, versi minor, tag, rilis; tanpa em dash dan ampersand | Ya | 2.5.0, tag `v2.5.0`, GitHub Release. Pemindai gaya bersih |
+
 ## Yang masih kurang menurut penilaian sendiri
 
 - Kinerja di perangkat HP sungguhan belum diukur; preset Tinggi butuh sekitar 1,3 detik untuk
@@ -146,3 +171,11 @@ Screenshot sebelum dan sesudah ada di `docs/bos/screenshots/`.
 - Tabrakan (2.3.0): ambang fatal ukuran sengaja 6,9 kali radius pesawat (R 18), bukan 2 kali seperti contoh
   di spesifikasi, agar asteroid sedang dan besar tidak menjadi fatal. Bila pemilik ingin lebih ketat, cukup
   ubah `fatalRatio`.
+- Senjata (2.5.0): laras ujung sayap Starfighter dan Interceptor hanya mengenai sasaran kecil (radius 0,6) di sekitar
+  titik temu, yaitu 80 sampai 160 satuan. Bantuan bidik membantu, tetapi pemain yang mematikan bantuan bidik akan
+  lebih sering meleset terhadap rudal dari jarak dekat.
+- Terbang (2.5.0): ramp kurva S membuat bot rata-rata sedikit kurang tepat. TTK bot rata-rata Normal untuk Penjaga
+  dan Pemburu naik dari 169 menjadi 223 detik dan dari 198 menjadi 229 detik, dan 13 persen run tidak selesai dalam
+  300 detik. Perlu dicoba pemain manusia.
+- Putar Balik U (2.5.0): tombol sentuh Balik kini dua fungsi (Balik U bawaan, Balik vertikal dengan joystick ke atas
+  atau bawah). Pemain lama yang terbiasa dengan Balik vertikal perlu tahu perubahan ini (ada di catatan rilis).

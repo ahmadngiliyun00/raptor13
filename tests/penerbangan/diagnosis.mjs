@@ -102,7 +102,7 @@ async function main() {
     summary.ships[ship] = {};
     for (const [name, sc] of Object.entries(SCENARIOS)) {
       // Bumi: mulai di ketinggian 230 (batas atas medan 260, gunung sampai 115); angkasa tanpa batas ketinggian
-      const rows = await page.evaluate(([segs, y]) => window.__game.debug.flightRun(segs, { y }), [sc.segs, world === 'earth' ? 230 : undefined]);
+      const rows = await page.evaluate(([segs, y]) => window.__game.debug.flightRun(segs, { y, noCollide: true }), [sc.segs, world === 'earth' ? 230 : undefined]);
       const m = metrics(rows, cols);
       const csv = [cols.concat(['ang_step_deg', 'ang_accel', 'ang_jerk']).join(',')].concat(rows.map((r, i) => r.concat([m.series.stepDeg[i].toFixed(4), m.series.acc[i].toFixed(3), m.series.jerk[i].toFixed(1)]).join(','))).join('\n');
       fs.writeFileSync(path.join(OUT, `${ship}-${name}.csv`), csv + '\n');

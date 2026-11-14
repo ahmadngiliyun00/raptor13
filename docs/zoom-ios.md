@@ -125,3 +125,19 @@ Dari overlay ?diag=1:
 Arti angka: "canvas CSS" harus selalu sama dengan "layout", walau "skala" lebih dari 1. Bila "skala tertinggi"
 pernah lebih dari 1,01, berarti iOS sempat memperbesar halaman. Itu dibatasi iOS (zoom aksesibilitas tidak
 bisa dimatikan sepenuhnya oleh situs), tetapi game tidak boleh rusak.
+
+## Pembaruan 2.5.0: pencegahan zoom tetap aktif bersama kontrol baru
+
+- **Tidak ada perubahan pada lapisan pencegahan zoom** (meta viewport, touch-action, penjaga gesture dan dua kali
+  ketuk, ukuran berbasis layout viewport).
+- **Uji zoom tetap lolos di regresi 2.5.0:** `tests/zoom.spec.mjs` dan `tests/zoom-viewport.spec.mjs` di Chromium,
+  dan versi mock di WebKit.
+- **Kontrol baru tidak menambah area sentuh.** Putar Balik U memakai tombol Balik yang sudah ada:
+  - ketuk biasa memberi Putar Balik U;
+  - ketuk sambil joystick didorong ke atas atau bawah memberi Balik vertikal.
+
+  Ketuk cepat berulang pada tombol itu tetap dicegah dari zoom, seperti tombol sentuh lain.
+- **Indikator tingkat senjata** berupa titik di dalam tombol Tembak (`pointer-events: none`), jadi tidak mengubah
+  target sentuh.
+- **Saat menguji di iPhone,** tambahkan satu langkah ke daftar uji terukur: ketuk dua kali cepat pada tombol Balik
+  di tengah permainan. Catat apakah halaman membesar, dan apakah manuver Putar Balik U berjalan.

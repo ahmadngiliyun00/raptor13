@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-t9ThUuwVzYunN9opPppuIbSlZj+NYFxpQALn0Mcms4A='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-/EYELuRAbAOYejgCfGaLdW0ATcpxbsMbIuHAAJRuIHQ='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -72,7 +72,7 @@
   "numberOfPlayers": { "@type": "QuantitativeValue", "value": 1 },
   "image": "https://raptor13.ngiliyun.my.id/icons/og-image.jpg",
   "url": "https://raptor13.ngiliyun.my.id/",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "datePublished": "2026-11-12",
   "isAccessibleForFree": true,
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "IDR" },
@@ -1820,7 +1820,7 @@ const QUALITY_PRESETS = {
 };
 
 // Satu sumber nomor versi: ditampilkan di menu, Tentang, dan overlay performa (samakan dengan package.json)
-const GAME_VERSION = '2.4.0';
+const GAME_VERSION = '2.5.0';
 // Parameter URL dibaca sekali dan divalidasi ketat (A3). Hook uji window.__game, alat pratinjau model,
 // dan galeri hanya aktif dengan ?debug=1; overlay diagnosis kotak hitam dengan ?diag=1.
 const URLQ = (() => { try { return new URLSearchParams(location.search); } catch (err) { return new URLSearchParams(''); } })();
@@ -2713,7 +2713,7 @@ function applyDamage(entity, amount, source, x, y, z) {
 const Worlds = { active: null, list: {} };
 
 // Saklar debug (dipakai uji otomatis lewat window.__game)
-const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, equipBot: false, speedOverride: 0, frozen: false, scriptInput: null, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
+const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, equipBot: false, speedOverride: 0, frozen: false, scriptInput: null, noCollide: false, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
 
 // Uji tabrakan segmen (gerak peluru satu frame) terhadap bola, tanpa alokasi
 function segmentHitsSphere(ax, ay, az, bx, by, bz, cx, cy, cz, r) {
@@ -16236,7 +16236,7 @@ const FlightProbe = {
   run(segments, opts = {}) {
     if (Game.state !== 'playing') return null;
     const godBefore = Debug.god, step = opts.dt || 1 / 60;
-    Debug.god = true;
+    Debug.god = true; Debug.noCollide = !!opts.noCollide;   // dinamika terbang murni: tanpa respons tabrakan medan
     Debug.scriptInput = { pitch: 0, yaw: 0, fire: false, nitro: false };
     if (opts.level !== false) { Player.quat.setFromAxisAngle(_AX_Y, Player.yaw); Player.rig.quaternion.copy(Player.quat); Player.basis(); Player.syncEuler(); CamRig.snapChase = true; }
     if (opts.y !== undefined) Player.pos.y = opts.y;
@@ -16250,7 +16250,7 @@ const FlightProbe = {
       const n = Math.round(dur / step);
       for (let i = 0; i < n; i++) { if (Game.state !== 'playing') break; update(step); }
     }
-    Debug.scriptInput = null; Debug.god = godBefore;
+    Debug.scriptInput = null; Debug.god = godBefore; Debug.noCollide = false;
     Controls.reset();
     return this.stop();
   },
@@ -16277,7 +16277,7 @@ function update(dt) {
       Player.updateNitro(dt, ctl.nitro);
       Player.update(dt, ctl.pitch, ctl.yaw);
       Player.updateInvuln(dt);
-      Worlds.active.collide(dt);
+      if (!Debug.noCollide) Worlds.active.collide(dt);   // noCollide: hanya skenario terbang berskrip (E6)
       FatalWatch.update(dt);
     }
     Weapons.update(dt, Player.alive ? ctl.fire : false);
@@ -17417,6 +17417,8 @@ const GameHooks = {
     // Senjata bertingkat (E5): setel tingkat kapal aktif (1 sampai 3), info hardpoint, dan rekaman asal peluru
     setGunTier(n) { const id = Player.ship.id; Save.data.guns[id] = clamp(n | 0, 1, 3); Guns.sync(true); return Guns.tier(); },
     gunInfo() { return Guns.info(); },
+    // Nama program shader yang sudah dikompilasi (untuk melacak material yang baru pertama kali dirender)
+    programNames() { const h = (t) => { let x = 0; for (let i = 0; i < t.length; i++) x = (x * 31 + t.charCodeAt(i)) | 0; return x; }; return (renderer.info.programs || []).map((pr) => pr.name + ' ' + h(String(pr.cacheKey))); },
     // Diagnosis penerbangan (E6): rekam deret waktu permainan biasa, atau jalankan skenario berskrip langkah tetap
     flightTrace(cmd) { if (cmd === 'start') { FlightProbe.start(); return true; } return FlightProbe.stop(); },
     flightRun(segments, opts) { return FlightProbe.run(segments, opts); },

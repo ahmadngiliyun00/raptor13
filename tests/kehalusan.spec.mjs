@@ -27,7 +27,7 @@ for (const [ship, world] of [['starfighter', 'space'], ['raptor-j', 'earth']]) {
     const cols = await page.evaluate(() => window.__game.debug.flightColumns());
     const table = {};
     for (const [name, sc] of Object.entries(SCENARIOS)) {
-      const rows = await page.evaluate(([segs, y]) => window.__game.debug.flightRun(segs, { y }), [sc.segs, world === 'earth' ? 230 : undefined]);
+      const rows = await page.evaluate(([segs, y]) => window.__game.debug.flightRun(segs, { y, noCollide: true }), [sc.segs, world === 'earth' ? 230 : undefined]);
       const m = metrics(rows, cols);
       table[name] = m.worst;
       expect(m.flagged, `${name}: ${JSON.stringify(m.flagged.slice(0, 3))}`).toEqual([]);

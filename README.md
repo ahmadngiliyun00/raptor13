@@ -15,7 +15,26 @@ dan tanpa aset eksternal. Three.js 0.187.0 ditanam lokal di `vendor/three-0.187.
 dipetakan importmap dengan integrity sha384), semua model, tekstur, langit, dan planet dibuat prosedural
 oleh kode, dan semua suara serta musik disintesis dengan WebAudio.
 
-Versi saat ini: **2.4.0** (lihat [CHANGELOG.md](CHANGELOG.md)). Tanpa cookie, pelacak, atau analitik.
+Versi saat ini: **2.5.0** (lihat [CHANGELOG.md](CHANGELOG.md)). Tanpa cookie, pelacak, atau analitik.
+
+### Yang baru di 2.5.0
+
+- **Senjata bertingkat.** Senjata dasar dua laras bergantian; tingkat 2 kedua laras menembak serempak; tingkat 3
+  empat laras berpasangan. Kapal angkasa menembak dari ujung keempat sayap, sedangkan Raptor-J dari pod bawah sayap
+  dan meriam akar sayap. Laras terlihat, peluru keluar dari ujung laras, dan semuanya menyatu di depan.
+  - Perolehan: kartu level **Peningkatan Senjata**, hadiah stage 3 dan 7, serta hadiah kontrak. Tingkat tersimpan
+    per kapal.
+  - Indikator titik laras ada di tombol Tembak dan di baris LEVEL.
+- **Terbang lebih halus.** Tidak ada lagi sentakan saat menanjak tinggi lalu melepas W, saat menukik lalu melepas
+  S, atau saat miring kanan dan kiri. Pesawat kembali datar lewat lengkungan 2 sampai 3 detik. Kamera tidak lagi
+  berbalik saat gulung atau balik.
+- **Manuver baru Putar Balik U** (tombol `V`, atau tombol Balik di HP). Belok miring 180 derajat untuk kembali
+  menghadap bos yang terlewat. Arahnya dari `A` atau `D`, atau otomatis menuju bos di belakang.
+- **Piko hidup.** Robot pendamping terbang sendiri di samping kapal: tertinggal sedikit saat belok, melayang saat
+  diam, menoleh ke bos atau musuh. Saat nitro, manuver, atau belok tajam, Piko menempel ke sisi lambung, lalu
+  melompat keluar lagi.
+- **Bos menyesuaikan tingkat senjata.** Bos lebih gesit saat pemain membawa lebih banyak laras, sehingga lama
+  pertarungan per stage tetap seimbang.
 
 ### Yang baru di 2.4.0
 
@@ -89,6 +108,7 @@ menit game tersedia di `https://ahmadngiliyun00.github.io/raptor13/`.
 | `Z` | Gulung Tong (kebal peluru selama gulungan; juga ketuk ganda `A` atau `D`) |
 | `X` | Balik Arah (setengah looping lalu setengah gulungan) |
 | `C` | Looping |
+| `V` | Putar Balik U: belok miring 180 derajat ke arah `A` atau `D` yang ditahan, atau menuju bos di belakang |
 | `Shift` (tahan) | lihat belakang |
 | `Tab` | peta Tata Surya (medan Angkasa) |
 | `P` atau `Esc` | jeda |
@@ -125,7 +145,7 @@ tinggi tampak (`visualViewport`), sehingga ikut menyesuaikan saat bar browser mu
 | Joystick analog melayang | dasar 2,6u, jempol 1,1u | muncul di titik sentuh pertama pada 45 persen kiri layar; atas naik, kiri belok kiri; deadzone 12 persen dan kurva halus |
 | Tembak | 1,4u | pojok kanan bawah, tahan untuk menembak |
 | Nitro | 1,1u | tepat di atas Tembak |
-| Gulung, Balik, Loop, Ultimate | 1,0u | grid 2x2 di kiri Tembak |
+| Gulung, Balik, Loop, Ultimate | 1,0u | grid 2x2 di kiri Tembak. Balik memberi Putar Balik U (arah dari joystick ke samping); dengan joystick didorong ke atas atau bawah, Balik memberi Balik Arah vertikal |
 
 Ukuran tampak boleh kecil, tetapi area sentuh efektif selalu minimal 44 px lewat hit slop
 transparan, dan jarak antar tombol dihitung agar hit slop tidak saling menimpa. Multi-touch bekerja
@@ -465,6 +485,13 @@ menjalankan uji berikut:
   - penanda yang tidak menimpa HUD dan zona tengah di empat ukuran HP dan desktop 1440x900;
   - perilaku per kesulitan;
   - tabel dan benturan nyata.
+- Uji 2.5.0:
+  - `tests/piko.spec.mjs`: gerak mandiri dan menempel;
+  - `tests/senjata.spec.mjs`: laras, konvergensi, DPS, performa, simpanan, perolehan;
+  - `tests/manuver.spec.mjs`: Putar Balik U;
+  - `tests/kehalusan.spec.mjs`: semua skenario terbang di bawah ambang.
+- Diagnosis terbang (`node tests/penerbangan/diagnosis.mjs <label>`) dan TTK bos
+  (`node tests/bos/ttk.mjs <label> --tier=realistis`) adalah skrip pengukuran terpisah.
 - 8 uji zoom di `tests/zoom.spec.mjs`: proyek webkit untuk iPhone 12 dan 14 serta chromium untuk Pixel 7.
   `npx playwright install webkit` diperlukan sekali.
 
@@ -493,7 +520,9 @@ Semua angka penting ada di objek `CONFIG` di bagian atas skrip. Beberapa nilai k
 | --- | --- |
 | `player.baseSpeed`, `nitroSpeed` | 70 dan 128 unit per detik |
 | `weapons.fireInterval`, `bulletSpeed` | 0,10 detik, 750 unit per detik ditambah kecepatan kapal |
-| `maneuvers` cooldown | Gulung 4 detik, Balik Arah 6 detik, Looping 5 detik |
+| `maneuvers` cooldown | Gulung 4 detik, Balik Arah 6 detik, Looping 5 detik, Putar Balik U 5 detik |
+| `guns` | tingkat senjata, syarat kartu, hadiah stage dan kontrak, penyebaran, batas suara |
+| `flight` | laju pitch 1,8, batas percepatan sudut 19,5 dan hentakan 380, pemulihan berlengkung, pita batas atas Bumi |
 | `enemies.cruiseFactor` | drone 0,75, Penyerbu 0,82, Pengintai 0,86, Penjaga 0,66 dari kecepatan dasar pemain |
 | `enemies.maxSpeedFactor` | tidak ada musuh (selain rudal) lebih cepat dari 80 persen nitro pemain |
 | `enemies.maxTailTime` | penembak dipaksa menjauh setelah 1,2 detik membuntuti |
@@ -543,6 +572,10 @@ __game.debug.hudEditor('open'); __game.debug.hudPreset('kidal')   // editor tata
 __game.debug.equipSet(['kunang', 'kubah', 'tombak']); __game.debug.equipUse(0); __game.debug.equip()
 __game.debug.equipTest('pengacau'); __game.debug.equipBot(180, ['kunang', 'sisik', 'kubah'])
 __game.debug.pwa(); __game.debug.nativeInfo(); __game.debug.bugReport()
+__game.debug.piko.state(); __game.debug.piko.trace('start')    // gerak Piko (E3, E4)
+__game.debug.setGunTier(3); __game.debug.gunInfo(); __game.debug.gunTrace('start')   // senjata bertingkat (E5)
+__game.debug.flightRun([[0.75, 1, 0], [3, 0, 0]])   // skenario terbang berskrip langkah tetap (E6)
+__game.debug.uturnInfo(); __game.debug.uturnObstacleTest()     // Putar Balik U (E8)
 ```
 
 ## Struktur proyek

@@ -35,7 +35,7 @@ for (const [ship, world] of [['starfighter', 'space'], ['raptor-j', 'earth']]) {
     const out = {};
     for (const dir of [-1, 1]) {
       const y = world === 'earth' ? 150 : undefined;
-      const rows = await dbg(page, 'flightRun', [[0.4, 0, 0], [0.01, 0, 0, 'uturn', dir], [2.6, 0, 0]], { y });
+      const rows = await dbg(page, 'flightRun', [[0.4, 0, 0], [0.01, 0, 0, 'uturn', dir], [2.6, 0, 0]], { y, noCollide: true });
       const info = await dbg(page, 'uturnInfo');
       const m = metrics(rows, cols);
       out[dir] = { ...info, worst: m.worst, flagged: m.flagged.length };

@@ -5,7 +5,11 @@ Semua perubahan penting RAPTOR13 dicatat di berkas ini. Format mengikuti
 [Semantic Versioning](https://semver.org/lang/id/). Tanggal diambil dari riwayat git (WIB, UTC+7).
 Bukti pemilihan commit tiap tag ada di `docs/rilis/rencana-tag.md`.
 
-## [Belum dirilis]
+## [2.5.0] - 2026-11-14
+
+Pembaruan minor: Piko terbang mandiri dan menempel ke lambung, senjata bertingkat berbasis hardpoint sampai empat
+laras, penerbangan tanpa sentakan dengan diagnosis terukur, manuver baru Putar Balik U, dan perilaku bos yang
+menyesuaikan tingkat senjata.
 
 ### Ditambahkan
 - **Piko terbang mandiri (E3).** Piko bergerak dengan pegas teredam di bingkai yang ikut kapal:
@@ -64,6 +68,16 @@ Bukti pemilihan commit tiap tag ada di `docs/rilis/rencana-tag.md`.
   - Tanpa penyesuaian, nilainya 57, 83, dan 36 detik.
   - Rincian di `docs/bos/ttk-e9.md`.
 - Skrip `tests/bos/ttk.mjs` menerima `--tier`.
+- Skenario terbang berskrip berjalan tanpa respons tabrakan medan (`noCollide`, hanya hook debug), agar metrik
+  dinamika tidak tercampur benturan pilar di Bumi. Tabrakan tetap diuji terpisah, termasuk di jalur Balik U.
+- Uji gelombang S9 merata-ratakan dua simulasi. Rasio membuntuti satu simulasi bervariasi 0,06 sampai 0,25.
+- Uji simulasi 5 menit mengizinkan paling banyak 2 program shader baru, seperti uji kebocoran C6. Varian shader
+  baru dikompilasi saat jenis objek pertama kali muncul di jalur bot yang acak.
+- Uji draw call laras: batasnya 8 (6 dari laras, cincin, dan bayangan, ditambah variasi garis dasar 2).
+- Regresi penuh 2.5.0:
+  - 236 lolos, 9 dilewati karena khusus mesin lain atau peka waktu di SwiftShader;
+  - satu kegagalan (simulasi 5 menit, program shader 105 menjadi 106) diperiksa lalu disesuaikan seperti di atas;
+  - uji yang disesuaikan lolos 4 kali berturut-turut.
 - Tombol sentuh Balik kini berikon panah U dan secara bawaan memberi Putar Balik U. Balik vertikal tetap tersedia
   dengan joystick didorong ke atas atau bawah, jadi jumlah tombol busur tidak bertambah.
 - Laju pitch 1,7 menjadi 1,8 rad/s untuk mengganti waktu ramp. Sudut yang ditempuh dalam 1 detik tetap setara.
