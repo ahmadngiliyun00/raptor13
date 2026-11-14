@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-Lu20xfHoM18mY/GNEvULrMiVfQfhWVoqJ1GK5Jj/1to='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-oSxTWk5EQ2Wi1sRthU534rUzjlJ1lHUWXVHvwX3yPDo='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -2693,7 +2693,7 @@ function applyDamage(entity, amount, source, x, y, z) {
 const Worlds = { active: null, list: {} };
 
 // Saklar debug (dipakai uji otomatis lewat window.__game)
-const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, equipBot: false, speedOverride: 0, frozen: false, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
+const Debug = { god: false, enemiesEnabled: true, fixedSeed: null, autoInput: false, botBoss: false, equipBot: false, speedOverride: 0, frozen: false, scriptInput: null, off: new Set() };   // off: fitur yang dimatikan untuk uji eliminasi (A1, A7)
 
 // Uji tabrakan segmen (gerak peluru satu frame) terhadap bola, tanpa alokasi
 function segmentHitsSphere(ax, ay, az, bx, by, bz, cx, cy, cz, r) {
@@ -16034,6 +16034,71 @@ const SkilledBot = {
 Events.on('enemyTelegraph', (pos) => SkilledBot.onTele(pos));
 Events.on('shot', () => { if (BossStats.on) BossStats.shots++; });
 
+/* =====================================================================
+   PEREKAM PENERBANGAN (E6) - deret waktu per frame untuk diagnosis kehalusan: orientasi kapal, kecepatan sudut
+   di sumbu badan (pitch, yaw, roll), sudut pitch, bank, dan heading, kuaternion kamera, vektor atas kamera dan
+   perubahannya per frame, input, kecepatan, dan manuver. Percepatan sudut dan hentakan dihitung dari deret ini.
+   Hanya aktif lewat hook debug.flightTrace atau debug.flightRun.
+   ===================================================================== */
+const FlightProbe = {
+  rows: null, has: false,
+  pq: new THREE.Quaternion(), dq: new THREE.Quaternion(), pUp: new THREE.Vector3(), cUp: new THREE.Vector3(), pcq: new THREE.Quaternion(),
+  start() { this.rows = []; this.has = false; },
+  stop() { const r = this.rows || []; this.rows = null; return r; },
+  // Kecepatan sudut sumbu badan dari selisih kuaternion dua frame (rad per detik)
+  rate(prev, cur, dt, out) {
+    this.dq.copy(prev).invert().multiply(cur);
+    if (this.dq.w < 0) { this.dq.x = -this.dq.x; this.dq.y = -this.dq.y; this.dq.z = -this.dq.z; this.dq.w = -this.dq.w; }
+    const sh = Math.sqrt(this.dq.x * this.dq.x + this.dq.y * this.dq.y + this.dq.z * this.dq.z);
+    const ang = 2 * Math.atan2(sh, this.dq.w), k = sh > 1e-9 ? ang / sh / Math.max(dt, 1e-6) : 0;
+    out[0] = this.dq.x * k; out[1] = this.dq.y * k; out[2] = this.dq.z * k;
+    return out;
+  },
+  _w: [0, 0, 0], _c: [0, 0, 0],
+  sample(dt) {
+    if (this.rows.length >= 20000) return;
+    const q = Player.quat, r6 = (v) => Math.round(v * 1e6) / 1e6, deg = (v) => Math.round(v * 180 / Math.PI * 1000) / 1000;
+    this.cUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    let w = [0, 0, 0], c = [0, 0, 0], upd = 0;
+    if (this.has) {
+      w = this.rate(this.pq, q, dt, this._w).slice();
+      c = this.rate(this.pcq, camera.quaternion, dt, this._c).slice();
+      upd = this.cUp.angleTo(this.pUp);
+    }
+    const ctl = Debug.scriptInput || Controls;
+    this.rows.push([r6(Game.time), r6(q.x), r6(q.y), r6(q.z), r6(q.w), deg(Player.pitch), deg(Player.roll), deg(Player.yaw),
+      r6(w[0]), r6(w[1]), r6(w[2]),
+      r6(camera.quaternion.x), r6(camera.quaternion.y), r6(camera.quaternion.z), r6(camera.quaternion.w),
+      r6(this.cUp.x), r6(this.cUp.y), r6(this.cUp.z), deg(upd), r6(c[0]), r6(c[1]), r6(c[2]),
+      ctl.pitch || 0, ctl.yaw || 0, Math.round(Player.speed * 100) / 100, Math.round(Player.pos.y * 100) / 100, Player.maneuver ? Player.maneuver.type : '', r6(dt)]);
+    this.pq.copy(q); this.pcq.copy(camera.quaternion); this.pUp.copy(this.cUp); this.has = true;
+  },
+  COLUMNS: ['t', 'qx', 'qy', 'qz', 'qw', 'pitch_deg', 'bank_deg', 'yaw_deg', 'wx_pitch', 'wy_yaw', 'wz_roll',
+    'cam_qx', 'cam_qy', 'cam_qz', 'cam_qw', 'cam_up_x', 'cam_up_y', 'cam_up_z', 'cam_up_delta_deg', 'cam_wx', 'cam_wy', 'cam_wz',
+    'in_pitch', 'in_yaw', 'speed', 'pos_y', 'maneuver', 'dt'],
+  // Skenario berskrip: segmen [durasi, pitch, yaw, manuver opsional] dijalankan dengan langkah tetap 60 FPS
+  run(segments, opts = {}) {
+    if (Game.state !== 'playing') return null;
+    const godBefore = Debug.god, step = opts.dt || 1 / 60;
+    Debug.god = true;
+    Debug.scriptInput = { pitch: 0, yaw: 0, fire: false, nitro: false };
+    if (opts.level !== false) { Player.quat.setFromAxisAngle(_AX_Y, Player.yaw); Player.rig.quaternion.copy(Player.quat); Player.basis(); Player.syncEuler(); CamRig.snapChase = true; }
+    if (opts.y !== undefined) Player.pos.y = opts.y;
+    Player.maneuver = null;
+    for (const k in Player.cooldowns) Player.cooldowns[k] = 0;
+    this.start();
+    for (const seg of segments) {
+      const [dur, pitch, yaw, man, dir] = seg;
+      Debug.scriptInput.pitch = pitch; Debug.scriptInput.yaw = yaw;
+      if (man) Player.startManeuver(man, dir || 1, true);
+      const n = Math.round(dur / step);
+      for (let i = 0; i < n; i++) { if (Game.state !== 'playing') break; update(step); }
+    }
+    Debug.scriptInput = null; Debug.god = godBefore;
+    Controls.reset();
+    return this.stop();
+  },
+};
 let lastDt = 0;
 function update(dt) {
   lastDt = dt;
@@ -16048,6 +16113,7 @@ function update(dt) {
     Game.time += dt;
     let ctl = Controls;
     if (Debug.autoInput) { AutoInput.update(Game.time); ctl = AutoInput; }
+    if (Debug.scriptInput) ctl = Debug.scriptInput;   // skenario penerbangan berskrip (E6, hanya hook debug)
     Warp.update(dt);
     if (Warp.active) ctl = Warp.idle;   // warp sinematik: kendali dilepas sebentar
     WarpGate.update(dt);
@@ -16118,6 +16184,7 @@ function update(dt) {
     if (Game.state !== 'cutscene') CamRig.update(dt);
     Worlds.active.follow();   // langit, cahaya dan latar mengikuti kamera dan pemain
   }
+  if (FlightProbe.rows) FlightProbe.sample(dt);
   Sfx.update(dt);   // selalu dipanggil: saat jeda gain mesin turun ke 0
 }
 
@@ -17194,6 +17261,10 @@ const GameHooks = {
     // Senjata bertingkat (E5): setel tingkat kapal aktif (1 sampai 3), info hardpoint, dan rekaman asal peluru
     setGunTier(n) { const id = Player.ship.id; Save.data.guns[id] = clamp(n | 0, 1, 3); Guns.sync(true); return Guns.tier(); },
     gunInfo() { return Guns.info(); },
+    // Diagnosis penerbangan (E6): rekam deret waktu permainan biasa, atau jalankan skenario berskrip langkah tetap
+    flightTrace(cmd) { if (cmd === 'start') { FlightProbe.start(); return true; } return FlightProbe.stop(); },
+    flightRun(segments, opts) { return FlightProbe.run(segments, opts); },
+    flightColumns() { return FlightProbe.COLUMNS.slice(); },
     gunTrace(cmd) { if (cmd === 'start') { Guns.trace = []; return true; } const r = Guns.trace || []; Guns.trace = null; return r; },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
     shootPlayer(dist = 60) {

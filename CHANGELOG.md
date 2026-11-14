@@ -28,6 +28,10 @@ Bukti pemilihan commit tiap tag ada di `docs/rilis/rencana-tag.md`.
   - Saran Piko satu kali.
   - Rincian: `docs/senjata/keseimbangan.md`.
 
+- **Diagnosis kehalusan penerbangan (E6).** Perekam per frame `FlightProbe` dan skenario berskrip langkah tetap
+  (`debug.flightRun`, `debug.flightTrace`, hanya dengan `?debug=1`). Skrip `tests/penerbangan/diagnosis.mjs`
+  menghasilkan CSV, grafik PNG, dan metrik ambang. Hasilnya di `docs/penerbangan/diagnosis-halus.md`.
+
 ### Diubah
 - Titik temu peluru 160 menjadi 120 satuan.
 - Anggaran peluru pemain 80 menjadi 128.

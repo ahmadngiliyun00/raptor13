@@ -1,0 +1,1402 @@
+{
+ "label": "sebelum",
+ "date": "2026-11-14",
+ "thresholds": {
+  "uncmdDegPerFrame": 1.5,
+  "cmdDegPerFrame": 2,
+  "accel": 20,
+  "jerk": 400,
+  "manAccel": 60,
+  "manJerk": 1500,
+  "camUpMargin": 1,
+  "camFlipDeg": 20
+ },
+ "ships": {
+  "starfighter": {
+   "naik-tahan-lepas": {
+    "note": "tahan naik sampai sekitar 80 derajat lalu lepas",
+    "frames": 315,
+    "worst": {
+     "uncmd": 11.609,
+     "cmd": 1.786,
+     "accel": 731.947,
+     "jerk": 43915.951,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 13.255,
+     "camExcess": 6.836
+    },
+    "flaggedFrames": 34,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 1.333267,
+      "pitch": 1.786,
+      "bank": 0,
+      "flags": [
+       "percepatan 112.2",
+       "hentakan 6732"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 1.349933,
+      "pitch": 3.571,
+      "bank": 0,
+      "flags": [
+       "hentakan 6732"
+      ]
+     },
+     {
+      "frame": 75,
+      "t": 2.083267,
+      "pitch": 81.331,
+      "bank": 0,
+      "flags": [
+       "percepatan 51.0",
+       "hentakan 3060"
+      ]
+     },
+     {
+      "frame": 76,
+      "t": 2.099933,
+      "pitch": 82.305,
+      "bank": 0,
+      "flags": [
+       "hentakan 3060"
+      ]
+     },
+     {
+      "frame": 106,
+      "t": 2.599933,
+      "pitch": 69.448,
+      "bank": 168.391,
+      "flags": [
+       "putar tanpa input 11.61 derajat",
+       "percepatan 731.9",
+       "hentakan 43916"
+      ]
+     },
+     {
+      "frame": 107,
+      "t": 2.6166,
+      "pitch": 69.448,
+      "bank": 157.531,
+      "flags": [
+       "putar tanpa input 10.86 derajat",
+       "percepatan 47.0",
+       "hentakan 41094"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "naik-vertikal-lepas": {
+    "note": "tahan naik melewati vertikal lalu lepas",
+    "frames": 327,
+    "worst": {
+     "uncmd": 11.609,
+     "cmd": 1.786,
+     "accel": 731.947,
+     "jerk": 43915.951,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 13.238,
+     "camExcess": 6.819
+    },
+    "flaggedFrames": 34,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 6.833267,
+      "pitch": 1.786,
+      "bank": 0,
+      "flags": [
+       "percepatan 112.2",
+       "hentakan 6732"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 6.849933,
+      "pitch": 3.571,
+      "bank": 0,
+      "flags": [
+       "hentakan 6732"
+      ]
+     },
+     {
+      "frame": 87,
+      "t": 7.783267,
+      "pitch": 77.24,
+      "bank": 180,
+      "flags": [
+       "percepatan 51.0",
+       "hentakan 3060"
+      ]
+     },
+     {
+      "frame": 88,
+      "t": 7.799933,
+      "pitch": 76.266,
+      "bank": 180,
+      "flags": [
+       "hentakan 3060"
+      ]
+     },
+     {
+      "frame": 96,
+      "t": 7.933267,
+      "pitch": 69.448,
+      "bank": 168.391,
+      "flags": [
+       "putar tanpa input 11.61 derajat",
+       "percepatan 731.9",
+       "hentakan 43916"
+      ]
+     },
+     {
+      "frame": 97,
+      "t": 7.949933,
+      "pitch": 69.448,
+      "bank": 157.531,
+      "flags": [
+       "putar tanpa input 10.86 derajat",
+       "percepatan 47.0",
+       "hentakan 41094"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "turun-tahan-lepas": {
+    "note": "tahan turun sampai sekitar 80 derajat menukik lalu lepas",
+    "frames": 315,
+    "worst": {
+     "uncmd": 1.265,
+     "cmd": 1.786,
+     "accel": 173.397,
+     "jerk": 10403.584,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.744,
+     "camExcess": 0.552
+    },
+    "flaggedFrames": 6,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 12.466567,
+      "pitch": -1.786,
+      "bank": 0,
+      "flags": [
+       "percepatan 112.2",
+       "hentakan 6732"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 12.483233,
+      "pitch": -3.571,
+      "bank": 0,
+      "flags": [
+       "hentakan 6732"
+      ]
+     },
+     {
+      "frame": 75,
+      "t": 13.216567,
+      "pitch": -79.383,
+      "bank": 0,
+      "flags": [
+       "percepatan 173.4",
+       "hentakan 10404"
+      ]
+     },
+     {
+      "frame": 76,
+      "t": 13.233233,
+      "pitch": -78.409,
+      "bank": 0,
+      "flags": [
+       "hentakan 10404"
+      ]
+     },
+     {
+      "frame": 86,
+      "t": 13.3999,
+      "pitch": -68.378,
+      "bank": 0,
+      "flags": [
+       "hentakan 1097"
+      ]
+     },
+     {
+      "frame": 87,
+      "t": 13.416567,
+      "pitch": -67.136,
+      "bank": 0,
+      "flags": [
+       "hentakan 1011"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "miring-kanan-lepas": {
+    "note": "tahan miring kanan lalu lepas",
+    "frames": 330,
+    "worst": {
+     "uncmd": 4.048,
+     "cmd": 3.881,
+     "accel": 243.851,
+     "jerk": 14630.742,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.25,
+     "camExcess": 0
+    },
+    "flaggedFrames": 28,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 17.883367,
+      "pitch": 0,
+      "bank": 3.88,
+      "flags": [
+       "putar dengan input 3.88 derajat",
+       "percepatan 243.9",
+       "hentakan 14631"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 17.900033,
+      "pitch": 0,
+      "bank": 7.51,
+      "flags": [
+       "putar dengan input 3.63 derajat",
+       "hentakan 13631"
+      ]
+     },
+     {
+      "frame": 32,
+      "t": 17.9167,
+      "pitch": 0,
+      "bank": 10.905,
+      "flags": [
+       "putar dengan input 3.41 derajat"
+      ]
+     },
+     {
+      "frame": 33,
+      "t": 17.933367,
+      "pitch": 0,
+      "bank": 14.082,
+      "flags": [
+       "putar dengan input 3.19 derajat"
+      ]
+     },
+     {
+      "frame": 34,
+      "t": 17.950033,
+      "pitch": 0,
+      "bank": 17.054,
+      "flags": [
+       "putar dengan input 3.00 derajat"
+      ]
+     },
+     {
+      "frame": 35,
+      "t": 17.9667,
+      "pitch": 0,
+      "bank": 19.834,
+      "flags": [
+       "putar dengan input 2.82 derajat"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "miring-kiri-lepas": {
+    "note": "tahan miring kiri lalu lepas",
+    "frames": 330,
+    "worst": {
+     "uncmd": 4.048,
+     "cmd": 3.881,
+     "accel": 243.851,
+     "jerk": 14630.742,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.25,
+     "camExcess": 0
+    },
+    "flaggedFrames": 28,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 23.549967,
+      "pitch": 0,
+      "bank": -3.88,
+      "flags": [
+       "putar dengan input 3.88 derajat",
+       "percepatan 243.9",
+       "hentakan 14631"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 23.566633,
+      "pitch": 0,
+      "bank": -7.51,
+      "flags": [
+       "putar dengan input 3.63 derajat",
+       "hentakan 13631"
+      ]
+     },
+     {
+      "frame": 32,
+      "t": 23.5833,
+      "pitch": 0,
+      "bank": -10.905,
+      "flags": [
+       "putar dengan input 3.41 derajat"
+      ]
+     },
+     {
+      "frame": 33,
+      "t": 23.599967,
+      "pitch": 0,
+      "bank": -14.082,
+      "flags": [
+       "putar dengan input 3.19 derajat"
+      ]
+     },
+     {
+      "frame": 34,
+      "t": 23.616633,
+      "pitch": 0,
+      "bank": -17.054,
+      "flags": [
+       "putar dengan input 3.00 derajat"
+      ]
+     },
+     {
+      "frame": 35,
+      "t": 23.6333,
+      "pitch": 0,
+      "bank": -19.834,
+      "flags": [
+       "putar dengan input 2.82 derajat"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "kanan-kiri-cepat": {
+    "note": "ganti arah kanan kiri cepat",
+    "frames": 258,
+    "worst": {
+     "uncmd": 3.393,
+     "cmd": 7.478,
+     "accel": 490.526,
+     "jerk": 29243.732,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.402,
+     "camExcess": 0
+    },
+    "flaggedFrames": 67,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 29.216567,
+      "pitch": 0,
+      "bank": 3.88,
+      "flags": [
+       "putar dengan input 3.88 derajat",
+       "percepatan 243.9",
+       "hentakan 14631"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 29.233233,
+      "pitch": 0,
+      "bank": 7.51,
+      "flags": [
+       "putar dengan input 3.63 derajat",
+       "hentakan 13631"
+      ]
+     },
+     {
+      "frame": 32,
+      "t": 29.2499,
+      "pitch": 0,
+      "bank": 10.905,
+      "flags": [
+       "putar dengan input 3.41 derajat"
+      ]
+     },
+     {
+      "frame": 33,
+      "t": 29.266567,
+      "pitch": 0,
+      "bank": 14.082,
+      "flags": [
+       "putar dengan input 3.19 derajat"
+      ]
+     },
+     {
+      "frame": 34,
+      "t": 29.283233,
+      "pitch": 0,
+      "bank": 17.054,
+      "flags": [
+       "putar dengan input 3.00 derajat"
+      ]
+     },
+     {
+      "frame": 35,
+      "t": 29.2999,
+      "pitch": 0,
+      "bank": 19.834,
+      "flags": [
+       "putar dengan input 2.82 derajat"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "loop": {
+    "note": "manuver Looping (C)",
+    "frames": 271,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 2.776,
+     "jerk": 166.583,
+     "manAccel": 5.505,
+     "manJerk": 166.583,
+     "camUp": 3.38,
+     "camExcess": 0.858
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "gulung": {
+    "note": "manuver Gulung tong (Z)",
+    "frames": 151,
+    "worst": {
+     "uncmd": 0.41,
+     "cmd": 0,
+     "accel": 50.131,
+     "jerk": 1544.839,
+     "manAccel": 50.131,
+     "manJerk": 1544.839,
+     "camUp": 13.261,
+     "camExcess": 3.993
+    },
+    "flaggedFrames": 23,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 38.349933,
+      "pitch": 0,
+      "bank": 0.41,
+      "flags": [
+       "hentakan manuver 1545"
+      ]
+     },
+     {
+      "frame": 46,
+      "t": 38.6166,
+      "pitch": 0,
+      "bank": 93.333,
+      "flags": [
+       "atas kamera 13.26 derajat, kapal 9.27"
+      ]
+     },
+     {
+      "frame": 47,
+      "t": 38.633267,
+      "pitch": 0,
+      "bank": 102.878,
+      "flags": [
+       "atas kamera 12.24 derajat, kapal 9.54"
+      ]
+     },
+     {
+      "frame": 48,
+      "t": 38.649933,
+      "pitch": 0,
+      "bank": 112.667,
+      "flags": [
+       "atas kamera 11.32 derajat, kapal 9.79"
+      ]
+     },
+     {
+      "frame": 64,
+      "t": 38.9166,
+      "pitch": 0,
+      "bank": -84.065,
+      "flags": [
+       "atas kamera 12.20 derajat, kapal 9.27"
+      ]
+     },
+     {
+      "frame": 65,
+      "t": 38.933267,
+      "pitch": 0,
+      "bank": -75.107,
+      "flags": [
+       "atas kamera 11.18 derajat, kapal 8.96"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "balik": {
+    "note": "manuver Balik arah (X)",
+    "frames": 241,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 16.078,
+     "jerk": 964.675,
+     "manAccel": 31.202,
+     "manJerk": 965.717,
+     "camUp": 13.142,
+     "camExcess": 7.223
+    },
+    "flaggedFrames": 39,
+    "firstFlags": [
+     {
+      "frame": 89,
+      "t": 41.983233,
+      "pitch": 7.477,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.85 derajat, kapal 1.79"
+      ]
+     },
+     {
+      "frame": 90,
+      "t": 41.9999,
+      "pitch": 5.865,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.75 derajat, kapal 1.61"
+      ]
+     },
+     {
+      "frame": 91,
+      "t": 42.016567,
+      "pitch": 4.433,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.64 derajat, kapal 1.43"
+      ]
+     },
+     {
+      "frame": 92,
+      "t": 42.033233,
+      "pitch": 3.189,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.53 derajat, kapal 1.24"
+      ]
+     },
+     {
+      "frame": 93,
+      "t": 42.0499,
+      "pitch": 2.139,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.41 derajat, kapal 1.05"
+      ]
+     },
+     {
+      "frame": 94,
+      "t": 42.066567,
+      "pitch": 1.29,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.29 derajat, kapal 0.85"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "kombinasi": {
+    "note": "naik sambil belok, lalu turun sambil belok, lalu lepas",
+    "frames": 336,
+    "worst": {
+     "uncmd": 3.457,
+     "cmd": 8.02,
+     "accel": 489.642,
+     "jerk": 29325.308,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.682,
+     "camExcess": 0.16
+    },
+    "flaggedFrames": 103,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 45.166567,
+      "pitch": 1.786,
+      "bank": 3.88,
+      "flags": [
+       "putar dengan input 4.27 derajat",
+       "percepatan 268.3",
+       "hentakan 16100"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 45.183233,
+      "pitch": 3.567,
+      "bank": 7.515,
+      "flags": [
+       "putar dengan input 4.05 derajat",
+       "hentakan 15070"
+      ]
+     },
+     {
+      "frame": 32,
+      "t": 45.1999,
+      "pitch": 5.338,
+      "bank": 10.929,
+      "flags": [
+       "putar dengan input 3.84 derajat"
+      ]
+     },
+     {
+      "frame": 33,
+      "t": 45.216567,
+      "pitch": 7.091,
+      "bank": 14.141,
+      "flags": [
+       "putar dengan input 3.66 derajat"
+      ]
+     },
+     {
+      "frame": 34,
+      "t": 45.233233,
+      "pitch": 8.822,
+      "bank": 17.17,
+      "flags": [
+       "putar dengan input 3.49 derajat"
+      ]
+     },
+     {
+      "frame": 35,
+      "t": 45.2499,
+      "pitch": 10.528,
+      "bank": 20.033,
+      "flags": [
+       "putar dengan input 3.34 derajat"
+      ]
+     }
+    ],
+    "pass": false
+   }
+  },
+  "raptor-j": {
+   "naik-tahan-lepas": {
+    "note": "tahan naik sampai sekitar 80 derajat lalu lepas",
+    "frames": 315,
+    "worst": {
+     "uncmd": 11.609,
+     "cmd": 1.623,
+     "accel": 731.947,
+     "jerk": 43915.951,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 13.253,
+     "camExcess": 6.884
+    },
+    "flaggedFrames": 34,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 1.316667,
+      "pitch": 1.623,
+      "bank": 0,
+      "flags": [
+       "percepatan 102.0",
+       "hentakan 6120"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 1.333333,
+      "pitch": 3.247,
+      "bank": 0,
+      "flags": [
+       "hentakan 6120"
+      ]
+     },
+     {
+      "frame": 75,
+      "t": 2.066667,
+      "pitch": 74.026,
+      "bank": 0,
+      "flags": [
+       "percepatan 40.8",
+       "hentakan 2448"
+      ]
+     },
+     {
+      "frame": 76,
+      "t": 2.083333,
+      "pitch": 75,
+      "bank": 0,
+      "flags": [
+       "hentakan 2448"
+      ]
+     },
+     {
+      "frame": 113,
+      "t": 2.7,
+      "pitch": 69.935,
+      "bank": 168.391,
+      "flags": [
+       "putar tanpa input 11.61 derajat",
+       "percepatan 731.9",
+       "hentakan 43916"
+      ]
+     },
+     {
+      "frame": 114,
+      "t": 2.716667,
+      "pitch": 69.935,
+      "bank": 157.531,
+      "flags": [
+       "putar tanpa input 10.86 derajat",
+       "percepatan 47.0",
+       "hentakan 41094"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "naik-vertikal-lepas": {
+    "note": "tahan naik melewati vertikal lalu lepas",
+    "frames": 327,
+    "worst": {
+     "uncmd": 11.609,
+     "cmd": 1.623,
+     "accel": 731.947,
+     "jerk": 43915.951,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 13.247,
+     "camExcess": 6.878
+    },
+    "flaggedFrames": 34,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 6.733267,
+      "pitch": 1.623,
+      "bank": 0,
+      "flags": [
+       "percepatan 102.0",
+       "hentakan 6120"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 6.749933,
+      "pitch": 3.247,
+      "bank": 0,
+      "flags": [
+       "hentakan 6120"
+      ]
+     },
+     {
+      "frame": 87,
+      "t": 7.683267,
+      "pitch": 86.493,
+      "bank": 180,
+      "flags": [
+       "percepatan 40.8",
+       "hentakan 2448"
+      ]
+     },
+     {
+      "frame": 88,
+      "t": 7.699933,
+      "pitch": 85.519,
+      "bank": 180,
+      "flags": [
+       "hentakan 2448"
+      ]
+     },
+     {
+      "frame": 105,
+      "t": 7.983267,
+      "pitch": 69.935,
+      "bank": 168.391,
+      "flags": [
+       "putar tanpa input 11.61 derajat",
+       "percepatan 731.9",
+       "hentakan 43916"
+      ]
+     },
+     {
+      "frame": 106,
+      "t": 7.999933,
+      "pitch": 69.935,
+      "bank": 157.531,
+      "flags": [
+       "putar tanpa input 10.86 derajat",
+       "percepatan 47.0",
+       "hentakan 41094"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "turun-tahan-lepas": {
+    "note": "tahan turun sampai sekitar 80 derajat menukik lalu lepas",
+    "frames": 315,
+    "worst": {
+     "uncmd": 25.204,
+     "cmd": 1.623,
+     "accel": 1609.698,
+     "jerk": 96551.432,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 2.065,
+     "camExcess": 1.45
+    },
+    "flaggedFrames": 25,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 12.333267,
+      "pitch": -1.623,
+      "bank": 0,
+      "flags": [
+       "percepatan 102.0",
+       "hentakan 6120"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 12.349933,
+      "pitch": -3.247,
+      "bank": 0,
+      "flags": [
+       "hentakan 6120"
+      ]
+     },
+     {
+      "frame": 75,
+      "t": 13.083267,
+      "pitch": -72.078,
+      "bank": 0,
+      "flags": [
+       "percepatan 163.2",
+       "hentakan 9792"
+      ]
+     },
+     {
+      "frame": 76,
+      "t": 13.099933,
+      "pitch": -71.104,
+      "bank": 0,
+      "flags": [
+       "hentakan 9792"
+      ]
+     },
+     {
+      "frame": 79,
+      "t": 13.149933,
+      "pitch": -67.9,
+      "bank": 0,
+      "flags": [
+       "hentakan 1064"
+      ]
+     },
+     {
+      "frame": 80,
+      "t": 13.1666,
+      "pitch": -66.666,
+      "bank": 0,
+      "flags": [
+       "hentakan 978"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "miring-kanan-lepas": {
+    "note": "tahan miring kanan lalu lepas",
+    "frames": 330,
+    "worst": {
+     "uncmd": 4.019,
+     "cmd": 3.881,
+     "accel": 243.838,
+     "jerk": 14629.993,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.249,
+     "camExcess": 0
+    },
+    "flaggedFrames": 26,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 17.733367,
+      "pitch": 0,
+      "bank": 3.88,
+      "flags": [
+       "putar dengan input 3.88 derajat",
+       "percepatan 243.8",
+       "hentakan 14630"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 17.750033,
+      "pitch": 0,
+      "bank": 7.51,
+      "flags": [
+       "putar dengan input 3.63 derajat",
+       "hentakan 13639"
+      ]
+     },
+     {
+      "frame": 32,
+      "t": 17.7667,
+      "pitch": 0,
+      "bank": 10.905,
+      "flags": [
+       "putar dengan input 3.40 derajat"
+      ]
+     },
+     {
+      "frame": 33,
+      "t": 17.783367,
+      "pitch": 0,
+      "bank": 14.082,
+      "flags": [
+       "putar dengan input 3.19 derajat"
+      ]
+     },
+     {
+      "frame": 34,
+      "t": 17.800033,
+      "pitch": 0,
+      "bank": 17.054,
+      "flags": [
+       "putar dengan input 2.99 derajat"
+      ]
+     },
+     {
+      "frame": 35,
+      "t": 17.8167,
+      "pitch": 0,
+      "bank": 19.834,
+      "flags": [
+       "putar dengan input 2.81 derajat"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "miring-kiri-lepas": {
+    "note": "tahan miring kiri lalu lepas",
+    "frames": 330,
+    "worst": {
+     "uncmd": 4.019,
+     "cmd": 3.881,
+     "accel": 243.838,
+     "jerk": 14629.993,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.249,
+     "camExcess": 0
+    },
+    "flaggedFrames": 26,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 23.383267,
+      "pitch": 0,
+      "bank": -3.88,
+      "flags": [
+       "putar dengan input 3.88 derajat",
+       "percepatan 243.8",
+       "hentakan 14630"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 23.399933,
+      "pitch": 0,
+      "bank": -7.51,
+      "flags": [
+       "putar dengan input 3.63 derajat",
+       "hentakan 13639"
+      ]
+     },
+     {
+      "frame": 32,
+      "t": 23.4166,
+      "pitch": 0,
+      "bank": -10.905,
+      "flags": [
+       "putar dengan input 3.40 derajat"
+      ]
+     },
+     {
+      "frame": 33,
+      "t": 23.433267,
+      "pitch": 0,
+      "bank": -14.082,
+      "flags": [
+       "putar dengan input 3.19 derajat"
+      ]
+     },
+     {
+      "frame": 34,
+      "t": 23.449933,
+      "pitch": 0,
+      "bank": -17.054,
+      "flags": [
+       "putar dengan input 2.99 derajat"
+      ]
+     },
+     {
+      "frame": 35,
+      "t": 23.4666,
+      "pitch": 0,
+      "bank": -19.834,
+      "flags": [
+       "putar dengan input 2.81 derajat"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "kanan-kiri-cepat": {
+    "note": "ganti arah kanan kiri cepat",
+    "frames": 258,
+    "worst": {
+     "uncmd": 3.367,
+     "cmd": 7.466,
+     "accel": 490.516,
+     "jerk": 29244.192,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 0.403,
+     "camExcess": 0
+    },
+    "flaggedFrames": 65,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 29.033267,
+      "pitch": 0,
+      "bank": 3.88,
+      "flags": [
+       "putar dengan input 3.88 derajat",
+       "percepatan 243.8",
+       "hentakan 14630"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 29.049933,
+      "pitch": 0,
+      "bank": 7.51,
+      "flags": [
+       "putar dengan input 3.63 derajat",
+       "hentakan 13639"
+      ]
+     },
+     {
+      "frame": 32,
+      "t": 29.0666,
+      "pitch": 0,
+      "bank": 10.905,
+      "flags": [
+       "putar dengan input 3.40 derajat"
+      ]
+     },
+     {
+      "frame": 33,
+      "t": 29.083267,
+      "pitch": 0,
+      "bank": 14.082,
+      "flags": [
+       "putar dengan input 3.19 derajat"
+      ]
+     },
+     {
+      "frame": 34,
+      "t": 29.099933,
+      "pitch": 0,
+      "bank": 17.054,
+      "flags": [
+       "putar dengan input 2.99 derajat"
+      ]
+     },
+     {
+      "frame": 35,
+      "t": 29.1166,
+      "pitch": 0,
+      "bank": 19.834,
+      "flags": [
+       "putar dengan input 2.81 derajat"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "loop": {
+    "note": "manuver Looping (C)",
+    "frames": 271,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 2.776,
+     "jerk": 166.583,
+     "manAccel": 5.505,
+     "manJerk": 166.583,
+     "camUp": 3.38,
+     "camExcess": 0.858
+    },
+    "flaggedFrames": 0,
+    "firstFlags": [],
+    "pass": true
+   },
+   "gulung": {
+    "note": "manuver Gulung tong (Z)",
+    "frames": 151,
+    "worst": {
+     "uncmd": 0.41,
+     "cmd": 0,
+     "accel": 50.131,
+     "jerk": 1544.839,
+     "manAccel": 50.131,
+     "manJerk": 1544.839,
+     "camUp": 13.261,
+     "camExcess": 3.993
+    },
+    "flaggedFrames": 23,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 38.149933,
+      "pitch": 0,
+      "bank": 0.41,
+      "flags": [
+       "hentakan manuver 1545"
+      ]
+     },
+     {
+      "frame": 46,
+      "t": 38.4166,
+      "pitch": 0,
+      "bank": 93.333,
+      "flags": [
+       "atas kamera 13.26 derajat, kapal 9.27"
+      ]
+     },
+     {
+      "frame": 47,
+      "t": 38.433267,
+      "pitch": 0,
+      "bank": 102.878,
+      "flags": [
+       "atas kamera 12.24 derajat, kapal 9.54"
+      ]
+     },
+     {
+      "frame": 48,
+      "t": 38.449933,
+      "pitch": 0,
+      "bank": 112.667,
+      "flags": [
+       "atas kamera 11.32 derajat, kapal 9.79"
+      ]
+     },
+     {
+      "frame": 64,
+      "t": 38.7166,
+      "pitch": 0,
+      "bank": -84.065,
+      "flags": [
+       "atas kamera 12.20 derajat, kapal 9.27"
+      ]
+     },
+     {
+      "frame": 65,
+      "t": 38.733267,
+      "pitch": 0,
+      "bank": -75.107,
+      "flags": [
+       "atas kamera 11.18 derajat, kapal 8.96"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "balik": {
+    "note": "manuver Balik arah (X)",
+    "frames": 241,
+    "worst": {
+     "uncmd": 0,
+     "cmd": 0,
+     "accel": 16.078,
+     "jerk": 964.675,
+     "manAccel": 31.202,
+     "manJerk": 965.717,
+     "camUp": 13.142,
+     "camExcess": 7.223
+    },
+    "flaggedFrames": 39,
+    "firstFlags": [
+     {
+      "frame": 89,
+      "t": 41.766533,
+      "pitch": 7.477,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.85 derajat, kapal 1.79"
+      ]
+     },
+     {
+      "frame": 90,
+      "t": 41.7832,
+      "pitch": 5.865,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.75 derajat, kapal 1.61"
+      ]
+     },
+     {
+      "frame": 91,
+      "t": 41.799867,
+      "pitch": 4.433,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.64 derajat, kapal 1.43"
+      ]
+     },
+     {
+      "frame": 92,
+      "t": 41.816533,
+      "pitch": 3.189,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.53 derajat, kapal 1.24"
+      ]
+     },
+     {
+      "frame": 93,
+      "t": 41.8332,
+      "pitch": 2.139,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.41 derajat, kapal 1.05"
+      ]
+     },
+     {
+      "frame": 94,
+      "t": 41.849867,
+      "pitch": 1.29,
+      "bank": 180,
+      "flags": [
+       "atas kamera 2.29 derajat, kapal 0.85"
+      ]
+     }
+    ],
+    "pass": false
+   },
+   "kombinasi": {
+    "note": "naik sambil belok, lalu turun sambil belok, lalu lepas",
+    "frames": 336,
+    "worst": {
+     "uncmd": 3.412,
+     "cmd": 7.98,
+     "accel": 489.285,
+     "jerk": 29313.194,
+     "manAccel": 0,
+     "manJerk": 0,
+     "camUp": 1.46,
+     "camExcess": 0.281
+    },
+    "flaggedFrames": 100,
+    "firstFlags": [
+     {
+      "frame": 30,
+      "t": 44.933267,
+      "pitch": 1.623,
+      "bank": 3.88,
+      "flags": [
+       "putar dengan input 4.21 derajat",
+       "percepatan 264.2",
+       "hentakan 15854"
+      ]
+     },
+     {
+      "frame": 31,
+      "t": 44.949933,
+      "pitch": 3.243,
+      "bank": 7.514,
+      "flags": [
+       "putar dengan input 3.98 derajat",
+       "hentakan 14839"
+      ]
+     },
+     {
+      "frame": 32,
+      "t": 44.9666,
+      "pitch": 4.852,
+      "bank": 10.925,
+      "flags": [
+       "putar dengan input 3.77 derajat"
+      ]
+     },
+     {
+      "frame": 33,
+      "t": 44.983267,
+      "pitch": 6.446,
+      "bank": 14.131,
+      "flags": [
+       "putar dengan input 3.58 derajat"
+      ]
+     },
+     {
+      "frame": 34,
+      "t": 44.999933,
+      "pitch": 8.02,
+      "bank": 17.15,
+      "flags": [
+       "putar dengan input 3.41 derajat"
+      ]
+     },
+     {
+      "frame": 35,
+      "t": 45.0166,
+      "pitch": 9.571,
+      "bank": 19.998,
+      "flags": [
+       "putar dengan input 3.25 derajat"
+      ]
+     }
+    ],
+    "pass": false
+   }
+  }
+ }
+}
