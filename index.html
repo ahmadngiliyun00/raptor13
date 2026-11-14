@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-40Cl5gnLf6U/Yat02nIENy4qAXWjpvrDUKQBm6WJaaA='; style-src 'self' 'sha256-vPvR9uw97S3o54LbtOAC3LUT4u9heeUSocMSzjtmico='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-Lu20xfHoM18mY/GNEvULrMiVfQfhWVoqJ1GK5Jj/1to='; style-src 'self' 'sha256-Ivj4F5XAhqq56RWe2v88yZL20YI+m7kGuJHIcIgCf8Y='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -642,6 +642,13 @@
   #touch .t-eq .eq-n { position: absolute; right: -4px; bottom: -4px; min-width: 16px; height: 16px; padding: 0 3px; font: 800 11px/16px system-ui, sans-serif;
     color: #fff; background: rgba(10, 16, 26, 0.92); border: 1px solid rgba(255, 255, 255, 0.7); border-radius: 8px; text-align: center; pointer-events: none; }
   #touch .t-eq .eq-n:empty { display: none; }
+  /* Indikator tingkat senjata (E5): titik per laras yang menembak dalam satu interval */
+  .gun-pips { display: inline-flex; gap: 3px; align-items: center; }
+  .gun-pips i { width: 5px; height: 5px; border-radius: 50%; background: rgba(255, 255, 255, 0.22); }
+  .gun-pips i.on { background: #ffb347; box-shadow: 0 0 4px rgba(255, 170, 70, 0.8); }
+  #touch .t-fire .gun-pips { position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%); pointer-events: none; }
+  #touch .t-fire .gun-pips i { width: 4px; height: 4px; }
+  .lv-row .gun-pips { margin-left: auto; padding-left: 8px; }
   #touch .t-eq.ready { animation: eqReady 1.6s ease-in-out infinite; }
   @keyframes eqReady { 50% { box-shadow: var(--ol, none), 0 0 10px rgba(159, 232, 255, 0.7); } }
   #touch .t-eq.cool { opacity: calc(0.45 * var(--ca)); }
@@ -808,7 +815,7 @@
   @keyframes rotPhone { 0%, 25% { transform: rotate(0deg); } 55%, 100% { transform: rotate(-90deg); } }
   body.portrait-hp #toolbar { display: flex !important; }
   /* Kartu unduh APK di kiri bawah menu (C10): kecil, tidak menutupi zona tengah atau tombol menu */
-  #apk-card { position: fixed; z-index: 44; left: max(var(--ed-l), 12px); bottom: max(var(--ed-b), 12px); width: min(330px, 40vw); display: flex; flex-direction: column; gap: 4px;
+  #apk-card { position: fixed; z-index: 44; left: max(var(--ed-l), 12px); bottom: max(var(--ed-b), 12px); width: min(330px, calc(40vw - max(var(--ed-l), 12px))); display: flex; flex-direction: column; gap: 4px;
     padding: 8px 10px; font-size: 12px; line-height: 1.35; color: #e8f6ff; background: rgba(8, 14, 24, 0.92); border: 1px solid rgba(160, 220, 255, 0.45); border-radius: 10px; }
   #apk-card b { font-size: 12px; }
   #apk-card small { color: var(--ui-dim); font-size: 11px; }
@@ -1230,7 +1237,7 @@
     <div class="bar" id="nitro-bar"><i id="nitro-fill"></i></div>
     <div class="row"><span class="label">ULTIMATE <kbd class="mini">E</kbd></span><span id="ult-tag" class="tag"></span></div>
     <div class="bar" id="ult-bar"><i id="ult-fill"></i></div>
-    <div class="row lv-row"><span class="label">LEVEL <b id="lv-num" class="num">1</b></span><span id="shield-tag" class="tag"></span></div>
+    <div class="row lv-row"><span class="label">LEVEL <b id="lv-num" class="num">1</b></span><span id="shield-tag" class="tag"></span><span class="gun-pips" title="Tingkat senjata" aria-label="Tingkat senjata"><i class="on"></i><i></i><i></i><i></i></span></div>
     <div class="bar thin" id="xp-bar"><i id="xp-fill"></i></div>
   </div>
   <div class="hud-block tc">
@@ -1304,7 +1311,7 @@
     <button class="tbtn t-eq hidden" data-eq="0" type="button" aria-label="Peralatan 1" title="Peralatan 1"><svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg><b class="eq-n"></b></button>
     <button class="tbtn t-eq hidden" data-eq="1" type="button" aria-label="Peralatan 2" title="Peralatan 2"><svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg><b class="eq-n"></b></button>
     <button class="tbtn t-eq hidden" data-eq="2" type="button" aria-label="Peralatan 3" title="Peralatan 3"><svg viewBox="0 0 24 24"><path d="M12 3l7 4v6c0 4-3 6.5-7 8-4-1.5-7-4-7-8V7z"/></svg><b class="eq-n"></b></button>
-    <button class="tbtn t-fire" data-act="fire" type="button" aria-label="Tembak" title="Tembak"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg></button>
+    <button class="tbtn t-fire" data-act="fire" type="button" aria-label="Tembak" title="Tembak"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 1.5v5M12 17.5v5M1.5 12h5M17.5 12h5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg><span class="gun-pips" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span></button>
   </div>
 </div>
 <!-- Editor tata letak HUD mode HP (C3): geser tombol, ubah ukuran per elemen, validasi langsung -->
@@ -1890,12 +1897,28 @@ const CONFIG = {
     bulletSpeed: 750,          // ditambah kecepatan pesawat (sekitar tiga kali versi awal)
     bulletLife: 0.8,
     damage: 10,                // damage per peluru pemain
-    maxPlayerBullets: 80,
-    convergeDistance: 160,     // jarak titik temu peluru kedua sayap, juga posisi reticle
+    maxPlayerBullets: 128,     // anggaran peluru pemain (tingkat 3 dengan buff laju tembak tetap di bawah batas ini)
+    convergeDistance: 120,     // titik temu semua laras di depan (80 sampai 150 satuan, E5), juga posisi reticle
     hitPadding: 0.9,           // tambahan radius saat cek kena
     // Bantuan bidik dari Pengaturan: kerucut (derajat) dan laju lengkung peluru (radian per detik)
     aimAssist: { mati: [0, 0], rendah: [3, 0.9], sedang: [5, 1.8] },
     aimAssistRange: 520,
+  },
+  // Senjata bertingkat berbasis hardpoint (E5). Tiap tingkat: urutan voli (lihat volleysFor), jumlah voli per
+  // interval dasar, dan pengali damage per peluru. DPS nominal relatif dasar: 1,0, 1,8, dan 3,2.
+  guns: {
+    tiers: [null,
+      { name: 'Tingkat 1', pattern: 'bergantian', perInterval: 1, mult: 1.0, shots: 1 },
+      { name: 'Tingkat 2', pattern: 'serempak', perInterval: 1, mult: 0.9, shots: 2 },
+      { name: 'Tingkat 3', pattern: 'pasangan bergantian', perInterval: 2, mult: 0.8, shots: 4 }],
+    // Syarat kartu level "Peningkatan Senjata": level yang dicapai, dan untuk angkasa juga stage kampanye terbuka
+    card: { 2: { level: 5 }, 3: { level: 10, stage: 5, earthLevel: 12 } },
+    stageReward: { 3: 2, 7: 3 },   // selesai stage n memberi tingkat minimal untuk kapal yang dipakai
+    contractEvery: 4, contractMaxTier: 2,   // tiap 4 kontrak selesai naik satu tingkat, paling tinggi tingkat 2
+    spread: 0.0035,            // penyebaran kecil deterministik (radian), tanpa memakai RNG permainan
+    extendTime: 0.45,          // animasi laras baru memanjang dan menyala
+    recoil: 0.1, flashTime: 0.06,
+    voiceCap: 8,               // batas suara tembak bersamaan
   },
   enemies: {
     maxDrones: 16,             // ukuran pool drone
@@ -2448,6 +2471,9 @@ const Save = {
       campaign: { stage: 1, completed: false, freeArea: 'bumi', intros: [], ratings: {} },   // ratings: bintang terbaik per stage   // stage tertinggi yang terbuka
       // Peralatan (C4, C7): id yang terbuka dan loadout per kapal (panjang = jumlah slot kapal, null = slot kosong)
       equip: { unlocked: EQUIP_START.slice(), loadout: Object.fromEntries(SHIP_IDS.map((id) => [id, Array.from({ length: SHIP_SLOTS[id] }, (_, i) => (EQUIP_DEFAULT_LOADOUT[id] || [])[i] || null)])), contracts: 0 },
+      // Tingkat senjata per kapal (E5): 1 sampai 3; simpanan lama tanpa field ini mulai dari tingkat 1
+      guns: Object.fromEntries(SHIP_IDS.map((id) => [id, 1])),
+      gunHint: false,
     };
   },
   // Terima hanya field yang dikenal dengan tipe dan rentang yang benar
@@ -2493,6 +2519,9 @@ const Save = {
     if (Array.isArray(cp.intros)) for (const n of cp.intros) { if (Number.isInteger(n) ? n >= 1 ? n <= 10 ? !d.campaign.intros.includes(n) : false : false : false) d.campaign.intros.push(n); }
     if (Array.isArray(raw.discoveries)) for (const id of raw.discoveries) { if (DISCOVERY_IDS.includes(id) ? !d.discoveries.includes(id) : false) d.discoveries.push(id); }
     d.equip = this.sanitizeEquip(raw.equip, d.equip);
+    const gn = isObj(raw.guns) ? raw.guns : {};
+    for (const id of SHIP_IDS) { const v = gn[id]; if (Number.isInteger(v) ? v >= 1 ? v <= 3 : false : false) d.guns[id] = v; }
+    if (raw.gunHint === true) d.gunHint = true;
     return d;
   },
   // Peralatan (C7): hanya id yang dikenal, loadout memakai id yang terbuka, tanpa duplikat dalam satu kapal,
@@ -3483,7 +3512,7 @@ function buildStarfighter(params = {}) {
     thickRoot: 0.08, thickTip: 0.03, ns: 6, nc: 10 };
   const wingGeo = liftingSurface(plan);
   const tipGeo = capsuleGeometry(0.11, 0.9, 8);
-  const wings = [];
+  const wings = [], mounts = {};
   for (const [side, up] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
     const pivot = new THREE.Group();
     pivot.position.set(0, 0, wp.rootZ);
@@ -3498,6 +3527,8 @@ function buildStarfighter(params = {}) {
     const thr = add(tipGeo, side > 0 ? matThrR : matThrL, twist, false);
     thr.position.set(side * (W * 0.45 + wp.span * 0.97), 0, plan.tipLE + wp.tipChord * 0.5);
     wings.push({ pivot, twist, side, up });
+    // Titik pasang laras (E5): segaris dengan thruster ujung bilah, ujung laras di depan thruster
+    mounts[(up > 0 ? 'U' : 'L') + (side > 0 ? 'R' : 'L')] = { group: twist, tip: new THREE.Vector3(thr.position.x, 0, thr.position.z - 1.3) };
   }
 
   // Lampu navigasi
@@ -3505,11 +3536,7 @@ function buildStarfighter(params = {}) {
   add(navGeo, new THREE.MeshBasicMaterial({ color: 0xff3030 }), body, false).position.set(-W * 0.9, 0.05, z0 + L * 0.7);
   add(navGeo, new THREE.MeshBasicMaterial({ color: 0x30ff70 }), body, false).position.set(W * 0.9, 0.05, z0 + L * 0.7);
 
-  // Laras tambahan untuk varian bersenjata berat
-  if (P.guns > 2) {
-    const barrel = capsuleGeometry(0.09, 1.4, 6);
-    for (const sx of [-1, 1]) add(barrel, matDark).position.set(sx * W * 0.95, -H * 0.25, z0 + L * 0.3);   // menempel di sisi bawah badan
-  }
+  // Laras senjata dipasang oleh attachHardpoints (E5) dari data hardpoint registri kapal
 
   const light = new THREE.PointLight(0x66ddff, 0, 24, 2);
   light.position.set(0, 0, zTail + 1.2);
@@ -3537,10 +3564,71 @@ function buildStarfighter(params = {}) {
 
   const tipX = W * 0.45 + wp.span;
   return {
-    root, body, flames: [flame], light, matGlow, matFlame, animate, wings, pikoMount, state,
+    root, body, flames: [flame], light, matGlow, matFlame, animate, wings, pikoMount, state, mounts,
     glowBase: new THREE.Color(P.ring), glowHot: new THREE.Color(0xe8ffff),
     wingtips: [new THREE.Vector3(-tipX, 0, plan.tipLE + 0.5), new THREE.Vector3(tipX, 0, plan.tipLE + 0.5)],
   };
+}
+// Laras senjata pada hardpoint (E5). Tiap laras: grup di pangkal (diam), geser (recoil dan animasi memanjang),
+// geometri bubut dari pangkal ke ujung (-z), cincin ujung yang menyala, kilat moncong additive, dan titik
+// moncong di ujung yang terlihat sebagai asal peluru. Geometri dan material laras dipakai bersama.
+const GUN_KINDS = {
+  sayap: { len: 1.0, prof: [[0, 0], [0.085, 0], [0.085, 0.16], [0.062, 0.24], [0.062, 0.92], [0.075, 0.95], [0.075, 1.0], [0, 1.0]] },
+  pod: { len: 1.9, prof: [[0, 0], [0.05, 0], [0.05, 0.42], [0.1, 0.5], [0.13, 0.75], [0.13, 1.55], [0.08, 1.85], [0, 1.9]] },
+  meriam: { len: 1.3, prof: [[0, 0], [0.09, 0], [0.09, 0.3], [0.055, 0.38], [0.055, 1.22], [0.07, 1.26], [0.07, 1.3], [0, 1.3]] },
+  berat: { len: 1.6, prof: [[0, 0], [0.13, 0], [0.13, 0.5], [0.095, 0.62], [0.095, 1.5], [0.11, 1.55], [0.11, 1.6], [0, 1.6]] },
+};
+const GunParts = {
+  geos: null, matBarrel: null, matFlash: null,
+  init() {
+    if (this.geos) return;
+    this.geos = {};
+    for (const [k, d] of Object.entries(GUN_KINDS)) {
+      // Profil bubut: y dari pangkal (0) ke ujung (len); diputar agar ujung ada di -z dan pangkal di titik asal
+      const g = new THREE.LatheGeometry(d.prof.map(([r, y]) => new THREE.Vector2(r, d.len - y)), 10);
+      g.rotateX(Math.PI / 2);
+      g.translate(0, 0, -d.len);
+      this.geos[k] = g;
+    }
+    this.ring = new THREE.TorusGeometry(0.08, 0.026, 4, 12);
+    const fl = new THREE.ConeGeometry(0.16, 0.7, 6, 1, true);
+    fl.rotateX(-Math.PI / 2); fl.translate(0, 0, -0.35);
+    this.flash = fl;
+    this.pylon = new THREE.BoxGeometry(0.05, 0.22, 0.9);
+    this.matBarrel = new THREE.MeshStandardMaterial({ color: 0x23272e, metalness: 0.75, roughness: 0.38 });
+    this.matFlash = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 0.9, 0.4), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
+  },
+};
+function attachHardpoints(model, def) {
+  GunParts.init();
+  const G = GunParts, out = [];
+  for (const h of def.hardpoints) {
+    const k = GUN_KINDS[h.kind], m = h.at === 'body' ? null : model.mounts[h.at];
+    const parent = m ? m.group : model.body, tip = m ? m.tip : new THREE.Vector3(...h.pos);
+    const base = new THREE.Group();
+    base.position.set(tip.x, tip.y, tip.z + k.len);
+    parent.add(base);
+    const slide = new THREE.Group();
+    base.add(slide);
+    const barrel = new THREE.Mesh(G.geos[h.kind], G.matBarrel);
+    barrel.castShadow = true;
+    barrel.userData.gun = true;
+    slide.add(barrel);
+    if (h.kind === 'pod') { const py = new THREE.Mesh(G.pylon, G.matBarrel); py.position.set(0, 0.2, -0.95); py.userData.gun = true; base.add(py); }
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0x331a10, fog: false });
+    const ring = new THREE.Mesh(G.ring, glowMat);
+    ring.position.z = -k.len; ring.userData.gun = true;
+    slide.add(ring);
+    const flash = new THREE.Mesh(G.flash, G.matFlash);
+    flash.position.z = -k.len; flash.visible = false; flash.frustumCulled = false;
+    slide.add(flash);
+    const muzzle = new THREE.Object3D();
+    muzzle.position.z = -k.len - 0.05;
+    slide.add(muzzle);
+    out.push({ def: h, base, slide, ring, glowMat, flash, muzzle, ext: 1, recoil: 0, flashT: 0, heat: 0, on: true });
+  }
+  model.hardpoints = out;
+  return out;
 }
 const _AX_X = new THREE.Vector3(1, 0, 0), _AX_Y = new THREE.Vector3(0, 1, 0), _AX_Z = new THREE.Vector3(0, 0, 1);
 const _qb = new THREE.Quaternion();
@@ -3557,7 +3645,14 @@ const SHIPS = {
     desc: 'Jet tempur atmosfer bersayap trapesium. Seimbang dan stabil di ketinggian rendah.',
     build: buildJetRaptor,
     stats: { speed: 1.0, agility: 1.0, hp: 100, damage: 10, nitro: 1.0 },
-    muzzles: [[-1.25, -0.12, -1.2], [1.25, -0.12, -1.2]],
+    // Hardpoint (E5): pos adalah ujung laras di ruang model (arah tembak maju, -z). Dua pod di bawah sayap untuk
+    // tingkat 1 dan 2, lalu dua meriam di akar sayap di bawah strake untuk tingkat 3.
+    hardpoints: [
+      { id: 'pod-kiri', at: 'body', pos: [-1.5, -0.27, -0.95], kind: 'pod', tier: 1 },
+      { id: 'pod-kanan', at: 'body', pos: [1.5, -0.27, -0.95], kind: 'pod', tier: 1 },
+      { id: 'akar-kiri', at: 'body', pos: [-0.9, -0.15, -1.95], kind: 'meriam', tier: 3 },
+      { id: 'akar-kanan', at: 'body', pos: [0.9, -0.15, -1.95], kind: 'meriam', tier: 3 },
+    ],
     engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
     radius: 2.6,
     // Titik tambat Piko saat menempel (E4): sisi kanan badan, rendah, sedikit tertanam; dicerminkan untuk sisi kiri
@@ -3570,7 +3665,11 @@ const SHIPS = {
     build: buildStarfighter,
     params: {},
     stats: { speed: 1.0, agility: 1.1, hp: 100, damage: 10, nitro: 1.0 },
-    muzzles: [[-0.75, -0.05, -1.6], [0.75, -0.05, -1.6]],
+    // Hardpoint (E5): laras di ujung keempat sayap X; pasangan atas dahulu, pasangan bawah terbuka di tingkat 3
+    hardpoints: [
+      { id: 'kiri-atas', at: 'UL', kind: 'sayap', tier: 1 }, { id: 'kanan-atas', at: 'UR', kind: 'sayap', tier: 1 },
+      { id: 'kiri-bawah', at: 'LL', kind: 'sayap', tier: 3 }, { id: 'kanan-bawah', at: 'LR', kind: 'sayap', tier: 3 },
+    ],
     engines: [[0, 0, 4.1]],
     radius: 2.6,
     // Titik tambat Piko saat menempel (E4): sisi kanan badan, rendah, sedikit tertanam; dicerminkan untuk sisi kiri
@@ -3583,7 +3682,10 @@ const SHIPS = {
     build: buildStarfighter,
     params: { length: 9.0, width: 0.5, height: 0.42, wing: { span: 3.1, rootChord: 2.2, tipChord: 0.7, sweep: 1.7, rootZ: 0.9 }, spread: 0.38, color: 0x3c4450, accent: 0x46e8ff, ring: 0x9cf6ff },
     stats: { speed: 1.18, agility: 1.35, hp: 75, damage: 9, nitro: 1.25 },
-    muzzles: [[-0.62, -0.05, -2.0], [0.62, -0.05, -2.0]],
+    hardpoints: [
+      { id: 'kiri-atas', at: 'UL', kind: 'sayap', tier: 1 }, { id: 'kanan-atas', at: 'UR', kind: 'sayap', tier: 1 },
+      { id: 'kiri-bawah', at: 'LL', kind: 'sayap', tier: 3 }, { id: 'kanan-bawah', at: 'LR', kind: 'sayap', tier: 3 },
+    ],
     engines: [[0, 0, 4.4]],
     radius: 2.3,
     // Titik tambat Piko saat menempel (E4): sisi kanan badan, rendah, sedikit tertanam; dicerminkan untuk sisi kiri
@@ -3591,11 +3693,16 @@ const SHIPS = {
   },
   gunship: {
     id: 'gunship', name: 'Gunship', worlds: ['space'], cost: 1200,
-    desc: 'Varian berat berlapis tebal dengan empat laras. Lambat berbelok, tetapi pukulannya keras.',
+    desc: 'Varian berat berlapis tebal dengan laras besar di badan. Lambat berbelok, tetapi pukulannya keras.',
     build: buildStarfighter,
     params: { length: 8.0, width: 0.86, height: 0.66, wing: { span: 3.0, rootChord: 3.0, tipChord: 1.4, sweep: 0.8, rootZ: 0.5 }, spread: 0.6, color: 0x2c2f35, accent: 0xff4a3a, ring: 0xffa64a, guns: 4 },
     stats: { speed: 0.88, agility: 0.8, hp: 160, damage: 14, nitro: 0.85 },
-    muzzles: [[-1.03, -0.26, -2.2], [1.03, -0.26, -2.2], [-0.9, -0.05, -1.4], [0.9, -0.05, -1.4]],
+    // Gunship: dua laras berat di sisi bawah badan sebagai dasar, lalu laras di ujung sayap atas pada tingkat 3
+    hardpoints: [
+      { id: 'badan-kiri', at: 'body', pos: [-0.82, -0.17, -2.55], kind: 'berat', tier: 1 },
+      { id: 'badan-kanan', at: 'body', pos: [0.82, -0.17, -2.55], kind: 'berat', tier: 1 },
+      { id: 'kiri-atas', at: 'UL', kind: 'sayap', tier: 3 }, { id: 'kanan-atas', at: 'UR', kind: 'sayap', tier: 3 },
+    ],
     engines: [[0, 0, 4.05]],
     radius: 3.0,
     // Titik tambat Piko saat menempel (E4): sisi kanan badan, rendah, sedikit tertanam; dicerminkan untuk sisi kiri
@@ -3606,8 +3713,17 @@ const DEFAULT_SHIP = { earth: 'raptor-j', space: 'starfighter' };
 const MAX_ENGINES = 4;
 // Ubah daftar angka menjadi Vector3 sekali saja
 function prepareShipDef(def) {
-  def.muzzleVecs = def.muzzles.map((m) => new THREE.Vector3(...m));
   def.engineVecs = def.engines.map((e) => new THREE.Vector3(...e));
+  def.volleys = [null, 1, 2, 3].map((t) => (t ? volleysFor(def, t) : null));
+}
+// Urutan voli per tingkat (indeks hardpoint): tingkat 1 laras dasar bergantian, tingkat 2 pasangan dasar serempak,
+// tingkat 3 pasangan dasar dan pasangan tambahan bergantian dengan laju dua kali
+function volleysFor(def, tier) {
+  const ids = (t) => def.hardpoints.map((h, i) => (h.tier === t ? i : -1)).filter((i) => i >= 0);
+  const base = ids(1), extra = ids(3);
+  if (tier === 1) return base.map((i) => [i]);
+  if (tier === 2) return [base];
+  return [base, extra];
 }
 for (const def of Object.values(SHIPS)) prepareShipDef(def);
 
@@ -3619,6 +3735,7 @@ const ShipModels = {};      // cache model per id kapal: dibuat sekali, dipakai 
 function getShipModel(id) {
   if (!ShipModels[id]) {
     const m = SHIPS[id].build(SHIPS[id].params);
+    attachHardpoints(m, SHIPS[id]);
     // Piko tidak lagi duduk di soket (E3): ia terbang mandiri lewat PikoFly dan menempel di sisi lambung (E4)
     ShipModels[id] = m;
   }
@@ -4654,6 +4771,7 @@ const Weapons = {
   },
   reset() { this.cooldown = 0; this.side = 0; this.shotsFired = 0; this.pool.reset(); },
   update(dt, firing) {
+    Guns.update(dt);
     this.cooldown -= dt;
     if (firing) this.tryFire();
     else this.cooldown = Math.max(this.cooldown, 0);
@@ -4688,22 +4806,33 @@ const Weapons = {
   tryFire() {
     const W = CONFIG.weapons;
     if (!Player.alive || this.cooldown > 0) return;   // cooldown antar tembakan
-    const interval = this.interval();
+    Guns.sync();
+    const tier = Guns.tier(), T = CONFIG.guns.tiers[tier], vol = Player.ship.volleys[tier];
+    const interval = this.interval() / T.perInterval;
     this.cooldown = Math.max(this.cooldown, -interval) + interval;
-    const muzzles = Player.ship.muzzleVecs;
-    const gun = muzzles[this.side % muzzles.length];
-    this.side = (this.side + 1) % muzzles.length;                                        // laras bergantian
-    _va.copy(gun).applyQuaternion(Player.rig.quaternion).add(Player.pos);                // posisi laras
-    // Arah ke titik temu di depan; bantuan bidik lembut membuat peluru sedikit melengkung ke target
-    _vb.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance).sub(_va).normalize();
-    const target = this.findAssistTarget();
-    const bi = this.pool.spawn(_va.x, _va.y, _va.z, _vb.x, _vb.y, _vb.z, W.bulletSpeed + Player.speed, W.bulletLife, this.damage());
-    // Warna dan ukuran mengikuti buff aktif
-    this.pool.colorIdx[bi] = Buffs.destroyer > 0 ? 2 : Buffs.overdrive > 0 ? 1 : 0;
-    this.pool.sizes[bi] = Buffs.destroyer > 0 ? 1.45 : 1;
-    this.pool.target[bi] = target ? Enemies.list.indexOf(target) : -1;
-    this.shotsFired++;
-    Events.emit('shot', _va, _vb);
+    const set = vol[this.side % vol.length];
+    this.side = (this.side + 1) % vol.length;                                            // voli berikutnya
+    const target = this.findAssistTarget(), ti = target ? Enemies.list.indexOf(target) : -1;
+    const dmg = this.damage() * T.mult, hps = Player.model.hardpoints, sp = CONFIG.guns.spread;
+    // Titik temu di depan hidung: semua laras menembak ke depan dan menyatu di sana
+    _gunConv.copy(Player.pos).addScaledVector(Player.forward, W.convergeDistance);
+    for (let k = 0; k < set.length; k++) {
+      const hp = hps[set[k]];
+      // Vektor khusus: spawn memakai _va dan _vb sebagai sementara, jadi asal dan arah disimpan terpisah
+      const o = hp.muzzle.getWorldPosition(_gunPos), d = _gunDir;                       // ujung laras yang terlihat
+      d.copy(_gunConv).sub(o).normalize();
+      // Penyebaran kecil deterministik (pola Lissajous dari hitungan tembakan)
+      const n = this.shotsFired;
+      d.addScaledVector(Player._right, Math.sin(n * 2.399) * sp).addScaledVector(Player._up, Math.cos(n * 1.731) * sp).normalize();
+      const bi = this.pool.spawn(o.x, o.y, o.z, d.x, d.y, d.z, W.bulletSpeed + Player.speed, W.bulletLife, dmg);
+      // Warna dan ukuran mengikuti buff aktif
+      this.pool.colorIdx[bi] = Buffs.destroyer > 0 ? 2 : Buffs.overdrive > 0 ? 1 : 0;
+      this.pool.sizes[bi] = Buffs.destroyer > 0 ? 1.45 : 1;
+      this.pool.target[bi] = ti;
+      this.shotsFired++;
+      Guns.fired(hp, set[k], o, d);
+      Events.emit('shot', o, d, k, set.length);
+    }
   },
   // Musuh dengan sudut terkecil terhadap arah hidung, di dalam kerucut aim assist
   findAssistTarget(angleDeg) {
@@ -4726,6 +4855,122 @@ const Weapons = {
 };
 
 Weapons.init();
+
+/* =====================================================================
+   SENJATA BERTINGKAT (E5) - tingkat per kapal tersimpan di Save.data.guns (1 sampai 3). Laras aktif terlihat,
+   laras baru memanjang dan menyala saat tingkat naik, recoil halus dan kilat moncong per laras. Perolehan:
+   kartu level "Peningkatan Senjata", hadiah stage, dan hadiah kontrak (syarat di CONFIG.guns).
+   ===================================================================== */
+const _gunConv = new THREE.Vector3(), _gunPos = new THREE.Vector3(), _gunDir = new THREE.Vector3(), _gunInv = new THREE.Matrix4();
+const Guns = {
+  model: null, shownTier: 0, trace: null, hintChecked: 0,
+  tierOf(id) { const v = Save.data.guns ? Save.data.guns[id] : 1; return Number.isInteger(v) ? clamp(v, 1, 3) : 1; },
+  tier() { return this.tierOf(Player.ship.id); },
+  // Pasang tampilan tingkat ke model pemain bila kapal atau tingkat berubah; animate: laras baru memanjang
+  sync(animate = false) {
+    const m = Player.model, t = this.tier();
+    if (this.model === m ? this.shownTier === t : false) return;
+    const grow = animate ? this.model === m : false;
+    this.apply(m, t, grow ? 'grow' : 'game');
+    this.model = m; this.shownTier = t;
+    Weapons.side = 0;
+    this.hud();
+  },
+  // mode: 'game' (laras terkunci disembunyikan), 'grow' (laras baru memanjang), 'hangar' (terkunci tampak redup)
+  apply(m, tier, mode) {
+    for (const hp of m.hardpoints) {
+      const on = hp.def.tier <= (tier >= 3 ? 3 : 1);
+      if (on ? (mode === 'grow' ? !hp.on : false) : false) { hp.ext = 0; hp.heat = 1; }
+      else if (on) hp.ext = 1;
+      hp.on = on;
+      hp.base.visible = on ? true : mode === 'hangar';
+      hp.slide.scale.set(1, 1, on ? Math.max(0.02, hp.ext) : 1);
+      hp.glowMat.color.setRGB(on ? (mode === 'hangar' ? 1.4 : 0.35) : 0.08, on ? (mode === 'hangar' ? 0.75 : 0.18) : 0.08, on ? (mode === 'hangar' ? 0.25 : 0.06) : 0.1);
+    }
+  },
+  fired(hp, idx, pos, dir) {
+    hp.recoil = CONFIG.guns.recoil; hp.flashT = CONFIG.guns.flashTime; hp.heat = Math.min(1, hp.heat + 0.35);
+    if (this.trace ? this.trace.length < 4000 : false) {
+      const P = Player.pos, q = Player.quat;
+      this.trace.push([round2(Game.time), round2(pos.x), round2(pos.y), round2(pos.z), Math.round(dir.x * 1e4) / 1e4, Math.round(dir.y * 1e4) / 1e4, Math.round(dir.z * 1e4) / 1e4, idx,
+        round2(P.x), round2(P.y), round2(P.z), q.x, q.y, q.z, q.w, hp.base.visible ? 1 : 0, this.tier()]);
+    }
+  },
+  // Animasi per frame tanpa alokasi: memanjang, recoil, kilat moncong, dan cincin ujung yang mendingin
+  update(dt) {
+    if (this.model !== Player.model) this.sync();
+    const C = CONFIG.guns;
+    for (const hp of Player.model.hardpoints) {
+      if (!hp.on) continue;
+      if (hp.ext < 1) { hp.ext = Math.min(1, hp.ext + dt / C.extendTime); const e = 1 - (1 - hp.ext) ** 3; hp.slide.scale.z = Math.max(0.02, e); }
+      if (hp.recoil > 0) { hp.recoil = Math.max(0, hp.recoil - dt * 1.2); hp.slide.position.z = hp.recoil; }
+      if (hp.flashT > 0) { hp.flashT -= dt; hp.flash.visible = hp.flashT > 0; const s = 0.7 + (hp.flashT / C.flashTime) * 0.6; hp.flash.scale.set(s, s, s); }
+      if (hp.heat > 0) { hp.heat = Math.max(0, hp.heat - dt * 2.2); const h = hp.heat; hp.glowMat.color.setRGB(0.35 + 1.6 * h, 0.18 + 0.9 * h, 0.06 + 0.3 * h); }
+    }
+    // Saran Piko satu kali: kartu Peningkatan Senjata akan muncul di level berikutnya
+    this.hintChecked -= dt;
+    if (this.hintChecked <= 0 ? !Save.data.gunHint : false) {
+      this.hintChecked = 1;
+      if (Game.state === 'playing' ? this.cardFor(Levels.level + 1) : false) { if (Piko.say('gunReady')) { Save.data.gunHint = true; Save.save(); } }
+    }
+  },
+  // Kartu level bila syarat terpenuhi untuk level berikutnya (null bila belum atau sudah maksimum)
+  cardFor(nextLevel) {
+    const t = this.tier();
+    if (t >= 3) return null;
+    const req = CONFIG.guns.card[t + 1], space = Worlds.active === SpaceWorld;
+    if (nextLevel < (space ? req.level : (req.earthLevel || req.level))) return null;
+    if (space ? (req.stage ? (Save.data.campaign.completed ? false : Save.data.campaign.stage < req.stage) : false) : false) return null;
+    return {
+      id: 'gun', name: 'Peningkatan Senjata', rarity: 'epik',
+      desc: t === 1 ? 'Kedua laras menembak serempak. Tersimpan permanen untuk kapal ini.' : 'Dua laras tambahan terbuka: empat tembakan, pasangan bergantian. Tersimpan permanen untuk kapal ini.',
+      apply: () => { this.raise('level'); },
+    };
+  },
+  raise(why) { return this.grant(this.tier() + 1, why); },
+  grant(t, why) {
+    const id = Player.ship.id, cur = this.tierOf(id), nt = clamp(t | 0, 1, 3);
+    if (nt <= cur) return false;
+    Save.data.guns[id] = nt; Save.save();
+    this.sync(true);
+    showBanner('SENJATA TINGKAT ' + nt + ': ' + CONFIG.guns.tiers[nt].shots + ' TEMBAKAN', 2000);
+    Events.emit('gunTier', nt, why);
+    return true;
+  },
+  // Indikator tingkat: titik laras di tombol tembak HP dan baris SENJATA di HUD desktop
+  hud() {
+    const n = CONFIG.guns.tiers[this.tier()].shots;
+    for (const box of document.querySelectorAll('.gun-pips')) {
+      box.dataset.tier = this.tier();
+      box.querySelectorAll('i').forEach((el, i) => el.classList.toggle('on', i < n));
+    }
+  },
+  // Posisi hardpoint di ruang model dan dunia (untuk hook debug dan tes)
+  info() {
+    this.sync();
+    const m = Player.model, t = this.tier();
+    m.root.updateWorldMatrix(true, true);
+    _gunInv.copy(m.root.matrixWorld).invert();
+    return {
+      ship: Player.ship.id, tier: t, maxTier: 3, pattern: CONFIG.guns.tiers[t].pattern, shots: CONFIG.guns.tiers[t].shots,
+      mult: CONFIG.guns.tiers[t].mult, perInterval: CONFIG.guns.tiers[t].perInterval, converge: CONFIG.weapons.convergeDistance,
+      volleys: Player.ship.volleys[t],
+      hardpoints: m.hardpoints.map((hp, i) => {
+        const w = hp.muzzle.getWorldPosition(new THREE.Vector3()), l = w.clone().applyMatrix4(_gunInv);
+        return { i, id: hp.def.id, at: hp.def.at, kind: hp.def.kind, tier: hp.def.tier, active: hp.on, visible: hp.base.visible ? hp.on : false,
+          world: [round2(w.x), round2(w.y), round2(w.z)], local: [round2(l.x), round2(l.y), round2(l.z)] };
+      }),
+    };
+  },
+  init() {
+    Events.on('stageClear', (n) => { const t = CONFIG.guns.stageReward[n]; if (t) this.grant(t, 'stage'); });
+    Events.on('contractDone', () => {
+      const n = Save.data.equip.contracts, C = CONFIG.guns;
+      if (n > 0 ? n % C.contractEvery === 0 : false) { if (this.tier() < C.contractMaxTier) this.raise('kontrak'); }
+    });
+  },
+};
+Guns.init();
 
 /* =====================================================================
    MUSUH - model, pool, AI sederhana, gelombang dan tembakan musuh
@@ -8924,7 +9169,7 @@ function visualRadius(root, q = 0.75, transparentToo = false) {
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), m = new THREE.Matrix4(), v = new THREE.Vector3(), d = [];
   root.traverse((o) => {
-    if (!o.isMesh) return;
+    if (!o.isMesh ? true : o.userData.gun === true) return;   // laras senjata (E5) tidak mengubah ambang tabrakan
     const mat = Array.isArray(o.material) ? o.material[0] : o.material;
     if (transparentToo ? false : (mat ? (mat.transparent ? true : mat.blending === THREE.AdditiveBlending) : true)) return;
     m.multiplyMatrices(inv, o.matrixWorld);
@@ -9860,7 +10105,7 @@ const BossHud = {
       if (this.form === 'ringkas') {
         const rx = hud.retX - x, ry = hud.retY - y;
         // Jarak crosshair ke kotak tiap sudut braket (kotak 8 px di keempat pojok)
-        const ok = (sz) => { const i = sz / 2 - 8; for (const sx of [-1, 1]) for (const sy of [-1, 1]) { const x0 = sx > 0 ? i : -i - 8, y0 = sy > 0 ? i : -i - 8; const dx = Math.max(x0 - rx, 0, rx - x0 - 8), dy = Math.max(y0 - ry, 0, ry - y0 - 8); if (Math.hypot(dx, dy) < 30) return false; } return true; };
+        const ok = (sz) => { const i = sz / 2 - 8; for (const sx of [-1, 1]) for (const sy of [-1, 1]) { const x0 = sx > 0 ? i : -i - 8, y0 = sy > 0 ? i : -i - 8; const dx = Math.max(x0 - rx, 0, rx - x0 - 8), dy = Math.max(y0 - ry, 0, ry - y0 - 8); if (Math.hypot(dx, dy) < 30) return false; } const hx = Math.max(-11 - rx, 0, rx - 11), hy = Math.max(sz / 2 + 8 - ry, 0, ry - sz / 2 - 11); return Math.hypot(hx, hy) >= 30; };   // bar HP ringkas (22 x 3 px di bawah braket) juga dijaga
         while (size < 170 ? !ok(size) : false) size += 6;
       }
       if (changed('bmPos', Math.round(x) * 100000 + Math.round(y))) this.mark.style.transform = 'translate(' + Math.round(x) + 'px, ' + Math.round(y) + 'px)';
@@ -10026,6 +10271,9 @@ const Levels = {
     // Cetak biru peralatan (C4): tiap level kelipatan 3 satu kartu diganti peralatan yang belum terbuka
     const bp = (this.level + 1) % 3 === 0 ? Equip.blueprintCard(rnd) : null;
     if (bp ? out.length === 3 : false) out[2] = bp;
+    // Peningkatan Senjata (E5): ditawarkan di kartu pertama selama syarat terpenuhi dan belum diambil
+    const gc = Guns.cardFor(this.level + 1);
+    if (gc) { if (out.length) out[0] = gc; else out.push(gc); }
     return out;
   },
   // Dipanggil tiap frame saat bermain: buka layar kartu bila ada level tertunda
@@ -11854,8 +12102,13 @@ const PikoFly = {
     const pk = buildPiko();
     pk.root.scale.setScalar(PIKO_CFG.scale);
     this.inst = pk.piko; this.inst.external = true; this.root = pk.root;
-    scene.add(pk.root);
-    Events.on('playerHit', () => { this.jolt = 0.45; this.vel.addScaledVector(Player._up || _AX_Y, -6).addScaledVector(Player._right || _AX_X, (rand() - 0.5) * 8); });
+    // Lapisan tetap di scene: saat menempel Piko pindah ke model kapal, saat bebas kembali ke lapisan ini, sehingga
+    // jumlah anak langsung scene tidak berubah antara keadaan bebas dan menempel (uji kebocoran 20 restart)
+    this.layer = new THREE.Group();
+    this.layer.name = 'piko-layer';
+    scene.add(this.layer);
+    this.layer.add(pk.root);
+    Events.on('playerHit', () => { this.jolt = 0.45; this.vel.addScaledVector(Player._up || _AX_Y, -6).addScaledVector(Player._right || _AX_X, (frand() - 0.5) * 8); });
     Events.on('enemyDestroyed', (e, byPlayer) => { if (byPlayer) this.cheer = Math.max(this.cheer, 0.7); });
     Events.on('pickup', () => { this.cheer = 0.9; });
     Events.on('bossStart', () => { this.alertT = 3; });
@@ -12081,7 +12334,7 @@ Object.assign(PikoFly, {
   },
   // Keluar: lepas ke scene dengan posisi dunia yang sama, lompatan kecil ke samping dan atas, lalu kembali melayang
   untuck() {
-    scene.attach(this.root);
+    this.layer.attach(this.root);
     this.root.getWorldPosition(this.pos);
     this.quat.copy(this.root.quaternion);
     const side = Math.sign(this.dockPos[0]) || 1;
@@ -12091,7 +12344,7 @@ Object.assign(PikoFly, {
   },
 });
 const _pikoReset = PikoFly.reset.bind(PikoFly);
-PikoFly.reset = function () { if (this.tucked ? true : this.mode === 'masuk') { scene.attach(this.root); this.root.scale.setScalar(PIKO_CFG.scale); } this.mode = 'bebas'; this.tucked = false; this.dock = null; _pikoReset(); };
+PikoFly.reset = function () { if (this.tucked ? true : this.mode === 'masuk') { this.layer.attach(this.root); this.root.scale.setScalar(PIKO_CFG.scale); } this.mode = 'bebas'; this.tucked = false; this.dock = null; _pikoReset(); };
 
 /* =====================================================================
    BUFF SEMENTARA - OVERDRIVE (laju tembak) dan PENGHANCUR (damage), dari pickup kristal
@@ -12400,9 +12653,10 @@ const FX = {
 FX.setViewport(renderer.domElement.height);
 
 // Efek berbasis event
+// Percikan kecil di ujung laras (E5: kini benar-benar di ujung laras; sebelumnya posisi tertimpa vektor sementara)
 Events.on('shot', (pos, dir) => {
   const v = Player.vel;
-  FX.fire.emit(pos.x, pos.y, pos.z, v.x + dir.x * 20, v.y + dir.y * 20, v.z + dir.z * 20, 0.07, 2.8, 4, 1, 0.55, 0.2, 1, 0, 0);
+  FX.fire.emit(pos.x, pos.y, pos.z, v.x + dir.x * 20, v.y + dir.y * 20, v.z + dir.z * 20, 0.06, 0.9, 4, 1, 0.55, 0.2, 1, 0, 0);
 });
 Events.on('enemyTelegraph', (pos) => FX.fire.emit(pos.x, pos.y, pos.z, 0, 0, 0, 0.06, 1.6 + frand() * 1.2, 0, 1, 0.15, 0.25, 0.9, 0, 0));
 Events.on('enemyShot', (pos) => FX.fire.emit(pos.x, pos.y, pos.z, 0, 0, 0, 0.08, 2.2, 0, 1, 0.4, 0.2, 1, 0, 0));
@@ -12929,13 +13183,25 @@ const Sfx = {
     src.stop(t + dur + 0.02);
   },
 
-  shoot() {
+  shotEnds: new Float64Array(8), shotPitch: 0,
+  // Satu panggilan per voli: n lapisan dengan gain 1 per akar n (energi total tetap), variasi pitch kecil,
+  // dan paling banyak CONFIG.guns.voiceCap suara tembak yang berbunyi bersamaan
+  shoot(n = 1) {
     if (!this.ready) return;
     const now = this.ctx.currentTime;
-    if (now - this.lastShot < 0.05) return;
+    if (now - this.lastShot < 0.035) return;
     this.lastShot = now;
-    this.tone('square', 920, 260, 0.07, 0.045);
-    this.noiseBurst('highpass', 4000, 2000, 0.04, 0.05);
+    const g = 1 / Math.sqrt(Math.max(1, n)), cap = Math.min(this.shotEnds.length, CONFIG.guns.voiceCap);
+    for (let i = 0; i < n; i++) {
+      let slot = -1;
+      for (let k = 0; k < cap; k++) if (this.shotEnds[k] <= now) { slot = k; break; }
+      if (slot < 0) break;
+      this.shotPitch = (this.shotPitch + 1) % 5;
+      const pf = 1 + (this.shotPitch - 2) * 0.012 + i * 0.03, d = i * 0.008;
+      this.shotEnds[slot] = now + d + 0.09;
+      this.tone('square', 920 * pf, 260 * pf, 0.07, 0.045 * g, d);
+    }
+    this.noiseBurst('highpass', 4000, 2000, 0.04, 0.05 * g);
   },
   enemyShoot(dist) { if (Pacer.saver ? dist > 220 : false) return; this.tone('sawtooth', 460, 170, 0.12, 0.06 * this.attenuation(dist)); },
   hitMarker() {
@@ -12992,7 +13258,7 @@ function onAudioGesture() {
 }
 
 const distToPlayer = (p) => Math.sqrt(p.distanceToSquared(Player.pos));
-Events.on('shot', () => Sfx.shoot());
+Events.on('shot', (pos, dir, k = 0, n = 1) => { if (k === 0) Sfx.shoot(n); });
 Events.on('enemyShot', (pos) => Sfx.enemyShoot(distToPlayer(pos)));
 Events.on('enemyHit', () => Sfx.hitMarker());
 Events.on('enemyDestroyed', (e) => Sfx.explosion(e.type === 'drone' ? 0.8 : 1.2, distToPlayer(e.pos)));
@@ -14461,6 +14727,7 @@ Events.on('gameover', () => {
 
 /* Piko: peringatan bersubtitle dan bunyi bip, dengan jeda minimum, cooldown per pesan dan prioritas */
 const PIKO_LINES = {
+  gunReady: { text: 'Naik level berikutnya, pilih kartu Peningkatan Senjata untuk menambah laras.', mood: 'happy', prio: 2, short: 'Ambil Peningkatan Senjata.' },
   // Saran peralatan (C5): sekali per peralatan per sesi, lewat pusat notifikasi tunggal, ikut opsi Bantuan robot
   eq_suar: { text: 'Rudal musuh mengunci kita, luncurkan Suar Kelip!', mood: 'alert', prio: 2, short: 'Rudal mengunci, pakai Suar.', key: 'suar' },
   eq_kubah: { text: 'Tembakan deras! Nyalakan Kubah Energi.', mood: 'alert', prio: 2, short: 'Tembakan deras, pakai Kubah.' },
@@ -15549,7 +15816,7 @@ const Hangar = {
     this.canvas.addEventListener('pointercancel', end);
   },
   model(id) {
-    if (!this.models[id]) this.models[id] = SHIPS[id].build(SHIPS[id].params);
+    if (!this.models[id]) { const m = SHIPS[id].build(SHIPS[id].params); attachHardpoints(m, SHIPS[id]); this.models[id] = m; }
     return this.models[id];
   },
   get def() { return this.list[this.index]; },
@@ -15589,6 +15856,13 @@ const Hangar = {
       const bar = document.createElement('i'); bar.style.setProperty('--v', Math.round(v * 100) + '%');
       box.append(sp, bar);
     }
+    // Tingkat senjata (E5): hardpoint aktif menyala pada model, yang terkunci tampak redup
+    const gt = Guns.tierOf(def.id);
+    Guns.apply(m, gt, 'hangar');
+    const gs = document.createElement('span'); gs.textContent = 'Senjata T' + gt;
+    const gb = document.createElement('i'); gb.style.setProperty('--v', Math.round(gt / 3 * 100) + '%');
+    gs.title = CONFIG.guns.tiers[gt].shots + ' tembakan per interval'; gb.dataset.gunTier = gt;
+    box.append(gs, gb);
     const st = document.getElementById('hangar-status');
     st.textContent = !unlocked ? `TERKUNCI, biaya ${fmtInt(def.cost)} kredit` : picked ? 'TERPILIH' : 'TERSEDIA';
     st.className = 'hangar-status ' + (!unlocked ? 'locked' : picked ? 'picked' : '');
@@ -16917,6 +17191,10 @@ const GameHooks = {
     pikoReset() { Piko.reset(); return true; },
     piko() { return { mood: Piko.mood, said: [...Piko.said], panel: !Piko.panel.classList.contains('hidden'), text: Piko.textEl.textContent }; },
     forceManeuver(type, dir = 1) { return Player.startManeuver(type, dir, true); },
+    // Senjata bertingkat (E5): setel tingkat kapal aktif (1 sampai 3), info hardpoint, dan rekaman asal peluru
+    setGunTier(n) { const id = Player.ship.id; Save.data.guns[id] = clamp(n | 0, 1, 3); Guns.sync(true); return Guns.tier(); },
+    gunInfo() { return Guns.info(); },
+    gunTrace(cmd) { if (cmd === 'start') { Guns.trace = []; return true; } const r = Guns.trace || []; Guns.trace = null; return r; },
     // Tembakkan satu peluru musuh tepat ke arah pemain dari jarak tertentu (uji kebal gulungan)
     shootPlayer(dist = 60) {
       const P = Player.pos, f = Player.forward;
@@ -17447,7 +17725,7 @@ const Haptic = {
     Native.vibrate(ms);
   },
 };
-Events.on('shot', () => Haptic.pulse(8, 160));
+Events.on('shot', (pos, dir, k = 0) => { if (k === 0) Haptic.pulse(8, 160); });
 Events.on('playerHit', () => Haptic.pulse(40));
 Events.on('enemyDestroyed', (e, byPlayer) => { if (byPlayer) Haptic.pulse(22, 60); });
 Events.on('pickup', () => Haptic.pulse(14, 60));

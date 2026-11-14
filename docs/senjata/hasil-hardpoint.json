@@ -1,0 +1,138 @@
+{
+ "starfighter": {
+  "1": {
+   "active": [
+    "kiri-atas -3.14,1.71,-0.2",
+    "kanan-atas 3.14,1.71,-0.2"
+   ],
+   "maxErr": 0.009,
+   "minFwd": 0.9994,
+   "maxMiss": 0.58,
+   "shots": 10
+  },
+  "2": {
+   "active": [
+    "kiri-atas -3.14,1.71,-0.2",
+    "kanan-atas 3.14,1.71,-0.2"
+   ],
+   "maxErr": 0.009,
+   "minFwd": 0.9995,
+   "maxMiss": 0.565,
+   "shots": 18
+  },
+  "3": {
+   "active": [
+    "kiri-atas -3.14,1.71,-0.2",
+    "kanan-atas 3.14,1.71,-0.2",
+    "kiri-bawah -3.14,-1.71,-0.2",
+    "kanan-bawah 3.14,-1.71,-0.2"
+   ],
+   "maxErr": 0.01,
+   "minFwd": 0.9994,
+   "maxMiss": 0.581,
+   "shots": 38
+  }
+ },
+ "interceptor": {
+  "1": {
+   "active": [
+    "kiri-atas -3,1.2,0.61",
+    "kanan-atas 3,1.2,0.61"
+   ],
+   "maxErr": 0.011,
+   "minFwd": 0.9995,
+   "maxMiss": 0.579,
+   "shots": 10
+  },
+  "2": {
+   "active": [
+    "kiri-atas -3,1.2,0.61",
+    "kanan-atas 3,1.2,0.61"
+   ],
+   "maxErr": 0.011,
+   "minFwd": 0.9996,
+   "maxMiss": 0.576,
+   "shots": 20
+  },
+  "3": {
+   "active": [
+    "kiri-atas -3,1.2,0.61",
+    "kanan-atas 3,1.2,0.61",
+    "kiri-bawah -3,-1.2,0.61",
+    "kanan-bawah 3,-1.2,0.61"
+   ],
+   "maxErr": 0.01,
+   "minFwd": 0.9995,
+   "maxMiss": 0.592,
+   "shots": 38
+  }
+ },
+ "gunship": {
+  "1": {
+   "active": [
+    "badan-kiri -0.82,-0.17,-2.6",
+    "badan-kanan 0.82,-0.17,-2.6"
+   ],
+   "maxErr": 0.009,
+   "minFwd": 0.9999,
+   "maxMiss": 0.571,
+   "shots": 9
+  },
+  "2": {
+   "active": [
+    "badan-kiri -0.82,-0.17,-2.6",
+    "badan-kanan 0.82,-0.17,-2.6"
+   ],
+   "maxErr": 0.009,
+   "minFwd": 0.9999,
+   "maxMiss": 0.557,
+   "shots": 18
+  },
+  "3": {
+   "active": [
+    "badan-kiri -0.82,-0.17,-2.6",
+    "badan-kanan 0.82,-0.17,-2.6",
+    "kiri-atas -2.72,1.86,-0.7",
+    "kanan-atas 2.72,1.86,-0.7"
+   ],
+   "maxErr": 0.01,
+   "minFwd": 0.9995,
+   "maxMiss": 0.58,
+   "shots": 38
+  }
+ },
+ "raptor-j": {
+  "1": {
+   "active": [
+    "pod-kiri -1.5,-0.27,-1",
+    "pod-kanan 1.5,-0.27,-1"
+   ],
+   "maxErr": 0,
+   "minFwd": 0.9999,
+   "maxMiss": 0.579,
+   "shots": 10
+  },
+  "2": {
+   "active": [
+    "pod-kiri -1.5,-0.27,-1",
+    "pod-kanan 1.5,-0.27,-1"
+   ],
+   "maxErr": 0,
+   "minFwd": 0.9999,
+   "maxMiss": 0.567,
+   "shots": 20
+  },
+  "3": {
+   "active": [
+    "pod-kiri -1.5,-0.27,-1",
+    "pod-kanan 1.5,-0.27,-1",
+    "akar-kiri -0.9,-0.15,-2",
+    "akar-kanan 0.9,-0.15,-2"
+   ],
+   "maxErr": 0,
+   "minFwd": 0.9999,
+   "maxMiss": 0.576,
+   "shots": 38
+  }
+ }
+}

@@ -5,6 +5,49 @@ Semua perubahan penting RAPTOR13 dicatat di berkas ini. Format mengikuti
 [Semantic Versioning](https://semver.org/lang/id/). Tanggal diambil dari riwayat git (WIB, UTC+7).
 Bukti pemilihan commit tiap tag ada di `docs/rilis/rencana-tag.md`.
 
+## [Belum dirilis]
+
+### Ditambahkan
+- **Piko terbang mandiri (E3).** Piko bergerak dengan pegas teredam di bingkai yang ikut kapal:
+  - tertinggal dan terayun saat belok;
+  - idle hidup;
+  - menoleh ke bos, musuh, atau pickup;
+  - tidak menembus lambung dan tidak menutupi crosshair.
+- **Piko menempel ke sisi lambung (E4).** Piko menempel saat nitro, kecepatan tinggi, manuver, belok tajam,
+  cutscene, atau dekat permukaan benda besar. Ada histeresis dan waktu minimum, lalu Piko keluar dengan lompatan
+  kecil.
+- **Senjata bertingkat berbasis hardpoint (E5).** Tingkat 1 memakai dua laras bergantian, tingkat 2 dua laras
+  serempak (DPS 1,8 kali), dan tingkat 3 empat laras dalam pasangan bergantian (DPS 3,14 kali, terukur).
+  - Laras terlihat di model: ujung keempat sayap kapal angkasa, pod bawah sayap dan meriam akar sayap Raptor-J,
+    serta laras badan Gunship.
+  - Laras baru memanjang dan menyala, dengan recoil dan kilat moncong per laras.
+  - Semua laras menyatu di titik temu 120 satuan di depan.
+  - Perolehan lewat kartu level Peningkatan Senjata, hadiah stage 3 dan 7, dan hadiah kontrak. Tingkat tersimpan
+    per kapal.
+  - Indikator tingkat di tombol Tembak (mode HP), di baris LEVEL (desktop), dan di hangar.
+  - Saran Piko satu kali.
+  - Rincian: `docs/senjata/keseimbangan.md`.
+
+### Diubah
+- Titik temu peluru 160 menjadi 120 satuan.
+- Anggaran peluru pemain 80 menjadi 128.
+- Suara tembak satu kali per voli, berlapis dengan gain 1 per akar jumlah laras, paling banyak 8 suara.
+- Uji keseimbangan bot peralatan kini memakai rata-rata 3 seed. Satu seed terlalu peka terhadap urutan RNG.
+- Uji Piko E3 kini mengukur lompatan Piko di ruang dunia relatif posisi kapal. Bingkai lokal kapal ikut berputar saat
+  laju roll melompat ketika A ditekan (ditangani E7), walau posisi dunia Piko tetap kontinu.
+- Uji perilaku bos B5 kini menilai kontak dari rata-rata tiga kesulitan, di bawah 2 per menit, dengan batas per
+  kesulitan 4 kontak dalam 90 detik. Kontak terkuantisasi 0,67 per menit, dan commit E4 pun sudah mencapai 2,0 pada
+  satu seed.
+
+### Diperbaiki
+- Percikan moncong tampil di ujung laras. Sebelumnya posisinya tertimpa vektor sementara `BulletPool.spawn`.
+- Moncong Raptor-J tidak lagi berada di udara di depan sayap.
+- Reaksi Piko saat kapal terkena tidak lagi memakai RNG permainan, sehingga simulasi berseed tetap dapat diulang.
+- Piko kini selalu berada di lapisan tetap di scene saat bebas, sehingga jumlah anak scene sama antara keadaan bebas
+  dan menempel. Uji kebocoran 20 restart sempat gagal sejak E4.
+- Penanda bos ringkas kini menjaga bar HP kecilnya juga minimal 30 px dari crosshair, bukan hanya sudut braket.
+- Kartu APK tidak lagi melewati 40 persen lebar layar di HP 844 px. Margin kiri kini ikut dihitung.
+
 ## [2.4.0] - 2026-11-14
 
 Pembaruan besar: kontras tombol yang menyesuaikan latar, tata letak HUD baru dan editornya, sistem peralatan,

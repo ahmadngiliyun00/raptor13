@@ -193,7 +193,7 @@ VERIFIKASI C1 sampai C14 terhadap Definition of Done prompt 01 (rilis 2.4.0, 14 
 Bagian 4 (prompt 03 sisa, versi minor 2.5.0):
 - E3 (SELESAI) Piko gerak mandiri
 - E4 (SELESAI) Piko menempel (tuck)
-- E5 Senjata bertingkat berbasis hardpoint
+- E5 (SELESAI) Senjata bertingkat berbasis hardpoint (`docs/senjata/keseimbangan.md`, `tests/senjata.spec.mjs`)
 - E6 Diagnosis kehalusan penerbangan
 - E7 Perbaikan penerbangan
 - E8 Manuver Putar Balik U

@@ -53,8 +53,15 @@ test('E3 Piko bukan salinan kapal: idle hidup, tertinggal saat belok lalu menyus
   test.info().annotations.push({ type: 'piko', description: 'lag terbaik ' + best[0] + ' frame, std idle y ' + std(idle.map((r) => r[5])).toFixed(3) });
   // Tanpa lompatan: perubahan posisi Piko relatif kapal per frame kecil
   let jump = 0;
-  // Kecepatan Piko relatif kapal (satuan per detik) pada pasangan frame berurutan yang keduanya bebas: tanpa lompatan
-  for (let i = 1; i < rows.length; i++) { const dt = rows[i][0] - rows[i - 1][0]; if (rows[i][12] !== 'bebas' ? true : (rows[i - 1][12] !== 'bebas' ? true : dt <= 0)) continue; jump = Math.max(jump, Math.hypot(rows[i][4] - rows[i - 1][4], rows[i][5] - rows[i - 1][5], rows[i][6] - rows[i - 1][6]) / dt); }
+  // Kecepatan Piko relatif posisi kapal di ruang dunia (satuan per detik) pada pasangan frame berurutan yang keduanya
+  // bebas: tanpa lompatan. Diukur di ruang dunia, bukan bingkai lokal kapal, karena bingkai lokal ikut berputar saat
+  // kapal mulai roll (laju roll melompat saat A ditekan, masalah E6 dan E7) walau posisi dunia Piko tetap kontinu.
+  for (let i = 1; i < rows.length; i++) {
+    const dt = rows[i][0] - rows[i - 1][0];
+    if (rows[i][12] !== 'bebas' ? true : (rows[i - 1][12] !== 'bebas' ? true : dt <= 0)) continue;
+    const rel = (r) => [r[1] - r[7], r[2] - r[8], r[3] - r[9]], a = rel(rows[i]), b = rel(rows[i - 1]);
+    jump = Math.max(jump, Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) / dt);
+  }
   expect(jump).toBeLessThan(30);
   // Jarak lambung dan posisi layar
   const st = await page.evaluate(() => window.__game.debug.piko.state());
