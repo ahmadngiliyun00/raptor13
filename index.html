@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-84OuMIo7zkEbx4rl4ncbemHbCcJbHXItV031aw0vnbI='; style-src 'self' 'sha256-vPvR9uw97S3o54LbtOAC3LUT4u9heeUSocMSzjtmico='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-40Cl5gnLf6U/Yat02nIENy4qAXWjpvrDUKQBm6WJaaA='; style-src 'self' 'sha256-vPvR9uw97S3o54LbtOAC3LUT4u9heeUSocMSzjtmico='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -3560,6 +3560,8 @@ const SHIPS = {
     muzzles: [[-1.25, -0.12, -1.2], [1.25, -0.12, -1.2]],
     engines: [[-0.48, -0.02, 4.75], [0.48, -0.02, 4.75]],
     radius: 2.6,
+    // Titik tambat Piko saat menempel (E4): sisi kanan badan, rendah, sedikit tertanam; dicerminkan untuk sisi kiri
+    pikoDock: [0.62, -0.18, -1.8],
   },
   // Model angkasa dibuat di A3; sementara memakai jet agar sistem lain bisa diuji
   starfighter: {
@@ -3571,6 +3573,8 @@ const SHIPS = {
     muzzles: [[-0.75, -0.05, -1.6], [0.75, -0.05, -1.6]],
     engines: [[0, 0, 4.1]],
     radius: 2.6,
+    // Titik tambat Piko saat menempel (E4): sisi kanan badan, rendah, sedikit tertanam; dicerminkan untuk sisi kiri
+    pikoDock: [0.5, -0.32, -1.35],
   },
   // Varian dari pembuat model yang sama dengan parameter berbeda (model dibuat di A3)
   interceptor: {
@@ -3582,6 +3586,8 @@ const SHIPS = {
     muzzles: [[-0.62, -0.05, -2.0], [0.62, -0.05, -2.0]],
     engines: [[0, 0, 4.4]],
     radius: 2.3,
+    // Titik tambat Piko saat menempel (E4): sisi kanan badan, rendah, sedikit tertanam; dicerminkan untuk sisi kiri
+    pikoDock: [0.42, -0.26, -1.6],
   },
   gunship: {
     id: 'gunship', name: 'Gunship', worlds: ['space'], cost: 1200,
@@ -3592,6 +3598,8 @@ const SHIPS = {
     muzzles: [[-1.03, -0.26, -2.2], [1.03, -0.26, -2.2], [-0.9, -0.05, -1.4], [0.9, -0.05, -1.4]],
     engines: [[0, 0, 4.05]],
     radius: 3.0,
+    // Titik tambat Piko saat menempel (E4): sisi kanan badan, rendah, sedikit tertanam; dicerminkan untuk sisi kiri
+    pikoDock: [0.78, -0.36, -0.9],
   },
 };
 const DEFAULT_SHIP = { earth: 'raptor-j', space: 'starfighter' };
@@ -11827,6 +11835,14 @@ const PIKO_CFG = {
   hullClear: 1.08,              // jarak minimum dari pusat kapal, kali radius visual kapal (bola pelindung di luar ujung sayap)
   camClear: 3.2,                // jarak minimum dari kamera
   accelMax: 220,                // batas percepatan Piko (satuan per detik kuadrat) agar tidak melompat
+  // Menempel (E4)
+  tuckSpeed: 0.85,              // di atas 85 persen kecepatan maksimum (nitro)
+  tuckYawRate: 1.3,             // laju belok kapal (rad per detik)
+  tuckMin: 0.8,                 // waktu minimum menempel
+  tuckExitDelay: 0.6,           // tunda keluar setelah pemicu hilang
+  tuckIn: 0.35,                 // durasi terbang masuk ke titik tambat
+  tuckOvershoot: 0.6,           // parameter ease out back (lewatan sekitar 3 persen, di bawah 5 persen)
+  nearBig: 180,                 // dekat permukaan benda besar saat cepat
 };
 const PikoFly = {
   inst: null, pos: new THREE.Vector3(), vel: new THREE.Vector3(), acc: new THREE.Vector3(), quat: new THREE.Quaternion(),
@@ -11970,6 +11986,112 @@ const PikoFly = {
   },
 };
 
+// Mode menempel (E4): pemicu dengan histeresis, terbang lengkung ke titik tambat di sisi lambung, lalu menjadi
+// anak model kapal (ikut tanpa jeda), dan melompat keluar dengan pantulan kecil saat pemicu hilang.
+Object.assign(PikoFly, {
+  mode: 'bebas', tucked: false, tuckT: 0, offT: 0, inT: 0, tuckCount: 0, toggles: 0, dock: null, docks: {},
+  _ls: new THREE.Vector3(), _ray: new THREE.Raycaster(),
+  // Titik tambat: data eksplisit di registri kapal (pikoDock), atau dihitung dari model (sisi badan sekitar 40 persen panjang)
+  dockFor() {
+    const id = Player.ship.id;
+    if (this.docks[id]) return this.docks[id];
+    let d = Player.ship.pikoDock ? { pos: Player.ship.pikoDock.slice(), auto: false } : null;
+    if (!d) d = { pos: this.autoDock(Player.model), auto: true };
+    this.docks[id] = d;
+    return d;
+  },
+  autoDock(model) {
+    const root = model.root;
+    root.updateMatrixWorld(true);
+    const inv = new THREE.Matrix4().copy(root.matrixWorld).invert(), m = new THREE.Matrix4(), tmp = new THREE.Box3(), box = new THREE.Box3();
+    // Kotak pembatas di ruang lokal model (bukan dunia), dari setiap mesh yang terlihat
+    root.traverse((o) => { if (!o.isMesh ? true : !o.visible) return; if (!o.geometry.boundingBox) o.geometry.computeBoundingBox(); tmp.copy(o.geometry.boundingBox).applyMatrix4(m.multiplyMatrices(inv, o.matrixWorld)); box.union(tmp); });
+    const sz = box.getSize(new THREE.Vector3());
+    let best = null;
+    for (let u = 0.3; u <= 0.56; u += 0.02) {
+      const z = box.min.z + sz.z * u, o = new THREE.Vector3(box.max.x + 5, box.min.y + sz.y * 0.45, z).applyMatrix4(root.matrixWorld);
+      this._ray.set(o, new THREE.Vector3(-1, 0, 0).transformDirection(root.matrixWorld));
+      const hit = this._ray.intersectObject(root, true).find((h) => h.object.visible);
+      if (!hit) continue;
+      const l = hit.point.clone().applyMatrix4(inv);
+      if (!best ? true : l.x < best.x) best = l;
+    }
+    if (!best) best = new THREE.Vector3(sz.x * 0.15, 0, box.min.z + sz.z * 0.4);
+    return [Math.round(best.x * 0.9 * 100) / 100, Math.round((best.y - sz.y * 0.05) * 100) / 100, Math.round(best.z * 100) / 100];
+  },
+  trigger() {
+    const C = PIKO_CFG;
+    if (!Player.alive) return false;
+    if (Game.state === 'cutscene') return true;
+    // Histeresis ambang: masuk pada 85 persen kecepatan atau laju belok 1,3, bertahan sampai turun di bawah 78 persen atau 1,0
+    const held = this.mode !== 'bebas', k = held ? 0.78 / 0.85 : 1;
+    if (Player.nitroActive ? true : Player.speed > CONFIG.player.nitroSpeed * (Player.ship.stats.speed || 1) * C.tuckSpeed * k) return true;
+    if (Player.maneuver) return true;
+    if (Math.abs(this.yawRate) > C.tuckYawRate * (held ? 0.77 : 1)) return true;
+    // Sangat cepat di dekat permukaan benda besar (planet atau bulan)
+    if (Worlds.active === SpaceWorld ? (SolarSystem.built ? Player.speed > CONFIG.player.nitroSpeed * (Player.ship.stats.speed || 1) * 0.7 * k : false) : false) {
+      if (SolarSystem.inside(Player.pos.x, Player.pos.y, Player.pos.z, C.nearBig * (held ? 1.25 : 1))) return true;
+    }
+    return false;
+  },
+  // Kembali true bila Piko sedang dikendalikan mode menempel (posisi tidak dihitung pegas)
+  tuckUpdate(dt) {
+    const C = PIKO_CFG, want = this.trigger();
+    if (want) this.offT = 0; else this.offT += dt;
+    if (this.mode === 'bebas') {
+      if (!want) return false;
+      this.dock = this.dockFor();
+      // Titik tambat di sisi tempat Piko sedang berada (data registri untuk sisi kanan, dicerminkan untuk kiri)
+      const sgn = this.side >= 0 ? 1 : -1;
+      this.dockPos = [Math.abs(this.dock.pos[0]) * sgn, this.dock.pos[1], this.dock.pos[2]];
+      this.mode = 'masuk'; this.inT = 0; this.toggles++;
+      this._m.copy(Player.model.root.matrixWorld).invert();
+      this._ls.copy(this.pos).applyMatrix4(this._m);
+    }
+    const body = Player.model.root;
+    if (this.mode === 'masuk') {
+      this.inT += dt;
+      const u = Math.min(1, this.inT / C.tuckIn), c1 = C.tuckOvershoot, c3 = c1 + 1, e = 1 + c3 * (u - 1) ** 3 + c1 * (u - 1) ** 2;
+      const D = this.dockPos;
+      this._a.set(D[0], D[1], D[2]);
+      this._b.copy(this._ls).lerp(this._a, e);
+      body.updateMatrixWorld();
+      this.pos.copy(this._b).applyMatrix4(body.matrixWorld);
+      this.vel.copy(Player.vel); this.acc.set(0, 0, 0);
+      this.quat.slerp(Player.quat, Math.min(1, dt * 10));
+      this.root.position.copy(this.pos); this.root.quaternion.copy(this.quat);
+      if (u >= 1) {
+        // Menempel: menjadi anak model kapal di titik tambat (tanpa jitter)
+        body.add(this.root);
+        this.root.position.set(D[0], D[1], D[2]); this.root.quaternion.identity();
+        this.root.scale.setScalar(C.scale);
+        this.mode = 'menempel'; this.tucked = true; this.tuckT = 0; this.tuckCount++;
+      }
+      return true;
+    }
+    if (this.mode === 'menempel') {
+      this.tuckT += dt;
+      if (this.root.parent !== body) { body.add(this.root); const D = this.dockPos; this.root.position.set(D[0], D[1], D[2]); this.root.quaternion.identity(); }
+      this.root.getWorldPosition(this.pos);
+      this.vel.copy(Player.vel); this.acc.set(0, 0, 0);
+      if (this.tuckT >= C.tuckMin ? this.offT >= C.tuckExitDelay : false) this.untuck();
+      return this.tucked;
+    }
+    return false;
+  },
+  // Keluar: lepas ke scene dengan posisi dunia yang sama, lompatan kecil ke samping dan atas, lalu kembali melayang
+  untuck() {
+    scene.attach(this.root);
+    this.root.getWorldPosition(this.pos);
+    this.quat.copy(this.root.quaternion);
+    const side = Math.sign(this.dockPos[0]) || 1;
+    this.side = side;
+    this.vel.copy(Player.vel).addScaledVector(Player._right || _AX_X, 7 * side).addScaledVector(Player._up || _AX_Y, 5);
+    this.mode = 'bebas'; this.tucked = false; this.toggles++; this.exitT = 0.5;
+  },
+});
+const _pikoReset = PikoFly.reset.bind(PikoFly);
+PikoFly.reset = function () { if (this.tucked ? true : this.mode === 'masuk') { scene.attach(this.root); this.root.scale.setScalar(PIKO_CFG.scale); } this.mode = 'bebas'; this.tucked = false; this.dock = null; _pikoReset(); };
 
 /* =====================================================================
    BUFF SEMENTARA - OVERDRIVE (laju tembak) dan PENGHANCUR (damage), dari pickup kristal

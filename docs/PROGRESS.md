@@ -191,8 +191,8 @@ VERIFIKASI C1 sampai C14 terhadap Definition of Done prompt 01 (rilis 2.4.0, 14 
 7. Aktifkan pengaturan repo yang direkomendasikan (`docs/komunitas/pengaturan-repo.md`).
 
 Bagian 4 (prompt 03 sisa, versi minor 2.5.0):
-- E3 Piko gerak mandiri
-- E4 Piko menempel (tuck)
+- E3 (SELESAI) Piko gerak mandiri
+- E4 (SELESAI) Piko menempel (tuck)
 - E5 Senjata bertingkat berbasis hardpoint
 - E6 Diagnosis kehalusan penerbangan
 - E7 Perbaikan penerbangan

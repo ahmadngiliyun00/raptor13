@@ -62,3 +62,44 @@ test('E3 Piko bukan salinan kapal: idle hidup, tertinggal saat belok lalu menyus
   const ret = await page.evaluate(() => { const r = document.getElementById('reticle').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
   expect(Math.hypot(st.screen[0] - ret[0], st.screen[1] - ret[1])).toBeGreaterThan(80);
 });
+
+for (const [ship, world] of [['starfighter', 'space'], ['gunship', 'space'], ['interceptor', 'space'], ['raptor-j', 'earth']]) {
+  test(`E4 ${ship}: menempel ke titik tambat saat nitro, minimal 0,8 detik, keluar 0,6 detik setelah nitro dilepas, tanpa kedip`, async ({ page }) => {
+    await fly(page, ship === 'raptor-j' ? 'starfighter' : ship, world);
+    await page.keyboard.down('Space');
+    await expect.poll(async () => (await page.evaluate(() => window.__game.debug.piko.state())).mode, { timeout: 3000 }).toBe('menempel');
+    const s1 = await page.evaluate(() => window.__game.debug.piko.state());
+    for (let k = 0; k < 3; k++) expect(Math.abs(s1.local[k]) - Math.abs(s1.dock[k])).toBeLessThan(0.03);
+    await page.waitForTimeout(400);
+    await page.keyboard.up('Space');
+    await page.waitForTimeout(300);
+    expect((await page.evaluate(() => window.__game.debug.piko.state())).mode).toBe('menempel');   // tunda keluar
+    await expect.poll(async () => (await page.evaluate(() => window.__game.debug.piko.state())).mode, { timeout: 4000 }).toBe('bebas');
+    const s3 = await page.evaluate(() => window.__game.debug.piko.state());
+    expect(s3.toggles).toBe(2);   // satu kali masuk, satu kali keluar
+    expect(s3.tucks).toBe(1);
+  });
+}
+
+test('E4 manuver dan lintasan masuk: menempel saat looping, lewatan kurang dari 5 persen, tidak berganti mode lebih sering dari histeresis', async ({ page }) => {
+  await fly(page);
+  await page.evaluate(() => window.__game.debug.piko.trace('start'));
+  await dbg(page, 'forceManeuver', 'loop');
+  await page.waitForTimeout(3500);
+  const rows = await page.evaluate(() => window.__game.debug.piko.trace('stop'));
+  const modes = rows.map((r) => r[12]);
+  expect(modes).toContain('menempel');
+  // Lintasan masuk: jarak ke titik tambat berkurang monoton kecuali lewatan kecil di akhir
+  const st = await page.evaluate(() => window.__game.debug.piko.state());
+  const dock = st.dock, inRows = rows.filter((r) => r[12] === 'masuk');
+  if (inRows.length > 3) {
+    const d0 = Math.hypot(Math.abs(inRows[0][4]) - dock[0], inRows[0][5] - dock[1], inRows[0][6] - dock[2]);
+    const minSigned = Math.min(...inRows.map((r) => (Math.abs(r[4]) - dock[0]) / Math.max(0.01, Math.abs(Math.abs(inRows[0][4]) - dock[0]))));
+    expect(minSigned).toBeGreaterThan(-0.05);   // lewatan di bawah 5 persen jarak awal
+    expect(d0).toBeGreaterThan(0.5);
+  }
+  // Tanpa kedip: pergantian mode menempel ke bebas tidak lebih sering dari waktu minimum plus tunda
+  let lastChange = -1, minGap = Infinity;
+  for (let i = 1; i < rows.length; i++) if (rows[i][11] !== rows[i - 1][11]) { if (lastChange >= 0) minGap = Math.min(minGap, rows[i][0] - rows[lastChange][0]); lastChange = i; }
+  if (Number.isFinite(minGap)) expect(minGap).toBeGreaterThanOrEqual(0.8);
+});
