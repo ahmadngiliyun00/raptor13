@@ -1,0 +1,18 @@
+name: Permintaan fitur
+description: Usulan fitur atau perbaikan pengalaman bermain
+labels: [enhancement]
+body:
+  - type: textarea
+    id: masalah
+    attributes:
+      label: Masalah yang ingin diselesaikan
+    validations:
+      required: true
+  - type: textarea
+    id: usulan
+    attributes:
+      label: Usulan solusi
+  - type: textarea
+    id: alternatif
+    attributes:
+      label: Alternatif yang sudah dipertimbangkan

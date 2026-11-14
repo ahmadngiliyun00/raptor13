@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Laporan kerentanan keamanan
+    url: https://github.com/ahmadngiliyun00/raptor13/security/advisories/new
+    about: Laporkan secara pribadi, jangan lewat issue publik.

@@ -1,0 +1,27 @@
+name: Masalah keseimbangan
+description: Terlalu mudah, terlalu sulit, atau ada strategi yang terlalu kuat
+labels: [area/balance]
+body:
+  - type: input
+    id: bagian
+    attributes:
+      label: Bagian yang tidak seimbang
+      placeholder: "Bos Pemburu Agung di Sulit, atau Kubah Energi"
+    validations:
+      required: true
+  - type: dropdown
+    id: kesulitan
+    attributes:
+      label: Kesulitan
+      options: [Mudah, Normal, Sulit]
+  - type: textarea
+    id: pengalaman
+    attributes:
+      label: Pengalaman bermain
+      description: Berapa lama pertarungan, berapa kali mati, kapal dan peralatan yang dipakai. Log pertarungan bos ada di UNDUH LOG (index.html?diag=1).
+    validations:
+      required: true
+  - type: textarea
+    id: usulan
+    attributes:
+      label: Usulan perubahan angka

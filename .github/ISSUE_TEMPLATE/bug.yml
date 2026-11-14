@@ -1,0 +1,38 @@
+name: Laporan bug
+description: Sesuatu tidak berjalan sebagaimana mestinya
+labels: [bug]
+body:
+  - type: textarea
+    id: apa
+    attributes:
+      label: Apa yang terjadi
+      description: Jelaskan bugnya dan apa yang Anda harapkan terjadi.
+    validations:
+      required: true
+  - type: textarea
+    id: langkah
+    attributes:
+      label: Langkah mengulang
+      placeholder: "1. Buka menu\n2. Pilih Kampanye\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostik
+    attributes:
+      label: Info diagnostik
+      description: Tempel hasil tombol Lapor Bug di menu Jeda, atau isi berkas UNDUH LOG dari index.html?diag=1. Tidak berisi data pribadi.
+      render: text
+  - type: input
+    id: perangkat
+    attributes:
+      label: Perangkat, sistem operasi, dan browser
+      placeholder: "iPhone 12, iOS 18, Chrome iOS"
+  - type: dropdown
+    id: kontrol
+    attributes:
+      label: Mode kontrol
+      options: [Keyboard, HP (sentuh), Aplikasi Android, Tidak tahu]
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshot atau rekaman

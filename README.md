@@ -1,6 +1,13 @@
 # RAPTOR13
 
+[![Lisensi kode: MIT](https://img.shields.io/badge/kode-MIT-2ea44f)](LICENSE)
+[![Lisensi konten: CC BY 4.0](https://img.shields.io/badge/konten-CC%20BY%204.0-1f6feb)](LICENSE-CONTENT.md)
+[![Versi](https://img.shields.io/github/v/release/ahmadngiliyun00/raptor13?label=versi)](CHANGELOG.md)
+[![CI](https://github.com/ahmadngiliyun00/raptor13/actions/workflows/ci.yml/badge.svg)](https://github.com/ahmadngiliyun00/raptor13/actions/workflows/ci.yml)
+
 > Superioritas udara dimulai dari sini.
+
+**Main sekarang:** <https://raptor13.ngiliyun.my.id/>
 
 RAPTOR13 adalah game tempur udara dan angkasa 3D bergaya arcade yang berjalan langsung di browser.
 Seluruh game ada di satu berkas `index.html` (HTML, CSS, dan JavaScript inline), tanpa build step
@@ -562,6 +569,29 @@ Belum dikerjakan:
 - Dukungan gamepad, mode HP tegak, dan service worker untuk bermain luring.
 - Papan skor lokal berisi beberapa skor terbaik dan statistik per stage di atlas.
 - Model kepala naga yang lebih detail dan bos Bumi dengan desain sendiri.
+
+## Berkontribusi
+
+Kontribusi terbuka untuk siapa saja:
+
+- Panduan lengkap ada di [CONTRIBUTING.md](CONTRIBUTING.md): menjalankan lokal, menjalankan uji, konvensi
+  (satu `index.html`, konten orisinal, tanpa em dash dan ampersand), alur kerja dengan DCO, dan kebijakan
+  kontribusi yang dibantu AI.
+- Peta kode ada di [ARCHITECTURE.md](ARCHITECTURE.md), rencana ada di [ROADMAP.md](ROADMAP.md).
+- Mulailah dari issue berlabel `good first issue`.
+- Kode etik: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md). Laporan kerentanan: [SECURITY.md](SECURITY.md).
+  Bantuan: [SUPPORT.md](SUPPORT.md).
+
+## Lisensi
+
+| Bagian | Lisensi |
+| --- | --- |
+| Kode sumber | MIT, lihat [LICENSE](LICENSE) |
+| Konten kreatif (nama, cerita, Piko, desain kapal dan ikon, teks) | CC BY 4.0, lihat [LICENSE-CONTENT.md](LICENSE-CONTENT.md) |
+| Nama dan logo RAPTOR13 | Tidak dilisensikan, lihat [TRADEMARKS.md](TRADEMARKS.md) |
+| Three.js | MIT, lihat [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) |
+
+Alasan pilihan lisensi: [docs/lisensi/pilihan-lisensi.md](docs/lisensi/pilihan-lisensi.md).
 
 ## Kredit
 

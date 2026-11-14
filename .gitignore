@@ -22,3 +22,16 @@ docx/prompt/
 *.key
 *.p12
 .claude/
+# keystore dan sandi penandatanganan Android (C8, C10): simpan di luar repo
+*.jks
+*.keystore
+keystore.properties
+signing.properties
+mobile/android/local.properties
+mobile/android/app/release/
+# hasil build mobile
+mobile/node_modules/
+mobile/www/
+mobile/dist/
+*.apk
+*.aab

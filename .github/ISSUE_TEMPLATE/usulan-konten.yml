@@ -1,0 +1,41 @@
+name: Usulan kapal, peralatan, musuh, atau dunia
+description: Usulkan konten baru yang orisinal
+labels: [enhancement, area/equipment]
+body:
+  - type: dropdown
+    id: jenis
+    attributes:
+      label: Jenis
+      options: [Kapal, Peralatan, Musuh, Bos, Dunia atau area]
+    validations:
+      required: true
+  - type: input
+    id: nama
+    attributes:
+      label: Nama orisinal
+      description: Nama sendiri dalam bahasa Indonesia. Jangan memakai nama atau istilah dari waralaba lain.
+    validations:
+      required: true
+  - type: textarea
+    id: peran
+    attributes:
+      label: Peran dalam permainan dan angka keseimbangan
+      description: Bandingkan dengan tabel di docs/equipment/keseimbangan.md (cooldown, muatan, damage, kapal yang cocok).
+    validations:
+      required: true
+  - type: textarea
+    id: rupa
+    attributes:
+      label: Rupa dan ikon
+      description: Deskripsi bentuk atau sketsa buatan sendiri.
+  - type: textarea
+    id: performa
+    attributes:
+      label: Perkiraan biaya performa
+  - type: checkboxes
+    id: orisinal
+    attributes:
+      label: Orisinalitas
+      options:
+        - label: Konten ini buatan sendiri dan tidak memakai IP pihak lain
+          required: true

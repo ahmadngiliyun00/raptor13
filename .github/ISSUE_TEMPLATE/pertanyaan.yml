@@ -1,0 +1,10 @@
+name: Pertanyaan
+description: Tanya cara bermain, memasang, atau berkontribusi
+labels: [question]
+body:
+  - type: textarea
+    id: tanya
+    attributes:
+      label: Pertanyaan
+    validations:
+      required: true
