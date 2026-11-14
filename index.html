@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-6v/i4SgB0ra5QuL+EfX/xDWmNiPooyihvX3mvrv0a24='; style-src 'self' 'sha256-vPvR9uw97S3o54LbtOAC3LUT4u9heeUSocMSzjtmico='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-84OuMIo7zkEbx4rl4ncbemHbCcJbHXItV031aw0vnbI='; style-src 'self' 'sha256-vPvR9uw97S3o54LbtOAC3LUT4u9heeUSocMSzjtmico='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -3385,15 +3385,24 @@ function buildPiko() {
   add(fin, matDark).position.set(0.28, 0, 0.05);
   add(mirrorX(fin), matDark).position.set(-0.28, 0, 0.05);
   // Thruster mini
-  const thr = add(new THREE.CircleGeometry(0.07, 12), new THREE.MeshBasicMaterial({ color: 0x7fe8ff }));
+  const thr = add(new THREE.CircleGeometry(0.07, 12), new THREE.MeshBasicMaterial({ color: 0x7fe8ff, transparent: true }));
   thr.position.set(0, 0, 0.445);
-  const inst = { root, head, eye, t: Math.random() * 10, blink: 0 };
+  // Antena di atas kepala dengan sendi di pangkal: bergoyang sebagai gerak sekunder (E3), terlipat saat menempel (E4)
+  const antenna = new THREE.Group();
+  antenna.position.set(0, 0.15, 0.12);
+  head.add(antenna);
+  const stalk = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.2, 5), matDark);
+  stalk.position.y = 0.1; antenna.add(stalk);
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), PikoEyeMat);
+  tip.position.y = 0.21; antenna.add(tip);
+  const inst = { root, head, eye, thr, antenna, t: Math.random() * 10, blink: 0, external: false };
   PikoInstances.push(inst);
   return { root, flames: [], light: { intensity: 0 }, matGlow: new THREE.MeshBasicMaterial(), matFlame: { opacity: 0 }, wingtips: [], piko: inst };
 }
 // Animasi semua Piko: kedip, menoleh pelan, melayang naik turun bila tidak duduk di soket
 function updatePikos(dt) {
   for (const p of PikoInstances) {
+    if (p.external) continue;   // Piko pendamping di permainan dianimasikan PikoFly
     p.t += dt;
     p.blink -= dt;
     if (p.blink < -3 - (p.t % 2)) p.blink = 0.12;
@@ -3602,8 +3611,7 @@ const ShipModels = {};      // cache model per id kapal: dibuat sekali, dipakai 
 function getShipModel(id) {
   if (!ShipModels[id]) {
     const m = SHIPS[id].build(SHIPS[id].params);
-    // Piko duduk di soket belakang kokpit (kapal yang punya soket)
-    if (m.pikoMount) { const pk = buildPiko(); pk.root.scale.setScalar(0.7); m.pikoMount.add(pk.root); }
+    // Piko tidak lagi duduk di soket (E3): ia terbang mandiri lewat PikoFly dan menempel di sisi lambung (E4)
     ShipModels[id] = m;
   }
   return ShipModels[id];
@@ -11793,6 +11801,177 @@ const EquipUI = {
 };
 
 /* =====================================================================
+   PIKO PENDAMPING YANG HIDUP (E3) - bukan salinan posisi kapal. Posisi target di ruang lokal kapal (kanan atas,
+   sedikit di belakang) dikejar pegas teredam kritis di ruang dunia, jadi Piko tertinggal saat kapal berbelok
+   atau berakselerasi lalu menyusul. Tambahan: kelembaman sebanding percepatan kapal (dibatasi), terayun keluar
+   saat belok tajam, gerak idle Lissajous, pindah sisi tiap 8 sampai 14 detik saat tenang, badan mengikuti arah
+   kapal dengan jeda dan miring sesuai percepatannya sendiri, kepala menoleh ke titik minat, kedip, antena
+   bergoyang, api pendorong sebanding percepatan, reaksi (tersentak, gugup, bersorak, waspada bos). Menjaga
+   jarak dari lambung dan dari kamera. Semua parameter di PIKO_CFG. Tanpa alokasi per frame.
+   ===================================================================== */
+const PIKO_CFG = {
+  scale: 1.35,
+  offset: [4.8, 0.9, 0.9],      // kanan, atas, belakang (ruang lokal kapal): di luar ujung sayap, jauh dari crosshair
+  omega: 7,                     // frekuensi alami pegas (rad per detik), teredam kritis
+  lagAccel: 0.012,              // detik kuadrat: tertinggal sebanding percepatan kapal
+  lagMax: 1.6,                  // batas tertinggal (satuan)
+  swing: 2.0,                   // terayun keluar saat belok (satuan per rad per detik)
+  swingMax: 2.0,
+  idleAmp: [0.18, 0.16, 0.12], idleFreq: [0.53, 0.71, 0.37],
+  sideSwitch: [8, 14],          // detik antar pindah sisi saat tenang
+  sideArc: 3.4,                 // tinggi lengkung saat pindah sisi (di atas sayap)
+  turnRate: 4,                  // laju badan mengikuti arah kapal
+  bankGain: 0.05, bankMax: 0.7, // miring dari percepatan lateral Piko sendiri
+  lookMax: 0.9,                 // batas sudut menoleh kepala (rad)
+  lookRange: 420,
+  hullClear: 1.08,              // jarak minimum dari pusat kapal, kali radius visual kapal (bola pelindung di luar ujung sayap)
+  camClear: 3.2,                // jarak minimum dari kamera
+  accelMax: 220,                // batas percepatan Piko (satuan per detik kuadrat) agar tidak melompat
+};
+const PikoFly = {
+  inst: null, pos: new THREE.Vector3(), vel: new THREE.Vector3(), acc: new THREE.Vector3(), quat: new THREE.Quaternion(),
+  side: 1, sideT: 10, t: 0, jolt: 0, cheer: 0, nervous: 0, alertT: 0, look: { yaw: 0, pitch: 0 }, ant: { a: 0, v: 0 }, bank: 0,
+  prevShipVel: new THREE.Vector3(), prevShipQuat: new THREE.Quaternion(), shipAcc: new THREE.Vector3(), yawRate: 0, ready: false,
+  _t: new THREE.Vector3(), _a: new THREE.Vector3(), _b: new THREE.Vector3(), _q: new THREE.Quaternion(), _e: new THREE.Euler(), _m: new THREE.Matrix4(),
+  trace: null,
+  init() {
+    const pk = buildPiko();
+    pk.root.scale.setScalar(PIKO_CFG.scale);
+    this.inst = pk.piko; this.inst.external = true; this.root = pk.root;
+    scene.add(pk.root);
+    Events.on('playerHit', () => { this.jolt = 0.45; this.vel.addScaledVector(Player._up || _AX_Y, -6).addScaledVector(Player._right || _AX_X, (rand() - 0.5) * 8); });
+    Events.on('enemyDestroyed', (e, byPlayer) => { if (byPlayer) this.cheer = Math.max(this.cheer, 0.7); });
+    Events.on('pickup', () => { this.cheer = 0.9; });
+    Events.on('bossStart', () => { this.alertT = 3; });
+  },
+  reset() { this.ready = false; },
+  amp() { return Save.settings.reduceMotion ? 0.3 : 1; },
+  reactive() { return Save.settings.robotHelp !== 'mati'; },
+  // Titik minat: bos, musuh terdekat, pickup dekat
+  interest() {
+    if (Bosses.active) return (Bosses.active.anchor || Bosses.active.group).position;
+    let best = null, bd = PIKO_CFG.lookRange * PIKO_CFG.lookRange;
+    for (const e of Enemies.list) { if (!e.active) continue; const d = e.pos.distanceToSquared(Player.pos); if (d < bd) { bd = d; best = e.pos; } }
+    if (best) return best;
+    for (const it of Pickups.items) { if (!it.active) continue; const d = it.group.position.distanceToSquared(Player.pos); if (d < bd) { bd = d; best = it.group.position; } }
+    return best;
+  },
+  // Target di ruang dunia dari offset lokal kapal, idle, kelembaman, dan ayunan belok
+  target(out, dt) {
+    const C = PIKO_CFG, A = this.amp(), R = Player._right || _AX_X, U = Player._up || _AX_Y, F = Player.forward;
+    const ox = C.offset[0] * this.sideX, t = this.t;
+    out.copy(Player.pos)
+      .addScaledVector(R, ox + Math.sin(t * C.idleFreq[0] * 6.283) * C.idleAmp[0] * A)
+      .addScaledVector(U, C.offset[1] + (1 - Math.abs(this.sideX)) * C.sideArc + Math.sin(t * C.idleFreq[1] * 6.283 + 1.3) * C.idleAmp[1] * A)   // pindah sisi melengkung di atas kapal
+      .addScaledVector(F, -C.offset[2] + Math.sin(t * C.idleFreq[2] * 6.283 + 0.6) * C.idleAmp[2] * A);
+    // Tertinggal sebanding percepatan kapal (dibatasi), terayun keluar sebanding laju belok
+    const lag = this._a.copy(this.shipAcc).multiplyScalar(-C.lagAccel);
+    if (lag.length() > C.lagMax) lag.setLength(C.lagMax);
+    out.add(lag);
+    out.addScaledVector(R, clamp(-this.yawRate * C.swing, -C.swingMax, C.swingMax));
+    // Gugup saat HP rendah: getar kecil
+    if (this.nervous > 0) out.addScaledVector(U, Math.sin(t * 40) * 0.05 * A).addScaledVector(R, Math.sin(t * 33) * 0.05 * A);
+    // Bersorak: lompatan kecil
+    if (this.cheer > 0) out.addScaledVector(U, Math.sin((1 - this.cheer) * Math.PI) * 0.45 * A);
+    return out;
+  },
+  update(dt) {
+    if (!this.inst ? true : dt <= 0) return;
+    const C = PIKO_CFG, P = Player.pos;
+    this.t += dt;
+    const show = Player.alive ? Player.rig.visible : false;
+    this.root.visible = show;
+    if (!this.ready) {
+      this.sideX = 1; this.side = 1;
+      this.pos.copy(P).addScaledVector(Player._right || _AX_X, C.offset[0]).addScaledVector(Player._up || _AX_Y, C.offset[1]).addScaledVector(Player.forward, -C.offset[2]);
+      this.vel.copy(Player.vel); this.prevShipVel.copy(Player.vel); this.prevShipQuat.copy(Player.quat); this.quat.copy(Player.quat); this.ready = true;
+    }
+    // Percepatan dan laju belok kapal (dihaluskan) untuk kelembaman
+    this._a.copy(Player.vel).sub(this.prevShipVel).divideScalar(Math.max(dt, 1e-3));
+    this.shipAcc.lerp(this._a, Math.min(1, dt * 8));
+    this.prevShipVel.copy(Player.vel);
+    this._q.copy(this.prevShipQuat).invert().premultiply(Player.quat);
+    this._e.setFromQuaternion(this._q, 'YXZ');
+    this.yawRate += ((this._e.y / Math.max(dt, 1e-3)) - this.yawRate) * Math.min(1, dt * 6);
+    this.prevShipQuat.copy(Player.quat);
+    // Pindah sisi sesekali saat tenang
+    this.sideT -= dt;
+    const calm = Math.abs(this.yawRate) < 0.3 ? !Player.nitroActive : false;
+    if (this.sideT <= 0) { this.sideT = randRange(C.sideSwitch[0], C.sideSwitch[1]); if (calm) this.side = -this.side; }
+    this.sideX = damp(this.sideX, this.side, 1.6, dt);
+    this.jolt = Math.max(0, this.jolt - dt); this.cheer = Math.max(0, this.cheer - dt); this.alertT = Math.max(0, this.alertT - dt);
+    this.nervous = this.reactive() ? (Player.hp < Player.health.maxHp * 0.3 ? 1 : 0) : 0;
+    if (!this.reactive()) { this.cheer = 0; this.jolt = 0; }
+    if (this.tuckUpdate ? this.tuckUpdate(dt) : false) { this.afterMove(dt); return; }
+    // Pegas teredam kritis di bingkai yang ikut bergerak bersama kapal: a = w kuadrat (target - pos) - 2 w (v - v kapal).
+    // Peredaman relatif membuat Piko tidak tertinggal 2v/w saat kecepatan tetap; ia hanya tertinggal saat kapal berakselerasi
+    const tgt = this.target(this._t, dt), w = C.omega;
+    this.acc.copy(tgt).sub(this.pos).multiplyScalar(w * w).addScaledVector(this._b.copy(this.vel).sub(Player.vel), -2 * w);
+    // Bagian percepatan kapal sendiri tidak dibatasi (agar tidak tertinggal tanpa batas), sisanya dibatasi
+    this._b.copy(this.acc).sub(this.shipAcc);
+    if (this._b.length() > C.accelMax) this._b.setLength(C.accelMax);
+    this.acc.copy(this.shipAcc).add(this._b);
+    this.vel.addScaledVector(this.acc, dt);
+    this.pos.addScaledVector(this.vel, dt);
+    // Jarak minimum dari lambung dan dari kamera
+    // Setelah keluar dari tuck (0,5 detik) Piko meninggalkan lambung dengan kecepatan lompatnya, tanpa didorong paksa ke bola
+    this.exitT = Math.max(0, (this.exitT || 0) - dt);
+    const minR = (Player.visualR || Player.radius * 1.47) * C.hullClear, d = this._a.copy(this.pos).sub(P), dl = d.length();
+    if (dl < minR ? !(this.exitT > 0) : false) this.pos.copy(P).addScaledVector(d.divideScalar(Math.max(dl, 1e-3)), minR);
+    const dc = this._a.copy(this.pos).sub(camera.position), dcl = dc.length();
+    if (dcl < C.camClear) this.pos.copy(camera.position).addScaledVector(dc.divideScalar(Math.max(dcl, 1e-3)), C.camClear);
+    this.afterMove(dt);
+  },
+  // Orientasi, kepala, kedip, antena, api pendorong, dan rekaman lintasan
+  afterMove(dt) {
+    const C = PIKO_CFG, inst = this.inst, A = this.amp();
+    if (!this.tucked) {
+      this.quat.slerp(Player.quat, Math.min(1, dt * C.turnRate));
+      // Miring dari percepatan lateral Piko sendiri, ditambah sentakan saat kapal terkena
+      const lat = this.acc.dot(Player._right || _AX_X);
+      this.bank = damp(this.bank, clamp(-lat * C.bankGain, -C.bankMax, C.bankMax) + (this.jolt > 0 ? Math.sin(this.t * 50) * 0.3 * A : 0), 6, dt);
+      this._q.setFromAxisAngle(_AX_Z, this.bank);
+      this.root.quaternion.copy(this.quat).multiply(this._q);
+      this.root.position.copy(this.pos);
+    }
+    // Kepala menoleh ke titik minat (dibatasi), kembali lurus bila tidak ada
+    const poi = this.tucked ? null : this.interest();
+    let ty = 0, tp = 0;
+    if (poi) {
+      this._m.copy(this.root.matrixWorld).invert();
+      const v = this._a.copy(poi).applyMatrix4(this._m);
+      ty = clamp(Math.atan2(-v.x, -v.z), -C.lookMax, C.lookMax); tp = clamp(Math.atan2(v.y, Math.hypot(v.x, v.z)), -0.5, 0.5);
+    } else { ty = Math.sin(this.t * 0.6) * 0.3 * A; tp = Math.sin(this.t * 0.43) * 0.08 * A; }
+    this.look.yaw = damp(this.look.yaw, ty, this.alertT > 0 ? 8 : 4, dt); this.look.pitch = damp(this.look.pitch, tp, 4, dt);
+    inst.head.rotation.set(this.look.pitch, this.look.yaw, 0);
+    // Kedip periodik; mata menyipit saat menempel
+    inst.blink -= dt;
+    if (inst.blink < -3 - (this.t % 2)) inst.blink = 0.12;
+    inst.eye.scale.y = this.tucked ? 0.35 : (inst.blink > 0 ? 0.25 : 1.4);
+    // Antena: pegas sekunder digerakkan percepatan Piko, terlipat ke belakang saat menempel
+    const drive = this.tucked ? -1.3 : clamp(this.acc.dot(Player.forward) * 0.004 + this.bank * 0.4, -0.8, 0.8);
+    this.ant.v += ((drive - this.ant.a) * 90 - this.ant.v * 9) * dt; this.ant.a += this.ant.v * dt;
+    inst.antenna.rotation.x = this.ant.a;
+    // Api pendorong sebanding percepatan Piko relatif kapal, mati saat menempel
+    const rel = this.tucked ? 0 : clamp(this._b.length() / 60, 0.15, 1);
+    inst.thr.material.opacity = rel * (0.75 + 0.25 * Math.sin(this.t * 45)); inst.thr.scale.setScalar(0.7 + rel * 0.6);
+    if (this.trace) this.record();
+  },
+  toLocal(out) { return out.copy(this.pos).sub(Player.pos).applyQuaternion(this._q.copy(Player.quat).invert()); },
+  // Rekaman lintasan untuk uji (debug.piko.trace): posisi Piko dan kapal di ruang dunia dan lokal kapal
+  record() {
+    const T = this.trace;
+    if (T.n >= T.max) return;
+    // Lokal dari posisi dan kuaternion kapal saat ini (matrixWorld rig bisa masih dari frame sebelumnya)
+    const l = this.toLocal(this._a);
+    T.rows.push([round2(Game.time), round2(this.pos.x), round2(this.pos.y), round2(this.pos.z), round2(l.x), round2(l.y), round2(l.z),
+      round2(Player.pos.x), round2(Player.pos.y), round2(Player.pos.z), round2(this.acc.length()), this.tucked ? 1 : 0, this.mode || 'bebas', round2(this.yawRate)]);
+    T.n++;
+  },
+};
+
+
+/* =====================================================================
    BUFF SEMENTARA - OVERDRIVE (laju tembak) dan PENGHANCUR (damage), dari pickup kristal
    ===================================================================== */
 const Buffs = {
@@ -13645,6 +13824,7 @@ function resetSession(keepWorld = false) {
   Stars.reset();
   Ultimate.reset();
   Equip.reset();
+  PikoFly.reset();
   Piko.reset();
   Notify.reset();
   Metrics.reset();
@@ -15098,6 +15278,7 @@ Touch.init();
 UiContrast.init();
 HudEditor.init();
 EquipUI.init();
+PikoFly.init();
 Controls.addSource(Touch);
 
 // Mode HP dimainkan mendatar (H7): overlay putar layar yang rapi di bawah toolbar, permainan dijeda
@@ -15528,6 +15709,7 @@ function update(dt) {
     if (!Game.hasSession) { Game.attractTime += dt; Player.autopilot(dt, Game.attractTime); }
   }
   updatePikos(dt);
+  if (Game.state !== 'paused') PikoFly.update(dt);
   if (Game.simulating) {
     Player.updateVisuals(dt, Game.stateTime);
     FX.update(dt);
@@ -16736,6 +16918,19 @@ const GameHooks = {
   },
 };
 // Hanya dipasang bila ?debug=1: tanpa parameter itu tidak ada hook global yang bisa dipakai dari console
+// Piko pendamping (E3, E4): debug.piko.trace('start' | 'stop'), debug.piko.state()
+GameHooks.debug.piko.trace = (cmd = 'start', max = 3600) => {
+  if (cmd === 'start') { PikoFly.trace = { rows: [], n: 0, max }; return true; }
+  if (cmd === 'stop') { const t = PikoFly.trace; PikoFly.trace = null; return t ? t.rows : []; }
+  return PikoFly.trace ? PikoFly.trace.n : 0;
+};
+GameHooks.debug.piko.state = () => {
+  const F = PikoFly, l = F.toLocal(F._a);
+  const v = F._b.copy(F.pos).project(camera);
+  return { mode: F.mode || 'bebas', tucked: !!F.tucked, side: F.side, local: [round2(l.x), round2(l.y), round2(l.z)], dist: round2(F.pos.distanceTo(Player.pos)),
+    screen: [round2((v.x + 1) * 0.5 * Layout.w), round2((1 - v.y) * 0.5 * Layout.h)], visible: F.root.visible, hullMin: round2((Player.visualR || Player.radius * 1.47) * PIKO_CFG.hullClear),
+    dock: F.dock ? F.dock.pos.map(round2) : null, tucks: F.tuckCount || 0, toggles: F.toggles || 0 };
+};
 if (DEBUG_ON) Object.defineProperty(window, '__game', { value: GameHooks, configurable: true, enumerable: false, writable: false });
 
 
@@ -17532,7 +17727,8 @@ await bootStep(100, 'Siap');
 for (const obj of [GameHooks, GameHooks.debug]) {
   for (const k of Object.keys(obj)) {
     const f = obj[k];
-    if (typeof f === 'function') obj[k] = function (...a) { Pacer.dirty = true; return f.apply(this, a); };
+    // Properti milik fungsi (misalnya debug.piko.trace) ikut disalin ke pembungkus
+    if (typeof f === 'function') obj[k] = Object.assign(function (...a) { Pacer.dirty = true; return f.apply(this, a); }, f);
   }
 }
 rafId = requestAnimationFrame(frame);
