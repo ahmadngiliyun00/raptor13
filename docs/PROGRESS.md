@@ -136,7 +136,7 @@ Bagian 3 (prompt 01, versi minor 2.4.0):
 - C4 (SELESAI) Data dan aturan equipment
 - C5 (SELESAI) UI equipment
 - C6 (SELESAI) Pengujian equipment dan keseimbangan
-- C7 Persistensi dan keamanan data baru
+- C7 (SELESAI) Persistensi dan keamanan data baru
 - C8 Open source (lisensi, kontribusi, templat, CI, arsitektur, roadmap)
 - C9 PWA
 - C10 Android Capacitor (APK)

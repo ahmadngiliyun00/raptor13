@@ -22,7 +22,7 @@ async function boot(page, save, { w = 1280, h = 720 } = {}) {
   await page.setViewportSize({ width: w, height: h });
   if (!page.url().startsWith('http')) { await page.goto(gameUrl()); await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 }); }
   await page.evaluate((d) => { localStorage.clear(); localStorage.setItem('raptor13.v3', JSON.stringify(d)); }, save);
-  await page.reload();
+  await page.goto(gameUrl());
   await page.waitForFunction(() => window.__game?.snapshot().state === 'menu', null, { timeout: 60000 });
 }
 async function play(page, world = 'space') {
@@ -215,4 +215,43 @@ test('C6 keseimbangan: bot 60 detik Normal, peralatan membantu tetapi tidak memb
   expect(withEq.absorbed + Object.values(withEq.used).reduce((a, b) => a + b, 0), 'peralatan terpakai').toBeGreaterThan(2);
   expect(none.damageTaken, 'musuh tetap mengancam').toBeGreaterThan(0);
   expect(withEq.kills, 'bot berperalatan tetap bertarung').toBeGreaterThan(3);
+});
+
+// ---------- C7: persistensi dan keamanan data peralatan ----------
+test('C7 data peralatan: id asing, duplikat, slot berlebih, peralatan terkunci di loadout, dan tipe salah dibersihkan; simpanan lama tanpa peralatan mendapat bawaan', async ({ page }) => {
+  const cases = [
+    // [simpanan equip mentah, harapan loadout gunship, harapan unlocked]
+    [{ unlocked: ['kunang', 'sisik', 'jahat', '__proto__', 7, 'kubah'], loadout: { gunship: ['kubah', 'kubah', 'jahat', 'kunang', 'sisik'] } }, ['kubah', null, null], ['kunang', 'sisik', 'kubah']],
+    [{ unlocked: ['kunang'], loadout: { gunship: ['tombak', 'kunang', null] } }, [null, 'kunang', null], ['kunang', 'sisik']],
+    [{ unlocked: 'bukan array', loadout: 'bukan objek', contracts: -5 }, [null, null, null], ['kunang', 'sisik']],
+    [null, [null, null, null], ['kunang', 'sisik']],
+  ];
+  for (const [eq, lo, un] of cases) {
+    await boot(page, SAVE(eq === null ? {} : { equip: eq }));
+    const r = await page.evaluate(() => { const d = window.__game.debug.equip(); return { lo: d.loadout, un: d.unlocked }; });
+    expect(r.lo.gunship, JSON.stringify(eq)).toEqual(lo);
+    expect(r.un, JSON.stringify(eq)).toEqual(un);
+    // Panjang loadout selalu sama dengan jumlah slot kapal; Raptor-J membawa Kunang bawaan bila simpanan tanpa peralatan
+    expect(r.lo.starfighter).toEqual([]);
+    expect(r.lo.interceptor.length).toBe(2);
+    if (eq === null) expect(r.lo['raptor-j']).toEqual(['kunang']);
+  }
+  // Data mentah raksasa dibatasi pembacaan 200 KB: simpanan diabaikan, permainan tetap jalan dengan bawaan
+  await page.evaluate(() => { localStorage.setItem('raptor13.v3', JSON.stringify({ version: 3, equip: { unlocked: Array(60000).fill('kunang') } })); });
+  await page.reload();
+  await page.waitForFunction(() => window.__game?.snapshot().state === 'menu');
+  expect((await dbg(page, 'equip')).unlocked).toEqual(['kunang', 'sisik']);
+});
+
+test('C7 hook peralatan dan editor hanya ada dengan ?debug=1; kunci localStorage berawalan raptor13', async ({ page }) => {
+  await page.goto('/index.html');
+  await expect(page.locator('#screen-title')).toBeVisible();
+  expect(await page.evaluate(() => typeof window.__game)).toBe('undefined');
+  expect(await page.evaluate(() => typeof window.Equip + typeof window.HudEditor + typeof window.EQUIPMENT_DEFS)).toBe('undefinedundefinedundefined');
+  await boot(page, SAVE());
+  await play(page);
+  await dbg(page, 'equipSet', ['kunang']);
+  await page.evaluate(() => { window.__game.debug.hudEditor('open'); window.__game.debug.hudEditor('set', { fire: { dx: 0, dy: 0, s: 0.95 } }); window.__game.debug.hudEditor('save'); });
+  const keys = await page.evaluate(() => Object.keys(localStorage));
+  for (const k of keys) expect(k.startsWith('raptor13.')).toBe(true);
 });

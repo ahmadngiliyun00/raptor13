@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-ZV9Ctm6cq8SQJh0oWK0TJp7xKwXr+USgvqBd4Dq4wqg='; style-src 'self' 'sha256-9Wa+x9jDUNTTDAJ6iEt+MwuGadnpFnz6RPCho6zSGys='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'sha256-eBvyGu50tE7BQHtdGVIc2cpGOIJlU+UMHJMGt1w8zGk=' 'sha256-OagVWz6h9p9vmEWaf3mWVnWGXP5mGyku19zToElMX1w='; style-src 'self' 'sha256-9Wa+x9jDUNTTDAJ6iEt+MwuGadnpFnz6RPCho6zSGys='; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'none'; font-src 'none'; worker-src 'none'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>RAPTOR13 - Game Pesawat Tempur 3D di Browser</title>
 
@@ -16336,6 +16336,8 @@ const GameHooks = {
       if (Game.state !== 'playing' ? true : !EQUIPMENT_DEFS[id]) return null;
       const d = window.__game.debug, step = (sec) => { for (let i = 0; i < Math.round(sec * 60); i++) { if (Game.state === 'levelup') Levels.choose(Levels.offer[0].id); if (Game.state !== 'playing') break; update(1 / 60); } };   // kartu level dari pembunuhan skenario sebelumnya dipilih otomatis
       const P = Player.pos, F = Player.forward, ahead = (k, side = 0, up = 0) => _va.copy(P).addScaledVector(F, k).addScaledVector(Player._right || _AX_X, side).addScaledVector(Player._up || _AX_Y, up);
+      if (Game.state === 'levelup') Levels.choose(Levels.offer[0].id);
+      Levels.pending = 0;   // kartu level dari skenario sebelumnya tidak boleh menyela skenario ini
       Debug.god = false; Debug.enemiesEnabled = false; Enemies.reset(); Player.spawnInvuln = 0; Player.hitInvuln = 0; Save.settings.fatalCrash = true;
       d.equipSet([id]);
       const placeEnemy = (type, v) => { const e = Enemies.spawn(type, v.x, v.y, v.z); if (e) { e.state = 'reposition'; e.dir.copy(F).negate(); } return e; };
